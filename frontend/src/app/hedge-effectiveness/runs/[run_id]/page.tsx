@@ -1803,8 +1803,52 @@ function ComplianceSection({ compliance, run }: { compliance: string[]; run: Run
           ))}
         </div>
 
+        {/* Hash chain flow diagram */}
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text3, letterSpacing: "0.12em", marginBottom: 10 }}>
+            HASH DERIVATION CHAIN
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 0, overflowX: "auto" }}>
+            {([
+              { label: "INPUTS HASH", hash: run.inputs_hash, color: HEX.cyan, icon: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" },
+              { label: "ENGINE v" + run.methodology_version, hash: "SHA-256 transform", color: HEX.amber, icon: "M12 2L2 7l10 5 10-5-10-5z", isProcess: true },
+              { label: "OUTPUTS HASH", hash: run.outputs_hash, color: HEX.cyan, icon: "M9 11l3 3L22 4" },
+              { label: "RUN HASH", hash: run.run_hash, color: HEX.green, icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z", isFinal: true },
+            ] as const).map((node, i, arr) => (
+              <div key={node.label} style={{ display: "flex", alignItems: "center", flex: i < arr.length - 1 ? "1 1 auto" : "0 0 auto" }}>
+                <div style={{
+                  padding: "8px 10px", borderRadius: 4, flexShrink: 0,
+                  background: "isProcess" in node ? `${node.color}10` : S.sub,
+                  border: `1px solid ${node.color}${"isFinal" in node ? "60" : "30"}`,
+                  minWidth: 110,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={node.color} strokeWidth="2">
+                      <path d={node.icon}/>
+                    </svg>
+                    <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: node.color, letterSpacing: "0.1em" }}>
+                      {node.label}
+                    </span>
+                  </div>
+                  <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, wordBreak: "break-all", lineHeight: 1.3 }}>
+                    {(node as { isProcess?: boolean }).isProcess ? node.hash : node.hash?.slice(0, 16) + "…"}
+                  </div>
+                </div>
+                {i < arr.length - 1 && (
+                  <div style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 20, position: "relative" }}>
+                    <div style={{ height: 1, flex: 1, background: `linear-gradient(90deg, ${arr[i].color}40, ${arr[i+1].color}40)` }} />
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={arr[i+1].color} strokeWidth="2" style={{ flexShrink: 0 }}>
+                      <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div style={{
-          marginTop: 16, padding: "10px 14px", borderRadius: 4,
+          marginTop: 12, padding: "10px 14px", borderRadius: 4,
           background: "rgba(5,150,105,0.04)", border: "1px solid rgba(5,150,105,0.12)",
           display: "flex", alignItems: "center", gap: 8,
         }}>

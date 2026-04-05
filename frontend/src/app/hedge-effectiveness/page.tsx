@@ -1500,6 +1500,65 @@ function OverviewTab({
           </div>
         );
       })()}
+
+      {/* ── 21.3 Assessment Cadence Insight ── */}
+      {(() => {
+        // For each dataset compute avg days between consecutive runs
+        const cadenceRows = datasets.map((ds) => {
+          const dsRuns = runs
+            .filter((r) => r.dataset_id === ds.id && r.created_at)
+            .map((r) => r.created_at!)
+            .sort();
+          const lastDate = dsRuns.length > 0 ? dsRuns[dsRuns.length - 1] : null;
+          if (dsRuns.length < 2) return { ds, avgDays: null, lastDate, runCount: dsRuns.length };
+          let totalMs = 0;
+          for (let i = 1; i < dsRuns.length; i++) {
+            totalMs += new Date(dsRuns[i]).getTime() - new Date(dsRuns[i - 1]).getTime();
+          }
+          const avgDays = Math.round(totalMs / (dsRuns.length - 1) / 86400000);
+          return { ds, avgDays, lastDate, runCount: dsRuns.length };
+        });
+        const withCadence = cadenceRows.filter((r) => r.runCount > 0);
+        if (withCadence.length === 0) return null;
+        return (
+          <div style={{ background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 4, padding: 16, marginTop: 16 }}>
+            <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.text3, textTransform: "uppercase", marginBottom: 12 }}>
+              Assessment Cadence
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "0 16px" }}>
+              {/* Header */}
+              {(["Dataset", "Runs", "Avg Interval", "Last Assessed"] as const).map((h) => (
+                <div key={h} style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: S.text3, textTransform: "uppercase", paddingBottom: 6, borderBottom: `1px solid ${S.rim}`, marginBottom: 4 }}>{h}</div>
+              ))}
+              {/* Rows */}
+              {withCadence.map(({ ds, avgDays, lastDate, runCount }) => {
+                const staleDays = lastDate ? Math.floor((Date.now() - new Date(lastDate).getTime()) / 86400000) : null;
+                const isStale = staleDays != null && staleDays > 90;
+                return (
+                  <>
+                    <div key={`${ds.id}-name`} style={{ fontFamily: S.ui, fontSize: 12, color: S.text1, padding: "3px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ds.name}</div>
+                    <div key={`${ds.id}-count`} style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, padding: "3px 0", textAlign: "right" }}>{runCount}</div>
+                    <div key={`${ds.id}-avg`} style={{ fontFamily: S.mono, fontSize: 12, padding: "3px 0", textAlign: "right", color: avgDays == null ? S.text3 : avgDays <= 7 ? HEX.green : avgDays <= 30 ? HEX.amber : HEX.red }}>
+                      {avgDays == null ? "—" : `${avgDays}d`}
+                    </div>
+                    <div key={`${ds.id}-last`} style={{ fontFamily: S.mono, fontSize: 12, padding: "3px 0", textAlign: "right", color: isStale ? HEX.red : S.text2 }}>
+                      {lastDate ? lastDate.slice(0, 10) : "—"}{isStale && <span style={{ marginLeft: 4, fontSize: 10, color: HEX.red }}>STALE</span>}
+                    </div>
+                  </>
+                );
+              })}
+            </div>
+            <div style={{ marginTop: 10, display: "flex", gap: 16 }}>
+              {([["≤7d", HEX.green, "Frequent"], ["≤30d", HEX.amber, "Regular"], [">30d", HEX.red, "Infrequent"]] as const).map(([label, color, desc]) => (
+                <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color, padding: "1px 6px", borderRadius: 2, background: color + "22", border: `1px solid ${color}55` }}>{label}</span>
+                  <span style={{ fontFamily: S.ui, fontSize: 11, color: S.text3 }}>{desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -2187,6 +2246,7 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 25;
+  const [groupByDataset, setGroupByDataset] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(STARRED_KEY, JSON.stringify([...starredIds]));
@@ -2358,6 +2418,25 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
           STARRED{starredIds.size > 0 ? ` (${starredIds.size})` : ""}
         </button>
         <div style={{ flex: 1 }} />
+        <button
+          onClick={() => setGroupByDataset((v) => !v)}
+          style={{
+            fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+            padding: "5px 12px", borderRadius: 3, cursor: "pointer",
+            background: groupByDataset ? S.sub : "transparent",
+            color: groupByDataset ? S.text1 : S.text3,
+            border: `1px solid ${groupByDataset ? S.rim : "transparent"}`,
+            display: "flex", alignItems: "center", gap: 5,
+            transition: "all 0.15s",
+          }}
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="7" height="4" rx="1"/><rect x="3" y="10" width="7" height="4" rx="1"/>
+            <rect x="3" y="17" width="7" height="4" rx="1"/><line x1="14" y1="5" x2="21" y2="5"/>
+            <line x1="14" y1="12" x2="21" y2="12"/><line x1="14" y1="19" x2="21" y2="19"/>
+          </svg>
+          GROUP
+        </button>
         <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
           {filteredRuns.length} OF {runs.length} RUNS
         </span>
@@ -2462,7 +2541,77 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
             Clear Filters
           </button>
         </div>
-      ) : displayRuns.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE).map((r) => (
+      ) : groupByDataset ? (() => {
+        // Group filtered+sorted runs by dataset
+        const groups: { dsId: string; dsName: string; pair: string | null; runs: Run[] }[] = [];
+        const seen = new Set<string>();
+        for (const r of displayRuns) {
+          if (!seen.has(r.dataset_id)) {
+            seen.add(r.dataset_id);
+            groups.push({ dsId: r.dataset_id, dsName: r.dataset_name, pair: r.currency_pair, runs: [] });
+          }
+          groups[groups.findIndex((g) => g.dsId === r.dataset_id)].runs.push(r);
+        }
+        return groups.map((g) => {
+          const passCount = g.runs.filter((r) => r.overall_effective).length;
+          const pct = Math.round((passCount / g.runs.length) * 100);
+          return (
+            <div key={g.dsId} style={{ borderRadius: 4, border: `1px solid ${S.rim}`, overflow: "hidden" }}>
+              {/* Dataset header */}
+              <div style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "10px 20px",
+                background: S.sub, borderBottom: `1px solid ${S.rim}`,
+              }}>
+                <span style={{ fontFamily: S.ui, fontSize: 13, fontWeight: 700, color: S.text1 }}>{g.dsName}</span>
+                {g.pair && <span style={{ fontFamily: S.mono, fontSize: 12, color: HEX.cyan }}>{g.pair}</span>}
+                <div style={{ flex: 1 }} />
+                <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>{g.runs.length} {g.runs.length === 1 ? "run" : "runs"}</span>
+                <span style={{
+                  fontFamily: S.mono, fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 2,
+                  background: pct >= 80 ? HEX.greenBg : pct >= 60 ? "rgba(217,119,6,0.08)" : HEX.redBg,
+                  color: pct >= 80 ? HEX.green : pct >= 60 ? HEX.amber : HEX.red,
+                  border: `1px solid ${pct >= 80 ? HEX.greenBorder : pct >= 60 ? "rgba(217,119,6,0.25)" : HEX.redBorder}`,
+                }}>{pct}% PASS</span>
+              </div>
+              {/* Compact run rows */}
+              {g.runs.map((r) => (
+                <div key={r.run_id} onClick={() => onNavigateRun(r.run_id)} style={{
+                  display: "grid", gridTemplateColumns: "28px auto 90px 100px 80px 100px 1fr",
+                  gap: 8, padding: "9px 20px", alignItems: "center",
+                  background: selectedIds.has(r.run_id) ? "rgba(28,98,242,0.04)" : S.panel,
+                  borderBottom: `1px solid ${S.rim}`,
+                  cursor: "pointer", transition: "background 0.1s",
+                  position: "relative",
+                }}
+                  onMouseEnter={(e) => { if (!selectedIds.has(r.run_id)) e.currentTarget.style.background = HEX.bgSub; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = selectedIds.has(r.run_id) ? "rgba(28,98,242,0.04)" : "var(--bg-panel)"; }}
+                >
+                  <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, borderRadius: "0", background: r.overall_effective ? HEX.green : HEX.red }} />
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    <input type="checkbox" checked={selectedIds.has(r.run_id)} onChange={() => {}} onClick={(e) => toggleSelect(r.run_id, e)} style={{ cursor: "pointer", accentColor: HEX.cyan, width: 13, height: 13 }} />
+                  </div>
+                  <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>{r.run_id.slice(0, 8)}…</span>
+                  <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2 }}>{r.standard.replace("_", " ")}</span>
+                  <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: r.dollar_offset_ratio != null && r.dollar_offset_ratio >= 0.80 && r.dollar_offset_ratio <= 1.25 ? HEX.green : S.text2 }}>
+                    {r.dollar_offset_ratio != null ? r.dollar_offset_ratio.toFixed(4) : "—"}
+                  </span>
+                  <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: r.regression_r_squared != null && r.regression_r_squared >= 0.80 ? HEX.green : S.text2 }}>
+                    {r.regression_r_squared != null ? r.regression_r_squared.toFixed(4) : "—"}
+                  </span>
+                  <span style={{ display: "flex", alignItems: "center" }}>
+                    <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 800, padding: "2px 7px", borderRadius: 2, background: r.overall_effective ? HEX.greenBg : HEX.redBg, color: r.overall_effective ? HEX.green : HEX.red, border: `1px solid ${r.overall_effective ? HEX.greenBorder : HEX.redBorder}` }}>
+                      {r.overall_effective ? "EFFECTIVE" : "INEFFECTIVE"}
+                    </span>
+                  </span>
+                  <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, textAlign: "right" }}>
+                    {r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          );
+        });
+      })() : displayRuns.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE).map((r) => (
         <div
           key={r.run_id}
           onClick={() => onNavigateRun(r.run_id)}
