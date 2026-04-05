@@ -1501,6 +1501,56 @@ function OverviewTab({
         );
       })()}
 
+      {/* ── 22.3 Worst Performers ── */}
+      {(() => {
+        // Compute pass rate per dataset (min 3 runs)
+        const dsMap = new Map<string, { name: string; total: number; pass: number; lastDate: string | null; lastVerdict: boolean }>();
+        for (const r of runs) {
+          const entry = dsMap.get(r.dataset_id) ?? { name: r.dataset_name, total: 0, pass: 0, lastDate: null, lastVerdict: false };
+          entry.total++;
+          if (r.overall_effective) entry.pass++;
+          if (!entry.lastDate || (r.created_at && r.created_at > entry.lastDate)) {
+            entry.lastDate = r.created_at ?? null;
+            entry.lastVerdict = r.overall_effective;
+          }
+          dsMap.set(r.dataset_id, entry);
+        }
+        const worst = [...dsMap.entries()]
+          .filter(([, v]) => v.total >= 3)
+          .map(([id, v]) => ({ id, ...v, rate: Math.round((v.pass / v.total) * 100) }))
+          .sort((a, b) => a.rate - b.rate)
+          .slice(0, 3);
+        if (worst.length === 0) return null;
+        return (
+          <div style={{ background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 4, padding: 16, marginTop: 16 }}>
+            <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.text3, textTransform: "uppercase", marginBottom: 12 }}>
+              Worst Performers
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {worst.map((w, i) => (
+                <div key={w.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", borderRadius: 3, background: S.sub, border: `1px solid ${S.rim}` }}>
+                  <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 800, color: S.text3, minWidth: 18 }}>#{i + 1}</span>
+                  <span style={{ fontFamily: S.ui, fontSize: 12, fontWeight: 600, color: S.text1, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.name}</span>
+                  <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>{w.total} runs</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 120 }}>
+                    <div style={{ flex: 1, height: 4, borderRadius: 2, background: S.rim, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${w.rate}%`, borderRadius: 2, background: w.rate >= 80 ? HEX.green : w.rate >= 60 ? HEX.amber : HEX.red }} />
+                    </div>
+                    <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: w.rate >= 80 ? HEX.green : w.rate >= 60 ? HEX.amber : HEX.red, minWidth: 32, textAlign: "right" }}>{w.rate}%</span>
+                  </div>
+                  <span style={{
+                    fontFamily: S.mono, fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 2,
+                    background: w.lastVerdict ? HEX.greenBg : HEX.redBg,
+                    color: w.lastVerdict ? HEX.green : HEX.red,
+                    border: `1px solid ${w.lastVerdict ? HEX.greenBorder : HEX.redBorder}`,
+                  }}>{w.lastVerdict ? "EFF" : "INEFF"}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── 21.3 Assessment Cadence Insight ── */}
       {(() => {
         // For each dataset compute avg days between consecutive runs
@@ -2244,6 +2294,9 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
   const [compareOpen, setCompareOpen] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [doMin, setDoMin] = useState("");
+  const [doMax, setDoMax] = useState("");
+  const [density, setDensity] = useState<"compact" | "normal">("normal");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 25;
   const [groupByDataset, setGroupByDataset] = useState(false);
@@ -2253,7 +2306,7 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
   }, [starredIds]);
 
   // Reset page whenever any filter changes
-  useEffect(() => { setPage(1); }, [search, stdFilter, verdictFilter, showStarredOnly, dateFrom, dateTo]);
+  useEffect(() => { setPage(1); }, [search, stdFilter, verdictFilter, showStarredOnly, dateFrom, dateTo, doMin, doMax]);
 
   const toggleStar = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -2297,6 +2350,11 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
     .filter((r) => {
       const q = search.toLowerCase();
       return !q || r.dataset_name.toLowerCase().includes(q) || (r.currency_pair?.toLowerCase().includes(q) ?? false);
+    })
+    .filter((r) => {
+      if (doMin !== "" && (r.dollar_offset_ratio == null || r.dollar_offset_ratio < parseFloat(doMin))) return false;
+      if (doMax !== "" && (r.dollar_offset_ratio == null || r.dollar_offset_ratio > parseFloat(doMax))) return false;
+      return true;
     });
 
   const totalPages = Math.max(1, Math.ceil(filteredRuns.length / PAGE_SIZE));
@@ -2387,6 +2445,18 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
             style={{ ...inputBase, cursor: "pointer", width: 130 }}
           />
         </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>D.O.</span>
+          <input
+            type="number" placeholder="min" value={doMin} onChange={(e) => setDoMin(e.target.value)}
+            style={{ ...inputBase, width: 60 }} step="0.01"
+          />
+          <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>–</span>
+          <input
+            type="number" placeholder="max" value={doMax} onChange={(e) => setDoMax(e.target.value)}
+            style={{ ...inputBase, width: 60 }} step="0.01"
+          />
+        </div>
         {(["ALL", "EFFECTIVE", "INEFFECTIVE"] as const).map((v) => (
           <button
             key={v} onClick={() => setVerdictFilter(v)}
@@ -2418,6 +2488,33 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
           STARRED{starredIds.size > 0 ? ` (${starredIds.size})` : ""}
         </button>
         <div style={{ flex: 1 }} />
+        <button
+          onClick={() => setDensity((d) => d === "normal" ? "compact" : "normal")}
+          title={density === "normal" ? "Switch to compact view" : "Switch to normal view"}
+          style={{
+            fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+            padding: "5px 10px", borderRadius: 3, cursor: "pointer",
+            background: density === "compact" ? S.sub : "transparent",
+            color: density === "compact" ? S.text1 : S.text3,
+            border: `1px solid ${density === "compact" ? S.rim : "transparent"}`,
+            display: "flex", alignItems: "center", gap: 4,
+            transition: "all 0.15s",
+          }}
+        >
+          {density === "normal" ? (
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          ) : (
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="3" y1="4" x2="21" y2="4"/><line x1="3" y1="8" x2="21" y2="8"/>
+              <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="16" x2="21" y2="16"/>
+              <line x1="3" y1="20" x2="21" y2="20"/>
+            </svg>
+          )}
+          {density === "normal" ? "COMPACT" : "NORMAL"}
+        </button>
         <button
           onClick={() => setGroupByDataset((v) => !v)}
           style={{
@@ -2532,7 +2629,7 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
         <div style={{ padding: "32px 20px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
           <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>No runs match the current filters.</div>
           <button
-            onClick={() => { setSearch(""); setStdFilter("ALL"); setVerdictFilter("ALL"); setShowStarredOnly(false); setDateFrom(""); setDateTo(""); }}
+            onClick={() => { setSearch(""); setStdFilter("ALL"); setVerdictFilter("ALL"); setShowStarredOnly(false); setDateFrom(""); setDateTo(""); setDoMin(""); setDoMax(""); }}
             style={{
               fontFamily: S.mono, fontSize: 11, padding: "5px 14px", borderRadius: 3, cursor: "pointer",
               background: "transparent", color: HEX.cyan, border: `1px solid rgba(28,98,242,0.25)`,
@@ -2617,7 +2714,7 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
           onClick={() => onNavigateRun(r.run_id)}
           style={{
             display: "grid", gridTemplateColumns: "28px 2fr 90px 100px 80px 100px 120px 90px",
-            gap: 8, padding: "12px 20px", borderRadius: 4,
+            gap: 8, padding: `${density === "compact" ? 6 : 12}px 20px`, borderRadius: 4,
             background: selectedIds.has(r.run_id) ? "rgba(28,98,242,0.04)" : S.panel,
             border: `1px solid ${selectedIds.has(r.run_id) ? HEX.cyan + "40" : S.rim}`,
             cursor: "pointer", transition: "all 0.15s",
