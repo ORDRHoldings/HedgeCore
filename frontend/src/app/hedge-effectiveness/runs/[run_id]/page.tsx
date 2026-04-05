@@ -163,6 +163,7 @@ export default function HedgeEffectivenessRunPage() {
   const [activeSection, setActiveSection] = useState<"results" | "periods" | "trace" | "compliance">("results");
   const [downloading, setDownloading] = useState<"ifrs9" | "asc815" | null>(null);
   const [allRunIds, setAllRunIds] = useState<string[]>([]);
+  const [allRuns, setAllRuns] = useState<Array<{ run_id: string; dataset_id: string; dataset_name: string; standard: string; overall_effective: boolean; dollar_offset_ratio: number | null; created_at: string | null }>>([]);
   const [copied, setCopied] = useState(false);
   const [reRunning, setReRunning] = useState(false);
 
@@ -226,9 +227,10 @@ export default function HedgeEffectivenessRunPage() {
       if (res.ok) setRun(await res.json());
       if (listRes.ok) {
         const list = await listRes.json();
-        const sorted: Array<{ run_id: string; created_at: string | null }> = Array.isArray(list) ? list : [];
+        const sorted = (Array.isArray(list) ? list : []) as typeof allRuns;
         sorted.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
         setAllRunIds(sorted.map((r) => r.run_id));
+        setAllRuns(sorted);
       }
     } catch {
       // silent
@@ -650,7 +652,7 @@ export default function HedgeEffectivenessRunPage() {
 
       {/* ── Content ────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflow: "auto", padding: 24 }}>
-        {activeSection === "results" && <ResultsSection run={run} narrative={narrative} periods={periods} />}
+        {activeSection === "results" && <ResultsSection run={run} narrative={narrative} periods={periods} siblingRuns={allRuns.filter((r) => r.dataset_id === run.dataset_id && r.run_id !== run.run_id)} onNavigate={(id) => router.push(`/hedge-effectiveness/runs/${id}`)} />}
         {activeSection === "periods" && <PeriodsSection periods={periods} />}
         {activeSection === "compliance" && <ComplianceSection compliance={compliance} run={run} />}
         {activeSection === "trace" && <TraceSection traces={traces} run={run} />}
@@ -663,7 +665,11 @@ export default function HedgeEffectivenessRunPage() {
 // RESULTS SECTION — Charts + Analysis
 // ═════════════════════════════════════════════════════════════════════════════
 
-function ResultsSection({ run, narrative, periods }: { run: RunDetail; narrative: string; periods: PeriodData[] }) {
+function ResultsSection({ run, narrative, periods, siblingRuns, onNavigate }: {
+  run: RunDetail; narrative: string; periods: PeriodData[];
+  siblingRuns: Array<{ run_id: string; standard: string; overall_effective: boolean; dollar_offset_ratio: number | null; created_at: string | null }>;
+  onNavigate: (id: string) => void;
+}) {
   return (
     <div style={{ maxWidth: 1200 }}>
       {/* Narrative */}
@@ -800,6 +806,58 @@ function ResultsSection({ run, narrative, periods }: { run: RunDetail; narrative
             </div>
           </div>
           <PeriodBarChart periods={periods} />
+        </div>
+      )}
+
+      {/* Other runs on this dataset */}
+      {siblingRuns.length > 0 && (
+        <div style={{ marginTop: 20, padding: "16px 20px", borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}` }}>
+          <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
+            OTHER RUNS ON THIS DATASET ({siblingRuns.length})
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            {siblingRuns.slice(0, 8).map((r) => (
+              <div
+                key={r.run_id}
+                onClick={() => onNavigate(r.run_id)}
+                style={{
+                  display: "grid", gridTemplateColumns: "auto 80px 100px 80px 1fr",
+                  gap: 10, alignItems: "center",
+                  padding: "7px 12px", borderRadius: 3,
+                  background: S.sub, border: `1px solid ${S.rim}`,
+                  cursor: "pointer", transition: "border-color 0.12s",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = HEX.cyan + "40"}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = HEX.border}
+              >
+                <div style={{
+                  width: 7, height: 7, borderRadius: "50%", flexShrink: 0,
+                  background: r.overall_effective ? HEX.green : HEX.red,
+                }} />
+                <span style={{
+                  fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+                  color: r.overall_effective ? HEX.green : HEX.red,
+                }}>
+                  {r.overall_effective ? "EFFECTIVE" : "INEFFECTIVE"}
+                </span>
+                <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text2 }}>{r.standard.replace("_", " ")}</span>
+                <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
+                  {r.dollar_offset_ratio != null ? r.dollar_offset_ratio.toFixed(4) : "—"}
+                </span>
+                <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, textAlign: "right" }}>
+                  {r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={HEX.text3} strokeWidth="2" style={{ marginLeft: 6, verticalAlign: "middle" }}>
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </span>
+              </div>
+            ))}
+            {siblingRuns.length > 8 && (
+              <div style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, padding: "4px 12px" }}>
+                +{siblingRuns.length - 8} more runs — view all in ASSESSMENT RUNS tab
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -517,8 +517,50 @@ function OverviewTab({
   onSwitchTab: (t: Tab) => void;
 }) {
   const lastRun = runs[0];
+
+  // KPI calculations
+  const totalRuns = runs.length;
+  const totalDatasets = datasets.length;
+  const effectiveRuns = runs.filter((r) => r.overall_effective).length;
+  const effectiveRate = totalRuns > 0 ? Math.round((effectiveRuns / totalRuns) * 100) : null;
+  const doRatios = runs.map((r) => r.dollar_offset_ratio).filter((v): v is number => v != null);
+  const avgDo = doRatios.length > 0 ? doRatios.reduce((s, v) => s + v, 0) / doRatios.length : null;
+
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, maxWidth: 1100 }}>
+      {/* KPI tiles */}
+      {totalRuns > 0 && (
+        <div style={{
+          gridColumn: "1 / -1",
+          display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12,
+        }}>
+          {([
+            { label: "TOTAL ASSESSMENTS", value: totalRuns.toString(), sub: `${effectiveRuns} effective`, color: HEX.cyan },
+            { label: "DATASETS", value: totalDatasets.toString(), sub: totalDatasets === 0 ? "none created" : `${totalDatasets} configured`, color: HEX.text2 },
+            { label: "PASS RATE", value: effectiveRate != null ? `${effectiveRate}%` : "—", sub: `${effectiveRuns} of ${totalRuns}`, color: effectiveRate == null ? HEX.text2 : effectiveRate >= 80 ? HEX.green : effectiveRate >= 60 ? HEX.amber : HEX.red },
+            { label: "AVG D.O. RATIO", value: avgDo != null ? avgDo.toFixed(3) : "—", sub: avgDo != null && avgDo >= 0.80 && avgDo <= 1.25 ? "within band" : avgDo != null ? "outside band" : "no data", color: avgDo != null && avgDo >= 0.80 && avgDo <= 1.25 ? HEX.green : HEX.text2 },
+          ] as const).map((kpi) => (
+            <div key={kpi.label} style={{
+              padding: "16px 18px", borderRadius: 6,
+              background: S.panel, border: `1px solid ${S.rim}`,
+              position: "relative", overflow: "hidden",
+            }}>
+              <div style={{
+                position: "absolute", top: 0, left: 0, width: "100%", height: 2,
+                background: kpi.color, opacity: 0.6,
+              }} />
+              <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 6 }}>
+                {kpi.label}
+              </div>
+              <div style={{ fontFamily: S.mono, fontSize: 26, fontWeight: 800, color: kpi.color, lineHeight: 1, marginBottom: 4 }}>
+                {kpi.value}
+              </div>
+              <div style={{ fontFamily: S.ui, fontSize: 11, color: S.text3 }}>{kpi.sub}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Quick start card */}
       <div style={{
         gridColumn: "1 / -1", padding: 28, borderRadius: 6,
@@ -1411,6 +1453,21 @@ function OverviewTab({
 // DATASETS TAB
 // ═════════════════════════════════════════════════════════════════════════════
 
+function HighlightMatch({ text, query }: { text: string; query: string }) {
+  if (!query.trim()) return <>{text}</>;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark style={{ background: "rgba(28,98,242,0.18)", color: "inherit", borderRadius: 2, padding: "0 1px" }}>
+        {text.slice(idx, idx + query.length)}
+      </mark>
+      {text.slice(idx + query.length)}
+    </>
+  );
+}
+
 function DatasetsTab({
   datasets, runs, standard, onRunAssessment, onNavigateRun, submitting,
 }: {
@@ -1553,7 +1610,7 @@ function DatasetsTab({
                   <path d="M9 18l6-6-6-6"/>
                 </svg>
                 <div style={{ fontFamily: S.ui, fontSize: 13, fontWeight: 600, color: S.text1 }}>
-                  {ds.name}
+                  <HighlightMatch text={ds.name} query={dsSearch} />
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, paddingLeft: 16 }}>
