@@ -1013,6 +1013,54 @@ function OverviewTab({
           </>
         );
       })()}
+
+      {/* Portfolio statistics */}
+      {runs.length >= 2 && (() => {
+        const ratios = runs.map((r) => r.dollar_offset_ratio).filter((v): v is number => v != null);
+        if (ratios.length === 0) return null;
+        const mean = ratios.reduce((s, v) => s + v, 0) / ratios.length;
+        const variance = ratios.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / ratios.length;
+        const stdDev = Math.sqrt(variance);
+
+        // Best/worst dataset by pass rate (among datasets with ≥1 run)
+        const dsIds = Array.from(new Set(runs.map((r) => r.dataset_id)));
+        const dsByPassRate = dsIds
+          .map((id) => {
+            const dsRuns = runs.filter((r) => r.dataset_id === id);
+            return {
+              name: dsRuns[0].dataset_name,
+              pair: dsRuns[0].currency_pair,
+              pct: dsRuns.filter((r) => r.overall_effective).length / dsRuns.length,
+              count: dsRuns.length,
+            };
+          })
+          .filter((d) => d.count >= 1);
+        const best = [...dsByPassRate].sort((a, b) => b.pct - a.pct)[0];
+        const worst = [...dsByPassRate].sort((a, b) => a.pct - b.pct)[0];
+
+        const statCard = (label: string, value: string, sub: string, color: string) => (
+          <div style={{ flex: "1 1 160px", padding: "12px 16px", borderRadius: 4, background: S.sub, border: `1px solid ${S.rim}` }}>
+            <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text3, letterSpacing: "0.12em", marginBottom: 6 }}>{label}</div>
+            <div style={{ fontFamily: S.mono, fontSize: 18, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
+            <div style={{ fontFamily: S.ui, fontSize: 11, color: S.text3, marginTop: 4 }}>{sub}</div>
+          </div>
+        );
+
+        return (
+          <div style={{ gridColumn: "1 / -1", padding: "16px 20px", borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}` }}>
+            <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 12 }}>
+              PORTFOLIO STATISTICS
+            </div>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              {statCard("MEAN D.O. RATIO", mean.toFixed(4), `${ratios.length} runs with ratio`, mean >= 0.80 && mean <= 1.25 ? HEX.green : HEX.amber)}
+              {statCard("STD DEVIATION", stdDev.toFixed(4), "ratio dispersion", HEX.text2)}
+              {statCard("RANGE", `${Math.min(...ratios).toFixed(4)} – ${Math.max(...ratios).toFixed(4)}`, "min – max D.O. ratio", HEX.text2)}
+              {best && best !== worst && statCard("TOP DATASET", `${best.pct === 1 ? "100" : Math.round(best.pct * 100)}%`, `${best.name}${best.pair ? ` (${best.pair})` : ""}`, HEX.green)}
+              {worst && best !== worst && worst.pct < 1 && statCard("NEEDS REVIEW", `${Math.round(worst.pct * 100)}%`, `${worst.name}${worst.pair ? ` (${worst.pair})` : ""}`, HEX.red)}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -1383,11 +1431,45 @@ function UploadTab({
             </svg>
             UPLOAD CSV FILE
           </div>
-          <p style={{ fontFamily: S.ui, fontSize: 12, color: S.text3, margin: "0 0 16px", lineHeight: 1.6 }}>
-            CSV must contain columns: <code style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, background: S.sub, padding: "1px 4px", borderRadius: 2 }}>hedged_item_fv_change</code>,{" "}
-            <code style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, background: S.sub, padding: "1px 4px", borderRadius: 2 }}>instrument_fv_change</code>.
-            Optional: <code style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, background: S.sub, padding: "1px 4px", borderRadius: 2 }}>period_date</code>.
-          </p>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 16 }}>
+            <p style={{ fontFamily: S.ui, fontSize: 12, color: S.text3, margin: 0, lineHeight: 1.6 }}>
+              CSV must contain columns: <code style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, background: S.sub, padding: "1px 4px", borderRadius: 2 }}>hedged_item_fv_change</code>,{" "}
+              <code style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, background: S.sub, padding: "1px 4px", borderRadius: 2 }}>instrument_fv_change</code>.
+              Optional: <code style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, background: S.sub, padding: "1px 4px", borderRadius: 2 }}>period_date</code>.
+            </p>
+            <button
+              onClick={() => {
+                const template = [
+                  "period_date,hedged_item_fv_change,instrument_fv_change",
+                  "2025-01-31,-15000,14800",
+                  "2025-02-28,-12000,11900",
+                  "2025-03-31,-8500,8200",
+                  "2025-04-30,-10200,9900",
+                  "2025-05-31,-13400,13100",
+                ].join("\n");
+                const url = URL.createObjectURL(new Blob([template], { type: "text/csv" }));
+                const a = document.createElement("a");
+                a.href = url; a.download = "hedge-effectiveness-template.csv";
+                document.body.appendChild(a); a.click(); a.remove();
+                URL.revokeObjectURL(url);
+              }}
+              style={{
+                fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+                padding: "5px 12px", borderRadius: 3, cursor: "pointer", flexShrink: 0,
+                background: "transparent", color: HEX.cyan,
+                border: `1px solid rgba(28,98,242,0.25)`,
+                display: "flex", alignItems: "center", gap: 5,
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(28,98,242,0.04)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+              DOWNLOAD TEMPLATE
+            </button>
+          </div>
 
           {/* Drop zone */}
           <div style={{

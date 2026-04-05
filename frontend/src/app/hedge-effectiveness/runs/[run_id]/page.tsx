@@ -1612,19 +1612,52 @@ function ComplianceSection({ compliance, run }: { compliance: string[]; run: Run
 // TRACE SECTION — Step-by-step audit trail
 // ═════════════════════════════════════════════════════════════════════════════
 
+type TraceEvent = { step: string; description: string; data: Record<string, unknown> };
+type TracePhase = "VALIDATION" | "COMPUTATION" | "INTEGRITY" | "RESULT";
+
 function TraceSection({
   traces,
   run,
 }: {
-  traces: Array<{ step: string; description: string; data: Record<string, unknown> }>;
+  traces: TraceEvent[];
   run: RunDetail;
 }) {
-  const stepColor = (step: string): string => {
-    if (step === "DETERMINATION") return run.overall_effective ? HEX.green : HEX.red;
-    if (step.includes("HASH")) return HEX.cyan;
-    if (step === "VALIDATE_INPUTS") return HEX.amber;
-    return HEX.border;
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  const getPhase = (step: string): TracePhase => {
+    if (step.includes("VALIDATE") || step.includes("INPUT")) return "VALIDATION";
+    if (step.includes("HASH") || step.includes("SEAL") || step.includes("INTEGRITY")) return "INTEGRITY";
+    if (step === "DETERMINATION" || step === "VERDICT") return "RESULT";
+    return "COMPUTATION";
   };
+
+  const phaseColor: Record<TracePhase, string> = {
+    VALIDATION: HEX.amber,
+    COMPUTATION: HEX.cyan,
+    INTEGRITY: "#7C3AED",
+    RESULT: run.overall_effective ? HEX.green : HEX.red,
+  };
+
+  const stepColor = (step: string): string => {
+    if (step === "DETERMINATION" || step === "VERDICT") return run.overall_effective ? HEX.green : HEX.red;
+    if (step.includes("HASH") || step.includes("SEAL") || step.includes("INTEGRITY")) return "#7C3AED";
+    if (step.includes("VALIDATE") || step.includes("INPUT")) return HEX.amber;
+    return HEX.cyan;
+  };
+
+  // Group steps into phases preserving order
+  const phases: Array<{ phase: TracePhase; steps: Array<{ event: TraceEvent; globalIdx: number }> }> = [];
+  traces.forEach((event, globalIdx) => {
+    const phase = getPhase(event.step);
+    const last = phases[phases.length - 1];
+    if (last && last.phase === phase) {
+      last.steps.push({ event, globalIdx });
+    } else {
+      phases.push({ phase, steps: [{ event, globalIdx }] });
+    }
+  });
+
+  const togglePhase = (key: string) => setCollapsed((c) => ({ ...c, [key]: !c[key] }));
 
   return (
     <div style={{ maxWidth: 900 }}>
@@ -1636,71 +1669,92 @@ function TraceSection({
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={HEX.cyan} strokeWidth="2" strokeLinecap="round">
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
         </svg>
-        EXECUTION TRACE ({traces.length} steps)
+        EXECUTION TRACE ({traces.length} steps · {phases.length} phases)
       </div>
 
-      <div style={{ position: "relative" }}>
-        {/* Vertical timeline line */}
-        <div style={{
-          position: "absolute", left: 15, top: 0, bottom: 0,
-          width: 1, background: S.rim,
-        }} />
-
-        {traces.map((t, i) => {
-          const color = stepColor(t.step);
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {phases.map((group, gi) => {
+          const key = `${gi}-${group.phase}`;
+          const isOpen = !collapsed[key];
+          const color = phaseColor[group.phase];
           return (
-            <div key={i} style={{
-              display: "flex", gap: 16, marginBottom: 12, position: "relative",
-            }}>
-              {/* Timeline dot */}
-              <div style={{
-                width: 10, height: 10, borderRadius: "50%",
-                background: color, border: "2px solid #fff",
-                flexShrink: 0, marginTop: 6, zIndex: 1,
-                boxShadow: `0 0 0 2px ${color}30`,
-              }} />
+            <div key={key} style={{ borderRadius: 4, border: `1px solid ${S.rim}`, overflow: "hidden" }}>
+              {/* Phase header */}
+              <button
+                onClick={() => togglePhase(key)}
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", gap: 10,
+                  padding: "10px 14px", background: S.sub, border: "none", cursor: "pointer",
+                  borderLeft: `3px solid ${color}`, textAlign: "left",
+                  transition: "background 0.1s",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-panel)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "var(--bg-sub)"}
+              >
+                <span style={{
+                  fontFamily: S.mono, fontSize: 11, fontWeight: 800, letterSpacing: "0.14em",
+                  color, padding: "1px 6px", borderRadius: 2,
+                  background: `${color}12`, border: `1px solid ${color}30`,
+                }}>
+                  {group.phase}
+                </span>
+                <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
+                  {group.steps.length} {group.steps.length === 1 ? "step" : "steps"}
+                </span>
+                <div style={{ flex: 1 }} />
+                <svg
+                  width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={HEX.text3} strokeWidth="2"
+                  style={{ transform: isOpen ? "rotate(90deg)" : "rotate(0)", transition: "transform 0.15s" }}
+                >
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </button>
 
-              {/* Card */}
-              <div style={{
-                flex: 1, padding: "12px 16px", borderRadius: 4,
-                background: S.panel, border: `1px solid ${S.rim}`,
-                borderLeft: `3px solid ${color}`,
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <span style={{
-                    fontFamily: S.mono, fontSize: 12, fontWeight: 800, letterSpacing: "0.12em",
-                    padding: "1px 8px", borderRadius: 2, background: S.sub, color: S.text3,
-                  }}>
-                    STEP {i + 1}
-                  </span>
-                  <span style={{
-                    fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: color,
-                  }}>
-                    {t.step}
-                  </span>
+              {/* Steps */}
+              {isOpen && (
+                <div style={{ padding: "10px 14px 10px 14px", display: "flex", flexDirection: "column", gap: 8, background: S.panel }}>
+                  {group.steps.map(({ event: t, globalIdx: i }) => {
+                    const color = stepColor(t.step);
+                    return (
+                      <div key={i} style={{
+                        padding: "10px 14px", borderRadius: 3,
+                        background: S.sub, border: `1px solid ${S.rim}`,
+                        borderLeft: `3px solid ${color}`,
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span style={{
+                            fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+                            padding: "1px 6px", borderRadius: 2, background: S.panel, color: S.text3,
+                          }}>
+                            {i + 1}
+                          </span>
+                          <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color }}>
+                            {t.step}
+                          </span>
+                        </div>
+                        <div style={{ fontFamily: S.ui, fontSize: 12, color: S.text1, lineHeight: 1.5, marginBottom: t.data && Object.keys(t.data).length > 0 ? 6 : 0 }}>
+                          {t.description}
+                        </div>
+                        {Object.keys(t.data).length > 0 && (
+                          <details>
+                            <summary style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, cursor: "pointer", padding: "2px 0", userSelect: "none" }}>
+                              DATA PAYLOAD
+                            </summary>
+                            <pre style={{
+                              fontFamily: S.mono, fontSize: 11, color: S.text3, margin: "4px 0 0",
+                              whiteSpace: "pre-wrap", wordBreak: "break-all",
+                              background: S.panel, padding: 10, borderRadius: 3,
+                              maxHeight: 200, overflow: "auto",
+                            }}>
+                              {JSON.stringify(t.data, null, 2)}
+                            </pre>
+                          </details>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                <div style={{ fontFamily: S.ui, fontSize: 12, color: S.text1, lineHeight: 1.5, marginBottom: t.data && Object.keys(t.data).length > 0 ? 8 : 0 }}>
-                  {t.description}
-                </div>
-                {Object.keys(t.data).length > 0 && (
-                  <details>
-                    <summary style={{
-                      fontFamily: S.mono, fontSize: 12, color: S.text3, cursor: "pointer",
-                      padding: "4px 0", userSelect: "none",
-                    }}>
-                      DATA PAYLOAD
-                    </summary>
-                    <pre style={{
-                      fontFamily: S.mono, fontSize: 12, color: S.text3, margin: "4px 0 0",
-                      whiteSpace: "pre-wrap", wordBreak: "break-all",
-                      background: S.sub, padding: 10, borderRadius: 3,
-                      maxHeight: 200, overflow: "auto",
-                    }}>
-                      {JSON.stringify(t.data, null, 2)}
-                    </pre>
-                  </details>
-                )}
-              </div>
+              )}
             </div>
           );
         })}
