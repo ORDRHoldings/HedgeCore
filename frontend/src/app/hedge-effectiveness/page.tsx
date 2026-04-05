@@ -14,6 +14,9 @@ import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
+import dynamic from "next/dynamic";
+
+const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
 
 // ── Design tokens ──────────────────────────────────────────────────────────
@@ -364,19 +367,24 @@ function HedgeEffectivenessInner() {
 
         {/* KPI strip */}
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
+          display: "grid", gridTemplateColumns: "repeat(5, 1fr)",
           margin: "14px 28px 0", borderRadius: 6,
           border: `1px solid ${S.rim}`, overflow: "hidden",
         }}>
-          {[
+          {([
             { label: "DATASETS", value: datasets.length, color: undefined },
             { label: "ASSESSMENTS", value: runs.length, color: undefined },
             { label: "EFFECTIVE", value: effectiveCount, color: effectiveCount > 0 ? HEX.green : undefined },
             { label: "INEFFECTIVE", value: ineffectiveCount, color: ineffectiveCount > 0 ? HEX.red : undefined },
-          ].map((kpi, i) => (
+            {
+              label: "PASS RATE",
+              value: runs.length > 0 ? `${((effectiveCount / runs.length) * 100).toFixed(1)}%` : "\u2014",
+              color: runs.length > 0 && effectiveCount / runs.length >= 0.8 ? HEX.green : undefined,
+            },
+          ] as { label: string; value: string | number; color?: string }[]).map((kpi, i) => (
             <div key={kpi.label} style={{
               padding: "12px 16px",
-              borderRight: i < 3 ? `1px solid ${S.rim}` : "none",
+              borderRight: i < 4 ? `1px solid ${S.rim}` : "none",
               background: S.panel,
             }}>
               <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 4 }}>
@@ -684,6 +692,60 @@ function OverviewTab({
                 </div>
               ))}
             </div>
+          </div>
+        );
+      })()}
+
+      {/* Effectiveness trend chart */}
+      {runs.length >= 2 && (() => {
+        const sorted = [...runs]
+          .filter((r) => r.created_at)
+          .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
+          .slice(-20);
+        const buckets = sorted.reduce<Record<string, { eff: number; ineff: number }>>((acc, r) => {
+          const d = new Date(r.created_at!).toLocaleDateString();
+          if (!acc[d]) acc[d] = { eff: 0, ineff: 0 };
+          if (r.overall_effective) acc[d].eff++; else acc[d].ineff++;
+          return acc;
+        }, {});
+        const dates = Object.keys(buckets);
+        const option = {
+          backgroundColor: "transparent",
+          grid: { top: 12, right: 16, bottom: 24, left: 40 },
+          xAxis: {
+            type: "category", data: dates,
+            axisLabel: { color: HEX.text3, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+            axisLine: { lineStyle: { color: HEX.border } },
+            axisTick: { show: false },
+          },
+          yAxis: {
+            type: "value", minInterval: 1,
+            axisLabel: { color: HEX.text3, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+            splitLine: { lineStyle: { color: HEX.border, type: "dashed" } },
+          },
+          series: [
+            {
+              name: "Effective", type: "bar", stack: "verdict", barMaxWidth: 32,
+              data: dates.map((d) => buckets[d].eff),
+              itemStyle: { color: HEX.green, borderRadius: [2, 2, 0, 0] },
+            },
+            {
+              name: "Ineffective", type: "bar", stack: "verdict", barMaxWidth: 32,
+              data: dates.map((d) => buckets[d].ineff),
+              itemStyle: { color: HEX.red, borderRadius: [2, 2, 0, 0] },
+            },
+          ],
+          tooltip: {
+            trigger: "axis", backgroundColor: HEX.bgSub,
+            borderColor: HEX.border, textStyle: { color: HEX.text1, fontSize: 12 },
+          },
+        };
+        return (
+          <div style={{ gridColumn: "1 / -1", padding: "16px 20px", borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}` }}>
+            <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 8 }}>
+              EFFECTIVENESS TREND
+            </div>
+            <ReactECharts option={option} style={{ height: 160 }} opts={{ renderer: "canvas" }} />
           </div>
         );
       })()}
@@ -1147,6 +1209,42 @@ function UploadTab({
 // ═════════════════════════════════════════════════════════════════════════════
 
 function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: string) => void }) {
+  const [search, setSearch] = useState("");
+  const [stdFilter, setStdFilter] = useState("ALL");
+  const [verdictFilter, setVerdictFilter] = useState<"ALL" | "EFFECTIVE" | "INEFFECTIVE">("ALL");
+
+  const filteredRuns = runs
+    .filter((r) => stdFilter === "ALL" || r.standard === stdFilter)
+    .filter((r) => verdictFilter === "ALL" || (verdictFilter === "EFFECTIVE" ? r.overall_effective : !r.overall_effective))
+    .filter((r) => {
+      const q = search.toLowerCase();
+      return !q || r.dataset_name.toLowerCase().includes(q) || (r.currency_pair?.toLowerCase().includes(q) ?? false);
+    });
+
+  const handleExportCsv = () => {
+    const header = "run_id,dataset_name,currency_pair,standard,dollar_offset_ratio,regression_r_squared,overall_effective,run_hash,created_at";
+    const rows = filteredRuns.map((r) =>
+      [
+        r.run_id, `"${r.dataset_name}"`, r.currency_pair ?? "",
+        r.standard, r.dollar_offset_ratio ?? "", r.regression_r_squared ?? "",
+        r.overall_effective, r.run_hash, r.created_at ?? "",
+      ].join(",")
+    );
+    const csv = [header, ...rows].join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `hedge-effectiveness-runs-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const inputBase: React.CSSProperties = {
+    fontFamily: S.mono, fontSize: 12, color: S.text1,
+    background: S.sub, border: `1px solid ${S.rim}`,
+    borderRadius: 3, padding: "5px 10px", outline: "none",
+  };
+
   if (runs.length === 0) {
     return (
       <div style={{
@@ -1169,7 +1267,58 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 1100 }}>
-      {/* Header */}
+      {/* Filter toolbar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
+        <input
+          type="text" placeholder="Search dataset or pair…"
+          value={search} onChange={(e) => setSearch(e.target.value)}
+          style={{ ...inputBase, width: 220 }}
+        />
+        <select value={stdFilter} onChange={(e) => setStdFilter(e.target.value)} style={{ ...inputBase, cursor: "pointer" }}>
+          <option value="ALL">All Standards</option>
+          <option value="IFRS_9">IFRS 9</option>
+          <option value="ASC_815">ASC 815</option>
+          <option value="IAS_39">IAS 39</option>
+        </select>
+        {(["ALL", "EFFECTIVE", "INEFFECTIVE"] as const).map((v) => (
+          <button
+            key={v} onClick={() => setVerdictFilter(v)}
+            style={{
+              fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+              padding: "5px 12px", borderRadius: 3, cursor: "pointer", border: "none",
+              background: verdictFilter === v ? HEX.cyan : S.sub,
+              color: verdictFilter === v ? "#fff" : S.text3,
+              transition: "all 0.15s",
+            }}
+          >
+            {v}
+          </button>
+        ))}
+        <div style={{ flex: 1 }} />
+        <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
+          {filteredRuns.length} OF {runs.length} RUNS
+        </span>
+        <button
+          onClick={handleExportCsv}
+          style={{
+            fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+            padding: "5px 14px", borderRadius: 3, cursor: "pointer",
+            background: "transparent", color: HEX.cyan,
+            border: `1px solid rgba(28,98,242,0.25)`,
+            display: "flex", alignItems: "center", gap: 5,
+            transition: "all 0.15s",
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = "rgba(28,98,242,0.04)"}
+          onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+          </svg>
+          EXPORT CSV
+        </button>
+      </div>
+
+      {/* Column headers */}
       <div style={{
         display: "grid", gridTemplateColumns: "2fr 90px 100px 80px 100px 120px 90px",
         gap: 8, padding: "0 20px",
@@ -1181,7 +1330,20 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
         ))}
       </div>
 
-      {runs.map((r) => (
+      {filteredRuns.length === 0 ? (
+        <div style={{ padding: "32px 20px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+          <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>No runs match the current filters.</div>
+          <button
+            onClick={() => { setSearch(""); setStdFilter("ALL"); setVerdictFilter("ALL"); }}
+            style={{
+              fontFamily: S.mono, fontSize: 11, padding: "5px 14px", borderRadius: 3, cursor: "pointer",
+              background: "transparent", color: HEX.cyan, border: `1px solid rgba(28,98,242,0.25)`,
+            }}
+          >
+            Clear Filters
+          </button>
+        </div>
+      ) : filteredRuns.map((r) => (
         <div
           key={r.run_id}
           onClick={() => onNavigateRun(r.run_id)}
