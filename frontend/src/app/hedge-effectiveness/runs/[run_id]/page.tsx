@@ -162,6 +162,7 @@ export default function HedgeEffectivenessRunPage() {
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<"results" | "periods" | "trace" | "compliance">("results");
   const [downloading, setDownloading] = useState<"ifrs9" | "asc815" | null>(null);
+  const [allRunIds, setAllRunIds] = useState<string[]>([]);
 
   const handleXmlDownload = async (fmt: "ifrs9" | "asc815") => {
     if (!token || !runId) return;
@@ -196,8 +197,17 @@ export default function HedgeEffectivenessRunPage() {
     if (!token || !runId) return;
     setLoading(true);
     try {
-      const res = await dashboardFetch(`/v1/hedge-effectiveness/runs/${runId}`, token);
+      const [res, listRes] = await Promise.all([
+        dashboardFetch(`/v1/hedge-effectiveness/runs/${runId}`, token),
+        dashboardFetch("/v1/hedge-effectiveness/runs", token),
+      ]);
       if (res.ok) setRun(await res.json());
+      if (listRes.ok) {
+        const list = await listRes.json();
+        const sorted: Array<{ run_id: string; created_at: string | null }> = Array.isArray(list) ? list : [];
+        sorted.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+        setAllRunIds(sorted.map((r) => r.run_id));
+      }
     } catch {
       // silent
     } finally {
@@ -241,6 +251,10 @@ export default function HedgeEffectivenessRunPage() {
   const narrative = run.report?.determination_narrative || "";
   const traces = run.trace_bundle?.events || [];
 
+  const currentIdx = allRunIds.indexOf(runId);
+  const prevRunId = currentIdx > 0 ? allRunIds[currentIdx - 1] : null;
+  const nextRunId = currentIdx !== -1 && currentIdx < allRunIds.length - 1 ? allRunIds[currentIdx + 1] : null;
+
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column", background: S.deep }}>
       {/* ── Header ──────────────────────────────────────────────── */}
@@ -266,6 +280,48 @@ export default function HedgeEffectivenessRunPage() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
               BACK
             </button>
+            {allRunIds.length > 1 && (
+              <>
+                <div style={{ width: 1, height: 16, background: S.soft }} />
+                <button
+                  onClick={() => prevRunId && router.push(`/hedge-effectiveness/runs/${prevRunId}`)}
+                  disabled={!prevRunId}
+                  title="Previous run"
+                  style={{
+                    fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: prevRunId ? S.text2 : S.text3,
+                    background: S.sub, border: `1px solid ${S.rim}`,
+                    padding: "4px 8px", borderRadius: 3, cursor: prevRunId ? "pointer" : "default",
+                    display: "flex", alignItems: "center", gap: 3,
+                    opacity: prevRunId ? 1 : 0.4, transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => { if (prevRunId) { e.currentTarget.style.borderColor = HEX.cyan; e.currentTarget.style.color = HEX.cyan; } }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = HEX.border; e.currentTarget.style.color = prevRunId ? HEX.text2 : HEX.text3; }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+                  PREV
+                </button>
+                <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
+                  {currentIdx !== -1 ? `${currentIdx + 1} / ${allRunIds.length}` : ""}
+                </span>
+                <button
+                  onClick={() => nextRunId && router.push(`/hedge-effectiveness/runs/${nextRunId}`)}
+                  disabled={!nextRunId}
+                  title="Next run"
+                  style={{
+                    fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: nextRunId ? S.text2 : S.text3,
+                    background: S.sub, border: `1px solid ${S.rim}`,
+                    padding: "4px 8px", borderRadius: 3, cursor: nextRunId ? "pointer" : "default",
+                    display: "flex", alignItems: "center", gap: 3,
+                    opacity: nextRunId ? 1 : 0.4, transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => { if (nextRunId) { e.currentTarget.style.borderColor = HEX.cyan; e.currentTarget.style.color = HEX.cyan; } }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = HEX.border; e.currentTarget.style.color = nextRunId ? HEX.text2 : HEX.text3; }}
+                >
+                  NEXT
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+              </>
+            )}
             <div style={{ width: 1, height: 16, background: S.soft }} />
             <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.text3, letterSpacing: "0.12em" }}>
               EFFECTIVENESS ASSESSMENT

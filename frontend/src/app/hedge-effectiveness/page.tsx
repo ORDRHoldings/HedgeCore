@@ -475,6 +475,7 @@ function HedgeEffectivenessInner() {
         ) : tab === "datasets" ? (
           <DatasetsTab
             datasets={datasets}
+            runs={runs}
             standard={formStandard}
             onRunAssessment={runAssessment}
             submitting={submitting}
@@ -813,12 +814,33 @@ function OverviewTab({
 // ═════════════════════════════════════════════════════════════════════════════
 
 function DatasetsTab({
-  datasets, standard, onRunAssessment, submitting,
+  datasets, runs, standard, onRunAssessment, submitting,
 }: {
-  datasets: Dataset[]; standard: string;
+  datasets: Dataset[]; runs: Run[]; standard: string;
   onRunAssessment: (id: string) => void;
   submitting: boolean;
 }) {
+  const [dsSearch, setDsSearch] = useState("");
+
+  // Per-dataset stats derived from runs
+  const dsStats = datasets.reduce<Record<string, { count: number; effective: number; lastVerdict: boolean | null }>>((acc, ds) => {
+    const dsRuns = runs.filter((r) => r.dataset_id === ds.id);
+    const sorted = [...dsRuns].sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+    acc[ds.id] = {
+      count: dsRuns.length,
+      effective: dsRuns.filter((r) => r.overall_effective).length,
+      lastVerdict: sorted.length > 0 ? sorted[0].overall_effective : null,
+    };
+    return acc;
+  }, {});
+
+  const filteredDs = dsSearch.trim()
+    ? datasets.filter((ds) =>
+        ds.name.toLowerCase().includes(dsSearch.toLowerCase()) ||
+        (ds.currency_pair ?? "").toLowerCase().includes(dsSearch.toLowerCase())
+      )
+    : datasets;
+
   if (datasets.length === 0) {
     return (
       <div style={{
@@ -840,6 +862,30 @@ function DatasetsTab({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 1000 }}>
+      {/* Search toolbar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 2 }}>
+        <div style={{ position: "relative", flex: 1, maxWidth: 320 }}>
+          <svg style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
+            width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={HEX.text3} strokeWidth="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input
+            value={dsSearch}
+            onChange={(e) => setDsSearch(e.target.value)}
+            placeholder="Search by name or pair..."
+            style={{
+              width: "100%", paddingLeft: 30, paddingRight: 10, paddingTop: 7, paddingBottom: 7,
+              fontFamily: S.mono, fontSize: 12, borderRadius: 3,
+              border: `1px solid ${S.soft}`, background: S.panel, color: S.text1, outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
+        <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>
+          {filteredDs.length} OF {datasets.length}
+        </span>
+      </div>
+
       {/* Column headers */}
       <div style={{
         display: "grid", gridTemplateColumns: "2fr 80px 100px 80px 100px 140px",
@@ -852,7 +898,13 @@ function DatasetsTab({
         ))}
       </div>
 
-      {datasets.map((ds) => (
+      {filteredDs.length === 0 && dsSearch.trim() ? (
+        <div style={{ padding: "24px 20px", fontFamily: S.mono, fontSize: 12, color: S.text3 }}>
+          No datasets match &ldquo;{dsSearch}&rdquo;.
+        </div>
+      ) : filteredDs.map((ds) => {
+        const stats = dsStats[ds.id];
+        return (
         <div key={ds.id} style={{
           display: "grid", gridTemplateColumns: "2fr 80px 100px 80px 100px 140px",
           gap: 8, padding: "14px 20px", alignItems: "center",
@@ -862,13 +914,32 @@ function DatasetsTab({
           onMouseEnter={(e) => e.currentTarget.style.borderColor = HEX.cyan + "30"}
           onMouseLeave={(e) => e.currentTarget.style.borderColor = HEX.border}
         >
-          <div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <div style={{ fontFamily: S.ui, fontSize: 13, fontWeight: 600, color: S.text1 }}>
               {ds.name}
             </div>
-            {ds.currency_pair && (
-              <span style={{ fontFamily: S.mono, fontSize: 12, color: HEX.cyan }}>{ds.currency_pair}</span>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {ds.currency_pair && (
+                <span style={{ fontFamily: S.mono, fontSize: 12, color: HEX.cyan }}>{ds.currency_pair}</span>
+              )}
+              {stats.count > 0 && (
+                <>
+                  {ds.currency_pair && <span style={{ color: S.rim }}>·</span>}
+                  <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
+                    {stats.count} {stats.count === 1 ? "RUN" : "RUNS"}
+                  </span>
+                  <span style={{
+                    fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                    padding: "1px 5px", borderRadius: 2,
+                    background: stats.lastVerdict ? HEX.greenBg : HEX.redBg,
+                    color: stats.lastVerdict ? HEX.green : HEX.red,
+                    border: `1px solid ${stats.lastVerdict ? HEX.greenBorder : HEX.redBorder}`,
+                  }}>
+                    {stats.lastVerdict ? "EFFECTIVE" : "INEFFECTIVE"}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
           <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.text2 }}>
             {ds.period_count}
@@ -902,7 +973,8 @@ function DatasetsTab({
             {submitting ? "RUNNING..." : "RUN ASSESSMENT"}
           </button>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

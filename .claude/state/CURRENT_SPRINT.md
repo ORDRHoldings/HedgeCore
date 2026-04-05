@@ -1,7 +1,29 @@
 # Current Sprint
 
-Sprint: Sprint 7 — Analytics & Export
+Sprint: Sprint 8 — Dataset Intelligence & Run Navigation
 Status: COMPLETE ✓
+Started: 2026-04-04
+Completed: 2026-04-04
+
+## Items
+| # | Item | Status | Priority |
+|---|------|--------|----------|
+| 8.1 | Per-dataset run summary badge in DatasetsTab (run count + last verdict pill) | DONE [PENDING BROWSER CONFIRMATION] | medium |
+| 8.2 | Dataset search/filter bar in DatasetsTab (text search by name or pair) | DONE [PENDING BROWSER CONFIRMATION] | high |
+| 8.3 | Run detail prev/next navigation arrows (← PREV N/total NEXT →) | DONE [PENDING BROWSER CONFIRMATION] | medium |
+
+## Completed: 3/3
+## Sprint Status: COMPLETE [PENDING BROWSER CONFIRMATION]
+
+## Notes
+- 8.1 + 8.2: `frontend/src/app/hedge-effectiveness/page.tsx` — DatasetsTab: added `runs: Run[]` prop, `dsStats` map computed from runs grouped by dataset_id, per-row verdict badge + run count
+- 8.2: search input filters `filteredDs` by name or currency_pair; shows "N OF M" count
+- 8.3: `frontend/src/app/hedge-effectiveness/runs/[run_id]/page.tsx` — parallel fetch of `/v1/hedge-effectiveness/runs`; sorted by `created_at` desc; prev/next computed from `allRunIds.indexOf(runId)`; arrows hidden when only 1 run
+- tsc clean, next build clean
+
+---
+
+# Sprint: Sprint 7 — Analytics & Export — COMPLETE ✓
 Started: 2026-04-04
 Completed: 2026-04-04
 
