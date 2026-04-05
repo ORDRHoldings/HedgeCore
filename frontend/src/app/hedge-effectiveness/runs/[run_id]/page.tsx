@@ -388,6 +388,26 @@ export default function HedgeEffectivenessRunPage() {
                 </>
               )}
             </button>
+            <button
+              onClick={() => window.print()}
+              title="Print / Save as PDF"
+              style={{
+                fontFamily: S.mono, fontSize: 12, fontWeight: 600,
+                color: S.text3, background: S.sub,
+                border: `1px solid ${S.rim}`,
+                padding: "4px 10px", borderRadius: 3, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 4,
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = HEX.cyan; e.currentTarget.style.color = HEX.cyan; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = HEX.border; e.currentTarget.style.color = HEX.text3; }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                <rect x="6" y="14" width="12" height="8"/>
+              </svg>
+              PRINT
+            </button>
           </div>
 
           {/* Title row with verdict */}

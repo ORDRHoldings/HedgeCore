@@ -1058,6 +1058,67 @@ function OverviewTab({
         );
       })()}
 
+      {/* D.O. Ratio Trend sparkline */}
+      {runs.length >= 3 && (() => {
+        const sorted = [...runs]
+          .filter((r) => r.dollar_offset_ratio != null && r.created_at != null)
+          .sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""))
+          .slice(-20);
+        if (sorted.length < 3) return null;
+        const dates = sorted.map((r) => new Date(r.created_at!).toLocaleDateString(undefined, { month: "short", day: "numeric" }));
+        const values = sorted.map((r) => r.dollar_offset_ratio!);
+        const trendOption = {
+          backgroundColor: "transparent",
+          grid: { top: 16, right: 16, bottom: 32, left: 44 },
+          xAxis: {
+            type: "category", data: dates,
+            axisLine: { lineStyle: { color: HEX.border } },
+            axisLabel: { color: HEX.text3, fontSize: 10, fontFamily: "'IBM Plex Mono',monospace", interval: Math.floor(sorted.length / 5) },
+            axisTick: { show: false },
+          },
+          yAxis: {
+            type: "value", min: 0.5, max: 1.5,
+            axisLine: { show: false },
+            splitLine: { lineStyle: { color: HEX.border, type: "dashed" as const } },
+            axisLabel: { color: HEX.text3, fontSize: 10, fontFamily: "'IBM Plex Mono',monospace" },
+          },
+          series: [
+            {
+              type: "line", data: values, smooth: true, symbol: "circle", symbolSize: 5,
+              lineStyle: { color: HEX.cyan, width: 2 },
+              itemStyle: { color: HEX.cyan },
+              areaStyle: { color: { type: "linear" as const, x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: "rgba(28,98,242,0.12)" }, { offset: 1, color: "rgba(28,98,242,0.00)" }] } },
+              markLine: {
+                silent: true,
+                lineStyle: { type: "dashed" as const, color: HEX.green, opacity: 0.6 },
+                data: [{ yAxis: 0.80, name: "0.80" }, { yAxis: 1.25, name: "1.25" }],
+                label: { show: true, position: "end" as const, fontSize: 10, fontFamily: "'IBM Plex Mono',monospace", color: HEX.green },
+              },
+            },
+          ],
+          tooltip: {
+            trigger: "axis" as const,
+            backgroundColor: "#1e293b", borderColor: HEX.border, textStyle: { color: "#fff", fontSize: 11, fontFamily: "'IBM Plex Mono',monospace" },
+            formatter: (params: { dataIndex: number }[]) => {
+              const idx = params[0].dataIndex;
+              const r = sorted[idx];
+              return `${dates[idx]}<br/>D.O.: <b>${values[idx].toFixed(4)}</b><br/>${r.overall_effective ? "✓ EFFECTIVE" : "✗ INEFFECTIVE"}`;
+            },
+          },
+        };
+        return (
+          <div style={{
+            gridColumn: "1 / -1", padding: "16px 20px 8px", borderRadius: 6,
+            background: S.panel, border: `1px solid ${S.rim}`,
+          }}>
+            <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 8 }}>
+              D.O. RATIO TREND — LAST {sorted.length} RUNS
+            </div>
+            <ReactECharts option={trendOption} style={{ height: 180 }} />
+          </div>
+        );
+      })()}
+
       {/* Portfolio statistics */}
       {runs.length >= 2 && (() => {
         const ratios = runs.map((r) => r.dollar_offset_ratio).filter((v): v is number => v != null);
@@ -1771,6 +1832,8 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
     try { return new Set(JSON.parse(localStorage.getItem(STARRED_KEY) || "[]")); }
     catch { return new Set(); }
   });
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [compareOpen, setCompareOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(STARRED_KEY, JSON.stringify([...starredIds]));
@@ -1784,6 +1847,22 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
       return next;
     });
   };
+
+  const toggleSelect = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (!compareOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setCompareOpen(false); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [compareOpen]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => d === "asc" ? "desc" : "asc");
@@ -1921,13 +2000,42 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
           </svg>
           EXPORT CSV
         </button>
+        {selectedIds.size >= 2 && (
+          <button
+            onClick={() => setCompareOpen(true)}
+            style={{
+              fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+              padding: "5px 14px", borderRadius: 3, cursor: "pointer",
+              background: HEX.cyan, color: "#fff", border: "none",
+              display: "flex", alignItems: "center", gap: 5,
+              boxShadow: "0 1px 6px rgba(28,98,242,0.3)",
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/>
+            </svg>
+            COMPARE ({selectedIds.size})
+          </button>
+        )}
+        {selectedIds.size > 0 && (
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            style={{
+              fontFamily: S.mono, fontSize: 11, color: S.text3, background: "transparent",
+              border: "none", cursor: "pointer", padding: "5px 4px",
+            }}
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       {/* Column headers */}
       <div style={{
-        display: "grid", gridTemplateColumns: "2fr 90px 100px 80px 100px 120px 90px",
+        display: "grid", gridTemplateColumns: "28px 2fr 90px 100px 80px 100px 120px 90px",
         gap: 8, padding: "0 20px",
       }}>
+        <div />
         {([
           { label: "DATASET", key: "dataset" as SortKey },
           { label: "STANDARD", key: null },
@@ -1980,14 +2088,15 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
           key={r.run_id}
           onClick={() => onNavigateRun(r.run_id)}
           style={{
-            display: "grid", gridTemplateColumns: "2fr 90px 100px 80px 100px 120px 90px",
+            display: "grid", gridTemplateColumns: "28px 2fr 90px 100px 80px 100px 120px 90px",
             gap: 8, padding: "12px 20px", borderRadius: 4,
-            background: S.panel, border: `1px solid ${S.rim}`,
+            background: selectedIds.has(r.run_id) ? "rgba(28,98,242,0.04)" : S.panel,
+            border: `1px solid ${selectedIds.has(r.run_id) ? HEX.cyan + "40" : S.rim}`,
             cursor: "pointer", transition: "all 0.15s",
             position: "relative",
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = HEX.cyan + "30"; e.currentTarget.style.boxShadow = "0 1px 6px rgba(28,98,242,0.04)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = HEX.border; e.currentTarget.style.boxShadow = "none"; }}
+          onMouseEnter={(e) => { if (!selectedIds.has(r.run_id)) { e.currentTarget.style.borderColor = HEX.cyan + "30"; e.currentTarget.style.boxShadow = "0 1px 6px rgba(28,98,242,0.04)"; } }}
+          onMouseLeave={(e) => { if (!selectedIds.has(r.run_id)) { e.currentTarget.style.borderColor = HEX.border; e.currentTarget.style.boxShadow = "none"; } }}
         >
           {/* Left verdict indicator */}
           <div style={{
@@ -1995,6 +2104,17 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
             borderRadius: "4px 0 0 4px",
             background: r.overall_effective ? HEX.green : HEX.red,
           }} />
+
+          {/* Checkbox */}
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <input
+              type="checkbox"
+              checked={selectedIds.has(r.run_id)}
+              onChange={() => {}} // controlled via onClick
+              onClick={(e) => toggleSelect(r.run_id, e)}
+              style={{ cursor: "pointer", accentColor: HEX.cyan, width: 13, height: 13 }}
+            />
+          </div>
 
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
             <div style={{ flex: 1 }}>
@@ -2064,6 +2184,125 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
           </span>
         </div>
       ))}
+
+      {/* Compare modal */}
+      {compareOpen && (() => {
+        const compareRuns = runs.filter((r) => selectedIds.has(r.run_id));
+        const metrics: { label: string; render: (r: Run) => React.ReactNode }[] = [
+          { label: "DATASET", render: (r) => r.dataset_name },
+          { label: "STANDARD", render: (r) => r.standard.replace("_", " ") },
+          { label: "D.O. RATIO", render: (r) => r.dollar_offset_ratio != null ? (
+            <span style={{ color: r.dollar_offset_ratio >= 0.80 && r.dollar_offset_ratio <= 1.25 ? HEX.green : HEX.red, fontWeight: 700 }}>
+              {r.dollar_offset_ratio.toFixed(4)}
+            </span>
+          ) : "—" },
+          { label: "R²", render: (r) => r.regression_r_squared != null ? (
+            <span style={{ color: r.regression_r_squared >= 0.80 ? HEX.green : HEX.red, fontWeight: 700 }}>
+              {r.regression_r_squared.toFixed(4)}
+            </span>
+          ) : "—" },
+          { label: "VERDICT", render: (r) => (
+            <span style={{
+              fontFamily: S.mono, fontSize: 11, fontWeight: 800, letterSpacing: "0.1em",
+              padding: "2px 8px", borderRadius: 2,
+              background: r.overall_effective ? HEX.greenBg : HEX.redBg,
+              color: r.overall_effective ? HEX.green : HEX.red,
+              border: `1px solid ${r.overall_effective ? HEX.greenBorder : HEX.redBorder}`,
+            }}>
+              {r.overall_effective ? "EFFECTIVE" : "INEFFECTIVE"}
+            </span>
+          ) },
+          { label: "HASH", render: (r) => <span style={{ fontSize: 11, color: S.text3 }}>{r.run_hash?.slice(0, 12)}…</span> },
+          { label: "DATE", render: (r) => r.created_at ? new Date(r.created_at).toLocaleDateString() : "—" },
+        ];
+        return (
+          <div
+            onClick={() => setCompareOpen(false)}
+            style={{
+              position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              zIndex: 1000, backdropFilter: "blur(2px)",
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: "var(--bg-panel, #fff)", borderRadius: 8,
+                border: `1px solid ${S.rim}`, maxWidth: 900, width: "calc(100vw - 48px)",
+                maxHeight: "calc(100vh - 80px)", overflow: "auto",
+                boxShadow: "0 24px 80px rgba(0,0,0,0.25)",
+              }}
+            >
+              {/* Modal header */}
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "16px 24px", borderBottom: `1px solid ${S.rim}`,
+                position: "sticky", top: 0, background: "var(--bg-panel, #fff)", zIndex: 1,
+              }}>
+                <span style={{ fontFamily: S.mono, fontSize: 13, fontWeight: 800, color: S.text1, letterSpacing: "0.1em" }}>
+                  RUN COMPARISON — {compareRuns.length} RUNS
+                </span>
+                <button
+                  onClick={() => setCompareOpen(false)}
+                  style={{ background: "transparent", border: "none", cursor: "pointer", color: S.text3, padding: 4 }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6 6 18M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+              {/* Comparison grid */}
+              <div style={{ padding: "16px 24px" }}>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: `140px repeat(${compareRuns.length}, 1fr)`,
+                  gap: 1, background: S.rim, borderRadius: 4, overflow: "hidden",
+                }}>
+                  {/* Header row */}
+                  <div style={{ background: S.sub, padding: "10px 14px" }} />
+                  {compareRuns.map((r, i) => (
+                    <div key={r.run_id} style={{
+                      background: S.sub, padding: "10px 14px",
+                      borderLeft: i === 0 ? "none" : `1px solid ${S.rim}`,
+                    }}>
+                      <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.1em" }}>
+                        RUN {i + 1}
+                      </div>
+                      <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, marginTop: 2 }}>
+                        {r.run_id.slice(0, 8)}…
+                      </div>
+                    </div>
+                  ))}
+                  {/* Metric rows */}
+                  {metrics.map((m, mi) => (
+                    <>
+                      <div key={`label-${mi}`} style={{
+                        background: "var(--bg-panel, #fff)", padding: "10px 14px",
+                        fontFamily: S.mono, fontSize: 11, fontWeight: 700,
+                        color: S.text3, letterSpacing: "0.12em",
+                        borderTop: `1px solid ${S.rim}`,
+                      }}>
+                        {m.label}
+                      </div>
+                      {compareRuns.map((r, ri) => (
+                        <div key={`${mi}-${ri}`} style={{
+                          background: "var(--bg-panel, #fff)", padding: "10px 14px",
+                          fontFamily: S.mono, fontSize: 12, color: S.text1,
+                          borderTop: `1px solid ${S.rim}`,
+                          borderLeft: `1px solid ${S.rim}`,
+                          display: "flex", alignItems: "center",
+                        }}>
+                          {m.render(r)}
+                        </div>
+                      ))}
+                    </>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

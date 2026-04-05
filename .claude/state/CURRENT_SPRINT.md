@@ -1,25 +1,41 @@
 # Current Sprint
 
-Sprint: Sprint 13 — Template, Trace & Portfolio Stats
+Sprint: Sprint 15 — Comparison, Trend & Print
 Status: COMPLETE ✓
-Started: 2026-04-04
-Completed: 2026-04-04
+Started: 2026-04-05
+Completed: 2026-04-05
 
 ## Items
 | # | Item | Status | Priority |
 |---|------|--------|----------|
-| 13.1 | Upload: CSV template download button (5-row pre-filled template with correct columns) | DONE [PENDING BROWSER CONFIRMATION] | high |
-| 13.2 | Run detail trace: phase grouping (VALIDATION/COMPUTATION/INTEGRITY/RESULT) with collapse/expand | DONE [PENDING BROWSER CONFIRMATION] | medium |
-| 13.3 | Overview: portfolio statistics panel (mean D.O., std dev, range, top/worst dataset) | DONE [PENDING BROWSER CONFIRMATION] | medium |
+| 15.1 | RunsTab: checkbox multi-select + COMPARE modal (side-by-side metrics grid, Escape to close) | DONE [PENDING BROWSER CONFIRMATION] | high |
+| 15.2 | Run detail: PRINT button (window.print(), printer SVG, hover state) | DONE [PENDING BROWSER CONFIRMATION] | medium |
+| 15.3 | OverviewTab: D.O. ratio trend sparkline (ECharts line, last 20 runs, 0.80/1.25 markLines) | DONE [PENDING BROWSER CONFIRMATION] | high |
 
 ## Completed: 3/3
 ## Sprint Status: COMPLETE [PENDING BROWSER CONFIRMATION]
 
 ## Notes
-- 13.1: `page.tsx` CSV mode — DOWNLOAD TEMPLATE button next to description; blob URL pattern; 5 pre-filled rows
-- 13.2: `runs/[run_id]/page.tsx` TraceSection rewritten — `getPhase()` classifies steps; consecutive steps with same phase merged into group; each group is a collapsible button; `collapsed` state; purple (#7C3AED) for INTEGRITY phase
-- 13.3: `page.tsx` OverviewTab — ratios computed from all runs with non-null D.O.; mean, stdDev, min/max; best/worst dataset by pass rate; shows when runs.length ≥ 2
+- 15.1: `selectedIds: Set<string>` state; `toggleSelect(id, e)` with stopPropagation; checkbox col added (28px) to grid; COMPARE button shown when ≥2 selected; modal is fixed overlay with backdrop; grid layout `140px repeat(N, 1fr)`; Escape key closes
+- 15.2: `runs/[run_id]/page.tsx` PRINT button after COPY button; `window.print()` onClick; printer icon SVG
+- 15.3: `page.tsx` OverviewTab — sorted chronologically, slice last 20, ECharts line with area fill; markLine at 0.80 and 1.25; shows when runs.length ≥ 3
 - tsc clean, next build clean
+
+---
+
+# Sprint: Sprint 14 — Bookmarks, Unassessed Alert & Dataset Sort — COMPLETE ✓
+Started: 2026-04-05
+Completed: 2026-04-05
+
+## Items
+| # | Item | Status | Priority |
+|---|------|--------|----------|
+| 14.1 | RunsTab: star/bookmark runs with localStorage persistence | DONE [PENDING BROWSER CONFIRMATION] | high |
+| 14.2 | OverviewTab: unassessed datasets alert panel | DONE [PENDING BROWSER CONFIRMATION] | medium |
+| 14.3 | DatasetsTab: sort selector (newest/name/runs/last assessed) | DONE [PENDING BROWSER CONFIRMATION] | medium |
+
+## Completed: 3/3
+## Sprint Status: COMPLETE [PENDING BROWSER CONFIRMATION]
 
 ---
 
