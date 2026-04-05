@@ -561,6 +561,34 @@ function OverviewTab({
         </div>
       )}
 
+      {/* ── 23.2 Trend Direction Badge ── */}
+      {(() => {
+        if (runs.length < 10) return null;
+        const sorted = [...runs].sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+        const n = Math.min(5, Math.floor(sorted.length / 2));
+        const recent = sorted.slice(-n);
+        const prior = sorted.slice(-n * 2, -n);
+        const recentRate = Math.round((recent.filter((r) => r.overall_effective).length / n) * 100);
+        const priorRate = Math.round((prior.filter((r) => r.overall_effective).length / n) * 100);
+        const delta = recentRate - priorRate;
+        const dir = delta > 5 ? "up" : delta < -5 ? "down" : "flat";
+        const color = dir === "up" ? HEX.green : dir === "down" ? HEX.red : HEX.amber;
+        const arrow = dir === "up" ? "↑" : dir === "down" ? "↓" : "→";
+        const label = dir === "up" ? "IMPROVING" : dir === "down" ? "DETERIORATING" : "STABLE";
+        return (
+          <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderRadius: 4, background: S.panel, border: `1px solid ${S.rim}` }}>
+            <span style={{ fontFamily: S.mono, fontSize: 22, fontWeight: 800, color }}>{arrow}</span>
+            <div>
+              <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 800, color, letterSpacing: "0.1em" }}>{label}</div>
+              <div style={{ fontFamily: S.ui, fontSize: 11, color: S.text3 }}>
+                Pass rate: last {n} runs <strong style={{ color: S.text1 }}>{recentRate}%</strong> vs prior {n} <strong style={{ color: S.text1 }}>{priorRate}%</strong>
+                {delta !== 0 && <span style={{ color, marginLeft: 6, fontWeight: 700 }}>{delta > 0 ? "+" : ""}{delta}pp</span>}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Risk alerts */}
       {(() => {
         const alerts: { level: "critical" | "warn" | "info"; text: string }[] = [];
@@ -2301,6 +2329,35 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
   const PAGE_SIZE = 25;
   const [groupByDataset, setGroupByDataset] = useState(false);
 
+  // ── Filter presets ──
+  const PRESETS_KEY = "hec_filter_presets";
+  type Preset = { name: string; search: string; stdFilter: string; verdictFilter: "ALL" | "EFFECTIVE" | "INEFFECTIVE"; doMin: string; doMax: string };
+  const [presets, setPresets] = useState<Preset[]>(() => {
+    try { return JSON.parse(localStorage.getItem(PRESETS_KEY) || "[]"); }
+    catch { return []; }
+  });
+  const [presetName, setPresetName] = useState("");
+  const [showPresets, setShowPresets] = useState(false);
+
+  const savePreset = () => {
+    const name = presetName.trim();
+    if (!name) return;
+    const next = [...presets.filter((p) => p.name !== name), { name, search, stdFilter, verdictFilter, doMin, doMax }];
+    setPresets(next);
+    localStorage.setItem(PRESETS_KEY, JSON.stringify(next));
+    setPresetName("");
+    setShowPresets(false);
+  };
+  const applyPreset = (p: Preset) => {
+    setSearch(p.search); setStdFilter(p.stdFilter); setVerdictFilter(p.verdictFilter);
+    setDoMin(p.doMin); setDoMax(p.doMax); setShowPresets(false);
+  };
+  const deletePreset = (name: string) => {
+    const next = presets.filter((p) => p.name !== name);
+    setPresets(next);
+    localStorage.setItem(PRESETS_KEY, JSON.stringify(next));
+  };
+
   useEffect(() => {
     localStorage.setItem(STARRED_KEY, JSON.stringify([...starredIds]));
   }, [starredIds]);
@@ -2487,6 +2544,64 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
           </svg>
           STARRED{starredIds.size > 0 ? ` (${starredIds.size})` : ""}
         </button>
+        {/* Preset save */}
+        <div style={{ display: "flex", alignItems: "center", gap: 5, position: "relative" }}>
+          <button
+            onClick={() => setShowPresets((v) => !v)}
+            style={{
+              fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+              padding: "5px 10px", borderRadius: 3, cursor: "pointer",
+              background: showPresets ? S.sub : "transparent",
+              color: showPresets ? S.text1 : S.text3,
+              border: `1px solid ${showPresets ? S.rim : "transparent"}`,
+              display: "flex", alignItems: "center", gap: 4,
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+            </svg>
+            PRESETS{presets.length > 0 ? ` (${presets.length})` : ""}
+          </button>
+          {showPresets && (
+            <div style={{
+              position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 100,
+              background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 4,
+              boxShadow: "0 4px 16px rgba(0,0,0,0.12)", padding: 12, minWidth: 220,
+            }}>
+              <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.text3, marginBottom: 8, textTransform: "uppercase" }}>Save Current Filters</div>
+              <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                <input
+                  value={presetName} onChange={(e) => setPresetName(e.target.value)}
+                  placeholder="Preset name…"
+                  onKeyDown={(e) => { if (e.key === "Enter") savePreset(); if (e.key === "Escape") setShowPresets(false); }}
+                  style={{ fontFamily: S.mono, fontSize: 11, flex: 1, background: S.sub, border: `1px solid ${S.rim}`, borderRadius: 3, padding: "4px 8px", color: S.text1, outline: "none" }}
+                />
+                <button
+                  onClick={savePreset}
+                  style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 3, background: HEX.cyan, color: "#fff", border: "none", cursor: "pointer" }}
+                >SAVE</button>
+              </div>
+              {presets.length > 0 && (
+                <>
+                  <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.text3, marginBottom: 6, textTransform: "uppercase" }}>Saved Presets</div>
+                  {presets.map((p) => (
+                    <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 0", borderTop: `1px solid ${S.rim}` }}>
+                      <button
+                        onClick={() => applyPreset(p)}
+                        style={{ flex: 1, textAlign: "left", fontFamily: S.mono, fontSize: 11, color: S.text1, background: "transparent", border: "none", cursor: "pointer", padding: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                      >{p.name}</button>
+                      <button
+                        onClick={() => deletePreset(p.name)}
+                        style={{ background: "transparent", border: "none", cursor: "pointer", color: S.text3, padding: "0 2px", fontSize: 13, lineHeight: 1 }}
+                        title="Delete preset"
+                      >×</button>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </div>
         <div style={{ flex: 1 }} />
         <button
           onClick={() => setDensity((d) => d === "normal" ? "compact" : "normal")}

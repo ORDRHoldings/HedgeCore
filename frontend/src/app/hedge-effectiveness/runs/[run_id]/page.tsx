@@ -694,8 +694,44 @@ function ResultsSection({ run, narrative, periods, siblingRuns, onNavigate }: {
   siblingRuns: Array<{ run_id: string; standard: string; overall_effective: boolean; dollar_offset_ratio: number | null; created_at: string | null }>;
   onNavigate: (id: string) => void;
 }) {
+  // ── 23.3 Anomaly flags ──
+  const anomalies: { level: "warn" | "info"; text: string }[] = [];
+  const do_ = run.dollar_offset_ratio;
+  const r2 = run.regression_r_squared;
+  if (do_ != null && (do_ < 0.50 || do_ > 1.75)) anomalies.push({ level: "warn", text: `Dollar-offset ratio ${do_.toFixed(4)} is severely out of band (expected 0.80–1.25). Possible data error or extreme market move.` });
+  else if (do_ != null && (do_ < 0.70 || do_ > 1.40)) anomalies.push({ level: "info", text: `Dollar-offset ratio ${do_.toFixed(4)} is moderately out of band. Review hedge notional vs exposure sizing.` });
+  if (r2 != null && r2 < 0.50) anomalies.push({ level: "warn", text: `Regression R² of ${r2.toFixed(4)} indicates very low correlation between hedged item and hedging instrument.` });
+  else if (r2 != null && r2 < 0.70) anomalies.push({ level: "info", text: `Regression R² of ${r2.toFixed(4)} is below the 0.70 advisory threshold. Hedge relationship may be weakening.` });
+  if (periods.length > 0) {
+    const outBand = periods.filter((p) => { const r = p.cumulative_ratio; return r != null && (r < 0.80 || r > 1.25); }).length;
+    const pct = Math.round((outBand / periods.length) * 100);
+    if (pct > 50) anomalies.push({ level: "warn", text: `${outBand} of ${periods.length} periods (${pct}%) have cumulative ratios outside the effective band.` });
+  }
+
   return (
     <div style={{ maxWidth: 1200 }}>
+      {/* Anomaly flags */}
+      {anomalies.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+          {anomalies.map((a, i) => (
+            <div key={i} style={{
+              display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 14px", borderRadius: 4,
+              background: a.level === "warn" ? HEX.redBg : "rgba(217,119,6,0.06)",
+              border: `1px solid ${a.level === "warn" ? HEX.redBorder : "rgba(217,119,6,0.22)"}`,
+              borderLeft: `3px solid ${a.level === "warn" ? HEX.red : HEX.amber}`,
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={a.level === "warn" ? HEX.red : HEX.amber} strokeWidth="2" style={{ flexShrink: 0, marginTop: 1 }}>
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              <div>
+                <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", color: a.level === "warn" ? HEX.red : HEX.amber, marginRight: 8 }}>{a.level === "warn" ? "ANOMALY" : "ADVISORY"}</span>
+                <span style={{ fontFamily: S.ui, fontSize: 12, color: S.text1 }}>{a.text}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Narrative */}
       {narrative && (
         <div style={{
