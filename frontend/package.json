@@ -31,7 +31,7 @@
     "next": "15.5.12",
     "papaparse": "^5.5.3",
     "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "react-dom": "19.2.4",
     "react-grid-layout": "^1.4.4",
     "react-redux": "^9.2.0",
     "recharts": "^2.15.3",
