@@ -65,6 +65,7 @@ interface Dataset {
   source: string;
   source_hash: string;
   created_at: string | null;
+  designation_date: string | null;
 }
 
 interface Run {
@@ -131,6 +132,31 @@ function HedgeEffectivenessInner() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const handleDeleteRuns = async (ids: string[]) => {
+    if (!token) return;
+    const res = await dashboardFetch("/v1/hedge-effectiveness/runs/batch-delete", token, {
+      method: "POST",
+      body: JSON.stringify({ run_ids: ids }),
+    });
+    if (res.ok) setRuns((prev) => prev.filter((r) => !ids.includes(r.run_id)));
+  };
+
+  const handleUpdateDataset = async (id: string, data: { name?: string; currency_pair?: string | null; designation_date?: string | null }) => {
+    if (!token) return;
+    await dashboardFetch(`/v1/hedge-effectiveness/datasets/${id}`, token, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+    await loadData();
+  };
+
+  // 29.2 — Clone dataset
+  const handleCloneDataset = async (id: string) => {
+    if (!token) return;
+    const res = await dashboardFetch(`/v1/hedge-effectiveness/datasets/${id}/clone`, token, { method: "POST" });
+    if (res.ok) await loadData();
+  };
 
   const loadData = useCallback(async () => {
     if (!token) return;
@@ -480,6 +506,9 @@ function HedgeEffectivenessInner() {
             onRunAssessment={runAssessment}
             onNavigateRun={(id) => router.push(`/hedge-effectiveness/runs/${id}`)}
             submitting={submitting}
+            onUpdateDataset={handleUpdateDataset}
+            onCloneDataset={handleCloneDataset}
+            token={token ?? ""}
           />
         ) : tab === "upload" ? (
           <UploadTab
@@ -496,7 +525,7 @@ function HedgeEffectivenessInner() {
             handleCsvUpload={handleCsvUpload}
           />
         ) : (
-          <RunsTab runs={runs} onNavigateRun={(id) => router.push(`/hedge-effectiveness/runs/${id}`)} />
+          <RunsTab runs={runs} onNavigateRun={(id) => router.push(`/hedge-effectiveness/runs/${id}`)} onDeleteRuns={handleDeleteRuns} />
         )}
       </div>
     </div>
@@ -517,6 +546,8 @@ function OverviewTab({
   onSwitchTab: (t: Tab) => void;
 }) {
   const lastRun = runs[0];
+  // ── 28.3 Rolling pass-rate window selector ──
+  const [passWindow, setPassWindow] = useState<5 | 10 | 0>(0);
 
   // KPI calculations
   const totalRuns = runs.length;
@@ -560,6 +591,58 @@ function OverviewTab({
           ))}
         </div>
       )}
+
+      {/* ── 28.3 Rolling pass-rate KPI ── */}
+      {runs.length >= 2 && (() => {
+        const sorted = [...runs].sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+        const windowSize = passWindow === 0 ? sorted.length : passWindow;
+        const windowRuns = sorted.slice(0, Math.min(windowSize, sorted.length));
+        const priorRuns = passWindow !== 0 ? sorted.slice(windowSize, windowSize * 2) : [];
+        const windowPass = Math.round((windowRuns.filter((r) => r.overall_effective).length / windowRuns.length) * 100);
+        const priorPass = priorRuns.length > 0 ? Math.round((priorRuns.filter((r) => r.overall_effective).length / priorRuns.length) * 100) : null;
+        const delta = priorPass != null ? windowPass - priorPass : null;
+        const accent = windowPass >= 80 ? HEX.green : windowPass >= 60 ? HEX.amber : HEX.red;
+        return (
+          <div style={{ gridColumn: "1 / -1", padding: "14px 20px", borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`, display: "flex", alignItems: "center", gap: 24 }}>
+            <div>
+              <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 6 }}>ROLLING PASS RATE</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                <span style={{ fontFamily: S.mono, fontSize: 28, fontWeight: 800, color: accent, lineHeight: 1 }}>{windowPass}%</span>
+                {delta != null && (
+                  <span style={{
+                    fontFamily: S.mono, fontSize: 11, fontWeight: 700,
+                    color: delta > 0 ? HEX.green : delta < 0 ? HEX.red : S.text3,
+                    display: "flex", alignItems: "center", gap: 2,
+                  }}>
+                    {delta > 0 ? "▲" : delta < 0 ? "▼" : "—"}{Math.abs(delta)}pp vs prior
+                  </span>
+                )}
+              </div>
+              <div style={{ fontFamily: S.ui, fontSize: 11, color: S.text3, marginTop: 3 }}>
+                {windowRuns.filter((r) => r.overall_effective).length} of {windowRuns.length} runs
+              </div>
+            </div>
+            <div style={{ width: 1, height: 44, background: S.rim }} />
+            <div style={{ display: "flex", gap: 6 }}>
+              {([5, 10, 0] as const).map((w) => (
+                <button
+                  key={w}
+                  onClick={() => setPassWindow(w)}
+                  style={{
+                    fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                    padding: "4px 10px", borderRadius: 3, cursor: "pointer", border: "none",
+                    background: passWindow === w ? HEX.cyan : S.sub,
+                    color: passWindow === w ? "#fff" : S.text3,
+                    transition: "all 0.12s",
+                  }}
+                >
+                  {w === 0 ? "ALL" : `LAST ${w}`}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── 23.2 Trend Direction Badge ── */}
       {(() => {
@@ -1735,6 +1818,76 @@ function OverviewTab({
           </div>
         );
       })()}
+
+      {/* ── 27.3 Best / Worst run tile ── */}
+      {runs.length >= 2 && (() => {
+        const withRatio = runs.filter((r) => r.dollar_offset_ratio != null);
+        const effective = withRatio.filter((r) => r.overall_effective);
+        const ineffective = withRatio.filter((r) => !r.overall_effective);
+        if (!effective.length && !ineffective.length) return null;
+        const best = effective.length
+          ? [...effective].sort((a, b) => Math.abs((a.dollar_offset_ratio ?? 0) - 1.0) - Math.abs((b.dollar_offset_ratio ?? 0) - 1.0))[0]
+          : null;
+        const worst = ineffective.length
+          ? [...ineffective].sort((a, b) => Math.abs((b.dollar_offset_ratio ?? 0) - 1.0) - Math.abs((a.dollar_offset_ratio ?? 0) - 1.0))[0]
+          : null;
+        if (!best && !worst) return null;
+        const RunCard = ({ run, label, accent, accentBg, accentBorder }: {
+          run: Run; label: string;
+          accent: string; accentBg: string; accentBorder: string;
+        }) => (
+          <div
+            onClick={() => onNavigateRun(run.run_id)}
+            style={{
+              padding: "16px 20px", borderRadius: 6, cursor: "pointer",
+              background: S.panel, border: `1px solid ${S.rim}`,
+              transition: "all 0.15s", position: "relative", overflow: "hidden",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = accent + "40"; e.currentTarget.style.boxShadow = `0 2px 10px ${accent}10`; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = HEX.border; e.currentTarget.style.boxShadow = "none"; }}
+          >
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: accent }} />
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
+              {label}
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
+              <span style={{ fontFamily: S.mono, fontSize: 22, fontWeight: 800, color: accent, lineHeight: 1 }}>
+                {run.dollar_offset_ratio?.toFixed(4)}
+              </span>
+              <span style={{
+                fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                padding: "2px 7px", borderRadius: 2,
+                background: accentBg, color: accent, border: `1px solid ${accentBorder}`,
+              }}>
+                {run.overall_effective ? "EFFECTIVE" : "INEFFECTIVE"}
+              </span>
+            </div>
+            <div style={{ fontFamily: S.ui, fontSize: 12, fontWeight: 600, color: S.text1, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {run.dataset_name}
+              {run.currency_pair && <span style={{ fontFamily: S.mono, fontSize: 11, color: HEX.cyan, marginLeft: 6 }}>{run.currency_pair}</span>}
+            </div>
+            <div style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
+              {run.standard} · {run.created_at ? new Date(run.created_at).toLocaleDateString() : ""}
+            </div>
+          </div>
+        );
+        return (
+          <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: best && worst ? "1fr 1fr" : "1fr", gap: 12 }}>
+            {best && (
+              <RunCard
+                run={best} label="BEST RUN — D.O. CLOSEST TO 1.0"
+                accent={HEX.green} accentBg={HEX.greenBg} accentBorder={HEX.greenBorder}
+              />
+            )}
+            {worst && (
+              <RunCard
+                run={worst} label="WORST RUN — MOST OUT OF BAND"
+                accent={HEX.red} accentBg={HEX.redBg} accentBorder={HEX.redBorder}
+              />
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -1759,16 +1912,63 @@ function HighlightMatch({ text, query }: { text: string; query: string }) {
 }
 
 function DatasetsTab({
-  datasets, runs, standard, onRunAssessment, onNavigateRun, submitting,
+  datasets, runs, standard, onRunAssessment, onNavigateRun, submitting, onUpdateDataset, onCloneDataset, token,
 }: {
   datasets: Dataset[]; runs: Run[]; standard: string;
   onRunAssessment: (id: string) => void;
   onNavigateRun: (id: string) => void;
   submitting: boolean;
+  onUpdateDataset: (id: string, data: { name?: string; currency_pair?: string | null; designation_date?: string | null }) => Promise<void>;
+  onCloneDataset: (id: string) => Promise<void>;
+  token: string;
 }) {
   const [dsSearch, setDsSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [dsSort, setDsSort] = useState<"name" | "runs" | "created" | "lastAssessed">("created");
+  // ── 29.2 Clone state ──
+  const [cloningId, setCloningId] = useState<string | null>(null);
+  // ── 28.2 Period data viewer ──
+  type PeriodRow28 = { period_index: number; period_date: string | null; hedged_item_fv_change: number; instrument_fv_change: number };
+  const [viewDataId, setViewDataId] = useState<string | null>(null);
+  const [periodsCache, setPeriodsCache] = useState<Record<string, PeriodRow28[]>>({});
+  const [loadingPeriods, setLoadingPeriods] = useState(false);
+  const toggleViewData = async (dsId: string) => {
+    if (viewDataId === dsId) { setViewDataId(null); return; }
+    setViewDataId(dsId);
+    if (periodsCache[dsId]) return;
+    setLoadingPeriods(true);
+    try {
+      const res = await dashboardFetch(`/v1/hedge-effectiveness/datasets/${dsId}`, token);
+      if (res.ok) {
+        const data = await res.json();
+        setPeriodsCache((prev) => ({ ...prev, [dsId]: data.periods ?? [] }));
+      }
+    } finally { setLoadingPeriods(false); }
+  };
+  // ── 27.2 Dataset metadata editor ──
+  const [editingDsId, setEditingDsId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPair, setEditPair] = useState("");
+  const [editDesig, setEditDesig] = useState("");
+  const [saving, setSaving] = useState(false);
+  const openEdit = (ds: Dataset, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingDsId(ds.id);
+    setEditName(ds.name);
+    setEditPair(ds.currency_pair ?? "");
+    setEditDesig(ds.designation_date ?? "");
+    setExpandedId(ds.id);
+  };
+  const saveEdit = async (dsId: string) => {
+    setSaving(true);
+    await onUpdateDataset(dsId, {
+      name: editName.trim() || undefined,
+      currency_pair: editPair.trim() || null,
+      designation_date: editDesig.trim() || null,
+    });
+    setSaving(false);
+    setEditingDsId(null);
+  };
 
   // ── 25.3 Dataset notes ──
   const DS_NOTES_KEY = "hec_dataset_notes";
@@ -1957,25 +2157,68 @@ function DatasetsTab({
             <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>
               {ds.created_at ? new Date(ds.created_at).toLocaleDateString() : "\u2014"}
             </span>
-            <button
-              onClick={(e) => { e.stopPropagation(); onRunAssessment(ds.id); }}
-              disabled={submitting}
-              style={{
-                fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
-                padding: "7px 16px", borderRadius: 3, cursor: submitting ? "not-allowed" : "pointer",
-                background: HEX.cyan, color: "#fff", border: "none",
-                opacity: submitting ? 0.5 : 1,
-                boxShadow: "0 1px 4px rgba(28,98,242,0.15)",
-                transition: "all 0.15s",
-              }}
-              onMouseEnter={(e) => { if (!submitting) e.currentTarget.style.boxShadow = "0 2px 10px rgba(28,98,242,0.25)"; }}
-              onMouseLeave={(e) => e.currentTarget.style.boxShadow = "0 1px 4px rgba(28,98,242,0.15)"}
-            >
-              {submitting ? "RUNNING..." : "RUN ASSESSMENT"}
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button
+                onClick={(e) => openEdit(ds, e)}
+                title="Edit metadata"
+                style={{
+                  width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "transparent", border: `1px solid ${S.soft}`, borderRadius: 3, cursor: "pointer",
+                  color: S.text3, flexShrink: 0, transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = HEX.cyan; e.currentTarget.style.color = HEX.cyan; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = S.soft; e.currentTarget.style.color = HEX.text3; }}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+              {/* 29.2 — Clone dataset */}
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  setCloningId(ds.id);
+                  await onCloneDataset(ds.id);
+                  setCloningId(null);
+                }}
+                disabled={cloningId === ds.id}
+                title="Clone dataset"
+                style={{
+                  width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "transparent", border: `1px solid ${S.soft}`, borderRadius: 3,
+                  cursor: cloningId === ds.id ? "not-allowed" : "pointer",
+                  color: S.text3, flexShrink: 0, transition: "all 0.15s",
+                  opacity: cloningId === ds.id ? 0.5 : 1,
+                }}
+                onMouseEnter={(e) => { if (cloningId !== ds.id) { e.currentTarget.style.borderColor = HEX.amber; e.currentTarget.style.color = HEX.amber; } }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = S.soft; e.currentTarget.style.color = HEX.text3; }}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                </svg>
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onRunAssessment(ds.id); }}
+                disabled={submitting}
+                style={{
+                  fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
+                  padding: "7px 16px", borderRadius: 3, cursor: submitting ? "not-allowed" : "pointer",
+                  background: HEX.cyan, color: "#fff", border: "none",
+                  opacity: submitting ? 0.5 : 1,
+                  boxShadow: "0 1px 4px rgba(28,98,242,0.15)",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => { if (!submitting) e.currentTarget.style.boxShadow = "0 2px 10px rgba(28,98,242,0.25)"; }}
+                onMouseLeave={(e) => e.currentTarget.style.boxShadow = "0 1px 4px rgba(28,98,242,0.15)"}
+              >
+                {submitting ? "RUNNING..." : "RUN ASSESSMENT"}
+              </button>
+            </div>
           </div>
 
-          {/* Accordion expand — last 3 runs */}
+          {/* Accordion expand — edit form or last 3 runs */}
           {expandedId === ds.id && (() => {
             const dsRuns = [...runs]
               .filter((r) => r.dataset_id === ds.id)
@@ -1987,6 +2230,80 @@ function DatasetsTab({
                 background: S.sub, padding: "12px 20px",
                 display: "flex", flexDirection: "column", gap: 6,
               }}>
+                {/* ── 27.2 Edit metadata strip ── */}
+                {editingDsId === ds.id && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "12px 0 14px", borderBottom: `1px solid ${S.rim}`, marginBottom: 8 }}>
+                    <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.14em" }}>
+                      EDIT METADATA
+                    </div>
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "2 1 200px" }}>
+                        <label style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, letterSpacing: "0.1em" }}>NAME</label>
+                        <input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          style={{
+                            fontFamily: S.ui, fontSize: 12, padding: "6px 10px", borderRadius: 3,
+                            border: `1px solid ${S.soft}`, background: S.panel, color: S.text1, outline: "none",
+                          }}
+                          onFocus={(e) => e.currentTarget.style.borderColor = HEX.cyan}
+                          onBlur={(e) => e.currentTarget.style.borderColor = S.soft}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 100px" }}>
+                        <label style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, letterSpacing: "0.1em" }}>CURRENCY PAIR</label>
+                        <input
+                          value={editPair}
+                          onChange={(e) => setEditPair(e.target.value)}
+                          placeholder="EUR/USD"
+                          style={{
+                            fontFamily: S.mono, fontSize: 12, padding: "6px 10px", borderRadius: 3,
+                            border: `1px solid ${S.soft}`, background: S.panel, color: S.text1, outline: "none",
+                          }}
+                          onFocus={(e) => e.currentTarget.style.borderColor = HEX.cyan}
+                          onBlur={(e) => e.currentTarget.style.borderColor = S.soft}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 110px" }}>
+                        <label style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, letterSpacing: "0.1em" }}>DESIGNATION DATE</label>
+                        <input
+                          value={editDesig}
+                          onChange={(e) => setEditDesig(e.target.value)}
+                          placeholder="YYYY-MM-DD"
+                          style={{
+                            fontFamily: S.mono, fontSize: 12, padding: "6px 10px", borderRadius: 3,
+                            border: `1px solid ${S.soft}`, background: S.panel, color: S.text1, outline: "none",
+                          }}
+                          onFocus={(e) => e.currentTarget.style.borderColor = HEX.cyan}
+                          onBlur={(e) => e.currentTarget.style.borderColor = S.soft}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        disabled={saving || !editName.trim()}
+                        onClick={() => saveEdit(ds.id)}
+                        style={{
+                          fontFamily: S.mono, fontSize: 11, fontWeight: 700, padding: "5px 14px", borderRadius: 3,
+                          background: HEX.cyan, color: "#fff", border: "none",
+                          cursor: saving || !editName.trim() ? "not-allowed" : "pointer",
+                          opacity: saving || !editName.trim() ? 0.6 : 1,
+                        }}
+                      >
+                        {saving ? "SAVING…" : "SAVE"}
+                      </button>
+                      <button
+                        onClick={() => setEditingDsId(null)}
+                        style={{
+                          fontFamily: S.mono, fontSize: 11, padding: "5px 12px", borderRadius: 3,
+                          background: "transparent", color: S.text3, border: `1px solid ${S.soft}`, cursor: "pointer",
+                        }}
+                      >
+                        CANCEL
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 4 }}>
                   ASSESSMENT HISTORY
                 </div>
@@ -2024,6 +2341,138 @@ function DatasetsTab({
                     </span>
                   </div>
                 ))}
+
+                {/* ── 29.3 D.O. trend sparkline ── */}
+                {(() => {
+                  const allDsRuns = [...runs]
+                    .filter((r) => r.dataset_id === ds.id && r.dollar_offset_ratio != null)
+                    .sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+                  if (allDsRuns.length < 2) return null;
+                  const xData = allDsRuns.map((r) => r.created_at ? new Date(r.created_at).toLocaleDateString() : r.run_id.slice(0,6));
+                  const yData = allDsRuns.map((r) => +(r.dollar_offset_ratio!.toFixed(4)));
+                  return (
+                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${S.rim}` }}>
+                      <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 4 }}>
+                        D.O. RATIO TREND
+                      </div>
+                      <ReactECharts
+                        opts={{ renderer: "svg", height: 80 }}
+                        style={{ height: 80 }}
+                        option={{
+                          animation: false,
+                          grid: { top: 8, bottom: 18, left: 48, right: 12 },
+                          xAxis: {
+                            type: "category", data: xData,
+                            axisLabel: { fontFamily: S.mono, fontSize: 9, color: HEX.text3 },
+                            axisLine: { lineStyle: { color: HEX.border } },
+                            axisTick: { show: false },
+                          },
+                          yAxis: {
+                            type: "value",
+                            min: (v: { min: number }) => +Math.min(v.min * 0.95, 0.75).toFixed(2),
+                            max: (v: { max: number }) => +Math.max(v.max * 1.05, 1.30).toFixed(2),
+                            axisLabel: { fontFamily: S.mono, fontSize: 9, color: HEX.text3, formatter: (v: number) => v.toFixed(2) },
+                            axisLine: { show: false }, axisTick: { show: false },
+                            splitLine: { lineStyle: { color: HEX.border, type: "dashed" } },
+                          },
+                          series: [
+                            // Effective band [0.80, 1.25]
+                            { type: "line", data: xData.map(() => 0.80), lineStyle: { color: HEX.green, type: "dashed", width: 1 }, symbol: "none", silent: true },
+                            { type: "line", data: xData.map(() => 1.25), lineStyle: { color: HEX.green, type: "dashed", width: 1 }, symbol: "none", silent: true },
+                            {
+                              type: "line",
+                              data: yData,
+                              smooth: true,
+                              lineStyle: { color: HEX.cyan, width: 2 },
+                              symbol: "circle", symbolSize: 5,
+                              itemStyle: {
+                                color: (params: { data: number }) =>
+                                  params.data >= 0.80 && params.data <= 1.25 ? HEX.green : HEX.red,
+                              },
+                              areaStyle: { color: `${HEX.cyan}14` },
+                            },
+                          ],
+                          tooltip: {
+                            trigger: "axis",
+                            formatter: (params: Array<{ name: string; value: number; seriesIndex: number }>) => {
+                              const p = params.find((x) => x.seriesIndex === 2);
+                              if (!p) return "";
+                              const inBand = p.value >= 0.80 && p.value <= 1.25;
+                              return `<span style="font-family:monospace;font-size:11px">${p.name}<br/><b style="color:${inBand ? HEX.green : HEX.red}">D.O. ${p.value.toFixed(4)}</b></span>`;
+                            },
+                          },
+                        }}
+                      />
+                    </div>
+                  );
+                })()}
+
+                {/* ── 28.2 Period data viewer ── */}
+                <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${S.rim}` }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleViewData(ds.id); }}
+                    style={{
+                      fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                      padding: "3px 10px", borderRadius: 2, cursor: "pointer",
+                      background: viewDataId === ds.id ? "rgba(28,98,242,0.08)" : "transparent",
+                      color: viewDataId === ds.id ? HEX.cyan : S.text3,
+                      border: `1px solid ${viewDataId === ds.id ? "rgba(28,98,242,0.25)" : S.rim}`,
+                      transition: "all 0.12s",
+                    }}
+                  >
+                    {viewDataId === ds.id ? "HIDE DATA" : "VIEW DATA"}
+                  </button>
+                  {viewDataId === ds.id && (
+                    <div style={{ marginTop: 8 }}>
+                      {loadingPeriods && !periodsCache[ds.id] ? (
+                        <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>Loading…</span>
+                      ) : (periodsCache[ds.id] ?? []).length === 0 ? (
+                        <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>No period data found.</span>
+                      ) : (
+                        <div style={{ overflow: "auto", maxHeight: 240, borderRadius: 3, border: `1px solid ${S.rim}` }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.mono, fontSize: 11 }}>
+                            <thead>
+                              <tr style={{ background: S.sub }}>
+                                {["#", "DATE", "HEDGED FV Δ", "INSTRUMENT FV Δ", "CUM D.O."].map((h) => (
+                                  <th key={h} style={{ padding: "6px 10px", textAlign: "left", fontWeight: 700, color: S.text3, letterSpacing: "0.08em", borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap" }}>{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(() => {
+                                let cumHedged = 0; let cumInstr = 0;
+                                return (periodsCache[ds.id] ?? []).map((p) => {
+                                  cumHedged += p.hedged_item_fv_change;
+                                  cumInstr += p.instrument_fv_change;
+                                  const cumDO = cumHedged !== 0 ? Math.abs(cumInstr / cumHedged) : null;
+                                  const inBand = cumDO != null && cumDO >= 0.80 && cumDO <= 1.25;
+                                  return (
+                                    <tr key={p.period_index} style={{ borderBottom: `1px solid ${S.rim}` }}
+                                      onMouseEnter={(e) => (e.currentTarget.style.background = S.sub)}
+                                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                    >
+                                      <td style={{ padding: "5px 10px", color: S.text3 }}>{p.period_index + 1}</td>
+                                      <td style={{ padding: "5px 10px", color: S.text2 }}>{p.period_date ?? "—"}</td>
+                                      <td style={{ padding: "5px 10px", color: p.hedged_item_fv_change >= 0 ? HEX.green : HEX.red, fontWeight: 600 }}>
+                                        {p.hedged_item_fv_change >= 0 ? "+" : ""}{p.hedged_item_fv_change.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                      </td>
+                                      <td style={{ padding: "5px 10px", color: p.instrument_fv_change >= 0 ? HEX.green : HEX.red, fontWeight: 600 }}>
+                                        {p.instrument_fv_change >= 0 ? "+" : ""}{p.instrument_fv_change.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                      </td>
+                                      <td style={{ padding: "5px 10px", color: cumDO == null ? S.text3 : inBand ? HEX.green : HEX.red, fontWeight: 700 }}>
+                                        {cumDO != null ? cumDO.toFixed(4) : "—"}
+                                      </td>
+                                    </tr>
+                                  );
+                                });
+                              })()}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {/* ── 25.3 Dataset sticky note ── */}
                 <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${S.rim}` }}>
@@ -2469,7 +2918,7 @@ type SortKey = "dataset" | "do_ratio" | "r2" | "verdict" | "date" | null;
 
 const STARRED_KEY = "hec_starred_runs";
 
-function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: string) => void }) {
+function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigateRun: (id: string) => void; onDeleteRuns: (ids: string[]) => Promise<void> }) {
   const [search, setSearch] = useState("");
   const [stdFilter, setStdFilter] = useState("ALL");
   const [verdictFilter, setVerdictFilter] = useState<"ALL" | "EFFECTIVE" | "INEFFECTIVE">("ALL");
@@ -2482,6 +2931,21 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
   });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [compareOpen, setCompareOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  // ── 28.1 Bulk tag ──
+  const [tagBulkOpen, setTagBulkOpen] = useState(false);
+  const applyBulkTag = (tag: TagValue, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = { ...tags };
+    for (const id of selectedIds) {
+      if (tag === null) delete next[id];
+      else next[id] = tag;
+    }
+    setTags(next);
+    localStorage.setItem(TAGS_KEY, JSON.stringify(next));
+    setTagBulkOpen(false);
+  };
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [doMin, setDoMin] = useState("");
@@ -2965,9 +3429,108 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
             COMPARE ({selectedIds.size})
           </button>
         )}
-        {selectedIds.size > 0 && (
+        {selectedIds.size > 0 && !deleteConfirm && (
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setTagBulkOpen((v) => !v)}
+              style={{
+                fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+                padding: "5px 12px", borderRadius: 3, cursor: "pointer",
+                background: "transparent", color: HEX.amber,
+                border: `1px solid rgba(217,119,6,0.25)`,
+                display: "flex", alignItems: "center", gap: 5,
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(217,119,6,0.04)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>
+              </svg>
+              TAG ALL
+            </button>
+            {tagBulkOpen && (
+              <div style={{
+                position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 200,
+                background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 4,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.12)", padding: 4,
+                display: "flex", flexDirection: "column", gap: 2, minWidth: 110,
+              }}>
+                {(["REVIEW", "APPROVED", "FLAGGED", null] as (TagValue)[]).map((t) => (
+                  <button
+                    key={t ?? "clear"}
+                    onClick={(e) => applyBulkTag(t, e)}
+                    style={{
+                      fontFamily: S.mono, fontSize: 10, fontWeight: 700, padding: "5px 10px",
+                      borderRadius: 3, cursor: "pointer", border: "none", textAlign: "left",
+                      background: t ? TAG_COLORS[t].bg : "transparent",
+                      color: t ? TAG_COLORS[t].color : S.text3,
+                    }}
+                  >
+                    {t ?? "Clear tag"}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {selectedIds.size > 0 && !deleteConfirm && (
           <button
-            onClick={() => setSelectedIds(new Set())}
+            onClick={() => setDeleteConfirm(true)}
+            style={{
+              fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+              padding: "5px 12px", borderRadius: 3, cursor: "pointer",
+              background: "transparent", color: HEX.red,
+              border: `1px solid rgba(220,38,38,0.25)`,
+              display: "flex", alignItems: "center", gap: 5,
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "rgba(220,38,38,0.04)"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+              <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+            </svg>
+            DELETE ({selectedIds.size})
+          </button>
+        )}
+        {deleteConfirm && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 12px", borderRadius: 3, background: HEX.redBg, border: `1px solid ${HEX.redBorder}` }}>
+            <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: HEX.red }}>
+              DELETE {selectedIds.size} RUN{selectedIds.size > 1 ? "S" : ""}?
+            </span>
+            <button
+              disabled={deleting}
+              onClick={async () => {
+                setDeleting(true);
+                await onDeleteRuns(Array.from(selectedIds));
+                setSelectedIds(new Set());
+                setDeleteConfirm(false);
+                setDeleting(false);
+              }}
+              style={{
+                fontFamily: S.mono, fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 2,
+                background: HEX.red, color: "#fff", border: "none", cursor: deleting ? "not-allowed" : "pointer",
+                opacity: deleting ? 0.6 : 1,
+              }}
+            >
+              {deleting ? "DELETING…" : "CONFIRM"}
+            </button>
+            <button
+              onClick={() => setDeleteConfirm(false)}
+              style={{
+                fontFamily: S.mono, fontSize: 11, padding: "3px 8px", borderRadius: 2,
+                background: "transparent", color: HEX.red, border: `1px solid ${HEX.redBorder}`, cursor: "pointer",
+              }}
+            >
+              CANCEL
+            </button>
+          </div>
+        )}
+        {selectedIds.size > 0 && !deleteConfirm && (
+          <button
+            onClick={() => { setSelectedIds(new Set()); setDeleteConfirm(false); }}
             style={{
               fontFamily: S.mono, fontSize: 11, color: S.text3, background: "transparent",
               border: "none", cursor: "pointer", padding: "5px 4px",
@@ -3403,14 +3966,51 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
                 <span style={{ fontFamily: S.mono, fontSize: 13, fontWeight: 800, color: S.text1, letterSpacing: "0.1em" }}>
                   RUN COMPARISON — {compareRuns.length} RUNS
                 </span>
-                <button
-                  onClick={() => setCompareOpen(false)}
-                  style={{ background: "transparent", border: "none", cursor: "pointer", color: S.text3, padding: 4 }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M18 6 6 18M6 6l12 12"/>
-                  </svg>
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {/* 29.1 — Export comparison as CSV */}
+                  <button
+                    onClick={() => {
+                      const header = ["run_id","dataset","standard","do_ratio","r_squared","verdict","date"];
+                      const rows = compareRuns.map((r) => [
+                        r.run_id,
+                        `"${r.dataset_name.replace(/"/g,'""')}"`,
+                        r.standard,
+                        r.dollar_offset_ratio?.toFixed(6) ?? "",
+                        r.regression_r_squared?.toFixed(6) ?? "",
+                        r.overall_effective ? "EFFECTIVE" : "INEFFECTIVE",
+                        r.created_at ? new Date(r.created_at).toISOString().slice(0,10) : "",
+                      ]);
+                      const csv = [header.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+                      const blob = new Blob([csv], { type: "text/csv" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url; a.download = `he_comparison_${Date.now()}.csv`;
+                      a.click(); URL.revokeObjectURL(url);
+                    }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 5,
+                      fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+                      padding: "5px 12px", borderRadius: 3, cursor: "pointer",
+                      background: "transparent", color: S.text2,
+                      border: `1px solid ${S.rim}`, transition: "all 0.12s",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = HEX.cyan; e.currentTarget.style.color = HEX.cyan; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = S.rim; e.currentTarget.style.color = S.text2; }}
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    EXPORT CSV
+                  </button>
+                  <button
+                    onClick={() => setCompareOpen(false)}
+                    style={{ background: "transparent", border: "none", cursor: "pointer", color: S.text3, padding: 4 }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 6 6 18M6 6l12 12"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
               {/* Comparison grid */}
               <div style={{ padding: "16px 24px" }}>

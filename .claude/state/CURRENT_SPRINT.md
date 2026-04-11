@@ -1,25 +1,95 @@
 # Current Sprint
 
-Sprint: Sprint 15 — Comparison, Trend & Print
-Status: COMPLETE ✓
-Started: 2026-04-05
-Completed: 2026-04-05
+Sprint: Sprint 29 — Compare Export, Dataset Clone & D.O. Sparkline
+Status: COMPLETE [PENDING BROWSER CONFIRMATION]
+Started: 2026-04-10
+Completed: 2026-04-10
 
 ## Items
 | # | Item | Status | Priority |
 |---|------|--------|----------|
-| 15.1 | RunsTab: checkbox multi-select + COMPARE modal (side-by-side metrics grid, Escape to close) | DONE [PENDING BROWSER CONFIRMATION] | high |
-| 15.2 | Run detail: PRINT button (window.print(), printer SVG, hover state) | DONE [PENDING BROWSER CONFIRMATION] | medium |
-| 15.3 | OverviewTab: D.O. ratio trend sparkline (ECharts line, last 20 runs, 0.80/1.25 markLines) | DONE [PENDING BROWSER CONFIRMATION] | high |
+| 29.1 | Compare modal: EXPORT CSV button (client-side Blob download; columns: run_id, dataset, standard, do_ratio, r_squared, verdict, date) | DONE [PENDING BROWSER CONFIRMATION] | high |
+| 29.2 | Dataset clone: `POST /datasets/{id}/clone` backend + amber copy-icon button in DatasetsTab row (cloningId spinner guard) | DONE [PENDING BROWSER CONFIRMATION] | high |
+| 29.3 | DatasetsTab accordion: per-dataset D.O. ratio trend sparkline (ECharts SVG line; effective band dashes; point colours; only shown when ≥2 runs with D.O. data) | DONE [PENDING BROWSER CONFIRMATION] | medium |
 
 ## Completed: 3/3
 ## Sprint Status: COMPLETE [PENDING BROWSER CONFIRMATION]
 
 ## Notes
-- 15.1: `selectedIds: Set<string>` state; `toggleSelect(id, e)` with stopPropagation; checkbox col added (28px) to grid; COMPARE button shown when ≥2 selected; modal is fixed overlay with backdrop; grid layout `140px repeat(N, 1fr)`; Escape key closes
-- 15.2: `runs/[run_id]/page.tsx` PRINT button after COPY button; `window.print()` onClick; printer icon SVG
-- 15.3: `page.tsx` OverviewTab — sorted chronologically, slice last 20, ECharts line with area fill; markLine at 0.80 and 1.25; shows when runs.length ≥ 3
-- tsc clean, next build clean
+- 29.1: Pure client-side; no backend; CSV constructed from in-memory `compareRuns`; `URL.createObjectURL` + anchor click + `revokeObjectURL`; button in modal header between title and close icon
+- 29.2: Backend `POST /datasets/{id}/clone` → copies period data + metadata, appends '(Copy)', new UUID, emits audit event. Frontend: `handleCloneDataset` in Inner; `onCloneDataset` prop on DatasetsTab; `cloningId` state guards double-click; amber hover
+- 29.3: ECharts SVG renderer (height=80); filtered to dataset runs with non-null D.O.; chronological sort; green dashed band lines at 0.80/1.25; series point colors green/red by band membership; tooltip shows date + D.O. ratio
+- Backend tests: 4801 passed, 158 skipped (no regressions)
+- tsc clean (no output from noEmit)
+
+---
+
+# Sprint: Sprint 28 — Bulk Tag, Period Viewer & Rolling Pass-Rate
+Status: COMPLETE [PENDING BROWSER CONFIRMATION]
+Started: 2026-04-10
+Completed: 2026-04-10
+
+## Items
+| # | Item | Status | Priority |
+|---|------|--------|----------|
+| 28.1 | RunsTab: bulk tag all selected (TAG ALL dropdown → REVIEW/APPROVED/FLAGGED/Clear; applies to all selectedIds in localStorage) | DONE [PENDING BROWSER CONFIRMATION] | high |
+| 28.2 | DatasetsTab: period data viewer (VIEW DATA toggle in accordion → fetches GET /datasets/{id} → scrollable period table with cumulative D.O.) | DONE [PENDING BROWSER CONFIRMATION] | high |
+| 28.3 | OverviewTab: rolling pass-rate KPI (LAST 5 / LAST 10 / ALL toggle; shows % + Δpp vs prior window) | DONE [PENDING BROWSER CONFIRMATION] | medium |
+
+## Completed: 3/3
+## Sprint Status: COMPLETE [PENDING BROWSER CONFIRMATION]
+
+## Notes
+- 28.1: `tagBulkOpen` state + `applyBulkTag()` in RunsTab; shares TAGS_KEY/TAG_COLORS/TagValue with existing per-run tag system; dropdown mirrors per-run tag menu; appears when selectedIds.size >= 1
+- 28.2: `viewDataId/periodsCache/loadingPeriods/toggleViewData` state in DatasetsTab; `token` prop added; lazy fetch from `GET /v1/hedge-effectiveness/datasets/{id}`; table shows index, date, hedged FV Δ, instrument FV Δ, cumulative D.O. (green if in band, red if out); backend: new `GET /datasets/{dataset_id}` endpoint returns metadata + periods array
+- 28.3: `passWindow: 5|10|0` local state in OverviewTab; sorted desc by created_at; window slice + prior window slice; delta in pp vs prior; cyan/amber/red by pass %
+- tsc clean, next build clean (99/99 static pages)
+
+---
+
+# Sprint: Sprint 27 — Bulk Delete, Dataset Editor & Best/Worst Tile
+Status: COMPLETE [PENDING BROWSER CONFIRMATION]
+Started: 2026-04-10
+Completed: 2026-04-10
+
+## Items
+| # | Item | Status | Priority |
+|---|------|--------|----------|
+| 27.1 | RunsTab: bulk delete selected runs (trash button → inline confirm → POST /runs/batch-delete) | DONE [PENDING BROWSER CONFIRMATION] | high |
+| 27.2 | DatasetsTab: dataset metadata editor (pencil icon → inline edit form for name/pair/designation date → PATCH /datasets/{id}) | DONE [PENDING BROWSER CONFIRMATION] | high |
+| 27.3 | OverviewTab: best/worst run tile (D.O. ratio closest to 1.0 vs most out-of-band; clickable to run detail) | DONE [PENDING BROWSER CONFIRMATION] | medium |
+
+## Completed: 3/3
+## Sprint Status: COMPLETE [PENDING BROWSER CONFIRMATION]
+
+## Notes
+- 27.1: `deleteConfirm` + `deleting` state in RunsTab; trash icon in toolbar when ≥1 selected; inline confirm strip (red); `onDeleteRuns` prop; backend: `POST /v1/hedge-effectiveness/runs/batch-delete`, `BatchDeleteRunsRequest`, tenant-scoped deletes, audit event
+- 27.2: `editingDsId/editName/editPair/editDesig/saving` state in DatasetsTab; pencil icon in each row last column; edit strip in accordion body; `onUpdateDataset` prop; backend: `PATCH /v1/hedge-effectiveness/datasets/{dataset_id}`, `UpdateDatasetRequest`; `designation_date` added to Dataset interface
+- 27.3: Pure OverviewTab computation; effective runs sorted by abs(D.O.-1.0); ineffective sorted by max distance; `RunCard` sub-component; only shown when ≥2 runs; green/red accent bars; clickable to run detail
+- tsc clean (no errors), next build clean (only pre-existing warnings)
+
+---
+
+# Sprints 16–26 — COMPLETE ✓ (reconstructed from git log)
+
+| Sprint | Commit | Delivered |
+|--------|--------|-----------|
+| 16 | 986e76d | RE-RUN button, date range filter, effectiveness streak |
+| 17 | f7b4fa8 | Health matrix, out-of-band markers, export selected |
+| 18 | a78483a | Monthly chart, smart compliance notes, pagination |
+| 19 | baba3fd | KPI tiles, sibling runs panel, search highlight |
+| 20 | ed0658b | Risk alerts, JSON export, perfect hedge line |
+| 21 | e21ec11 | Group-by-dataset, hash chain viz, assessment cadence |
+| 22 | 7d37261 | D.O. range filter, row density toggle, worst performers |
+| 23 | 15067e4 | Filter presets, trend direction badge, anomaly flags |
+| 24 | e1dbb63 | Column visibility, hover popover, activity calendar heatmap |
+| 25 | 7f0388c | Keyboard nav, quick tags, dataset sticky notes |
+| 26 | 788921d | Tag filter, D.O. statistics panel, per-run analyst notes |
+
+---
+
+# Sprint: Sprint 15 — Comparison, Trend & Print — COMPLETE ✓
+Started: 2026-04-05 | Completed: 2026-04-05 | Commit: ed43065
 
 ---
 

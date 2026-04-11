@@ -1,5 +1,66 @@
 # Changelog (AI-maintained)
 
+## 2026-04-10 — Sprint 29: Compare Export, Dataset Clone & D.O. Sparkline
+
+### Added
+- **Compare modal EXPORT CSV** (`page.tsx`): EXPORT CSV button in compare modal header; pure client-side Blob download via `URL.createObjectURL`; columns: run_id, dataset, standard, do_ratio, r_squared, verdict, date.
+- **Dataset clone endpoint** (`v1_hedge_effectiveness.py`): `POST /v1/hedge-effectiveness/datasets/{id}/clone` — copies period data + all metadata with '(Copy)' name suffix, new UUID, emits audit event.
+- **Dataset clone UI** (`page.tsx`): amber copy-icon button in DatasetsTab row actions; `cloningId` state prevents double-click; `handleCloneDataset` in HedgeEffectivenessInner; reloads datasets after clone.
+- **D.O. ratio trend sparkline** (`page.tsx`): ECharts SVG line chart (h=80) per dataset in accordion; shows chronological D.O. ratio across all runs; green dashed band lines at 0.80/1.25; data points coloured green/red by band membership; only rendered when ≥2 runs have D.O. data.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (no output)
+- pytest: 4801 passed, 0 failed, 158 skipped
+- Browser confirmation: PENDING
+
+### Files changed
+- `backend/app/api/routes/v1_hedge_effectiveness.py`
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+
+---
+
+## 2026-04-04 — Sprint 6: Regulatory Reporting (IFRS 9 / ASC 815) — session 2
+
+### Fixed
+- **PageShell-inside-RunsTab bug** on `hedge-effectiveness/page.tsx`: `<PageShell>` and `Play` were imported but PageShell wrapped RunsTab content incorrectly. Removed both imports and the erroneous wrapper.
+
+### Added
+- **At-risk hedges monitor** in `OverviewTab`: surfaces hedges whose effectiveness ratio is within 10% of the IFRS 9 boundaries (0.80 lower / 1.25 upper); amber warning card with ratio + trend indicator.
+- **Methodology & Standards disclosure panel** in `ComplianceSection` (EVIDENCE tab) on run detail page: shows accounting standard, methodology version, dollar-offset test pass/fail, regression test pass/fail, hedge type, designation date; includes standards citations (IFRS 9.6.4.1 / ASC 815-20-25).
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN
+- `npx next build` — PASSED (after cache clean)
+- pytest: 4801 passed, 0 failed, 158 skipped
+- Browser confirmation: PENDING (item 6.1 XML download buttons)
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `frontend/src/app/hedge-effectiveness/runs/[run_id]/page.tsx`
+
+---
+
+## 2026-04-04 — Sprint 6: Regulatory Reporting (IFRS 9 / ASC 815) — session 1 (partial)
+
+### Added
+- **IFRS 9 + ASC 815 XML download buttons** in run detail page header (`/hedge-effectiveness/runs/[run_id]`): cyan-styled buttons calling `dashboardFetch` to `/v1/hedge-effectiveness/runs/{run_id}/ifrs9-xml` and `/asc815-xml`; `downloading` state prevents double-click
+- **`designation_date`** added to `RunDetail` TypeScript interface and header metadata strip
+
+### Fixed
+- **PageShell-inside-map bug**: `<PageShell>` was placed inside `traces.map()` loop, wrapping each trace card in a full page shell. Removed entirely (import dropped).
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN
+- `npx next build` — PASSED
+- pytest: 4801 passed, 0 failed, 158 skipped
+- Browser confirmation: PENDING
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/runs/[run_id]/page.tsx` (1 file)
+
+---
+
 ## 2026-04-04 — Production Auth + Dashboard Fixes
 
 ### Fixed

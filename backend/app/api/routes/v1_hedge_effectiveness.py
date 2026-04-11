@@ -4,13 +4,17 @@ backend/app/api/routes/v1_hedge_effectiveness.py
 Hedge Effectiveness API -- IFRS 9 / ASC 815 compliance testing.
 
 Endpoints:
-  POST /v1/hedge-effectiveness/datasets           -- create dataset (JSON body)
-  POST /v1/hedge-effectiveness/datasets/upload     -- CSV upload
-  GET  /v1/hedge-effectiveness/datasets            -- list datasets
-  POST /v1/hedge-effectiveness/assess              -- run effectiveness assessment
-  GET  /v1/hedge-effectiveness/runs                -- list assessment runs
-  GET  /v1/hedge-effectiveness/runs/{run_id}       -- full assessment report
-  GET  /v1/hedge-effectiveness/runs/{run_id}/export -- evidence binder
+  POST /v1/hedge-effectiveness/datasets                  -- create dataset (JSON body)
+  POST /v1/hedge-effectiveness/datasets/upload            -- CSV upload
+  GET  /v1/hedge-effectiveness/datasets/{dataset_id}      -- dataset detail + periods
+  GET  /v1/hedge-effectiveness/datasets                   -- list datasets
+  PATCH /v1/hedge-effectiveness/datasets/{dataset_id}     -- update metadata
+  POST /v1/hedge-effectiveness/datasets/{dataset_id}/clone -- clone dataset
+  POST /v1/hedge-effectiveness/assess                     -- run effectiveness assessment
+  GET  /v1/hedge-effectiveness/runs                       -- list assessment runs
+  GET  /v1/hedge-effectiveness/runs/{run_id}              -- full assessment report
+  GET  /v1/hedge-effectiveness/runs/{run_id}/export       -- evidence binder
+  POST /v1/hedge-effectiveness/runs/batch-delete          -- delete runs by ID list
 
 All endpoints: JWT required, tenant-scoped by company_id.
 """
@@ -116,6 +120,13 @@ class AssessRequest(BaseModel):
     dataset_id: str
     standard: str = Field(default="ASC_815")
     method: str = Field(default="both")
+class BatchDeleteRunsRequest(BaseModel):
+    run_ids: list[str] = Field(..., min_length=1, max_length=50)
+class UpdateDatasetRequest(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = None
+    currency_pair: str | None = None
+    designation_date: str | None = None
 # -- CSV parser --------------------------------------------------------------
 
 def _parse_effectiveness_csv(raw_bytes: bytes) -> tuple[list[dict], list[str]]:
@@ -304,6 +315,49 @@ async def upload_dataset(
         "period_count": len(rows),
         "source_hash": source_hash,
         "parse_warnings": warnings[:50],
+    }
+# -- Endpoint: Get dataset (with period data) --------------------------------
+
+@router.get("/datasets/{dataset_id}")
+async def get_dataset(
+    dataset_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """
+    GET /v1/hedge-effectiveness/datasets/{dataset_id}
+
+    Returns dataset metadata plus the full period data array.
+    Used by the period data viewer in the frontend.
+    """
+    company_id = current_user.company_id
+    try:
+        uuid_id = uuid.UUID(dataset_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid dataset_id.")
+    stmt = select(HedgeEffectivenessDataset).where(
+        HedgeEffectivenessDataset.id == uuid_id,
+        HedgeEffectivenessDataset.company_id == company_id,
+    )
+    result = await session.execute(stmt)
+    ds = result.scalar_one_or_none()
+    if not ds:
+        raise HTTPException(status_code=404, detail="Dataset not found.")
+    data = ds.data_json if isinstance(ds.data_json, list) else (
+        json.loads(ds.data_json) if isinstance(ds.data_json, str) else []
+    )
+    return {
+        "id": str(ds.id),
+        "name": ds.name,
+        "description": ds.description,
+        "currency_pair": ds.currency_pair,
+        "hedge_type": ds.hedge_type,
+        "designation_date": ds.designation_date,
+        "source": ds.source,
+        "period_count": ds.period_count,
+        "source_hash": ds.source_hash,
+        "created_at": ds.created_at.isoformat() if ds.created_at else None,
+        "periods": data,
     }
 # -- Endpoint: List datasets ------------------------------------------------
 
@@ -726,3 +780,163 @@ async def download_asc815_xml(
         media_type="application/xml; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+# -- Endpoint: Batch delete runs --------------------------------------------
+
+@router.post("/runs/batch-delete")
+async def batch_delete_runs(
+    body: BatchDeleteRunsRequest,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """
+    POST /v1/hedge-effectiveness/runs/batch-delete
+
+    Delete one or more assessment runs by ID (tenant-scoped).
+    Uses POST /batch-delete instead of DELETE with body to avoid HTTP proxy stripping.
+    Requires: hedge_effectiveness.run
+    """
+    await _require(session, current_user, "hedge_effectiveness.run")
+    company_id = current_user.company_id
+    deleted = 0
+    for rid in body.run_ids:
+        try:
+            uuid_id = uuid.UUID(rid)
+        except ValueError:
+            continue
+        stmt = select(HedgeEffectivenessRun).where(
+            HedgeEffectivenessRun.id == uuid_id,
+            HedgeEffectivenessRun.company_id == company_id,
+        )
+        result = await session.execute(stmt)
+        run = result.scalar_one_or_none()
+        if run:
+            await session.delete(run)
+            deleted += 1
+    await session.commit()
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="SYSTEM",
+        description=f"Batch deleted {deleted} hedge effectiveness assessment runs",
+        entity_type="hedge_effectiveness_run",
+        entity_id="batch",
+        payload={"run_ids": body.run_ids, "deleted": deleted},
+    )
+    return {"deleted": deleted}
+# -- Endpoint: Update dataset metadata --------------------------------------
+
+@router.patch("/datasets/{dataset_id}")
+async def update_dataset_metadata(
+    dataset_id: str,
+    body: UpdateDatasetRequest,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """
+    PATCH /v1/hedge-effectiveness/datasets/{dataset_id}
+
+    Update editable metadata on an existing dataset: name, description,
+    currency_pair, designation_date. Period data is immutable.
+    Requires: hedge_effectiveness.run
+    """
+    await _require(session, current_user, "hedge_effectiveness.run")
+    company_id = current_user.company_id
+    try:
+        uuid_id = uuid.UUID(dataset_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid dataset_id.")
+    stmt = select(HedgeEffectivenessDataset).where(
+        HedgeEffectivenessDataset.id == uuid_id,
+        HedgeEffectivenessDataset.company_id == company_id,
+    )
+    result = await session.execute(stmt)
+    ds = result.scalar_one_or_none()
+    if not ds:
+        raise HTTPException(status_code=404, detail="Dataset not found.")
+    if body.name is not None:
+        ds.name = body.name
+    if body.description is not None:
+        ds.description = body.description or None
+    if body.currency_pair is not None:
+        ds.currency_pair = body.currency_pair or None
+    if body.designation_date is not None:
+        ds.designation_date = body.designation_date or None
+    await session.commit()
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="SYSTEM",
+        description=f"Dataset metadata updated: {ds.name}",
+        entity_type="hedge_effectiveness_dataset",
+        entity_id=dataset_id,
+        payload={"name": ds.name, "currency_pair": ds.currency_pair, "designation_date": ds.designation_date},
+    )
+    return {"dataset_id": dataset_id, "updated": True}
+# -- Endpoint: Clone dataset ------------------------------------------------
+
+@router.post("/datasets/{dataset_id}/clone")
+async def clone_dataset(
+    dataset_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """
+    POST /v1/hedge-effectiveness/datasets/{dataset_id}/clone
+
+    Duplicates an existing dataset (same period data, '(Copy)' name suffix).
+    Produces a new independent dataset UUID — the clone can be freely edited
+    without affecting the source.
+    Requires: hedge_effectiveness.run
+    """
+    await _require(session, current_user, "hedge_effectiveness.run")
+    company_id = current_user.company_id
+    try:
+        uuid_id = uuid.UUID(dataset_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid dataset_id.")
+    stmt = select(HedgeEffectivenessDataset).where(
+        HedgeEffectivenessDataset.id == uuid_id,
+        HedgeEffectivenessDataset.company_id == company_id,
+    )
+    result = await session.execute(stmt)
+    src = result.scalar_one_or_none()
+    if not src:
+        raise HTTPException(status_code=404, detail="Dataset not found.")
+
+    data = src.data_json if isinstance(src.data_json, list) else (
+        json.loads(src.data_json) if isinstance(src.data_json, str) else []
+    )
+
+    clone = HedgeEffectivenessDataset(
+        id=uuid.uuid4(),
+        company_id=company_id,
+        name=f"{src.name} (Copy)",
+        description=src.description,
+        currency_pair=src.currency_pair,
+        hedge_type=src.hedge_type,
+        designation_date=src.designation_date,
+        source=src.source,
+        period_count=src.period_count,
+        data_json=data,
+        source_hash=src.source_hash,
+        created_by=current_user.id,
+        created_at=datetime.now(UTC),
+    )
+    session.add(clone)
+    await session.commit()
+
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="SYSTEM",
+        description=f"Dataset cloned: {src.name} -> {clone.name}",
+        entity_type="hedge_effectiveness_dataset",
+        entity_id=str(clone.id),
+        payload={"source_id": dataset_id, "name": clone.name, "period_count": src.period_count},
+    )
+
+    return {
+        "dataset_id": str(clone.id),
+        "name": clone.name,
+        "period_count": clone.period_count,
+    }
