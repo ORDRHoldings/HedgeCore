@@ -36,6 +36,7 @@ async def test_close_entity_sets_status():
 
     mock_session = AsyncMock()
     entity = MagicMock()
+    entity.id = uuid.uuid4()
     entity.company_id = uuid.uuid4()
     entity.status = LegalEntityStatus.ACTIVE.value
 
@@ -45,7 +46,7 @@ async def test_close_entity_sets_status():
 
     actor_id = uuid.uuid4()
     with patch("app.services.legal_entity_service.append_event", new_callable=AsyncMock):
-        result = await close_entity(mock_session, entity_id=entity.company_id,
+        result = await close_entity(mock_session, entity_id=entity.id,
                                     company_id=entity.company_id, status="DORMANT", actor_id=actor_id)
 
     assert result.status == LegalEntityStatus.DORMANT.value
