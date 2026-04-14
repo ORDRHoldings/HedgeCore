@@ -84,11 +84,14 @@ def _compute_entry_hash(
     period_date: date,
     created_at: datetime,
     chain_seq: int,
+    prev_entry_hash: str,
 ) -> str:
     """SHA-256 over canonical pipe-delimited content string (spec §3.1).
 
     amount is normalized to 6 decimal places (f"{amount:.6f}") so that
     Decimal("100000") and Decimal("100000.00") produce the same hash.
+    prev_entry_hash is included so that chain reordering is detectable
+    (consistent with audit_event.py compute_event_hash pattern).
     """
     content = "|".join([
         str(company_id),
@@ -101,6 +104,7 @@ def _compute_entry_hash(
         period_date.isoformat(),
         created_at.isoformat(),
         str(chain_seq),
+        prev_entry_hash,
     ])
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
@@ -170,7 +174,7 @@ def _block_je_update(mapper, connection, target):
         if col.key in _MUTABLE_FIELDS:
             continue
         hist = get_history(target, col.key)
-        if hist.has_changes() and hist.deleted:
+        if hist.has_changes() and (hist.deleted or hist.added):
             raise RuntimeError(
                 f"JournalEntry {target.id!r} is WORM — cannot update "
                 f"field '{col.key}' (ADR-0009)."

@@ -59,12 +59,14 @@ def test_compute_entry_hash_deterministic():
         debit_account="1200", credit_account="3400", amount=Decimal("100000"),
         currency="EUR", period_date=date(2026, 3, 31),
         created_at=datetime(2026, 4, 1, tzinfo=UTC), chain_seq=1,
+        prev_entry_hash=GENESIS_HASH,
     )
     h2 = _compute_entry_hash(
         company_id=cid, entry_type="OCI_RECOGNITION", standard="IFRS_9",
         debit_account="1200", credit_account="3400", amount=Decimal("100000"),
         currency="EUR", period_date=date(2026, 3, 31),
         created_at=datetime(2026, 4, 1, tzinfo=UTC), chain_seq=1,
+        prev_entry_hash=GENESIS_HASH,
     )
     assert h1 == h2
     assert len(h1) == 64
@@ -77,6 +79,7 @@ def test_compute_entry_hash_changes_with_chain_seq():
         debit_account="1200", credit_account="3400", amount=Decimal("100000"),
         currency="EUR", period_date=date(2026, 3, 31),
         created_at=datetime(2026, 4, 1, tzinfo=UTC),
+        prev_entry_hash=GENESIS_HASH,
     )
     h1 = _compute_entry_hash(**kwargs, chain_seq=1)
     h2 = _compute_entry_hash(**kwargs, chain_seq=2)
@@ -134,6 +137,27 @@ def test_worm_update_immutable_field_blocked():
         return_value=mock_history,
     ):
         with pytest.raises(RuntimeError, match="cannot update.*amount"):
+            _block_je_update(mock_mapper, None, je)
+
+
+def test_worm_update_immutable_field_null_to_value_blocked():
+    """Setting a nullable immutable field from NULL to a value must also raise RuntimeError."""
+    from app.models.journal_entry import _block_je_update  # noqa: PLC0415
+
+    je = _make_je()
+    mock_history = MagicMock()
+    mock_history.has_changes.return_value = True
+    mock_history.deleted = []          # was NULL — no previous value
+    mock_history.added = [uuid.uuid4()]  # being set for the first time
+
+    mock_mapper = MagicMock()
+    mock_mapper.columns = [MagicMock(key="run_id")]
+
+    with patch(
+        "app.models.journal_entry.get_history",
+        return_value=mock_history,
+    ):
+        with pytest.raises(RuntimeError, match="cannot update.*run_id"):
             _block_je_update(mock_mapper, None, je)
 
 
