@@ -110,6 +110,8 @@ class CashAuditEventType(str, Enum):
     ENTITY_CREATED = "ENTITY_CREATED"
     ENTITY_UPDATED = "ENTITY_UPDATED"
     ENTITY_CLOSED = "ENTITY_CLOSED"
+    FORECAST_CREATED = "FORECAST_CREATED"
+    FORECAST_SCENARIO_RUN = "FORECAST_SCENARIO_RUN"
 
 
 # ── Models ─────────────────────────────────────────────────────────────────
