@@ -305,3 +305,16 @@ router.include_router(v1_erp_router)
 # Settlement tracking (owns /v1/settlement)
 from app.api.routes.v1_settlement import router as v1_settlement_router
 router.include_router(v1_settlement_router)
+
+# Treasury Suite Phase 2a — Cash & Banking (owns /v1/cash/*)
+from app.api.routes.v1_legal_entities import router as v1_legal_entities_router
+from app.api.routes.v1_bank_accounts import router as v1_bank_accounts_router
+from app.api.routes.v1_cash_positions import router as v1_cash_positions_router
+from app.api.routes.v1_bank_connections import router as v1_bank_connections_router
+from app.api.routes.v1_cash_audit import router as v1_cash_audit_router
+
+router.include_router(v1_legal_entities_router)
+router.include_router(v1_bank_accounts_router)
+router.include_router(v1_cash_positions_router)
+router.include_router(v1_bank_connections_router)
+router.include_router(v1_cash_audit_router)
