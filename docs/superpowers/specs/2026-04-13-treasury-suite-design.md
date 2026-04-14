@@ -1,7 +1,7 @@
 # ORDR Treasury Suite — Complete Design Specification
 
 **Date:** 2026-04-13  
-**Status:** APPROVED (rev 3 — spec review fixes applied)  
+**Status:** APPROVED (rev 4 — spec review fixes applied)  
 **Author:** ORDR Edge  
 **Supersedes:** n/a  
 **Related ADRs:** 0009, 0010, 0011, 0012, 0013, 0014 (to be written)
@@ -92,16 +92,18 @@ class JournalEntry(Base):
     posted_ref: String(128)      # ERP-assigned journal ID
     entry_hash: String(128)      # SHA-256(company_id + entry_type + standard +
                                  #   debit_account + credit_account + amount +
-                                 #   currency + period_date + created_at)
+                                 #   currency + period_date + created_at
+                                 #   + chain_seq)
     prev_entry_hash: String(128) # hash of previous JournalEntry for this
                                  # company_id (GENESIS = 64 zeros per tenant)
+    chain_seq: BigInteger        # per-tenant monotonic counter; ordering anchor
     created_at: DateTime
     created_by: UUID
 ```
 
-WORM semantics: no UPDATE, no DELETE. Status transitions only.
+**WORM semantics:** No DELETE. No UPDATE except the `status` column. The `status` column is the single permitted mutable field — this is a deliberate deviation from strict append-only WORM (where no column ever changes) because journal entries have an approval lifecycle that must be reflected on the record itself. Every status transition is also recorded as an `audit_event` (WORM, append-only), providing a fully immutable log of all state changes. ADR-0009 must document this deviation.
 
-**Hash chain mechanics:** `prev_entry_hash` is the `entry_hash` of the most recent `JournalEntry` for the same `company_id`. On first record per tenant, `prev_entry_hash = GENESIS_HASH` (64 zeros). This is a separate chain from `TreasuryTransaction` — every posted journal entry also appends a `TreasuryTransaction` record (type `JOURNAL_ENTRY`) creating a cross-reference, but the two chains are independent. ADR-0009 governs this design.
+**Hash chain mechanics:** `chain_seq` is computed as `SELECT MAX(chain_seq)+1 FROM journal_entries WHERE company_id = ? FOR UPDATE` within the same transaction that inserts the record. This serialises chain extension per tenant and prevents concurrent chain forks. `prev_entry_hash` is the `entry_hash` of the record with `MAX(chain_seq) - 1` for the same `company_id`. On first record per tenant, `prev_entry_hash = GENESIS_HASH` (64 zeros) and `chain_seq = 1`. This is a separate chain from `TreasuryTransaction` — every posted journal entry also appends a `TreasuryTransaction` record (type `JOURNAL_ENTRY`) as cross-reference, but the two chains are independent. ADR-0009 governs this design.
 
 #### GL Account Mapping (prerequisite — Sprint 56, Step 0)
 
@@ -129,6 +131,10 @@ class GLAccountMapping(Base):
 `JournalEntry.generate()` raises `GLMappingNotConfiguredError` if mapping missing — never creates a record with blank accounts.
 Frontend: `/settings/gl-accounts` — account mapping editor, launched in Sprint 56 Step 0.
 
+#### Plan Tier
+
+All GL journal entry routes (`/v1/gl/*`) and ERP connector routes (`/v1/connectors/erp/*`) are available on **STARTER and above** — they are core FX lifecycle features, not premium add-ons. `require_plan_tier(PlanTier.STARTER)` applied to all Phase 1 routes. Payment initiation (`/v1/payments/*`) is ENTERPRISE and above.
+
 #### API Routes
 
 ```
@@ -140,14 +146,16 @@ GET  /v1/gl/journal-entries
      → list with filters: status, period, standard, entity
 
 POST /v1/gl/journal-entries/{entry_id}/approve
-     → 4-eyes: requires approver ≠ creator (SoD enforced)
+     → 4-eyes: requires checker ≠ creator (SoD enforced)
      → status: PENDING_APPROVAL → APPROVED
 
 POST /v1/gl/journal-entries/{entry_id}/reject
-     → 4-eyes: requires reviewer ≠ creator (SoD enforced)
+     → 4-eyes: requires checker ≠ creator (SoD enforced — same role class as approve)
      → status: PENDING_APPROVAL → REJECTED
      → body: { "reason": String } (required)
      → entry remains in table (WORM — rejection recorded, not deleted)
+     → The checker (second party) is the same role for both approve and reject;
+       a user who did not create the entry may do either action.
 
 POST /v1/gl/journal-entries/{entry_id}/post
      → pushes to connected accounting system, updates status → POSTED
@@ -568,19 +576,19 @@ class TreasuryTransaction(Base):
     source_module: Enum[FX_LIFECYCLE, CASH, GL, PAYMENT, SETTLEMENT]
     source_ref_id: UUID         # points to originating record
     source_ref_type: String(64) # e.g. "ledger_entries", "settlement_events"
-    # Per-table SHA-256 hash chain (same pattern as audit_events)
+    # Per-table SHA-256 hash chain (strict WORM, append-only)
     tx_hash: String(128)        # SHA-256(company_id + tx_type + amount +
                                 #          currency + value_date + source_ref_id
-                                #          + created_at) — created_at included
-                                #          to prevent duplicate-entry collision
+                                #          + created_at + chain_seq)
     prev_tx_hash: String(128)   # hash of previous TreasuryTransaction for
                                 # this company_id (GENESIS = 64 zeros)
+    chain_seq: BigInteger        # per-tenant monotonic counter; ordering anchor
     created_at: DateTime
 ```
 
-Every financial event in the platform appends to this table — it is the single queryable audit spine across all modules. Append-only (WORM semantics: no UPDATE, no DELETE triggers, same as `ledger_entries`).
+Every financial event in the platform appends to this table — it is the single queryable audit spine across all modules. Strictly append-only (WORM: no UPDATE, no DELETE — no column is ever mutated after insert, unlike `JournalEntry`).
 
-**Hash chain mechanics:** `prev_tx_hash` is the `tx_hash` of the most recent `TreasuryTransaction` for the same `company_id`. On first record per tenant, `prev_tx_hash = GENESIS_HASH` (64 zeros). This is an independent chain from `audit_events` — the two chains are cross-referenced via `source_ref_id` pointing to the originating audit event, but they are not the same chain. ADR-0013 governs this design decision.
+**Hash chain mechanics:** `chain_seq` is computed as `SELECT MAX(chain_seq)+1 FROM treasury_transactions WHERE company_id = ? FOR UPDATE` within the same transaction. This serialises chain extension per tenant and prevents concurrent chain forks. `prev_tx_hash` is the `tx_hash` of the record with `MAX(chain_seq) - 1` for the same `company_id`. On first record per tenant, `prev_tx_hash = GENESIS_HASH` (64 zeros) and `chain_seq = 1`. This is an independent chain from `audit_events` — the two chains are cross-referenced via `source_ref_id` pointing to the originating audit event, but they are not the same chain. ADR-0013 governs this design decision.
 
 ### 6.2 Multi-Entity Consolidation
 
