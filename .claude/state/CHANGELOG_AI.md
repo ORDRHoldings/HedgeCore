@@ -35,6 +35,15 @@
 - Backend: **4839 passed, 158 skipped (PG-only), 0 failed** (pre-existing `test_trace_bundle_fingerprint_deterministic` ordering flake deselected)
 - Frontend: `tsc --noEmit` CLEAN, `next build` PASS
 
+### Browser verification (2026-04-14)
+- `/gl-postings` — renders correctly: status tab bar, Refresh button, breadcrumb
+- `/settlement` — renders correctly: graceful empty/error state (tables not in local dev DB)
+- `/erp-sync` — renders correctly: descriptive copy, correct breadcrumb
+- `/settings/gl-accounts` — renders correctly: GL Account Mappings header + breadcrumb
+- Sidebar ACCOUNTING group (GL Postings, Settlement, ERP Sync) visible under HEDGE DESK after section expand
+- Sidebar SETTINGS section includes GL Account Mappings → `/settings/gl-accounts`
+- All pages confirm plan-tier gating works (demo company set to professional in local dev DB)
+
 ### Commits
 - `cb93933` ADR-0009 + ADR-0013
 - `1d12bc7` JournalEntry + GLAccountMapping models

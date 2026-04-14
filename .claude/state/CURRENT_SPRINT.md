@@ -4,7 +4,7 @@ Sprint: Sprint 56-61 — Treasury Suite Phase 1 (GL Journals, Settlement, ERP Pu
 Status: COMPLETE
 Started: 2026-04-13
 Completed: 2026-04-13
-Browser Verified: NO — [PENDING BROWSER CONFIRMATION]
+Browser Verified: YES — 2026-04-14
 
 ## Items
 | # | Item | Status | Priority |
@@ -31,6 +31,14 @@ Browser Verified: NO — [PENDING BROWSER CONFIRMATION]
 - Backend: 4839 passed, 158 skipped (PG-only), 0 failed
 - Frontend: `tsc --noEmit` CLEAN, `next build` PASS
 - Pre-existing flake: test_trace_bundle_fingerprint_deterministic (test ordering issue, passes in isolation)
+
+## Browser Verification Evidence (2026-04-14)
+- 56.11: `/settings/gl-accounts` — "GL Account Mappings" header, "Settings → GL Account Mappings" breadcrumb. Screenshot: `verify-gl-accounts.png`
+- 56.12: `/gl-postings` — "GL Postings" header, "Hedge Desk → GL Postings" breadcrumb, ALL/DRAFT/PENDING APPROVAL/APPROVED/POSTED/REJECTED tabs, Refresh button. Screenshot: `verify-gl-postings.png`
+- 56.13a: `/settlement` — "Settlement Tracking" header, graceful "Failed to load pending settlements" error (tables not migrated in local dev DB). Screenshot: `verify-settlement.png`
+- 56.13b: `/erp-sync` — "ERP Sync" header, "Hedge Desk → ERP Sync" breadcrumb, descriptive copy visible. Screenshot: `verify-erp-sync.png`
+- 56.14: Sidebar ACCOUNTING group — GL Postings (`/gl-postings`), Settlement (`/settlement`), ERP Sync (`/erp-sync`) all visible under HEDGE DESK section after expand. SETTINGS section shows GL Account Mappings (`/settings/gl-accounts`). Screenshots: `verify-sidebar-accounting.png`, `verify-sidebar-settings-gl-accounts.png`
+- Auth: demo/demo login working; plan_tier updated to "professional" for demo company (local dev DB only)
 
 ## Notes
 - WORM enforcement: `before_delete` SQLAlchemy event hooks + PostgreSQL triggers (no DELETE allowed)
