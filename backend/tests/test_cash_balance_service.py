@@ -94,3 +94,52 @@ async def test_enter_balance_duplicate_date_raises_409():
                      "available_balance": "950000.00", "currency": "EUR"},
             created_by=uuid.uuid4(),
         )
+
+
+@pytest.mark.asyncio
+async def test_reconcile_balance_updates_status():
+    """reconcile_balance sets reconciliation_status and emits audit event."""
+    from app.services.cash_balance_service import reconcile_balance
+
+    mock_session = AsyncMock()
+    balance = MagicMock()
+    balance.id = uuid.uuid4()
+    balance.reconciliation_status = ReconciliationStatus.UNRECONCILED.value
+
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = balance
+    mock_session.execute = AsyncMock(return_value=mock_result)
+
+    reconciler_id = uuid.uuid4()
+    with patch("app.services.cash_balance_service.append_event", new_callable=AsyncMock) as mock_audit:
+        result = await reconcile_balance(
+            mock_session,
+            balance_id=balance.id,
+            company_id=uuid.uuid4(),
+            reconciler_id=reconciler_id,
+            new_status=ReconciliationStatus.RECONCILED,
+        )
+
+    assert result.reconciliation_status == ReconciliationStatus.RECONCILED.value
+    assert result.reconciled_by == reconciler_id
+    mock_audit.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_reconcile_balance_rejects_invalid_status():
+    """reconcile_balance raises 422 for UNRECONCILED/PENDING_REVIEW status."""
+    from app.services.cash_balance_service import reconcile_balance
+    from fastapi import HTTPException
+
+    mock_session = AsyncMock()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await reconcile_balance(
+            mock_session,
+            balance_id=uuid.uuid4(),
+            company_id=uuid.uuid4(),
+            reconciler_id=uuid.uuid4(),
+            new_status=ReconciliationStatus.PENDING_REVIEW,
+        )
+
+    assert exc_info.value.status_code == 422

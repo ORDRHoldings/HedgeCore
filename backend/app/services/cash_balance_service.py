@@ -126,6 +126,12 @@ async def bulk_enter_balances(
     return results
 
 
+_RECONCILE_EVENT_MAP: dict[ReconciliationStatus, CashAuditEventType] = {
+    ReconciliationStatus.RECONCILED: CashAuditEventType.BALANCE_RECONCILED,
+    ReconciliationStatus.DISPUTED: CashAuditEventType.BALANCE_DISPUTED,
+}
+
+
 async def reconcile_balance(
     session: AsyncSession,
     *,
@@ -135,8 +141,17 @@ async def reconcile_balance(
     new_status: ReconciliationStatus,
     note: str | None = None,
 ) -> CashBalance:
+    if new_status not in _RECONCILE_EVENT_MAP:
+        raise HTTPException(
+            status_code=422,
+            detail=f"reconcile_balance only accepts RECONCILED or DISPUTED; got {new_status.value}",
+        )
+    from app.models.cash import LegalEntity
     result = await session.execute(
-        select(CashBalance).where(CashBalance.id == balance_id)
+        select(CashBalance)
+        .join(BankAccount, CashBalance.account_id == BankAccount.id)
+        .join(LegalEntity, BankAccount.entity_id == LegalEntity.id)
+        .where(CashBalance.id == balance_id, LegalEntity.company_id == company_id)
     )
     balance = result.scalar_one_or_none()
     if balance is None:
@@ -145,11 +160,7 @@ async def reconcile_balance(
     balance.reconciliation_status = new_status.value
     balance.reconciled_by = reconciler_id
     balance.reconciled_at = datetime.now(UTC)
-    event_type = (
-        CashAuditEventType.BALANCE_RECONCILED
-        if new_status == ReconciliationStatus.RECONCILED
-        else CashAuditEventType.BALANCE_DISPUTED
-    )
+    event_type = _RECONCILE_EVENT_MAP[new_status]
     await append_event(
         session,
         company_id=company_id,
