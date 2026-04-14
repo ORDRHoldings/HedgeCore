@@ -7,9 +7,12 @@ All routes: PROFESSIONAL+ plan tier (Phase 1 core feature).
 """
 from __future__ import annotations
 
+import csv
+import io as _io
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
@@ -26,6 +29,7 @@ from app.schemas_v1.gl import (
 )
 from app.services import gl_service
 from app.services.audit_emit import emit_audit
+from app.services.gl_posting_service import post_journal_entry as _post_je
 
 router = APIRouter(prefix="/v1/gl", tags=["v1-gl"])
 
@@ -199,3 +203,86 @@ async def reject_journal_entry(
         payload={"reason": body.reason},
     )
     return je
+
+
+# ── GL Posting ────────────────────────────────────────────────────────────────
+
+@router.post(
+    "/journal-entries/{entry_id}/post",
+    response_model=JournalEntryRead,
+    dependencies=_PLAN_DEPS,
+)
+async def post_journal_entry(
+    entry_id: uuid.UUID,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    from sqlalchemy import select as sa_select  # noqa: PLC0415
+    from app.models.journal_entry import JournalEntry as JE  # noqa: PLC0415
+    result = await session.execute(
+        sa_select(JE).where(JE.id == entry_id, JE.company_id == current_user.company.id)
+    )
+    je = result.scalar_one_or_none()
+    if je is None:
+        raise HTTPException(status_code=404, detail=f"JournalEntry {entry_id} not found")
+
+    company = current_user.company
+    connector_settings = company.settings or {}
+    erp_system = connector_settings.get("erp_system", "CSV")
+
+    try:
+        posting_result = await _post_je(
+            session, je, current_user,
+            erp_system=erp_system,
+            connector_settings=connector_settings.get("erp_credentials", {}),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    if not posting_result.success:
+        raise HTTPException(
+            status_code=502,
+            detail=f"ERP posting failed: {posting_result.error}",
+        )
+
+    await session.commit()
+    await emit_audit(
+        session=session, user=current_user,
+        event_type="SYSTEM",
+        description=f"Journal entry {entry_id} posted to {erp_system}",
+        entity_type="journal_entry", entity_id=str(entry_id),
+        payload={"erp_system": erp_system, "erp_ref": posting_result.erp_ref},
+    )
+    return je
+
+
+# ── GL Export ─────────────────────────────────────────────────────────────────
+
+@router.get("/export", dependencies=_PLAN_DEPS)
+async def export_journal_entries(
+    format: str = "csv",
+    status_filter: str = "APPROVED",
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    entries = await gl_service.list_journal_entries(
+        session, current_user.company.id, status=status_filter
+    )
+    buf = _io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([
+        "id", "entry_type", "standard", "debit_account", "credit_account",
+        "amount", "currency", "period_date", "status", "posted_to", "posted_ref",
+    ])
+    for e in entries:
+        writer.writerow([
+            str(e.id), e.entry_type, e.standard, e.debit_account, e.credit_account,
+            str(e.amount), e.currency, e.period_date.isoformat(),
+            e.status, e.posted_to or "", e.posted_ref or "",
+        ])
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=journal_entries.csv"},
+    )
