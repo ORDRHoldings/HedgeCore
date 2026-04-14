@@ -242,7 +242,7 @@ async def post_journal_entry(
     if not posting_result.success:
         raise HTTPException(
             status_code=502,
-            detail=f"ERP posting failed: {posting_result.error}",
+            detail=f"ERP posting failed via {erp_system}",  # raw error logged in adapter
         )
 
     await session.commit()

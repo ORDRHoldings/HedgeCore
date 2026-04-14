@@ -117,3 +117,44 @@ async def test_reject_missing_reason_returns_422(auth_override):
             headers={"Authorization": "Bearer fake-jwt"},
         )
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_post_journal_entry_missing_returns_404(auth_override):
+    """POST /post with unknown entry_id returns 404 (tenant-scoped SELECT finds nothing)."""
+    from app.core.db import get_async_session
+
+    mock_session = MagicMock()
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = None
+    mock_session.execute = AsyncMock(return_value=mock_result)
+    mock_session.commit = AsyncMock()
+
+    app.dependency_overrides[get_async_session] = lambda: mock_session
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post(
+                f"/api/v1/gl/journal-entries/{uuid.uuid4()}/post",
+                headers={"Authorization": "Bearer fake-jwt"},
+            )
+    finally:
+        app.dependency_overrides.pop(get_async_session, None)
+
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_export_journal_entries_returns_csv(auth_override):
+    with patch(f"{_ROUTE}.gl_service") as mock_svc:
+        mock_svc.list_journal_entries = AsyncMock(return_value=[])
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get(
+                "/api/v1/gl/export",
+                headers={"Authorization": "Bearer fake-jwt"},
+            )
+    assert resp.status_code == 200
+    assert "text/csv" in resp.headers["content-type"]

@@ -77,7 +77,7 @@ async def post_journal_entry(
         je.posted_to = adapter.system_name
         je.posted_ref = result.erp_ref or ""
         je.posted_at = datetime.now(UTC)
-        await session.flush()
+        # Caller (route) owns the commit — do not flush here
     else:
         logger.error(
             "GL posting failed for entry %s via %s: %s",

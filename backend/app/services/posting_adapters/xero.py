@@ -13,6 +13,7 @@ class XeroPoster(GLPostingAdapter):
     def __init__(self, *, access_token: str, tenant_id: str, sandbox: bool = True):
         self.access_token = access_token
         self.tenant_id = tenant_id
+        self.sandbox = sandbox  # Xero has no separate sandbox URL; stored for parity with QB
 
     async def post(self, journal_entry) -> PostingResult:
         if not self.access_token:
