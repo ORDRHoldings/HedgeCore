@@ -85,7 +85,6 @@ async def test_error_message_is_truncated_to_500_chars():
 @pytest.mark.asyncio
 async def test_handle_callback_enforces_sod():
     """handle_callback raises ValueError when approver is the same user who initiated the OAuth flow."""
-    monkeypatch = None  # SoD check happens before adapter.exchange_code, so no env setup needed
     from app.services.bank_connection_service import handle_callback
 
     creator_id = uuid.uuid4()
