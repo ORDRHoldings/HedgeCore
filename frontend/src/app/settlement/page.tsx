@@ -116,7 +116,10 @@ export default function SettlementPage() {
                     </td>
                     <td style={{ padding: "10px 14px" }}>
                       <button
-                        onClick={() => setConfirmModal({ ledgerEntryId: String(entry.id), actualRate: "", settlementRef: "", hedgeRate: "", hedgeNotional: "" })}
+                        onClick={() => {
+                          if (!entry.id) return;
+                          setConfirmModal({ ledgerEntryId: String(entry.id), actualRate: "", settlementRef: "", hedgeRate: "", hedgeNotional: "" });
+                        }}
                         style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 12px", background: "rgba(0,212,255,0.1)", border: `1px solid rgba(0,212,255,0.3)`, color: S.accent, fontSize: 11, borderRadius: 3, cursor: "pointer", fontFamily: S.fontMono }}
                       >
                         <CheckSquare size={11} /> Confirm
