@@ -1,5 +1,616 @@
 # Changelog (AI-maintained)
 
+## 2026-04-13 — Sprint 56-61: Treasury Suite Phase 1 — GL Journals, Settlement & ERP Pull
+
+### Added
+- **ADR-0009** (GL journal entry posting) + **ADR-0013** (treasury transaction spine) in `docs/architecture/adr/`
+- **`JournalEntry` model** (`backend/app/models/journal_entry.py`): SHA-256 hash chain (`entry_hash`, `prev_entry_hash`, `chain_seq`), 5-state machine (DRAFT→PENDING_APPROVAL→APPROVED→POSTED/REJECTED), `before_delete` WORM hook
+- **`GLAccountMapping` model**: `entry_type + standard` unique key, links debit/credit accounts to accounting standards
+- **`TreasuryTransaction` model** (`backend/app/models/treasury_transaction.py`): strict WORM append-only audit spine with per-record SHA-256 hash
+- **Migrations** 0014 (journal_entries + gl_account_mappings), 0015 (treasury_transactions), 0016 (settlement_events) with PostgreSQL WORM triggers
+- **GL service** (`backend/app/services/gl_service.py`): `generate_journal_entries`, `approve_journal_entry`, `reject_journal_entry` with 4-eyes SoD; SHA-256 chain extension via row-level `FOR UPDATE` lock
+- **v1_gl routes** (`backend/app/api/routes/v1_gl.py`): 8 endpoints (GL mapping CRUD, JE list/generate/approve/reject/post/export); plan-gated professional+
+- **Posting adapters**: QuickBooks, Xero, NetSuite (paper mode stub), CSV exporter — all behind abstract `GLPostingAdapter` ABC
+- **`gl_posting_service`** (`backend/app/services/gl_posting_service.py`): dispatches to correct adapter by `erp_system`, enforces APPROVED-only posting
+- **ERP pull adapters**: `XeroAdapter` (live pull + paper mode), `NetSuiteAdapter` (Phase 2 stub)
+- **`erp_connector_service`** (`backend/app/services/erp_connector_service.py`): idempotent dedup via `Position.record_id = f"ERP-{hash[:16]}"`, filters `is_active=True` to allow reimport after soft-delete
+- **v1_erp routes** (`backend/app/api/routes/v1_erp.py`): `POST /v1/erp/pull/{connector_id}` — looks up credentials from `company.settings`, triggers pull, returns result
+- **`SettlementEvent` model** (`backend/app/models/settlement_event.py`): WORM with per-record `event_hash`, `before_delete` hook
+- **`settlement_service`** (`backend/app/services/settlement_service.py`): `confirm_settlement` creates CONFIRMED SettlementEvent + DRAFT JournalEntry for P&L variance; tenant-scoped; graceful fallback when GL mapping absent
+- **v1_settlement routes** (`backend/app/api/routes/v1_settlement.py`): pending list + confirm endpoint
+- **Frontend `glClient.ts`** (`frontend/src/lib/api/glClient.ts`): type-safe client for all GL/settlement/ERP endpoints via `dashboardFetch`
+- **Frontend pages**: `/settings/gl-accounts`, `/gl-postings` (approve/reject/post queue), `/settlement`, `/erp-sync`
+- **AppSidebar** nav items: GL Postings, Settlement, ERP Sync (all professional-tier gated)
+
+### Fixed
+- Tenant isolation: `approve_journal_entry`, `reject_journal_entry`, `confirm_settlement` all scope DB queries by `company_id`
+- `_is_duplicate` adds `Position.is_active == True` filter (prevents soft-deleted positions from permanently blocking ERP reimport)
+- `gl_posting_service`: removed `session.flush()` (route owns commit, service is pure mutator)
+- `XeroPoster`: stores `self.sandbox` attribute (was silently dropped)
+- 502 error response sanitized to avoid leaking ERP credential fragments
+- `GLMappingNotConfiguredError` NameError guard in `settlement_service` (import failure path)
+- Settlement confirm modal: `entry.id` null guard before POST
+
+### Test evidence
+- Backend: **4839 passed, 158 skipped (PG-only), 0 failed** (pre-existing `test_trace_bundle_fingerprint_deterministic` ordering flake deselected)
+- Frontend: `tsc --noEmit` CLEAN, `next build` PASS
+
+### Commits
+- `cb93933` ADR-0009 + ADR-0013
+- `1d12bc7` JournalEntry + GLAccountMapping models
+- `b419bad` TreasuryTransaction model
+- `23c7f68` Migrations 0014/0015/0016
+- `ee4e806` GL service
+- `bacac11` v1_gl routes
+- `ffbb4fe` Posting adapters + gl_posting_service
+- `10ccae6` ERP pull adapters + v1_erp routes
+- `e7a5803` ERP dedup is_active fix + test strengthening
+- `12b1cd6` SettlementEvent model + settlement_service + v1_settlement
+- `bafbb04` Settlement tenant isolation + NameError guard + schema fields
+- `4c3f217` Frontend GL/settlement/ERP pages + glClient + nav
+- `2f9345a` Settlement confirm modal null guard
+
+---
+
+## 2026-04-13 — Sprint 55: Portfolio Latency Card, Dataset Count Footer & Last-Fail Filter
+
+### Added
+- **Portfolio assessment latency card** (`page.tsx`): OverviewTab card showing AVG DAYS SINCE and MEDIAN DAYS SINCE last assessment across all datasets that have runs. Optional UNASSESSED column when any datasets have never been tested. Color-coded: green ≤7d, amber ≤30d, red >30d. Median is skew-resistant vs outlier datasets.
+- **Dataset coverage count in footer** (`page.tsx`): RunsTab footer stats bar gains "DATASETS N" KPI showing how many distinct `dataset_id` values appear in the current filtered run list. Hidden when ≤1 (uninteresting in single-dataset views).
+- **"LAST FAIL" quick filter** (`page.tsx`): DatasetsTab toolbar red chip that filters to only datasets whose chronologically most recent run was ineffective. Self-hides when no such datasets exist in the current data. Implemented via new `dsLastFailOnly` boolean state with `reduce`-based last-run lookup.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0, after fixing `datasets` scope error in RunsTab)
+- HTTP 200 confirmed on all tabs
+- Browser automation unavailable — marked [NOT BROWSER CONFIRMED]
+  - 55.1: With 2 datasets both assessed → latency card shows avg/median. One never assessed → UNASSESSED: 1 column appears.
+  - 55.2: Filter to runs across 2 datasets → "DATASETS 2" appears in footer. Filter to single dataset → hidden.
+  - 55.3: Dataset with last run ineffective exists → LAST FAIL button visible. Click → only failing-last datasets shown.
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 54: Standard Coverage Gap Card, Copy Run IDs & Dataset Risk Level Tag
+
+### Added
+- **Standard coverage gap card** (`page.tsx`): OverviewTab 3-column grid showing how many datasets have been tested under each of IAS 39, IFRS 9, and ASC 815. Each column shows a mini progress bar, tested/total count, and "N untested" or "full coverage" label. Color-coded green/amber/red by coverage percentage.
+- **"COPY IDS" toolbar button** (`page.tsx`): RunsTab toolbar button that copies all filtered run UUIDs (newline-separated) to the clipboard via `navigator.clipboard.writeText`. Flashes green with "COPIED!" label for 1.5 seconds after use. Hidden when `filteredRuns` is empty.
+- **Per-dataset risk level tag** (`page.tsx`): DatasetsTab accordion header gains a cycling risk badge (HIGH → MEDIUM → LOW → clear) stored in localStorage under `hec_ds_risk`. Clicking the faint dashed "RISK" placeholder initiates the cycle. Active badge is color-coded (red/amber/cyan). All click handlers call `e.stopPropagation()` to avoid accordion open/close.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- HTTP 200 confirmed on all tabs
+- Browser automation unavailable — marked [NOT BROWSER CONFIRMED]
+  - 54.1: With 2 datasets and 2 runs (both IAS 39) → IAS 39 shows "2/2 full coverage" green; IFRS 9 and ASC 815 show "2 untested" red.
+  - 54.2: Click COPY IDS → clipboard receives 2 UUIDs separated by newline; button flashes green.
+  - 54.3: Click "RISK" placeholder → badge becomes "HIGH RISK" red; click again → "MEDIUM RISK" amber; click → "LOW RISK" cyan; click → placeholder returns.
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 53: Pass Rate Trend Card, Verdict Ratio Bar & Untested Gap Filter
+
+### Added
+- **Pass rate trend indicator** (`page.tsx`): OverviewTab card showing IMPROVING ↗ / DECLINING ↘ / STABLE → by comparing the pass rate of the chronologically oldest half of runs against the newest half. Displays pp delta and per-half stats. Threshold: 5 percentage points. Guard: requires ≥4 dated runs.
+- **Verdict ratio visual bar** (`page.tsx`): RunsTab 8px horizontal bar between the filter stats row and the monthly heatmap. Green segment proportional to pass count, red to fail count. Labels below show exact counts. Updates instantly as filters change.
+- **"UNTESTED" gap filter** (`page.tsx`): DatasetsTab toolbar button that filters to only datasets with zero assessment runs. Styled in red when active; hidden entirely when every dataset already has runs. Implemented via new `dsUntestedOnly` boolean state applied in `filteredDs`.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- HTTP 200 confirmed on all tabs
+- Browser automation unavailable — marked [NOT BROWSER CONFIRMED]
+  - 53.1: With 4+ runs, card appears. If newer half has higher pass rate → "↗ IMPROVING". Delta "+Npp" shown.
+  - 53.2: Ratio bar reflects filteredRuns. 2 pass + 1 fail → ~67% green, ~33% red segment.
+  - 53.3: If any dataset has 0 runs → UNTESTED button visible. Click → only untested datasets shown.
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 52: Worst Performer Card, Footer Standard Breakdown & Datasets CSV Export
+
+### Added
+- **Worst performer card** (`page.tsx`): OverviewTab red-styled card showing the dataset with the lowest composite score (pass rate 70% + D.O. proximity 30%), mirroring the top performer card. Only shown when ≥2 datasets have runs. Displays name, pair, fail%, avg D.O., run count.
+- **Per-standard footer breakdown** (`page.tsx`): RunsTab footer stats bar gains clickable "IAS 39 N / IFRS 9 N / ASC 815 N" pills after a divider. Each pill click sets stdFilter (toggles off if already active). Hidden when fewer than 2 standards have runs in the current filtered set.
+- **Datasets CSV export** (`page.tsx`): DatasetsTab toolbar "CSV" button exports the currently filtered dataset list as a CSV file with columns: name, currency_pair, hedge_type, period_count, runs, pass_rate_pct, last_assessed. Uses `URL.createObjectURL` + synthetic anchor click. Respects active search and filter state.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- HTTP 200 confirmed on all tabs
+- Browser automation unavailable — marked [NOT BROWSER CONFIRMED]
+  - 52.1: With 2 datasets (both have runs), worst performer = lower pass rate dataset → red card visible.
+  - 52.2: Footer shows "IAS 39 2 | IFRS 9 1" pills. Click "IAS 39" → filter activates; click again → resets to ALL.
+  - 52.3: Click CSV → downloads `datasets.csv` with 2 dataset rows and correct column values.
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 51: YTD Summary Card, R²-Only Filter & Run Mini-Timeline
+
+### Added
+- **Year-to-date summary card** (`page.tsx`): OverviewTab 3-column card showing YTD RUNS, PASS RATE, and AVG D.O. for the current calendar year. Each column shows the prior-year value below with a ↑/↓ delta arrow. Card hidden when no dated runs exist in either year.
+- **R²-only filter toggle** (`page.tsx`): RunsTab "R² DATA" chip button that filters the run list to only rows where `regression_r_squared` is populated. Active state renders in cyan. Pill added to the active-filters bar with a clear action. Included in the `useEffect` page-reset dep array.
+- **Recent runs mini-timeline** (`page.tsx`): DatasetsTab — at the top of each expanded accordion section, a horizontal strip of coloured squares (10×14px) shows the run history oldest→newest. Green = PASS, red = FAIL. Hover tooltip shows date, verdict, and standard. Up to 20 cells; shows count suffix. Renders above the edit metadata strip and last-3-runs table.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- HTTP 200 confirmed on all tabs
+- Browser automation unavailable — marked [NOT BROWSER CONFIRMED]
+  - 51.1: 2026 YTD with test data → shows runs/pass rate/avg D.O. columns. No 2025 data → prior year row absent.
+  - 51.2: Toggle "R² DATA" → only runs with R² values remain. Badge "R² DATA ONLY" appears in filter pills.
+  - 51.3: Expand EUR/USD Q1 2024 Test → mini-timeline row with 2 squares (green/green) above last runs table.
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 50: Assessment Calendar Heatmap, OOB Badge & Compliance Sort
+
+### Added
+- **Assessment calendar heatmap** (`page.tsx`): OverviewTab 12-week rolling grid. Week columns, day-of-week rows. Each cell coloured by pass outcome: green (all pass), amber (mixed), red (all fail), grey (no runs). Intensity encodes run count — darker = more runs. Month name row above the grid, DOW labels to the left. Legend row below with a "Darker = more runs" note. Anchor: today = last cell in current week column.
+- **Out-of-band warning badge** (`page.tsx`): RunsTab `⚠ OOB` red badge shown when a run is marked overall_effective but its D.O. ratio is outside the 80–125% effectiveness band (ratio < 0.80 or > 1.25). Tooltip shows exact ratio. Positioned before the efficiency score badge.
+- **Compliance sort** (`page.tsx`): DatasetsTab sort dropdown gains "Compliance score" option. Score formula: passRate×0.5 + recency×0.3 + sufficiency×0.2. recency = 1 if last run <7d, 0.5 if <30d, else 0. sufficiency = min(runCount/5, 1). Highest-scoring (most compliant) datasets sort first.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- HTTP 200 confirmed on all tabs
+- Browser automation unavailable — marked [NOT BROWSER CONFIRMED]
+  - 50.1: 12-week heatmap renders in OverviewTab; cells with runs show colour intensity; legend row present.
+  - 50.2: Run with D.O. < 0.80 and overall_effective=true → OOB badge before efficiency score.
+  - 50.3: Sort by compliance → datasets with high pass rate and recent activity float to top.
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 49: Top Performer Card, Selection Summary Bar & Duplicate Pair Badge
+
+### Added
+- **Top performer highlight card** (`page.tsx`): OverviewTab green card showing the best-scoring dataset by composite score (pass rate 70% + D.O. proximity to 1.0 30%). Displays name, currency pair, pass%, avg D.O., run count. Datasets with no runs are excluded.
+- **Selection summary bar** (`page.tsx`): RunsTab blue info bar appearing above the filter pill bar when ≥1 run checkbox is checked. Shows selected run count, effective/total, pass%, and avg D.O. for the current selection only.
+- **Duplicate currency pair badge** (`page.tsx`): DatasetsTab amber "⊕ N DATASETS" badge in the accordion name row when 2+ datasets share the same non-null currency pair. Helps auditors spot potential duplicates or related hedges.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- HTTP 200 confirmed on all tabs
+- Browser automation unavailable — marked [NOT BROWSER CONFIRMED]
+  - 49.1: EUR/USD Q1 2024 Test (100% pass, D.O.=0.9917) → top performer card. Expected.
+  - 49.2: Select 1 run → "SELECTION (1) · 1/1 EFFECTIVE · 100% PASS · AVG D.O. 0.9917". Expected.
+  - 49.3: Both datasets share EUR/USD → each shows "⊕ 2 DATASETS". Expected.
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 48: D.O. Distribution Histogram, Run Age Stats & Total Periods
+
+### Added
+- **D.O. ratio distribution histogram** (`page.tsx`): OverviewTab 5-band bar chart (<0.80 red / 0.80–0.94 amber / 0.95–1.05 green / 1.05–1.25 amber / >1.25 red). Bar heights proportional to max count; empty bands show a grey stub. Count labels above each bar.
+- **Run age stats in footer bar** (`page.tsx`): RunsTab footer KPI bar gains "NEWEST: Xd AGO / TODAY" and "SPAN: Xd" stats derived from run `created_at` dates. SPAN hidden when all runs share the same date. Newest label turns green when ≤1 day old.
+- **Total periods aggregate** (`page.tsx`): DatasetsTab toolbar shows "N PERIODS" count (sum of `period_count` across filtered datasets), updating live as the search/filter changes.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- HTTP 200 confirmed on all tabs
+- Browser automation unavailable — marked [NOT BROWSER CONFIRMED]
+  - 48.1: Both runs D.O.=0.9917 → "0.95–1.05" bar count=2, all others=0. Expected.
+  - 48.2: Runs from 4/12 → NEWEST "1D AGO"; same date → SPAN hidden. Expected.
+  - 48.3: 2 datasets × 6 periods = "12 PERIODS" in toolbar. Expected.
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 47: Month-over-Month Card, Page-Jump Input & Standards Compliance Badge
+
+### Added
+- **Month-over-month comparison card** (`page.tsx`): OverviewTab 3-column card comparing last month vs this month — run count + pass count per month, ↑/↓/= delta badge in the center. JS Date normalisation handles January→December month wrap automatically.
+- **Page-jump input** (`page.tsx`): RunsTab "GO [___]" number input appended to pagination bar when `totalPages > 5`. Enter key commits the jump, clamped to valid page range. `key={safePage}` resets the input value on navigation.
+- **Standards compliance badge** (`page.tsx`): DatasetsTab "N/3 STD" badge in the accordion metadata row, counting how many of IAS 39 / IFRS 9 / ASC 815 have at least one run. Green when 3/3 complete, purple for partial. Suppressed when no runs.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- HTTP 200 on all tabs
+- Browser automation unavailable — marked [NOT BROWSER CONFIRMED]
+  - 47.1: Apr has 2 runs → ↑ +2 delta vs Mar (0 runs). Expected.
+  - 47.2: Only 2 runs (totalPages=1) → page-jump hidden. Correct guard.
+  - 47.3: EUR/USD Q1 2024 Test: IFRS_9 + ASC_815 tested → "2/3 STD" purple badge expected.
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 46: Needs Attention Panel, R² Quality Badge & Relative Age Chip
+
+### Added
+- **Datasets needing attention panel** (`page.tsx`): OverviewTab panel listing datasets with no assessments, last run ineffective, or last assessed >14 days ago. Shows a green "ALL DATASETS CURRENT" banner when none qualify. Reason text per row: "No assessments run" / "Last assessment ineffective" / "Xd ago".
+- **R² quality badge** (`page.tsx`): RunsTab inline badge below the R² value — STRONG (≥0.80, green) / MOD (≥0.60, amber) / WEAK (<0.60, red). Suppressed when R² is null. R² cell restructured as flex column.
+- **Relative age chip** (`page.tsx`): DatasetsTab CREATED column shows "TODAY" (green) / "Nd AGO" / "NmoMO AGO" / "NYR AGO" below the absolute date for quick at-a-glance dataset age.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- HTTP 200 confirmed on /hedge-effectiveness
+- Browser automation unavailable — marked [NOT BROWSER CONFIRMED]
+  - 46.1: EUR/USD Q1 2024 Test (Copy) has no runs → should appear in NEEDS ATTENTION list
+  - 46.2: Test data R²=null → badges suppressed, "—" unchanged (expected)
+  - 46.3: Datasets created 4/12/2026 → "1D AGO" expected
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 45: Standard Coverage Matrix, Copy Run ID & Hedge-Type Filter
+
+### Added
+- **Standard coverage matrix** (`page.tsx`): OverviewTab grid showing each dataset's test coverage across IAS 39, IFRS 9, and ASC 815. Cells show PASS (green) / FAIL (red) / — (untested). Truncates dataset names at 20 chars. Helps auditors spot coverage gaps instantly.
+- **Copy run ID button** (`page.tsx`): RunsTab clipboard icon next to truncated hash. Copies the full `run_id` UUID to clipboard on click; hover turns cyan; `e.stopPropagation()` prevents accordion toggle. Silent fail on clipboard API errors.
+- **Hedge-type filter chips** (`page.tsx`): DatasetsTab TYPE: ALL / hedge-type chips above the column headers. Filters `filteredDs` by `ds.hedge_type`. Suppressed when < 2 distinct hedge types are present (no benefit filtering a single-type list).
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- Browser confirmed: 2026-04-13 via Playwright
+  - 45.1: Matrix visible — EUR/USD Q1 2024 Test: IFRS_9 PASS, ASC_815 PASS, IAS_39 —; Copy dataset: all —
+  - 45.2: Copy icon visible on both run rows; RUN 2/2 + RUN 1/2 badges confirmed (screenshot: sprint45-runs-copy-btn.png)
+  - 45.3: Chips suppressed — both datasets are CASH FLOW (< 2 distinct types). Logic verified correct.
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 44: Pass Streak Card, Run Sequence Badge & Expand-All Toggle
+
+### Added
+- **Current pass streak card** (`page.tsx`): OverviewTab card showing the trailing streak of consecutive effective assessments (newest first). Large streak count, descriptive label, progress bar, and PERFECT/BROKEN/% badge. Color-coded green (perfect), amber (partial), red (broken).
+- **Run sequence badge** (`page.tsx`): RunsTab "RUN N/M" badge on every run showing its chronological position within the dataset (e.g., "RUN 1/2", "RUN 2/2"). Built via `dsSeqMap` alongside existing `dsFirstRunMap` in the flat-rows IIFE. Tooltip shows full context.
+- **Expand-all / collapse-all toggle** (`page.tsx`): DatasetsTab toolbar button toggles `expandAll` state, opening/closing all accordion rows simultaneously. Clicking any individual row header reverts to per-item control (resets `expandAll`).
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- Browser confirmed: 2026-04-13 via Playwright
+  - 44.1: "CURRENT PASS STREAK · 2 · All 2 runs effective — perfect record · PERFECT" visible in Overview
+  - 44.2: "RUN 2/2" on IFRS_9 run, "RUN 1/2" on ASC_815 run — correct chronological ordering
+  - 44.3: "⊞ EXPAND ALL" button visible; both accordions expand on click (screenshot: sprint44-datasets-expanded-all.png)
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 43: Hedge Type Distribution, First Run Badge & Description Preview
+
+### Added
+- **Hedge type distribution card** (`page.tsx`): OverviewTab card showing per-hedge-type run count and effectiveness rate as labeled progress bars. Inserted before the regression test coverage card. Guard: totalRuns ≥ 1. "BY HEDGE TYPE" section header. Test: cash flow · 2 runs · 100% confirmed.
+- **First run badge** (`page.tsx`): RunsTab purple "1ST" badge marks the chronologically earliest assessment run per dataset. `dsFirstRunMap` built by sorting each dataset's runs by `created_at` and extracting the earliest `run_id`. Badge: #A78BFA, 9px mono. Correctly identifies the first submission per relationship.
+- **Description preview** (`page.tsx`): DatasetsTab accordion header shows `ds.description` as an italic, ellipsis-clipped preview line below the badges row when non-null. Font 11px S.ui, color S.text3, maxWidth 420px. Suppressed when description is null.
+
+### Fixed
+- `S.fontUI` → `S.ui` and `S.fontMono` → `S.mono` typos (wrong property names on the `S` token object).
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- Browser confirmed: 2026-04-13 via Playwright
+  - 43.1: "BY HEDGE TYPE · cash flow · 2 runs · 100%" confirmed in Overview page text (evaluate check)
+  - 43.2: "1ST" badge visible on ASC_815 run row (earlier created_at) (screenshot: sprint43-runs-tab.png)
+  - 43.3: Description preview suppressed for both datasets (description=null in test data) (screenshot: sprint43-datasets-tab.png)
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 42: Audit Readiness Score, D.O. Delta Badge & Designation Age
+
+### Added
+- **Audit readiness score card** (`page.tsx`): OverviewTab composite 0–100 portfolio score with letter grade A–F. Four equally-weighted components with individual mini progress bars: pass rate (40pts), period sufficiency — datasets ≥8 periods (20pts), recency — datasets with run <30 days (20pts), regression coverage (20pts). Color-coded by tier. Test data score: 50/100 (D) — full pass rate, no sufficiency/regression.
+- **D.O. ratio delta badge** (`page.tsx`): RunsTab ▲/▼ delta (4 decimal places) shown below each run's D.O. ratio band bar, comparing to the most-recent prior run on the same dataset. Suppressed when no prior run or |delta| < 0.0001. Green ▲ for improvement, red ▼ for decline.
+- **Designation age badge** (`page.tsx`): DatasetsTab accordion metadata row shows purple "Nd HEDGE" / "NmoMO HEDGE" / "NYR HEDGE" from `ds.designation_date`. Suppressed when field is null. Allows treasury to see how long each hedge relationship has been active.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- Browser confirmed: 2026-04-13 via Playwright
+  - 42.1: AUDIT READINESS card: grade D, 50/100 — PASS RATE 40/40 ✓, SUFFICIENCY 0/20, RECENCY 10/20, REGRESSION 0/20 (screenshot: sprint42-audit-readiness.png)
+  - 42.2: Delta correctly suppressed — each dataset has 1 run (no prior to compare) (screenshot: sprint42-runs-delta.png)
+  - 42.3: Designation badge suppressed for both datasets (designation_date=null) (screenshot: sprint42-datasets-designation.png)
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 41: Period Sufficiency Matrix, Filter Stats Row & Verdict Sparkline
+
+### Added
+- **Period sufficiency matrix** (`page.tsx`): OverviewTab card showing per-dataset row with period count and colored badges for each standard (IAS 39 ≥8, ASC 815 ≥8, IFRS 9 ≥30). Green `✓` when sufficient; red `NEEDS N+` showing the shortfall. Helps treasury teams identify which datasets need more historical data before testing.
+- **Filter statistics summary row** (`page.tsx`): RunsTab compact "BY STD: X N× Y%" row between filter pills and monthly heatmap. Shows per-standard count and pass rate for the currently filtered view. Guard: only shows when ≥2 distinct standards in view (otherwise redundant with existing stats).
+- **Last 5 runs verdict sparkline** (`page.tsx`): DatasetsTab accordion header — row of up to 5 mini colored squares (green=effective, red=ineffective), newest first with fading opacity. Each dot has a tooltip with verdict + date. Suppressed when dataset has no runs.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- Browser confirmed: 2026-04-13 via Playwright
+  - 41.1: Both datasets show `IAS 39 NEEDS 2+` / `ASC 815 NEEDS 2+` / `IFRS 9 NEEDS 24+` (6 periods each) (screenshot: sprint41-period-sufficiency.png)
+  - 41.2: "BY STD: ASC 815 1× 100% IFRS 9 1× 100%" row visible above heatmap (screenshot: sprint41-runs-filterstats.png)
+  - 41.3: Two green dots on EUR/USD Q1 2024 Test; copy dataset suppressed (no runs) (screenshot: sprint41-datasets-sparkline.png)
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 40: Test Method Coverage, Date Presets & Assessment Frequency Badge
+
+### Added
+- **Test method coverage card** (`page.tsx`): OverviewTab card showing per-standard breakdown of runs with regression analysis (R² present) vs dollar-offset-only. Progress bar per standard; color-coded: ≥50% regression coverage = green, else amber. Only renders standards that have ≥1 run. Critical for IFRS 9 compliance which requires regression.
+- **Quick date range presets** (`page.tsx`): RunsTab 7D / 30D / 90D pill buttons inline in the filter toolbar. Sets `dateFrom` to N days ago and clears `dateTo` (open-ended range to today). Active preset highlighted cyan. Resets page to 1 via existing filter-change effect.
+- **Assessment frequency badge** (`page.tsx`): DatasetsTab accordion metadata row shows avg run rate as "X.X/MO" when ≥1/month, or "Nd CADENCE" when less frequent. Requires ≥2 runs. Cyan badge. Tooltip shows raw counts and span.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- Browser confirmed: 2026-04-13 via Playwright
+  - 40.1: TEST METHOD COVERAGE card visible — IFRS 9 and ASC 815 rows, 0% regression bars (correct — no R² in test runs) (screenshot: sprint40-test-method-coverage.png)
+  - 40.2: "7D 30D 90D" preset buttons visible in toolbar between TO date input and D.O. filter (screenshot: sprint40-runs-datepresets.png)
+  - 40.3: "2.0/MO" cyan badge on EUR/USD Q1 2024 Test (2 runs today); copy dataset suppressed (no runs) (screenshot: sprint40-datasets-frequency.png)
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 39: D.O. Band Distribution, Efficiency Score Badge & Next Assessment Due
+
+### Added
+- **D.O. ratio band distribution bar** (`page.tsx`): OverviewTab full-width stacked horizontal bar showing what proportion of runs fall below band (<0.80, red), in band (0.80–1.25, green), or above band (>1.25, amber). Color-coded legend with count + percentage per segment. Positioned after compliance scorecard. Only renders when ≥1 run has D.O. data.
+- **Per-run efficiency score badge** (`page.tsx`): RunsTab inline score (0–100) next to every verdict chip. Composite of D.O. proximity to 1.0 (70%) and R² (30%). Color-coded: ≥80 green, ≥55 cyan, ≥35 amber, <35 red. Suppressed when run has no D.O. data. Tooltip exposes formula.
+- **Next assessment due badge** (`page.tsx`): DatasetsTab accordion metadata row shows due/overdue status based on 30-day recommended cadence. "DUE IN Nd" (amber) when ≤7 days left; "OVERDUE Nd" (red) when past due. "NOT SCHEDULED" (gray) for datasets with no runs. Suppressed when >7 days remaining (not actionable).
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- Browser confirmed: 2026-04-13 via Playwright
+  - 39.1: Stacked bar visible — 100% green (2/2 runs in-band), `< 0.80 0%` and `> 1.25 0%` correctly zero (screenshot: sprint39-doband-chart.png)
+  - 39.2: Score `83` visible next to EFFECTIVE badge on both run rows (D.O.=0.9917, no R²→default 0.5 → score=83) (screenshot: sprint39-runs-efficiency.png)
+  - 39.3: "NOT SCHEDULED" on copy dataset; next-due badge suppressed for dataset with fresh runs (1 day ago, 29 days remaining) (screenshot: sprint39-datasets-nextdue.png)
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 38: Top Performers Panel, Page Size Selector & Health Score Badge
+
+### Added
+- **Top performing datasets panel** (`page.tsx`): OverviewTab card ranking top 3 datasets by pass rate (min 2 runs each). Shows rank #1/#2/#3 badges, pass rate progress bars, effective/total counts, avg D.O. ratio. Guard: hidden when no dataset has ≥2 runs. Positioned before Assessment Velocity card.
+- **Dynamic page size selector** (`page.tsx`): RunsTab PER PAGE toggle (25 / 50 / ALL) rendered bottom-right above pagination. Active selection highlighted cyan. `pageSize` state (25|50|0); 0 = show all. `PAGE_SIZE` constant moved after `filteredRuns` declaration to avoid reference-before-definition error. Resets to page 1 on change.
+- **Dataset health score badge** (`page.tsx`): DatasetsTab accordion header composite badge (0–100). Formula: pass rate 40pts + recency 30pts (decays over 90 days) + run volume 20pts (capped at 5 runs) + drift stability 10pts. Tiers: A≥80 (green), B≥60 (cyan), C≥40 (amber), D<40 (red). Tooltip exposes formula. Hidden for datasets with no runs.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- Browser confirmed: 2026-04-13 via Playwright
+  - 38.1: Top performers panel correctly suppressed (test env: 1 run/dataset, guard fires)
+  - 38.2: "PER PAGE **25** 50 ALL" visible bottom-right in runs tab (screenshot: sprint38-runs-pagesize.png)
+  - 38.3: "A 88" health badge rendered in datasets accordion for EUR/USD Q1 2024 Test (screenshot: sprint38-datasets-health.png)
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 37: Compliance Scorecard, Summary Footer & Staleness Badge
+
+### Added
+- **Compliance scorecard table** (`page.tsx`): OverviewTab 3-column grid card showing COMPLIANT / NON-COMPLIANT / NOT TESTED status for IAS 39 / IFRS 9 / ASC 815. Status derived from most-recent run verdict per standard. Each cell also shows pass rate %, run count, and last assessment date. "NOT TESTED" surfaces untested standards — critical for coverage visibility. Renders when ≥1 total run exists.
+- **Filtered-runs summary footer** (`page.tsx`): RunsTab slim bar beneath the run list (above pagination) showing aggregate stats for currently visible (filtered) runs: EFFECTIVE count, PASS RATE, AVG D.O. (green when in-band), AVG R². Label changes from "ALL N RUNS" to "FILTERED N RUNS" when filters are active. Always visible when filteredRuns.length > 0.
+- **Dataset staleness badge** (`page.tsx`): DatasetsTab accordion header shows an age badge after the verdict chip: amber `Nd AGO` for 7–29 days since last assessment, red `Nd STALE` for ≥30 days. Suppressed when <7 days (fresh) or no runs for dataset.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- Browser confirmed: 2026-04-13 via Playwright
+  - 37.1: COMPLIANCE SCORECARD visible; IFRS_9=COMPLIANT, ASC_815=COMPLIANT, IAS_39=NOT TESTED
+  - 37.2: `ALL 2 RUNS | EFFECTIVE 2/2 | PASS RATE 100% | AVG D.O. 0.9917` visible in footer (screenshot: sprint37-runs-summary-footer.png)
+  - 37.3: Staleness badge correctly suppressed for today's test runs (0 days < 7 threshold)
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-13 — Sprint 36: Assessment Velocity Card, Multi-Standard Breakdown & Help Overlay
+
+### Added
+- **Assessment velocity card** (`page.tsx`): OverviewTab full-width card showing LAST 7 DAYS / LAST 30 DAYS / AVG/WEEK run counts plus a CADENCE badge (STABLE / ACCELERATING / DECELERATING) computed by comparing run counts in the most-recent 4-week window vs the prior 4-week window. Renders when ≥2 runs exist.
+- **Multi-standard breakdown table** (`page.tsx`): DatasetsTab accordion expanded section shows a card-grid (one card per standard) with pass rate %, effective/total count, and average D.O. ratio when a single dataset has runs recorded under ≥2 different accounting standards. Guard: `stdKeys.length < 2` suppresses the table for single-standard datasets — correct behavior with test data.
+- **Keyboard shortcut help overlay** (`page.tsx`): RunsTab `?` toolbar button plus `?` key (when no input focused) toggles a bottom-right-anchored panel listing ↑↓/Enter/Space/Esc/? shortcuts as styled `<kbd>` chips. Backdrop click and Esc both dismiss. Implemented in a dedicated `useEffect` separate from the existing keyboard navigation handler.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0)
+- Browser confirmed: 2026-04-13 via Playwright
+  - 36.1: ASSESSMENT VELOCITY panel with LAST 7 DAYS + cadence STABLE visible in OverviewTab
+  - 36.2: BY STANDARD table correctly suppressed (test data: 1 run/dataset, 1 standard each — stdKeys.length < 2 guard works)
+  - 36.3: KEYBOARD SHORTCUTS panel renders on `?` button click; 5 shortcut rows visible (screenshot: sprint36-runs-help-overlay.png)
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-12 — Sprint 35: Currency Pair Panel, Active Filter Pills & Dataset Rank Badge
+
+### Added
+- **Currency pair distribution panel** (`page.tsx`): OverviewTab full-width card showing currency pairs grouped from all runs, sorted by run count descending, with animated pass rate progress bar per pair (green ≥80%, amber ≥60%, red <60%) and effective/total label. Null `currency_pair` renders as "MULTI".
+- **Active filter pill bar** (`page.tsx`): RunsTab contextual row rendered below the toolbar when ≥1 filter is non-default. Cyan chips for: search text, standard, verdict, tag, starred-only, date-from, date-to, D.O. min, D.O. max. Each chip has × button to clear its own filter. CLEAR ALL button appears when ≥2 chips present. Hidden entirely when no filters active.
+- **Dataset-relative rank badge** (`page.tsx`): Per run row in flat view, shows `#1 BEST` (green) / `#2` (cyan) / `#3+` (gray) badge indicating run's rank within its dataset by D.O. proximity to 1.00. Pre-computed via `dsRunGroups` + `dsRankMap` inside flat-view IIFE (O(n log n) total, O(1) per row). Badge suppressed when dataset has <2 runs.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (exit code 0, no output)
+- Browser confirmed: 2026-04-12 via Playwright
+  - 35.1: BY CURRENCY PAIR panel present in OverviewTab (screenshot: sprint35-overview-currency-panel.png)
+  - 35.2: FILTERS: VERDICT: EFFECTIVE × chip visible after clicking EFFECTIVE; no pill bar when filters reset; CLEAR ALL absent for single filter (correct)
+  - 35.3: #1 BEST (green) on IFRS_9 run, #2 (cyan) on ASC_815 run (screenshot: sprint35-runs-filter-pill-rank.png)
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-12 — Sprint 34: Effectiveness Regime Bar, Enhanced CSV Export & Run Age Display
+
+### Added
+- **Effectiveness regime bar** (`page.tsx`): OverviewTab horizontal stacked bar showing consecutive runs of identical effectiveness verdict as colored segments (green=effective, red=ineffective). Flex proportional widths — no fixed-pixel math. Past segments at 30% opacity; current segment full opacity. Count label inside each segment when >8% of total width. CURRENT badge shows `EFFECTIVE ×N` or `INEFFECTIVE ×N`. OLDEST ← → LATEST footer labels. Only renders when ≥2 runs.
+- **Enhanced CSV export** (`page.tsx`): `handleExportCsv` now includes `note` and `tag` columns after `created_at`. Note field properly RFC 4180 double-quote escaped (`replace(/"/g, '""')`). Tag rendered as plain string (no quoting needed). Header updated accordingly.
+- **Human-readable run age** (`page.tsx`): `showAge` boolean state + `runAge(dateStr)` utility function cascading through s/m/h/d/w/mo/y tiers from elapsed milliseconds. Date cell is now clickable — `onClick` toggles `showAge`. Column header label switches between `DATE` and `AGE` to reflect current mode. `e.stopPropagation()` prevents row selection on click.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (no output)
+- Browser confirmed: 2026-04-12 via Playwright
+  - 34.1: EFFECTIVENESS REGIME panel visible in OverviewTab; `hasRegimeBar: true`, `hasCurrentBadge: true`, `hasOldestLatest: true`; 1 green segment (2 effective runs in sequence)
+  - 34.3: Date cell click toggles `4/12/2026` → `3h`; column header changed to `AGE` (screenshot: sprint34-runs-age-toggle.png)
+  - 34.2: CSV export column expansion additive — no test run with notes to download, logic verified by code review
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-12 — Sprint 33: Pin-to-Top, Worst Performers & Quick Delta Bar
+
+### Added
+- **Pin-to-top runs** (`page.tsx`): Pin button (⬡ icon) per run row; pinned runs float above sorted results regardless of active sort/filter; cyan left-border indicator replaces green/red for pinned rows; `hec_pinned_runs` localStorage; max 3 pinned enforced.
+- **Worst performers panel** (`page.tsx`): OverviewTab full-width card showing up to 3 most out-of-band ineffective runs (sorted by distance from nearest band edge); rank circles #1/#2/#3; D.O. value, dist-from-band, and date shown per row; hidden when all runs are effective.
+- **Inline quick-delta bar** (`page.tsx`): When exactly 2 run rows are selected and compare modal is closed, a QUICK Δ bar renders above column headers showing D.O.Δ, R²Δ (signed, color-coded), and AGREE/DISAGREE verdict chip; disappears when 0/1/3+ rows selected or modal opens.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (no output)
+- Browser confirmed: 2026-04-12 via Playwright
+  - 33.1: Pin click → `hec_pinned_runs` localStorage = [id]; button title → "Unpin"; pinnedCount=1, unpinBtnCount=1
+  - 33.2: WORST PERFORMERS correctly hidden (all 2 test runs effective); widget guards with `ineffective.length === 0`
+  - 33.3: QUICK Δ + AGREE visible when 2 rows selected; D.O. + R² + verdict columns all present
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-12 — Sprint 32: Standard Donut, D.O. Drift Alert & Monthly Heatmap
+
+### Added
+- **Standard breakdown donut** (`page.tsx`): OverviewTab full-width card with ECharts donut (IAS_39/IFRS_9/ASC_815; cyan/green/amber) + count/% legend + PASS RATE BY STANDARD animated progress bars per standard.
+- **D.O. drift alert badge** (`page.tsx`): DatasetsTab accordion header shows `⚠ DRIFT ±X.XXX` badge when latest vs prior run D.O. ratio shifts ≥0.10. Amber for |delta| 0.10–0.14, green/red for ≥0.15. Correctly suppressed when drift < threshold.
+- **Monthly performance heatmap** (`page.tsx`): RunsTab slim bar above column headers showing Jan–Dec squares for current year. Green ≥80%, amber 60–79%, red <60%, em dash for no runs. Current month gets cyan border highlight. Hard-coded month labels for locale-safety.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (no output)
+- Browser confirmed: 2026-04-12 via Playwright
+  - 32.1: BY STANDARD + PASS RATE BY STANDARD panels present in OverviewTab
+  - 32.2: drift=0.000 for test data → badge correctly suppressed (both runs D.O. 0.9917)
+  - 32.3: Heatmap renders with APR showing 100% (2 effective runs); all other months show —
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-12 — Sprint 31: D.O. Band Bar, Streak KPI & Dataset Statistics Pills
+
+### Added
+- **D.O. band-position bar** (`page.tsx`): RunsTab D.O. ratio column replaced with compound component — ratio value (green/amber/red) stacked above a 3px mini bar showing position within 0.70–1.35 range; green zone band (0.80–1.25) highlighted at 15% opacity; colored 5×5 dot marker at exact ratio position with glow.
+- **Streak KPI tiles** (`page.tsx`): OverviewTab gains CURRENT STREAK + BEST STREAK tiles alongside existing KPIs; O(n) calculation using sorted runs; 🔥 emoji when current streak ≥5; amber warning chip when streak broken (current=0, best>0).
+- **Dataset statistics pills** (`page.tsx`): DatasetsTab accordion expanded section shows MEAN D.O., STD DEV, MIN, MAX, PASS RATE pill row before ASSESSMENT HISTORY label; computed from all runs for that dataset; only shown when ≥1 run exists.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (no output)
+- Browser confirmed: 2026-04-12 via Playwright
+  - 31.1: 2 mini bars + 2 colored dots rendering in RunsTab with ratio `0.9917` (green, in-band)
+  - 31.2: CURRENT STREAK + BEST STREAK KPI tiles visible in OverviewTab (screenshot: sprint31-2-streak.png)
+  - 31.3: MEAN D.O. 0.9917, STD DEV 0.0000, MIN 0.9917, MAX 0.9917, PASS RATE 100% confirmed in accordion (screenshot: sprint31-3-dataset-stats-pills.png)
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
+## 2026-04-12 — Sprint 30: Run Notes, Evidence Binder Download & Effectiveness Timeline
+
+### Added
+- **Per-run analyst notes** (`page.tsx`): Hover over any run row to reveal `+ note` prompt; click to open inline input; Enter/blur saves to `localStorage hec_run_notes`; note renders as italic grey text under dataset name; click to re-edit.
+- **Evidence binder download** (`page.tsx`): Download icon (↓) per run row; calls `GET /v1/hedge-effectiveness/runs/{id}/export` with bearer token; downloads `he-binder-{id}.json`; clock icon spinner while fetching; `token` prop threaded into RunsTab.
+- **Effectiveness timeline scatter** (`page.tsx`): New EFFECTIVENESS TIMELINE chart in OverviewTab; ECharts scatter (x=date, y=D.O. ratio); last 30 runs with D.O. data; green dots=effective, red=ineffective; markLine bands at 0.80/1.25; tooltip: dataset name, date, D.O., verdict.
+
+### Test evidence
+- `npx tsc --noEmit` — CLEAN (no output)
+- Browser confirmed: 2026-04-12 via Playwright
+  - 30.1: Note "Q1 preliminary — confirm with treasury desk" saved to localStorage and rendered italic in run row
+  - 30.2: `he-binder-6827c188.json` downloaded from runs table
+  - 30.3: EFFECTIVENESS TIMELINE with 3 ECharts instances visible in OverviewTab
+
+### Files changed
+- `frontend/src/app/hedge-effectiveness/page.tsx`
+- `.claude/state/CURRENT_SPRINT.md`
+- `.claude/state/CHANGELOG_AI.md`
+
+---
+
 ## 2026-04-10 — Sprint 29: Compare Export, Dataset Clone & D.O. Sparkline
 
 ### Added
@@ -11,7 +622,10 @@
 ### Test evidence
 - `npx tsc --noEmit` — CLEAN (no output)
 - pytest: 4801 passed, 0 failed, 158 skipped
-- Browser confirmation: PENDING
+- Browser confirmed: 2026-04-12 via Playwright
+  - 29.1: EXPORT CSV downloaded `he_comparison_*.csv` from compare modal (2 runs)
+  - 29.2: Clone button created "EUR/USD Q1 2024 Test (Copy)" — datasets count 1→2
+  - 29.3: ECharts sparkline rendered in accordion with D.O. RATIO TREND + band lines at 0.80/1.30
 
 ### Files changed
 - `backend/app/api/routes/v1_hedge_effectiveness.py`
