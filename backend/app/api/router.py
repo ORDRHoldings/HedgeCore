@@ -293,3 +293,7 @@ router.include_router(gdpr_router)
 # Webhooks — per-tenant outbound event delivery (owns /v1/webhooks)
 from app.api.routes.v1_webhooks import router as v1_webhooks_router
 router.include_router(v1_webhooks_router)
+
+# GL Journal Entry workflow (owns /v1/gl)
+from app.api.routes.v1_gl import router as v1_gl_router
+router.include_router(v1_gl_router)
