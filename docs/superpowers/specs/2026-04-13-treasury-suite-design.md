@@ -1,7 +1,7 @@
 # ORDR Treasury Suite — Complete Design Specification
 
 **Date:** 2026-04-13  
-**Status:** APPROVED  
+**Status:** APPROVED (rev 3 — spec review fixes applied)  
 **Author:** ORDR Edge  
 **Supersedes:** n/a  
 **Related ADRs:** 0009, 0010, 0011, 0012, 0013, 0014 (to be written)
@@ -90,24 +90,64 @@ class JournalEntry(Base):
     posted_at: DateTime
     posted_to: String(64)        # ERP system identifier
     posted_ref: String(128)      # ERP-assigned journal ID
-    entry_hash: String(128)      # SHA-256 of entry content
+    entry_hash: String(128)      # SHA-256(company_id + entry_type + standard +
+                                 #   debit_account + credit_account + amount +
+                                 #   currency + period_date + created_at)
+    prev_entry_hash: String(128) # hash of previous JournalEntry for this
+                                 # company_id (GENESIS = 64 zeros per tenant)
     created_at: DateTime
     created_by: UUID
 ```
 
 WORM semantics: no UPDATE, no DELETE. Status transitions only.
 
+**Hash chain mechanics:** `prev_entry_hash` is the `entry_hash` of the most recent `JournalEntry` for the same `company_id`. On first record per tenant, `prev_entry_hash = GENESIS_HASH` (64 zeros). This is a separate chain from `TreasuryTransaction` — every posted journal entry also appends a `TreasuryTransaction` record (type `JOURNAL_ENTRY`) creating a cross-reference, but the two chains are independent. ADR-0009 governs this design.
+
+#### GL Account Mapping (prerequisite — Sprint 56, Step 0)
+
+Before any journal entry can be generated, tenants must configure their chart-of-accounts mapping. This is a hard prerequisite for Sprint 56 and must ship first.
+
+```python
+class GLAccountMapping(Base):
+    __tablename__ = "gl_account_mappings"
+    id: UUID (PK)
+    company_id: UUID (indexed)
+    entry_type: Enum[OCI_RECOGNITION, PNL_RECLASSIFICATION,
+                     INEFFECTIVENESS, SETTLEMENT_VARIANCE, FAIR_VALUE_CHANGE]
+    standard: Enum[IFRS_9, ASC_815, IAS_39]
+    debit_account: String(64)    # chart-of-accounts code
+    credit_account: String(64)
+    account_label: String(256)   # human-readable description
+    erp_system: String(32)       # QB | XERO | NETSUITE | SAGE | MANUAL
+    created_by: UUID
+    created_at: DateTime
+    updated_at: DateTime
+    updated_by: UUID             # FK → users — required for full audit trail
+```
+
+`GET/POST /v1/gl/account-mappings` — tenant manages their mapping.
+`JournalEntry.generate()` raises `GLMappingNotConfiguredError` if mapping missing — never creates a record with blank accounts.
+Frontend: `/settings/gl-accounts` — account mapping editor, launched in Sprint 56 Step 0.
+
 #### API Routes
 
 ```
 POST /v1/gl/journal-entries/generate/{run_id}
      → calls hedge_accounting.py, creates JournalEntry records (DRAFT)
+     → raises GLMappingNotConfiguredError if account mapping absent
 
 GET  /v1/gl/journal-entries
      → list with filters: status, period, standard, entity
 
 POST /v1/gl/journal-entries/{entry_id}/approve
      → 4-eyes: requires approver ≠ creator (SoD enforced)
+     → status: PENDING_APPROVAL → APPROVED
+
+POST /v1/gl/journal-entries/{entry_id}/reject
+     → 4-eyes: requires reviewer ≠ creator (SoD enforced)
+     → status: PENDING_APPROVAL → REJECTED
+     → body: { "reason": String } (required)
+     → entry remains in table (WORM — rejection recorded, not deleted)
 
 POST /v1/gl/journal-entries/{entry_id}/post
      → pushes to connected accounting system, updates status → POSTED
@@ -210,11 +250,15 @@ class SettlementEvent(Base):
 ```
 GET  /v1/settlement/pending          → hedges past value_date, not yet settled
 POST /v1/settlement/confirm/{ledger_entry_id}
+     → status: PENDING → CONFIRMED (single user action)
+     → creates JournalEntry (DRAFT, status=DRAFT) — NOT auto-approved
+     → journal entry still requires separate 4-eyes approval via
+       POST /v1/gl/journal-entries/{entry_id}/approve before posting
 GET  /v1/settlement/reconciliation-report?period=...
 GET  /v1/settlement/variance-report  → P&L impact by period
 ```
 
-Settlement confirmation triggers automatic GL journal entry generation (settlement variance entry type), closing the loop between execution and accounting.
+Settlement confirmation creates a journal entry in **DRAFT** status only. The 4-eyes SoD gate (approver ≠ creator) on `POST /v1/gl/journal-entries/{entry_id}/approve` is always required before any journal entry can be posted to the ERP — regardless of how the draft was generated. This applies uniformly to all entry types: effectiveness runs, settlement variances, and fair value changes.
 
 ---
 
@@ -290,8 +334,11 @@ class BankTransaction(Base):
     counterparty: String(256)
     tx_code: String(16)         # SWIFT/BAI2 transaction code
     reconciliation_status: Enum[UNMATCHED, MATCHED, EXCEPTION]
-    matched_to_id: UUID         # FK → settlement_events / journal_entries
-    matched_to_type: String(32)
+    # Explicit nullable FKs per source type — no polymorphic bare UUID
+    matched_settlement_id: UUID (FK → settlement_events, nullable)
+    matched_journal_id: UUID (FK → journal_entries, nullable)
+    matched_position_id: UUID (FK → positions, nullable)
+    # Only one of the above should be non-null per matched transaction
     created_at: DateTime
 ```
 
@@ -508,7 +555,7 @@ Regulatory citations (IFRS 9.6.4.1, ASC 815-20-25) auto-included.
 class TreasuryTransaction(Base):
     __tablename__ = "treasury_transactions"
     id: UUID (PK)
-    company_id: UUID
+    company_id: UUID (indexed)
     entity_id: UUID (FK → treasury_entities, nullable)
     tx_type: Enum[FX_HEDGE, SETTLEMENT, BANK_RECEIPT, BANK_PAYMENT,
                   INTERCOMPANY, JOURNAL_ENTRY, CASH_POOL_SWEEP]
@@ -521,10 +568,19 @@ class TreasuryTransaction(Base):
     source_module: Enum[FX_LIFECYCLE, CASH, GL, PAYMENT, SETTLEMENT]
     source_ref_id: UUID         # points to originating record
     source_ref_type: String(64) # e.g. "ledger_entries", "settlement_events"
+    # Per-table SHA-256 hash chain (same pattern as audit_events)
+    tx_hash: String(128)        # SHA-256(company_id + tx_type + amount +
+                                #          currency + value_date + source_ref_id
+                                #          + created_at) — created_at included
+                                #          to prevent duplicate-entry collision
+    prev_tx_hash: String(128)   # hash of previous TreasuryTransaction for
+                                # this company_id (GENESIS = 64 zeros)
     created_at: DateTime
 ```
 
-Every financial event in the platform appends to this table. It is the single queryable audit spine across all modules. Append-only. Hash-chained via existing `audit_events` framework.
+Every financial event in the platform appends to this table — it is the single queryable audit spine across all modules. Append-only (WORM semantics: no UPDATE, no DELETE triggers, same as `ledger_entries`).
+
+**Hash chain mechanics:** `prev_tx_hash` is the `tx_hash` of the most recent `TreasuryTransaction` for the same `company_id`. On first record per tenant, `prev_tx_hash = GENESIS_HASH` (64 zeros). This is an independent chain from `audit_events` — the two chains are cross-referenced via `source_ref_id` pointing to the originating audit event, but they are not the same chain. ADR-0013 governs this design decision.
 
 ### 6.2 Multi-Entity Consolidation
 
@@ -579,6 +635,8 @@ IFRS 7 bundle auto-populates from:
 
 Frontend: `/compliance-centre` — bundle builder, regulatory calendar, export
 
+**Plan tier:** PROFESSIONAL and above. `ComplianceBundle` is purely rule-based — no AI dependency. It is delivered in Phase 2 (Sprint 71), not Phase 3. It is available without the INTELLIGENCE add-on.
+
 ---
 
 ## 7. Plan Tier Structure
@@ -624,27 +682,33 @@ Implementation: `require_plan_tier()` FastAPI dependency — existing pattern.
 
 | Sprint | Deliverable |
 |--------|-------------|
-| 62 | ADR-0010, 0011, 0014 · TreasuryEntity + BankAccount models |
+| 62 | **ADR-0010** (Bank Connectivity) · **ADR-0014** (Multi-Entity) · TreasuryEntity + BankAccount models |
 | 63 | MT940 / CAMT.053 parser · BankStatement + BankTransaction models |
 | 64 | BAI2 parser · statement import route · deduplication |
 | 65 | Auto-reconciliation engine (settlement + journal entry matching) |
 | 66 | CashPool model · multi-entity consolidation route |
 | 67 | `/cash-management` dashboard · entity tree · pool waterfall |
-| 68 | Cash flow forecast engine (13-week, rule-based) |
+| 68 | **ADR-0011** (Cash Flow Forecasting) · Cash flow forecast engine (13-week, rule-based) |
 | 69 | 12-month forecast · liquidity gap detection · variance tracking |
 | 70 | `/cash-forecast` page · waterfall chart · gap alerts |
 | 71 | Payment initiation (paper mode) · `/bank-accounts` · `/intercompany-netting` |
 
-### Phase 3 — AI Add-on (~parallel, ~6 sprints)
+### Phase 3 — AI Add-on (~parallel, ~8 sprints)
+
+> **Note:** Sprint P3-2 (ML forecasting) has a hidden infrastructure dependency: a per-tenant model training pipeline, model artifact storage, and retraining triggers. This adds ~2 sprints of infrastructure work before the model can run. P3-2 is therefore split into P3-2a (infrastructure) and P3-2b (model + UI).
 
 | Sprint | Deliverable |
 |--------|-------------|
 | P3-1 | ADR-0012 · INTELLIGENCE plan tier gate · opt-in per tenant |
-| P3-2 | ML forecasting model integration · confidence band overlay |
-| P3-3 | NLP query endpoint · Claude API integration · context injection |
-| P3-4 | `/intelligence` query bar (frontend) · query log |
-| P3-5 | AI commentary draft endpoint · report integration |
-| P3-6 | `/compliance-centre` · ComplianceBundle model · IFRS 7 auto-populate |
+| P3-2a | ML infrastructure: training pipeline, model artifact storage (S3/local), retraining trigger on new bank statement import |
+| P3-2b | Prophet model integration · per-tenant training · confidence band overlay on `/cash-forecast` |
+| P3-3 | NLP query endpoint · Claude API integration · tenant-scoped context injection |
+| P3-4 | `/intelligence` query bar (frontend, CMD+K) · query log |
+| P3-5 | AI commentary draft endpoint · report integration · "AI-assisted, human-reviewed" audit flag |
+| P3-6 | Multi-provider integration: Open Banking (EU PSD2) + Plaid (US) direct API connectivity |
+| P3-7 | SWIFT GPI tracking · real-time payment status · correspondent bank visibility |
+
+> **Note:** ComplianceBundle and `/compliance-centre` are delivered in Phase 2, Sprint 71 — they are PROFESSIONAL+ tier, fully rule-based, and have no dependency on the INTELLIGENCE tier. P3-6/P3-7 above deliver the premium bank API connectivity originally scoped as "Enterprise+ tier" in Section 4.1.
 
 ---
 
