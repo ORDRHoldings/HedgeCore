@@ -29,7 +29,7 @@ async def test_generate_raises_if_no_mapping():
     mock_run.id = uuid.uuid4()
     mock_run.company_id = uuid.uuid4()
     mock_run.standard = "IFRS_9"
-    mock_run.results = {"entry_type": "OCI_RECOGNITION"}
+    mock_run.report_json = {"oci_amount": "100000"}
 
     mock_user = MagicMock()
     mock_user.id = uuid.uuid4()

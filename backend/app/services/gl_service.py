@@ -14,7 +14,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.journal_entry import (
@@ -57,31 +57,28 @@ async def _extend_journal_chain(
     company_id: uuid.UUID,
 ) -> tuple[int, str]:
     """
-    Returns (new_chain_seq, prev_entry_hash) within a serialized lock.
+    Returns (new_chain_seq, prev_entry_hash) with a row-level lock.
 
-    Uses SELECT MAX(chain_seq) FOR UPDATE so that concurrent callers are
-    serialized at the aggregate level — locking a single data row is insufficient
-    because two transactions can both read the same last row before either inserts.
-    MUST be called inside the same transaction as the JournalEntry insert.
+    Fetches and locks the most recent chain row via ORDER BY chain_seq DESC
+    LIMIT 1 FOR UPDATE. Concurrent callers block on this lock until the current
+    transaction commits, preventing duplicate chain_seq values.
+
+    Note: SELECT MAX(...) FOR UPDATE is illegal in PostgreSQL (aggregate + FOR
+    UPDATE is rejected). Row-level locking on the last entry is the correct
+    approach.
     """
-    max_result = await session.execute(
-        select(func.max(JournalEntry.chain_seq))
+    result = await session.execute(
+        select(JournalEntry.chain_seq, JournalEntry.entry_hash)
         .where(JournalEntry.company_id == company_id)
+        .order_by(JournalEntry.chain_seq.desc())
+        .limit(1)
         .with_for_update()
     )
-    max_seq = max_result.scalar_one_or_none()
-    if max_seq is None:
+    row = result.first()
+    if row is None:
         return 1, GENESIS_HASH
-
-    hash_result = await session.execute(
-        select(JournalEntry.entry_hash)
-        .where(
-            JournalEntry.company_id == company_id,
-            JournalEntry.chain_seq == max_seq,
-        )
-    )
-    prev_hash = hash_result.scalar_one_or_none() or GENESIS_HASH
-    return max_seq + 1, prev_hash
+    max_seq, prev_hash = row
+    return max_seq + 1, prev_hash or GENESIS_HASH
 
 
 def _assert_je_transition(
@@ -171,7 +168,7 @@ def _extract_entry_specs(run) -> list[dict]:
     2. A single entry_type key in results — used when the run encodes one entry
        inline (e.g. {"entry_type": "OCI_RECOGNITION", "amount": 1000}).
     """
-    results = run.results or {}
+    results = run.report_json or {}
     specs = []
 
     if "oci_amount" in results:
@@ -179,7 +176,7 @@ def _extract_entry_specs(run) -> list[dict]:
             "entry_type": "OCI_RECOGNITION",
             "amount": results["oci_amount"],
             "currency": results.get("currency", "USD"),
-            "period_date": run.period_end or run.created_at.date(),
+            "period_date": run.created_at.date(),
         })
 
     if "ineffectiveness_amount" in results:
@@ -187,7 +184,7 @@ def _extract_entry_specs(run) -> list[dict]:
             "entry_type": "INEFFECTIVENESS",
             "amount": results["ineffectiveness_amount"],
             "currency": results.get("currency", "USD"),
-            "period_date": run.period_end or run.created_at.date(),
+            "period_date": run.created_at.date(),
         })
 
     # Fallback: single inline entry_type (e.g. {"entry_type": "OCI_RECOGNITION"})
@@ -196,7 +193,7 @@ def _extract_entry_specs(run) -> list[dict]:
             "entry_type": results["entry_type"],
             "amount": results.get("amount", 0),
             "currency": results.get("currency", "USD"),
-            "period_date": run.period_end or run.created_at.date(),
+            "period_date": run.created_at.date(),
         })
 
     return specs
@@ -230,13 +227,16 @@ async def approve_journal_entry(
     je = result.scalar_one_or_none()
     if je is None:
         raise ValueError(f"JournalEntry {entry_id} not found")
-    _assert_je_transition(je.status, JournalEntryStatus.APPROVED, entry_id)
 
+    # SoD must be checked first — a SoD violation should not be masked by a
+    # transition error. An unauthorized user should always get a SoD error.
     if je.created_by == checker.id:
         raise ValueError(
             f"SoD violation: checker cannot be the creator of "
             f"JournalEntry {entry_id}"
         )
+
+    _assert_je_transition(je.status, JournalEntryStatus.APPROVED, entry_id)
 
     je.status = JournalEntryStatus.APPROVED.value
     await session.flush()
@@ -259,13 +259,16 @@ async def reject_journal_entry(
     je = result.scalar_one_or_none()
     if je is None:
         raise ValueError(f"JournalEntry {entry_id} not found")
-    _assert_je_transition(je.status, JournalEntryStatus.REJECTED, entry_id)
 
+    # SoD must be checked first — a SoD violation should not be masked by a
+    # transition error. An unauthorized user should always get a SoD error.
     if je.created_by == checker.id:
         raise ValueError(
             f"SoD violation: checker cannot be the creator of "
             f"JournalEntry {entry_id}"
         )
+
+    _assert_je_transition(je.status, JournalEntryStatus.REJECTED, entry_id)
 
     je.status = JournalEntryStatus.REJECTED.value
     await session.flush()
@@ -292,35 +295,37 @@ async def list_journal_entries(
 async def upsert_gl_mapping(
     session: AsyncSession,
     company_id: uuid.UUID,
-    data: dict,
+    data: "GLAccountMappingCreate",
     user: User,
 ) -> GLAccountMapping:
+    from app.schemas_v1.gl import GLAccountMappingCreate  # noqa: PLC0415
+
     result = await session.execute(
         select(GLAccountMapping).where(
             GLAccountMapping.company_id == company_id,
-            GLAccountMapping.entry_type == data["entry_type"],
-            GLAccountMapping.standard == data["standard"],
+            GLAccountMapping.entry_type == data.entry_type,
+            GLAccountMapping.standard == data.standard,
         )
     )
     mapping = result.scalar_one_or_none()
     if mapping is None:
         mapping = GLAccountMapping(
             company_id=company_id,
-            entry_type=data["entry_type"],
-            standard=data["standard"],
-            debit_account=data["debit_account"],
-            credit_account=data["credit_account"],
-            account_label=data.get("account_label", ""),
-            erp_system=data.get("erp_system", "MANUAL"),
+            entry_type=data.entry_type,
+            standard=data.standard,
+            debit_account=data.debit_account,
+            credit_account=data.credit_account,
+            account_label=data.account_label,
+            erp_system=data.erp_system,
             created_by=user.id,
             updated_by=user.id,
         )
         session.add(mapping)
     else:
-        mapping.debit_account = data["debit_account"]
-        mapping.credit_account = data["credit_account"]
-        mapping.account_label = data.get("account_label", mapping.account_label)
-        mapping.erp_system = data.get("erp_system", mapping.erp_system)
+        mapping.debit_account = data.debit_account
+        mapping.credit_account = data.credit_account
+        mapping.account_label = data.account_label
+        mapping.erp_system = data.erp_system
         mapping.updated_by = user.id
     await session.flush()
     return mapping
