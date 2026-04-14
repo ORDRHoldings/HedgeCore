@@ -150,6 +150,7 @@ async def update_account_route(
         if hasattr(account, k):
             setattr(account, k, v)
     account.version += 1
+    await db.commit()
     return _account_response(account, current_user)
 
 

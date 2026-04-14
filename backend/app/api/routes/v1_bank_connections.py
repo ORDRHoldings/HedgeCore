@@ -129,4 +129,5 @@ async def reactivate_connection_route(
         raise HTTPException(status_code=422, detail="Connection is not in ERROR state")
     connection.status = BankConnectionStatus.ACTIVE.value
     connection.consecutive_failure_count = 0
+    await db.commit()
     return connection
