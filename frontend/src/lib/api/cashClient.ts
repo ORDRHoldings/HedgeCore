@@ -21,6 +21,24 @@ async function _fetchJson<T>(path: string, token: string, options?: RequestInit)
 
 // ── Types ────────────────────────────────────────────────────────────────
 
+export interface AccountAuditEvent {
+  id: string;
+  event_type: string;
+  chain_seq: number;
+  performed_by: string;
+  created_at: string;
+}
+
+export interface AccountPositionRow {
+  account_id: string;
+  nickname: string;
+  currency: string;
+  ledger_balance: string | null;
+  available_balance: string | null;
+  balance_date: string | null;
+  status: string;
+}
+
 export interface LegalEntity {
   id: string;
   company_id: string;
@@ -157,7 +175,7 @@ export const getAccountBalances = (token: string, id: string, params?: { date_fr
 };
 
 export const getAccountAudit = (token: string, id: string) =>
-  _fetchJson<object[]>(`/v1/cash/accounts/${id}/audit`, token);
+  _fetchJson<AccountAuditEvent[]>(`/v1/cash/accounts/${id}/audit`, token);
 
 // ── Position endpoints ───────────────────────────────────────────────────
 
@@ -168,7 +186,7 @@ export const getEntityPosition = (token: string, asOfDate?: string) =>
   _fetchJson<EntityPositionResponse>(`/v1/cash/positions/by-entity${asOfDate ? `?as_of_date=${asOfDate}` : ""}`, token);
 
 export const getAccountPosition = (token: string) =>
-  _fetchJson<object[]>("/v1/cash/positions/by-account", token);
+  _fetchJson<AccountPositionRow[]>("/v1/cash/positions/by-account", token);
 
 export const enterBalance = (token: string, payload: Partial<CashBalance>) =>
   _fetchJson<CashBalance>("/v1/cash/balances", token, { method: "POST", body: JSON.stringify(payload) });
@@ -214,6 +232,12 @@ export const verifyCashChain = (token: string) =>
   _fetchJson<{ ok: boolean; broken_at_seq?: number; event_count?: number }>("/v1/cash/audit/chain-verify", token);
 
 export const listCashAuditEvents = (token: string, params?: { account_id?: string; event_type?: string; limit?: number }) => {
-  const q = new URLSearchParams((params ?? {}) as Record<string, string>).toString();
-  return _fetchJson<object[]>(`/v1/cash/audit/events${q ? `?${q}` : ""}`, token);
+  const q = new URLSearchParams(
+    Object.fromEntries(
+      Object.entries(params ?? {})
+        .filter(([, v]) => v !== undefined)
+        .map(([k, v]) => [k, String(v)])
+    )
+  ).toString();
+  return _fetchJson<AccountAuditEvent[]>(`/v1/cash/audit/events${q ? `?${q}` : ""}`, token);
 };
