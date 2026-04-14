@@ -133,7 +133,7 @@ class LegalEntity(Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False, default=LegalEntityStatus.ACTIVE.value)
     created_by: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
 
@@ -160,7 +160,7 @@ class BankConnection(Base):
     approved_by: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
 
 class BankAccount(Base):
@@ -220,8 +220,12 @@ class CashBalance(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
 
-# Mutable fields — partial WORM (reconciliation workflow)
-_CASH_BALANCE_MUTABLE = frozenset({"reconciliation_status", "reconciled_by", "reconciled_at"})
+_CASH_BALANCE_IMMUTABLE = frozenset({
+    "account_id", "balance_date", "ledger_balance", "available_balance",
+    "value_date_balance", "in_transit_debit", "in_transit_credit",
+    "currency", "source", "created_by", "created_at",
+    "value_date", "pulled_at", "note",
+})
 
 
 @sa_event.listens_for(CashBalance, "before_delete")
@@ -237,18 +241,12 @@ def _guard_cash_balance_immutable(mapper, connection, target):
     """
     from sqlalchemy import inspect as sa_inspect
     state = sa_inspect(target)
-    immutable = frozenset({
-        "account_id", "balance_date", "ledger_balance", "available_balance",
-        "value_date_balance", "in_transit_debit", "in_transit_credit",
-        "currency", "source", "created_by", "created_at",
-        "value_date", "pulled_at", "note",
-    })
-    for attr in state.attrs:
-        if attr.key in immutable:
-            hist = attr.history
+    for col in mapper.columns:
+        if col.key in _CASH_BALANCE_IMMUTABLE:
+            hist = state.attrs[col.key].history
             if hist.added or hist.deleted:
                 raise ValueError(
-                    f"cash_balances.{attr.key} is immutable after creation (WORM financial column)"
+                    f"cash_balances.{col.key} is immutable after creation (WORM financial column)"
                 )
 
 
@@ -275,3 +273,8 @@ class CashAuditEvent(Base):
 @sa_event.listens_for(CashAuditEvent, "before_delete")
 def _block_audit_delete(mapper, connection, target):
     raise ValueError(f"cash_audit_events is WORM — deletes forbidden (id={target.id})")
+
+
+@sa_event.listens_for(CashAuditEvent, "before_update")
+def _block_audit_update(mapper, connection, target):
+    raise ValueError(f"cash_audit_events is WORM — updates forbidden (id={target.id})")
