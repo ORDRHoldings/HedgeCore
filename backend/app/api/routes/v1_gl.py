@@ -20,6 +20,7 @@ from app.models.user import User
 from app.schemas_v1.gl import (
     GLAccountMappingCreate,
     GLAccountMappingRead,
+    JournalEntryApproveRequest,
     JournalEntryRead,
     JournalEntryRejectRequest,
 )
@@ -145,6 +146,7 @@ async def generate_journal_entries(
 )
 async def approve_journal_entry(
     entry_id: uuid.UUID,
+    _body: JournalEntryApproveRequest = JournalEntryApproveRequest(),  # noqa: B008
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):

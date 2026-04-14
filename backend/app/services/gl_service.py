@@ -205,7 +205,10 @@ async def submit_for_approval(
     user: User,
 ) -> JournalEntry:
     result = await session.execute(
-        select(JournalEntry).where(JournalEntry.id == entry_id)
+        select(JournalEntry).where(
+            JournalEntry.id == entry_id,
+            JournalEntry.company_id == user.company.id,
+        )
     )
     je = result.scalar_one_or_none()
     if je is None:
@@ -222,7 +225,10 @@ async def approve_journal_entry(
     checker: User,
 ) -> JournalEntry:
     result = await session.execute(
-        select(JournalEntry).where(JournalEntry.id == entry_id)
+        select(JournalEntry).where(
+            JournalEntry.id == entry_id,
+            JournalEntry.company_id == checker.company.id,
+        )
     )
     je = result.scalar_one_or_none()
     if je is None:
@@ -254,7 +260,10 @@ async def reject_journal_entry(
         raise ValueError("reason is required to reject a journal entry")
 
     result = await session.execute(
-        select(JournalEntry).where(JournalEntry.id == entry_id)
+        select(JournalEntry).where(
+            JournalEntry.id == entry_id,
+            JournalEntry.company_id == checker.company.id,
+        )
     )
     je = result.scalar_one_or_none()
     if je is None:
