@@ -9,6 +9,7 @@ import pytest
 from app.models.treasury_transaction import (
     GENESIS_HASH as TX_GENESIS,
     TreasuryTransaction,
+    TxSourceModule,
     TxType,
     _compute_tx_hash,
     _block_tx_delete,
@@ -62,4 +63,10 @@ def test_tx_type_enum_has_required_values():
         "INTERCOMPANY", "JOURNAL_ENTRY", "CASH_POOL_SWEEP",
     }
     actual = {t.value for t in TxType}
+    assert required.issubset(actual)
+
+
+def test_tx_source_module_enum_has_required_values():
+    required = {"FX_LIFECYCLE", "CASH", "GL", "PAYMENT", "SETTLEMENT"}
+    actual = {m.value for m in TxSourceModule}
     assert required.issubset(actual)
