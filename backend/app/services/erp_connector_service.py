@@ -38,6 +38,7 @@ async def _is_duplicate(
         select(Position).where(
             Position.company_id == company_id,
             Position.record_id == prefix,
+            Position.is_active == True,  # noqa: E712 — only active positions block reimport
         ).limit(1)
     )
     return result.scalar_one_or_none() is not None
