@@ -167,8 +167,15 @@ async def unfreeze_account(
     company_id: uuid.UUID,
     actor_id: uuid.UUID,
 ) -> BankAccount:
-    """Unfreeze a FROZEN account back to ACTIVE."""
+    """Unfreeze a FROZEN account back to ACTIVE.
+
+    Explicitly guards FROZEN pre-condition: PENDING_VERIFICATION → ACTIVE is also
+    a valid state-machine transition (via verify_account), but unfreeze must only
+    operate on FROZEN accounts to prevent bypassing the SoD verification check.
+    """
     account = await _get_account(session, account_id, company_id)
+    if account.status != BankAccountStatus.FROZEN.value:
+        raise InvalidStateTransitionError(account.status, BankAccountStatus.ACTIVE.value)
     _assert_transition(account, BankAccountStatus.ACTIVE)
     account.status = BankAccountStatus.ACTIVE.value
     account.version += 1

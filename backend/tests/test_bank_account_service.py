@@ -104,6 +104,8 @@ async def test_create_account_encrypts_sensitive_fields(monkeypatch):
                                         company_id=company_id, payload=payload,
                                         created_by=actor_id)
 
-    # Stored value must be encrypted (not plaintext)
+    # Stored values must be encrypted (not plaintext)
     assert account.account_number_enc != "DE89370400440532013000"
     assert account.account_number_enc is not None
+    assert account.iban_enc != "DE89370400440532013000"
+    assert account.iban_enc is not None
