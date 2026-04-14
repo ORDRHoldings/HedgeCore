@@ -162,13 +162,16 @@ async def update_account_route(
 ):
     """Update non-sensitive fields: nickname, purpose, thresholds, GL codes."""
     _require_write(current_user)
-    account = await _get_account(db, account_id, current_user.company_id)
-    for k, v in payload.model_dump(exclude_none=True).items():
-        if hasattr(account, k):
-            setattr(account, k, v)
-    account.version += 1
-    await db.commit()
-    return _account_response(account, current_user)
+    try:
+        account = await _get_account(db, account_id, current_user.company_id)
+        for k, v in payload.model_dump(exclude_none=True).items():
+            if hasattr(account, k):
+                setattr(account, k, v)
+        account.version += 1
+        await db.commit()
+        return _account_response(account, current_user)
+    except AccountNotFoundError:
+        raise HTTPException(status_code=404, detail="Account not found")
 
 
 @router.get("/{account_id}/balances")
