@@ -25,6 +25,7 @@ import {
   Upload, Scale, Shield, Book, Clock, Terminal, Plug,
   ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen,
   Target, Cpu, PenSquare, Download, Key, User, Ticket, CircleHelp, Database,
+  DollarSign, RefreshCw,
 } from "lucide-react";
 import { Icon } from "@/components/ui/Icon";
 import { T } from "@/lib/design/tokens";
@@ -88,7 +89,7 @@ const NAV: NavSection[] = [
   },
   {
     label: "Hedge Desk", href: "/hedge-desk", icon: Play,
-    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/policies", "/results", "/hedge-effectiveness"],
+    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/policies", "/results", "/hedge-effectiveness", "/gl-postings", "/settlement", "/erp-sync"],
     header: "HEDGE DESK",
     items: [
       // ── PRIMARY OPERATING LANE
@@ -102,6 +103,10 @@ const NAV: NavSection[] = [
       // ── REFERENCE
       { label: "Policy Engine",   desc: "Library, saved, assign & analytics",          href: "/policies",             icon: Book, group: "REFERENCE" },
       { label: "Position Desk",  desc: "Position lifecycle management",              href: "/position-desk",    icon: LayoutDashboard, group: "REFERENCE" },
+      // ── ACCOUNTING
+      { label: "GL Postings",  desc: "Journal entry queue — approve, post to ERP",  href: "/gl-postings",   icon: FileText,     group: "ACCOUNTING", minTier: "professional" as PlanTier },
+      { label: "Settlement",   desc: "Confirm hedge settlements, P&L variance",     href: "/settlement",    icon: DollarSign,   group: "ACCOUNTING", minTier: "professional" as PlanTier },
+      { label: "ERP Sync",     desc: "Pull invoices from Xero, QB, NetSuite",       href: "/erp-sync",      icon: RefreshCw,    group: "ACCOUNTING", minTier: "professional" as PlanTier },
     ],
   },
   {
@@ -168,7 +173,7 @@ const NAV: NavSection[] = [
   },
   {
     label: "Settings", href: "/settings", icon: Settings,
-    prefixes: ["/settings", "/database-connection", "/erp-integration", "/accounting-connection", "/connectors", "/import-history"],
+    prefixes: ["/settings", "/database-connection", "/erp-integration", "/accounting-connection", "/connectors", "/import-history", "/settings/gl-accounts"],
     header: "Configuration",
     items: [
       { label: "General",            desc: "Organisation, currency, timezone",    href: "/settings",                   icon: User },
@@ -180,6 +185,7 @@ const NAV: NavSection[] = [
       // ── CONNECTORS
       { label: "Connect Database",   desc: "SQL pull -- Oracle, Postgres, MySQL",  href: "/settings?tab=connectors",    icon: Database, minTier: "professional" as PlanTier },
       { label: "ERP Integration",    desc: "SAP, Oracle, NetSuite connectors",    href: "/settings?tab=erp",           icon: Zap, minTier: "professional" as PlanTier },
+      { label: "GL Account Mappings", desc: "Chart-of-accounts for journal entries",  href: "/settings/gl-accounts", icon: FileText, minTier: "professional" as PlanTier },
       { label: "Import History",     desc: "Audit log of all imports",            href: "/settings?tab=import_history", icon: Clock, minTier: "professional" as PlanTier },
       // ── ADMIN
       { label: "Users & Roles",      desc: "Team members, RBAC assignments",      href: "/settings?tab=users_roles",   icon: User, minTier: "enterprise" as PlanTier },
