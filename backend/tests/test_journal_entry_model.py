@@ -94,6 +94,12 @@ def test_journal_entry_transitions_pending_to_approved_or_rejected():
     assert JournalEntryStatus.REJECTED in allowed
 
 
+def test_journal_entry_transitions_approved_to_posted():
+    allowed = JOURNAL_ENTRY_TRANSITIONS[JournalEntryStatus.APPROVED]
+    assert JournalEntryStatus.POSTED in allowed
+    assert len(allowed) == 1
+
+
 def test_journal_entry_transitions_posted_is_terminal():
     assert JOURNAL_ENTRY_TRANSITIONS[JournalEntryStatus.POSTED] == set()
 
