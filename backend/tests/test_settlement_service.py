@@ -43,6 +43,7 @@ async def test_confirm_settlement_creates_draft_journal_entry():
     mock_user = MagicMock()
     mock_user.id = uuid.uuid4()
     mock_user.company = MagicMock()
+    mock_user.company.id = company_id
     mock_user.company.settings = {}
 
     mock_mapping = MagicMock()
@@ -76,11 +77,12 @@ async def test_confirm_settlement_raises_if_already_settled():
     from app.services.settlement_service import confirm_settlement
 
     ledger_entry_id = uuid.uuid4()
+    company_id = uuid.uuid4()
     mock_session = AsyncMock()
 
     mock_ledger = MagicMock()
     mock_ledger.id = ledger_entry_id
-    mock_ledger.company_id = uuid.uuid4()
+    mock_ledger.company_id = company_id
     mock_ledger.frozen_artifact = {"rate": "1.12", "notional": "100000",
                                     "currency": "EUR", "value_date": "2026-03-31",
                                     "standard": "IFRS_9"}
@@ -100,6 +102,8 @@ async def test_confirm_settlement_raises_if_already_settled():
     mock_session.execute = AsyncMock(side_effect=_execute)
     mock_user = MagicMock()
     mock_user.id = uuid.uuid4()
+    mock_user.company = MagicMock()
+    mock_user.company.id = company_id
 
     with pytest.raises(ValueError, match="already settled"):
         await confirm_settlement(

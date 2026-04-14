@@ -60,6 +60,10 @@ async def confirm_settlement(
     if ledger is None:
         raise ValueError(f"LedgerEntry {ledger_entry_id} not found")
 
+    # Cross-tenant isolation: ensure the ledger entry belongs to the caller's company
+    if ledger.company_id != user.company.id:
+        raise ValueError(f"LedgerEntry {ledger_entry_id} not found")
+
     # Check not already settled
     result = await session.execute(
         select(SettlementEvent).where(
@@ -118,49 +122,53 @@ async def confirm_settlement(
 
         try:
             from app.services.gl_service import _extend_journal_chain, _get_gl_mapping, GLMappingNotConfiguredError  # noqa: PLC0415
-            mapping = await _get_gl_mapping(
-                session, company_id, "SETTLEMENT_VARIANCE", standard
-            )
-            now = datetime.now(UTC)
-            chain_seq, prev_hash = await _extend_journal_chain(session, company_id)
-            entry_hash = _compute_entry_hash(
-                company_id=company_id,
-                entry_type="SETTLEMENT_VARIANCE",
-                standard=standard,
-                debit_account=mapping.debit_account,
-                credit_account=mapping.credit_account,
-                amount=abs(pnl_impact),
-                currency=currency,
-                period_date=today,
-                created_at=now,
-                chain_seq=chain_seq,
-                prev_entry_hash=prev_hash,
-            )
-            draft_je = JournalEntry(
-                company_id=company_id,
-                settlement_event_id=se.id,
-                entry_type="SETTLEMENT_VARIANCE",
-                standard=standard,
-                debit_account=mapping.debit_account,
-                credit_account=mapping.credit_account,
-                amount=abs(pnl_impact),
-                currency=currency,
-                base_amount=abs(pnl_impact),
-                base_currency=base_currency,
-                fx_rate_used=actual_rate,
-                period_date=today,
-                description=f"Settlement variance: hedge={hedge_rate} actual={actual_rate}",
-                status=JournalEntryStatus.DRAFT.value,
-                entry_hash=entry_hash,
-                prev_entry_hash=prev_hash,
-                chain_seq=chain_seq,
-                created_at=now,
-                created_by=user.id,
-            )
-            session.add(draft_je)
-            await session.flush()
-        except (GLMappingNotConfiguredError, ImportError):
+        except ImportError:
             pass
+        else:
+            try:
+                mapping = await _get_gl_mapping(
+                    session, company_id, "SETTLEMENT_VARIANCE", standard
+                )
+                now = datetime.now(UTC)
+                chain_seq, prev_hash = await _extend_journal_chain(session, company_id)
+                entry_hash = _compute_entry_hash(
+                    company_id=company_id,
+                    entry_type="SETTLEMENT_VARIANCE",
+                    standard=standard,
+                    debit_account=mapping.debit_account,
+                    credit_account=mapping.credit_account,
+                    amount=abs(pnl_impact),
+                    currency=currency,
+                    period_date=today,
+                    created_at=now,
+                    chain_seq=chain_seq,
+                    prev_entry_hash=prev_hash,
+                )
+                draft_je = JournalEntry(
+                    company_id=company_id,
+                    settlement_event_id=se.id,
+                    entry_type="SETTLEMENT_VARIANCE",
+                    standard=standard,
+                    debit_account=mapping.debit_account,
+                    credit_account=mapping.credit_account,
+                    amount=abs(pnl_impact),
+                    currency=currency,
+                    base_amount=abs(pnl_impact),
+                    base_currency=base_currency,
+                    fx_rate_used=actual_rate,
+                    period_date=today,
+                    description=f"Settlement variance: hedge={hedge_rate} actual={actual_rate}",
+                    status=JournalEntryStatus.DRAFT.value,
+                    entry_hash=entry_hash,
+                    prev_entry_hash=prev_hash,
+                    chain_seq=chain_seq,
+                    created_at=now,
+                    created_by=user.id,
+                )
+                session.add(draft_je)
+                await session.flush()
+            except GLMappingNotConfiguredError:
+                pass
 
     return se, draft_je
 
@@ -169,7 +177,7 @@ async def list_pending_settlements(
     session: AsyncSession,
     company_id: uuid.UUID,
 ) -> list:
-    """Return LedgerEntries past value_date that have no SettlementEvent."""
+    """Return LedgerEntries with no SettlementEvent for the given company."""
     from app.models.ledger import LedgerEntry  # noqa: PLC0415
     se_subq = (
         select(SettlementEvent.ledger_entry_id)

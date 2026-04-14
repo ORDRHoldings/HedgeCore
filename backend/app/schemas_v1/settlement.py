@@ -22,9 +22,12 @@ class SettlementEventRead(BaseModel):
     ledger_entry_id: uuid.UUID
     hedge_rate: Decimal
     actual_rate: Decimal
+    hedge_amount: Decimal
+    settlement_amount: Decimal
     rate_variance: Decimal
     pnl_impact: Decimal
     settlement_date: date
+    value_date: date | None
     settlement_ref: str
     status: str
     created_at: datetime
