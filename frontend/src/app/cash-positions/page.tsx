@@ -34,6 +34,9 @@ export default function CashPositionsPage() {
     if (!token) return;
     setLoading(true);
     setError(null);
+    setConsolidated(null);
+    setEntityPos(null);
+    setAccountPos([]);
     try {
       if (tab === "CONSOLIDATED") {
         const data = await getConsolidatedPosition(token);
@@ -170,8 +173,8 @@ export default function CashPositionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {entityPos.positions.map((p, i) => (
-                  <tr key={i} style={{ borderBottom: `1px solid ${S.rim}` }}>
+                {entityPos.positions.map((p) => (
+                  <tr key={`${p.entity_id}-${p.currency}`} style={{ borderBottom: `1px solid ${S.rim}` }}>
                     <td style={{ padding: "10px 12px" }}>{p.entity_name}</td>
                     <td style={{ padding: "10px 12px" }}>{p.currency}</td>
                     <td style={{ padding: "10px 12px" }}>
@@ -207,8 +210,8 @@ export default function CashPositionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {accountPos.map((row, i) => (
-                  <tr key={i} style={{ borderBottom: `1px solid ${S.rim}` }}>
+                {accountPos.map((row) => (
+                  <tr key={row.account_id} style={{ borderBottom: `1px solid ${S.rim}` }}>
                     <td style={{ padding: "10px 12px" }}>{row.nickname}</td>
                     <td style={{ padding: "10px 12px" }}>{row.currency}</td>
                     <td style={{ padding: "10px 12px" }}>

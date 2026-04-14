@@ -122,24 +122,26 @@ export default function BankAccountsPage() {
                       {a.status}
                     </span>
                   </td>
-                  <td style={{ padding: "10px 12px", display: "flex", gap: 6 }}>
-                    {a.status === "PENDING_VERIFICATION" && (
-                      <button
-                        onClick={() => handleVerify(a.id)}
-                        disabled={actionId === a.id || isSelf}
-                        title={isSelf ? "Cannot verify your own account (Separation of Duties)" : "Verify account"}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 4,
-                          padding: "4px 10px", fontSize: 10, borderRadius: 3, cursor: "pointer",
-                          background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)",
-                          color: "#22c55e", fontFamily: S.fontMono,
-                          opacity: actionId === a.id ? 0.5 : 1,
-                        }}
-                      >
-                        <ShieldCheck size={10} />
-                        VERIFY
-                      </button>
-                    )}
+                  <td style={{ padding: "10px 12px" }}>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {a.status === "PENDING_VERIFICATION" && (
+                        <button
+                          onClick={() => handleVerify(a.id)}
+                          disabled={actionId === a.id || isSelf}
+                          title={isSelf ? "Cannot verify your own account (Separation of Duties)" : "Verify account"}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 4,
+                            padding: "4px 10px", fontSize: 10, borderRadius: 3, cursor: "pointer",
+                            background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)",
+                            color: "#22c55e", fontFamily: S.fontMono,
+                            opacity: actionId === a.id || isSelf ? 0.5 : 1,
+                          }}
+                        >
+                          <ShieldCheck size={10} />
+                          VERIFY
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
