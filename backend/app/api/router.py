@@ -297,3 +297,7 @@ router.include_router(v1_webhooks_router)
 # GL Journal Entry workflow (owns /v1/gl)
 from app.api.routes.v1_gl import router as v1_gl_router
 router.include_router(v1_gl_router)
+
+# ERP live pull (owns /v1/erp)
+from app.api.routes.v1_erp import router as v1_erp_router
+router.include_router(v1_erp_router)
