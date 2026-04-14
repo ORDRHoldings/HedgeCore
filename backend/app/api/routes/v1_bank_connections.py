@@ -49,7 +49,7 @@ async def get_auth_url_route(
         redirect_uri=redirect_uri,
         created_by=current_user.id,
     )
-    await db.flush()
+    await db.commit()
     return AuthUrlResponse(url=url, connection_id=connection.id)
 
 
@@ -68,6 +68,7 @@ async def oauth_callback(
             company_id=current_user.company_id,
             created_by=current_user.id,
         )
+        await db.commit()
         return connection
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -84,6 +85,7 @@ async def revoke_connection_route(
         await revoke_connection(db, connection_id=connection_id,
                                 company_id=current_user.company_id,
                                 actor_id=current_user.id)
+        await db.commit()
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 

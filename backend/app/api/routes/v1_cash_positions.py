@@ -69,10 +69,12 @@ async def enter_balance_route(
     current_user: User = Depends(get_current_user),
 ):
     _require_write(current_user)
-    return await enter_balance(db, account_id=payload.account_id,
-                                company_id=current_user.company_id,
-                                payload=payload.model_dump(),
-                                created_by=current_user.id)
+    balance = await enter_balance(db, account_id=payload.account_id,
+                                   company_id=current_user.company_id,
+                                   payload=payload.model_dump(),
+                                   created_by=current_user.id)
+    await db.commit()
+    return balance
 
 
 @router.post("/balances/bulk")
@@ -85,6 +87,7 @@ async def bulk_balances_route(
     rows = [r.model_dump() for r in payload.rows]
     results = await bulk_enter_balances(db, company_id=current_user.company_id,
                                          rows=rows, created_by=current_user.id)
+    await db.commit()
     return {"created": len(results)}
 
 
@@ -96,7 +99,7 @@ async def reconcile_balance_route(
     current_user: User = Depends(get_current_user),
 ):
     _require_write(current_user)
-    return await reconcile_balance(
+    balance = await reconcile_balance(
         db,
         balance_id=balance_id,
         company_id=current_user.company_id,
@@ -104,6 +107,8 @@ async def reconcile_balance_route(
         new_status=ReconciliationStatus(payload.status),
         note=payload.note,
     )
+    await db.commit()
+    return balance
 
 
 @router.post("/pull/{connection_id}")

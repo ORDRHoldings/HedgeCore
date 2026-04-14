@@ -44,9 +44,11 @@ async def create_entity_route(
     current_user: User = Depends(get_current_user),
 ):
     _require_write(current_user)
-    return await create_entity(db, company_id=current_user.company_id,
-                                payload=payload.model_dump(exclude_none=True),
-                                created_by=current_user.id)
+    entity = await create_entity(db, company_id=current_user.company_id,
+                                  payload=payload.model_dump(exclude_none=True),
+                                  created_by=current_user.id)
+    await db.commit()
+    return entity
 
 
 @router.get("/{entity_id}", response_model=LegalEntityResponse)
@@ -71,9 +73,11 @@ async def update_entity_route(
 ):
     _require_write(current_user)
     try:
-        return await update_entity(db, entity_id=entity_id, company_id=current_user.company_id,
-                                    payload=payload.model_dump(exclude_none=True),
-                                    actor_id=current_user.id)
+        entity = await update_entity(db, entity_id=entity_id, company_id=current_user.company_id,
+                                      payload=payload.model_dump(exclude_none=True),
+                                      actor_id=current_user.id)
+        await db.commit()
+        return entity
     except EntityNotFoundError:
         raise HTTPException(status_code=404, detail="Entity not found")
 
@@ -87,7 +91,9 @@ async def close_entity_route(
 ):
     _require_write(current_user)
     try:
-        return await close_entity(db, entity_id=entity_id, company_id=current_user.company_id,
-                                   status=payload.status, actor_id=current_user.id)
+        entity = await close_entity(db, entity_id=entity_id, company_id=current_user.company_id,
+                                     status=payload.status, actor_id=current_user.id)
+        await db.commit()
+        return entity
     except EntityNotFoundError:
         raise HTTPException(status_code=404, detail="Entity not found")

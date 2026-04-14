@@ -65,7 +65,7 @@ async def update_entity(
     if entity is None:
         raise EntityNotFoundError(f"LegalEntity {entity_id} not found")
     for k, v in payload.items():
-        if hasattr(entity, k) and k not in ("id", "company_id", "created_by", "created_at"):
+        if hasattr(entity, k) and k not in ("id", "company_id", "created_by", "created_at", "version"):
             setattr(entity, k, v)
     entity.updated_at = datetime.now(UTC)
     entity.version += 1

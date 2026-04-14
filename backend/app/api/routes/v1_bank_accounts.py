@@ -81,6 +81,7 @@ async def create_account_route(
                                     company_id=current_user.company_id,
                                     payload=payload.model_dump(),
                                     created_by=current_user.id)
+    await db.commit()
     return _account_response(account, current_user)
 
 
@@ -91,10 +92,14 @@ async def verify_account_route(
     current_user: User = Depends(get_current_user),
 ):
     _require_write(current_user)
-    account = await verify_account(db, account_id=account_id,
-                                    company_id=current_user.company_id,
-                                    verifier_id=current_user.id)
-    return _account_response(account, current_user)
+    try:
+        account = await verify_account(db, account_id=account_id,
+                                        company_id=current_user.company_id,
+                                        verifier_id=current_user.id)
+        await db.commit()
+        return _account_response(account, current_user)
+    except AccountNotFoundError:
+        raise HTTPException(status_code=404, detail="Account not found")
 
 
 @router.post("/{account_id}/freeze", response_model=BankAccountResponse)
@@ -104,10 +109,14 @@ async def freeze_account_route(
     current_user: User = Depends(get_current_user),
 ):
     _require_write(current_user)
-    account = await freeze_account(db, account_id=account_id,
-                                    company_id=current_user.company_id,
-                                    actor_id=current_user.id)
-    return _account_response(account, current_user)
+    try:
+        account = await freeze_account(db, account_id=account_id,
+                                        company_id=current_user.company_id,
+                                        actor_id=current_user.id)
+        await db.commit()
+        return _account_response(account, current_user)
+    except AccountNotFoundError:
+        raise HTTPException(status_code=404, detail="Account not found")
 
 
 @router.post("/{account_id}/unfreeze", response_model=BankAccountResponse)
@@ -117,10 +126,14 @@ async def unfreeze_account_route(
     current_user: User = Depends(get_current_user),
 ):
     _require_write(current_user)
-    account = await unfreeze_account(db, account_id=account_id,
-                                      company_id=current_user.company_id,
-                                      actor_id=current_user.id)
-    return _account_response(account, current_user)
+    try:
+        account = await unfreeze_account(db, account_id=account_id,
+                                          company_id=current_user.company_id,
+                                          actor_id=current_user.id)
+        await db.commit()
+        return _account_response(account, current_user)
+    except AccountNotFoundError:
+        raise HTTPException(status_code=404, detail="Account not found")
 
 
 @router.post("/{account_id}/close", response_model=BankAccountResponse)
@@ -130,10 +143,14 @@ async def close_account_route(
     current_user: User = Depends(get_current_user),
 ):
     _require_write(current_user)
-    account = await close_account(db, account_id=account_id,
-                                   company_id=current_user.company_id,
-                                   actor_id=current_user.id)
-    return _account_response(account, current_user)
+    try:
+        account = await close_account(db, account_id=account_id,
+                                       company_id=current_user.company_id,
+                                       actor_id=current_user.id)
+        await db.commit()
+        return _account_response(account, current_user)
+    except AccountNotFoundError:
+        raise HTTPException(status_code=404, detail="Account not found")
 
 
 @router.patch("/{account_id}", response_model=BankAccountResponse)
