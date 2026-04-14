@@ -37,7 +37,6 @@ def upgrade() -> None:
         );
     """)
     op.execute("CREATE INDEX ix_se_company_id ON settlement_events(company_id);")
-    op.execute("CREATE INDEX ix_se_ledger_entry_id ON settlement_events(ledger_entry_id);")
 
     op.execute("""
         CREATE OR REPLACE FUNCTION fn_block_se_delete()

@@ -82,7 +82,12 @@ def upgrade() -> None:
                 NEW.chain_seq       IS DISTINCT FROM OLD.chain_seq       OR
                 NEW.company_id      IS DISTINCT FROM OLD.company_id      OR
                 NEW.created_at      IS DISTINCT FROM OLD.created_at      OR
-                NEW.created_by      IS DISTINCT FROM OLD.created_by
+                NEW.created_by      IS DISTINCT FROM OLD.created_by      OR
+                NEW.run_id               IS DISTINCT FROM OLD.run_id               OR
+                NEW.ledger_entry_id      IS DISTINCT FROM OLD.ledger_entry_id      OR
+                NEW.settlement_event_id  IS DISTINCT FROM OLD.settlement_event_id  OR
+                NEW.period_date          IS DISTINCT FROM OLD.period_date          OR
+                NEW.fx_rate_used         IS DISTINCT FROM OLD.fx_rate_used
             ) THEN
                 RAISE EXCEPTION
                     'journal_entries WORM violation — only status/posted_* may be updated (id=%)',
