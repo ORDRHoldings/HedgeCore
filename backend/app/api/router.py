@@ -301,3 +301,7 @@ router.include_router(v1_gl_router)
 # ERP live pull (owns /v1/erp)
 from app.api.routes.v1_erp import router as v1_erp_router
 router.include_router(v1_erp_router)
+
+# Settlement tracking (owns /v1/settlement)
+from app.api.routes.v1_settlement import router as v1_settlement_router
+router.include_router(v1_settlement_router)
