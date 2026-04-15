@@ -209,3 +209,102 @@ class EntityPosition(BaseModel):
 class EntityPositionResponse(BaseModel):
     as_of_date: date
     positions: list[EntityPosition]
+
+
+# ── Forecast ─────────────────────────────────────────────────────────────
+
+class ForecastItemCreate(BaseModel):
+    label: str
+    direction: str = Field(..., pattern="^(INFLOW|OUTFLOW)$")
+    amount: Decimal
+    currency: str = Field(..., min_length=3, max_length=3)
+    confidence: str = Field(default="COMMITTED", pattern="^(COMMITTED|PROBABLE|POSSIBLE)$")
+    recurrence: str = Field(..., pattern="^(ONCE|WEEKLY|BIWEEKLY|MONTHLY|QUARTERLY|ANNUALLY)$")
+    start_date: date
+    end_date: date | None = None
+    day_of_month: int | None = Field(default=None, ge=1, le=28)
+    entity_id: uuid.UUID | None = None
+    account_id: uuid.UUID | None = None
+
+
+class ForecastItemResponse(BaseModel):
+    id: uuid.UUID
+    company_id: uuid.UUID
+    label: str
+    direction: str
+    amount: Decimal
+    currency: str
+    confidence: str
+    recurrence: str
+    start_date: date
+    end_date: date | None
+    day_of_month: int | None
+    entity_id: uuid.UUID | None
+    account_id: uuid.UUID | None
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ForecastItemUpdate(BaseModel):
+    label: str | None = None
+    amount: Decimal | None = None
+    confidence: str | None = Field(default=None, pattern="^(COMMITTED|PROBABLE|POSSIBLE)$")
+    end_date: date | None = None
+    is_active: bool | None = None
+
+
+class ScenarioRequest(BaseModel):
+    entity_id: uuid.UUID | None = None
+    horizon: str = Field(default="13w", pattern="^(13w|12m)$")
+    inflow_shift: Decimal = Decimal("0")
+    outflow_shift: Decimal = Decimal("0")
+
+
+class ForecastBucket(BaseModel):
+    period_start: date
+    period_end: date
+    opening_balance: Decimal
+    inflows: Decimal
+    outflows: Decimal
+    closing_balance: Decimal
+    confidence_breakdown: dict[str, Decimal]
+    liquidity_gap: bool
+    by_currency: dict[str, Any]
+
+
+class ForecastResponse(BaseModel):
+    as_of_date: date
+    horizon: str
+    entity_id: uuid.UUID | None
+    buckets: list[ForecastBucket]
+
+
+class LiquidityGap(BaseModel):
+    period_start: date
+    period_end: date
+    currency: str
+    closing_balance: Decimal
+    gap_threshold: Decimal
+    shortfall: Decimal
+
+
+class LiquidityGapsResponse(BaseModel):
+    as_of_date: date
+    gaps: list[LiquidityGap]
+
+
+class VarianceRow(BaseModel):
+    period_start: date
+    period_end: date
+    forecast_closing: Decimal
+    actual_closing: Decimal | None
+    variance: Decimal | None
+    variance_pct: Decimal | None
+
+
+class VarianceResponse(BaseModel):
+    entity_id: uuid.UUID | None
+    rows: list[VarianceRow]
