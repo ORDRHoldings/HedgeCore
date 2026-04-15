@@ -308,3 +308,60 @@ class VarianceRow(BaseModel):
 class VarianceResponse(BaseModel):
     entity_id: uuid.UUID | None
     rows: list[VarianceRow]
+
+
+# ── Intercompany Netting ────────────────────────────────────────────────
+
+class ObligationCreate(BaseModel):
+    debtor_entity_id: uuid.UUID
+    creditor_entity_id: uuid.UUID
+    amount: Decimal = Field(..., gt=0)
+    currency: str = Field(..., min_length=3, max_length=3)
+    due_date: date
+    reference: str | None = None
+
+
+class ObligationResponse(BaseModel):
+    id: uuid.UUID
+    company_id: uuid.UUID
+    debtor_entity_id: uuid.UUID
+    creditor_entity_id: uuid.UUID
+    amount: Decimal
+    currency: str
+    due_date: date
+    reference: str | None
+    status: str
+    created_by: uuid.UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class NettingProposalResponse(BaseModel):
+    id: uuid.UUID
+    company_id: uuid.UUID
+    status: str
+    entity_a_id: uuid.UUID
+    entity_b_id: uuid.UUID
+    currency: str
+    gross_payable: Decimal
+    gross_receivable: Decimal
+    net_amount: Decimal
+    net_direction: str
+    savings: Decimal
+    obligation_ids: list[uuid.UUID]
+    proposed_by: uuid.UUID
+    approved_by: uuid.UUID | None
+    proposed_at: datetime
+    approved_at: datetime | None
+    executed_at: datetime | None
+
+    class Config:
+        from_attributes = True
+
+
+class NettingSavingsSummary(BaseModel):
+    total_savings: Decimal
+    netting_count: int
+    savings_by_currency: dict[str, Decimal]
