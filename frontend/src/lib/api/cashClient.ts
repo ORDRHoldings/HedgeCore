@@ -448,3 +448,84 @@ export async function executeProposal(token: string, id: string): Promise<Nettin
 export async function getNettingSavings(token: string): Promise<NettingSavings> {
   return _fetchJson("/v1/cash/netting/savings", token);
 }
+
+// ── Bank Statements ────────────────────────────────────────────────
+
+export interface BankStatementRecord {
+  id: string;
+  company_id: string;
+  account_id: string;
+  statement_date: string;
+  opening_balance: string;
+  closing_balance: string;
+  currency: string;
+  format: "MT940" | "CAMT053" | "BAI2";
+  transaction_count: number;
+  filename: string | null;
+  created_at: string;
+}
+
+export interface BankTransactionRecord {
+  id: string;
+  statement_id: string;
+  account_id: string;
+  tx_date: string;
+  value_date: string | null;
+  amount: string;
+  currency: string;
+  direction: "DEBIT" | "CREDIT";
+  description: string | null;
+  reference: string | null;
+  counterparty: string | null;
+  tx_code: string | null;
+  reconciliation_status: "UNMATCHED" | "MATCHED" | "EXCEPTION";
+  created_at: string;
+}
+
+export async function listStatements(token: string, accountId?: string): Promise<BankStatementRecord[]> {
+  const params = accountId ? `?account_id=${accountId}` : "";
+  return _fetchJson(`/v1/cash/statements/${params}`, token);
+}
+
+export async function getStatementDetail(token: string, id: string): Promise<BankStatementRecord> {
+  return _fetchJson(`/v1/cash/statements/${id}`, token);
+}
+
+export async function getStatementTransactions(token: string, id: string): Promise<BankTransactionRecord[]> {
+  return _fetchJson(`/v1/cash/statements/${id}/transactions`, token);
+}
+
+export async function listBankTransactions(
+  token: string,
+  params?: { account_id?: string; date_from?: string; date_to?: string; status?: string },
+): Promise<BankTransactionRecord[]> {
+  const q = new URLSearchParams(
+    Object.fromEntries(
+      Object.entries(params ?? {}).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)])
+    )
+  ).toString();
+  return _fetchJson(`/v1/cash/statements/transactions${q ? `?${q}` : ""}`, token);
+}
+
+export async function uploadStatement(
+  token: string,
+  file: File,
+  accountId: string,
+  format?: string,
+): Promise<{ statement: BankStatementRecord; transaction_count: number; duplicate: boolean }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("account_id", accountId);
+  if (format) formData.append("format", format);
+
+  const res = await dashboardFetch("/v1/cash/statements/upload", token, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    try { const b = await res.json(); if (b?.detail) detail = b.detail; } catch { /* noop */ }
+    throw new Error(detail);
+  }
+  return res.json();
+}
