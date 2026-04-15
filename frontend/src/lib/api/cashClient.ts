@@ -529,3 +529,179 @@ export async function uploadStatement(
   }
   return res.json();
 }
+
+// ── Reconciliation (Phase 2e) ─────────────────────────────────────
+
+export interface ReconciliationRunResponse {
+  matched: number;
+  unmatched: number;
+  exceptions: number;
+}
+
+export interface ReconciliationSummary {
+  account_id: string;
+  total_transactions: number;
+  matched: number;
+  unmatched: number;
+  exceptions: number;
+  match_rate: number;
+}
+
+export interface ManualMatchPayload {
+  transaction_id: string;
+  settlement_id?: string;
+  journal_id?: string;
+}
+
+export async function runReconciliation(token: string, accountId: string): Promise<ReconciliationRunResponse> {
+  return _fetchJson("/v1/cash/reconciliation/run", token, {
+    method: "POST",
+    body: JSON.stringify({ account_id: accountId }),
+  });
+}
+
+export async function getReconciliationSummary(token: string, accountId: string): Promise<ReconciliationSummary> {
+  return _fetchJson(`/v1/cash/reconciliation/summary?account_id=${accountId}`, token);
+}
+
+export async function manualMatch(token: string, payload: ManualMatchPayload): Promise<void> {
+  return _fetchJson("/v1/cash/reconciliation/match", token, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function markException(token: string, txId: string): Promise<void> {
+  return _fetchJson(`/v1/cash/reconciliation/exception/${txId}`, token, { method: "POST" });
+}
+
+export async function unmatchTransaction(token: string, txId: string): Promise<void> {
+  return _fetchJson(`/v1/cash/reconciliation/unmatch/${txId}`, token, { method: "POST" });
+}
+
+// ── Cash Pools (Phase 2f) ─────────────────────────────────────────
+
+export interface TreasuryPoolEntity {
+  id: string;
+  company_id: string;
+  name: string;
+  entity_type: "SUBSIDIARY" | "BRANCH" | "FUND" | "HOLDING" | "SPV";
+  base_currency: string;
+  country_code: string;
+  erp_ref: string | null;
+  parent_entity_id: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface CashPool {
+  id: string;
+  company_id: string;
+  name: string;
+  pool_type: "NOTIONAL" | "PHYSICAL" | "ZBA";
+  header_account_id: string;
+  currency: string;
+  base_currency: string;
+  is_active: boolean;
+  member_count: number;
+  created_by: string;
+  created_at: string;
+}
+
+export interface PoolMemberBalance {
+  account_id: string;
+  entity_id: string;
+  ledger_balance: string;
+  target_balance: string | null;
+  excess: string | null;
+  is_exception: boolean;
+}
+
+export interface PoolBalance {
+  pool_id: string;
+  pool_type: string;
+  consolidated_balance: string;
+  header_balance: string | null;
+  currency: string;
+  member_balances: PoolMemberBalance[];
+}
+
+export interface SweepPreview {
+  source_account_id: string;
+  destination_account_id: string;
+  amount: string;
+  currency: string;
+  direction: "CONCENTRATION" | "DISTRIBUTION";
+}
+
+export interface SweepRecord {
+  id: string;
+  pool_id: string;
+  source_account_id: string;
+  destination_account_id: string;
+  amount: string;
+  currency: string;
+  direction: "CONCENTRATION" | "DISTRIBUTION";
+  status: "PENDING" | "EXECUTED" | "FAILED" | "CANCELLED";
+  triggered_by: string;
+  created_at: string;
+}
+
+export async function listTreasuryPoolEntities(token: string): Promise<TreasuryPoolEntity[]> {
+  return _fetchJson("/v1/cash/pools/entities", token);
+}
+
+export async function createTreasuryPoolEntity(
+  token: string,
+  payload: { name: string; entity_type?: string; base_currency: string; country_code: string; erp_ref?: string; parent_entity_id?: string },
+): Promise<TreasuryPoolEntity> {
+  return _fetchJson("/v1/cash/pools/entities", token, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listCashPools(token: string): Promise<CashPool[]> {
+  return _fetchJson("/v1/cash/pools/", token);
+}
+
+export async function createCashPool(
+  token: string,
+  payload: { name: string; pool_type: string; header_account_id: string; currency: string; base_currency: string },
+): Promise<CashPool> {
+  return _fetchJson("/v1/cash/pools/", token, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getPoolDetail(token: string, poolId: string): Promise<CashPool & { members: Array<{ id: string; pool_id: string; account_id: string; entity_id: string; participation_type: string; target_balance: string | null; created_at: string }> }> {
+  return _fetchJson(`/v1/cash/pools/${poolId}`, token);
+}
+
+export async function addPoolMember(
+  token: string,
+  poolId: string,
+  payload: { account_id: string; entity_id: string; participation_type?: string; target_balance?: string },
+): Promise<unknown> {
+  return _fetchJson(`/v1/cash/pools/${poolId}/members`, token, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getPoolBalance(token: string, poolId: string): Promise<PoolBalance> {
+  return _fetchJson(`/v1/cash/pools/${poolId}/balance`, token);
+}
+
+export async function calculateSweeps(token: string, poolId: string): Promise<SweepPreview[]> {
+  return _fetchJson(`/v1/cash/pools/${poolId}/sweeps/calculate`, token, { method: "POST" });
+}
+
+export async function executeSweeps(token: string, poolId: string): Promise<{ sweep_count: number }> {
+  return _fetchJson(`/v1/cash/pools/${poolId}/sweeps/execute`, token, { method: "POST" });
+}
+
+export async function listSweeps(token: string, poolId: string): Promise<SweepRecord[]> {
+  return _fetchJson(`/v1/cash/pools/${poolId}/sweeps`, token);
+}
