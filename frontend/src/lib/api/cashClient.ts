@@ -363,3 +363,88 @@ export async function updateForecastItem(
     body: JSON.stringify(payload),
   });
 }
+
+// ── Intercompany Netting ───────────────────────────────────────────────
+
+export interface IntercompanyObligation {
+  id: string;
+  company_id: string;
+  debtor_entity_id: string;
+  creditor_entity_id: string;
+  amount: string;
+  currency: string;
+  due_date: string;
+  reference: string | null;
+  status: "PENDING" | "NETTED" | "SETTLED" | "CANCELLED";
+  created_by: string;
+  created_at: string;
+}
+
+export interface NettingProposal {
+  id: string;
+  company_id: string;
+  status: "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "EXECUTED" | "REJECTED";
+  entity_a_id: string;
+  entity_b_id: string;
+  currency: string;
+  gross_payable: string;
+  gross_receivable: string;
+  net_amount: string;
+  net_direction: "A2B" | "B2A";
+  savings: string;
+  obligation_ids: string[];
+  proposed_by: string;
+  approved_by: string | null;
+  proposed_at: string;
+  approved_at: string | null;
+  executed_at: string | null;
+}
+
+export interface NettingSavings {
+  total_savings: string;
+  netting_count: number;
+  savings_by_currency: Record<string, string>;
+}
+
+export async function listObligations(token: string, status?: string): Promise<IntercompanyObligation[]> {
+  const params = status ? `?status=${status}` : "";
+  return _fetchJson(`/v1/cash/netting/obligations${params}`, token);
+}
+
+export async function createObligation(
+  token: string,
+  payload: {
+    debtor_entity_id: string; creditor_entity_id: string;
+    amount: string; currency: string; due_date: string; reference?: string;
+  },
+): Promise<IntercompanyObligation> {
+  return _fetchJson("/v1/cash/netting/obligations", token, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function cancelObligation(token: string, id: string): Promise<void> {
+  return _fetchJson(`/v1/cash/netting/obligations/${id}`, token, { method: "DELETE" });
+}
+
+export async function listProposals(token: string): Promise<NettingProposal[]> {
+  return _fetchJson("/v1/cash/netting/proposals", token);
+}
+
+export async function generateProposals(token: string): Promise<NettingProposal[]> {
+  return _fetchJson("/v1/cash/netting/proposals/generate", token, { method: "POST" });
+}
+
+export async function approveProposal(token: string, id: string): Promise<NettingProposal> {
+  return _fetchJson(`/v1/cash/netting/proposals/${id}/approve`, token, { method: "POST" });
+}
+
+export async function executeProposal(token: string, id: string): Promise<NettingProposal> {
+  return _fetchJson(`/v1/cash/netting/proposals/${id}/execute`, token, { method: "POST" });
+}
+
+export async function getNettingSavings(token: string): Promise<NettingSavings> {
+  return _fetchJson("/v1/cash/netting/savings", token);
+}
