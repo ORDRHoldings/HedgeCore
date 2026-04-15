@@ -330,3 +330,7 @@ router.include_router(v1_cash_netting_router)
 # Treasury Suite Phase 2d — Bank Statement Import (owns /v1/cash/statements/*)
 from app.api.routes.v1_cash_statements import router as v1_cash_statements_router
 router.include_router(v1_cash_statements_router)
+
+# Treasury Suite Phase 2e — Auto-Reconciliation (owns /v1/cash/reconciliation/*)
+from app.api.routes.v1_cash_reconciliation import router as v1_cash_reconciliation_router
+router.include_router(v1_cash_reconciliation_router)

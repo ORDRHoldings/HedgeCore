@@ -400,6 +400,8 @@ class BankTransactionResponse(BaseModel):
     counterparty: str | None
     tx_code: str | None
     reconciliation_status: str
+    matched_settlement_id: uuid.UUID | None = None
+    matched_journal_id: uuid.UUID | None = None
     created_at: datetime
 
     class Config:
@@ -410,3 +412,25 @@ class StatementUploadResponse(BaseModel):
     statement: BankStatementResponse
     transaction_count: int
     duplicate: bool = False
+
+
+# ── Reconciliation ──────────────────────────────────────────────────
+
+class ReconciliationRunResponse(BaseModel):
+    matched_count: int
+    exception_count: int
+    unmatched_remaining: int
+
+
+class ReconciliationSummary(BaseModel):
+    total_transactions: int
+    matched: int
+    unmatched: int
+    exceptions: int
+    match_rate_pct: Decimal
+
+
+class ManualMatchRequest(BaseModel):
+    transaction_id: uuid.UUID
+    match_type: str  # "SETTLEMENT" or "JOURNAL"
+    matched_id: uuid.UUID

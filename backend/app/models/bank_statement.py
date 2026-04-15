@@ -54,4 +54,6 @@ class BankTransaction(Base):
     counterparty: Mapped[str | None] = mapped_column(String(256), nullable=True)
     tx_code: Mapped[str | None] = mapped_column(String(16), nullable=True)
     reconciliation_status: Mapped[str] = mapped_column(String(16), nullable=False, default="UNMATCHED")
+    matched_settlement_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    matched_journal_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
