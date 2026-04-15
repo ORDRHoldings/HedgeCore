@@ -241,3 +241,125 @@ export const listCashAuditEvents = (token: string, params?: { account_id?: strin
   ).toString();
   return _fetchJson<AccountAuditEvent[]>(`/v1/cash/audit/events${q ? `?${q}` : ""}`, token);
 };
+
+// ── Forecast ────────────────────────────────────────────────────────────
+
+export interface ForecastBucket {
+  period_start: string;
+  period_end: string;
+  opening_balance: string;
+  inflows: string;
+  outflows: string;
+  closing_balance: string;
+  confidence_breakdown: Record<string, string>;
+  liquidity_gap: boolean;
+  by_currency: Record<string, {
+    opening_balance: string;
+    inflows: string;
+    outflows: string;
+    closing_balance: string;
+  }>;
+}
+
+export interface ForecastResponse {
+  as_of_date: string;
+  horizon: string;
+  entity_id: string | null;
+  buckets: ForecastBucket[];
+}
+
+export interface LiquidityGap {
+  period_start: string;
+  period_end: string;
+  currency: string;
+  closing_balance: string;
+  gap_threshold: string;
+  shortfall: string;
+}
+
+export interface VarianceRow {
+  period_start: string;
+  period_end: string;
+  forecast_closing: string;
+  actual_closing: string | null;
+  variance: string | null;
+  variance_pct: string | null;
+}
+
+export interface ForecastItem {
+  id: string;
+  company_id: string;
+  label: string;
+  direction: string;
+  amount: string;
+  currency: string;
+  confidence: string;
+  recurrence: string;
+  start_date: string;
+  end_date: string | null;
+  day_of_month: number | null;
+  entity_id: string | null;
+  account_id: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export async function getEntityForecast(token: string, entityId: string, horizon = "13w"): Promise<ForecastResponse> {
+  return _fetchJson(`/v1/cash/forecast/${entityId}?horizon=${horizon}`, token);
+}
+
+export async function getConsolidatedForecast(token: string, horizon = "13w"): Promise<ForecastResponse> {
+  return _fetchJson(`/v1/cash/forecast/consolidated?horizon=${horizon}`, token);
+}
+
+export async function getLiquidityGaps(token: string, entityId?: string): Promise<{ as_of_date: string; gaps: LiquidityGap[] }> {
+  const params = entityId ? `?entity_id=${entityId}` : "";
+  return _fetchJson(`/v1/cash/forecast/liquidity-gaps${params}`, token);
+}
+
+export async function runForecastScenario(
+  token: string,
+  payload: { horizon?: string; inflow_shift?: string; outflow_shift?: string; entity_id?: string },
+): Promise<ForecastResponse> {
+  return _fetchJson("/v1/cash/forecast/scenarios", token, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getForecastVariance(token: string, entityId?: string): Promise<{ entity_id: string | null; rows: VarianceRow[] }> {
+  const params = entityId ? `?entity_id=${entityId}` : "";
+  return _fetchJson(`/v1/cash/forecast/variance${params}`, token);
+}
+
+export async function getForecastItems(token: string, activeOnly = true): Promise<ForecastItem[]> {
+  return _fetchJson(`/v1/cash/forecast/items?active_only=${activeOnly}`, token);
+}
+
+export async function createForecastItem(
+  token: string,
+  payload: {
+    label: string; direction: string; amount: string; currency: string;
+    recurrence: string; start_date: string; confidence?: string;
+    end_date?: string; day_of_month?: number; entity_id?: string;
+  },
+): Promise<ForecastItem> {
+  return _fetchJson("/v1/cash/forecast/items", token, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateForecastItem(
+  token: string,
+  itemId: string,
+  payload: { label?: string; amount?: string; confidence?: string; end_date?: string; is_active?: boolean },
+): Promise<ForecastItem> {
+  return _fetchJson(`/v1/cash/forecast/items/${itemId}`, token, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
