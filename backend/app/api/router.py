@@ -322,3 +322,11 @@ router.include_router(v1_cash_audit_router)
 # Treasury Suite Phase 2b — Cash Flow Forecasting (owns /v1/cash/forecast/*)
 from app.api.routes.v1_cash_forecast import router as v1_cash_forecast_router
 router.include_router(v1_cash_forecast_router)
+
+# Treasury Suite Phase 2c — Intercompany Netting (owns /v1/cash/netting/*)
+from app.api.routes.v1_cash_netting import router as v1_cash_netting_router
+router.include_router(v1_cash_netting_router)
+
+# Treasury Suite Phase 2d — Bank Statement Import (owns /v1/cash/statements/*)
+from app.api.routes.v1_cash_statements import router as v1_cash_statements_router
+router.include_router(v1_cash_statements_router)

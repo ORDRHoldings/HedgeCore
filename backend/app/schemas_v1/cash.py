@@ -365,3 +365,48 @@ class NettingSavingsSummary(BaseModel):
     total_savings: Decimal
     netting_count: int
     savings_by_currency: dict[str, Decimal]
+
+
+# ── Bank Statements ─────────────────────────────────────────────────
+
+class BankStatementResponse(BaseModel):
+    id: uuid.UUID
+    company_id: uuid.UUID
+    account_id: uuid.UUID
+    statement_date: date
+    opening_balance: Decimal
+    closing_balance: Decimal
+    currency: str
+    format: str
+    transaction_count: int
+    filename: str | None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class BankTransactionResponse(BaseModel):
+    id: uuid.UUID
+    statement_id: uuid.UUID
+    account_id: uuid.UUID
+    tx_date: date
+    value_date: date | None
+    amount: Decimal
+    currency: str
+    direction: str
+    description: str | None
+    reference: str | None
+    counterparty: str | None
+    tx_code: str | None
+    reconciliation_status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class StatementUploadResponse(BaseModel):
+    statement: BankStatementResponse
+    transaction_count: int
+    duplicate: bool = False
