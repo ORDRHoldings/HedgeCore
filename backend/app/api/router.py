@@ -318,3 +318,7 @@ router.include_router(v1_bank_accounts_router)
 router.include_router(v1_cash_positions_router)
 router.include_router(v1_bank_connections_router)
 router.include_router(v1_cash_audit_router)
+
+# Treasury Suite Phase 2b — Cash Flow Forecasting (owns /v1/cash/forecast/*)
+from app.api.routes.v1_cash_forecast import router as v1_cash_forecast_router
+router.include_router(v1_cash_forecast_router)
