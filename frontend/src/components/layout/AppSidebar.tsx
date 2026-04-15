@@ -25,7 +25,7 @@ import {
   Upload, Scale, Shield, Book, Clock, Terminal, Plug,
   ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen,
   Target, Cpu, PenSquare, Download, Key, User, Ticket, CircleHelp, Database,
-  DollarSign, RefreshCw, BarChart2, Building2, CreditCard, Link2,
+  DollarSign, RefreshCw, BarChart2, Building2, CreditCard, Link2, TrendingUp,
 } from "lucide-react";
 import { Icon } from "@/components/ui/Icon";
 import { T } from "@/lib/design/tokens";
@@ -89,7 +89,7 @@ const NAV: NavSection[] = [
   },
   {
     label: "Hedge Desk", href: "/hedge-desk", icon: Play,
-    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/policies", "/results", "/hedge-effectiveness", "/gl-postings", "/settlement", "/erp-sync", "/cash-positions"],
+    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/policies", "/results", "/hedge-effectiveness", "/gl-postings", "/settlement", "/erp-sync", "/cash-positions", "/cash-forecast"],
     header: "HEDGE DESK",
     items: [
       // ── PRIMARY OPERATING LANE
@@ -108,6 +108,7 @@ const NAV: NavSection[] = [
       { label: "Settlement",   desc: "Confirm hedge settlements, P&L variance",     href: "/settlement",    icon: DollarSign,   group: "ACCOUNTING", minTier: "professional" as PlanTier },
       { label: "ERP Sync",       desc: "Pull invoices from Xero, QB, NetSuite",           href: "/erp-sync",       icon: RefreshCw,  group: "ACCOUNTING", minTier: "professional" as PlanTier },
       { label: "Cash Positions", desc: "Group treasury cash position dashboard",          href: "/cash-positions", icon: BarChart2,  group: "ACCOUNTING", minTier: "professional" as PlanTier },
+      { label: "Cash Forecast", desc: "Projected cash flows and liquidity planning",      href: "/cash-forecast",  icon: TrendingUp, group: "ACCOUNTING", minTier: "professional" as PlanTier },
     ],
   },
   {
