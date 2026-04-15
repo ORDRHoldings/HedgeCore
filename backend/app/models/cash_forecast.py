@@ -29,6 +29,7 @@ class CashForecastItem(Base):
     company_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False, index=True)
     entity_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
     account_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    counterparty_entity_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
     label: Mapped[str] = mapped_column(String(255), nullable=False)
     direction: Mapped[str] = mapped_column(String(7), nullable=False)  # "INFLOW" or "OUTFLOW"
     amount: Mapped[float] = mapped_column(Numeric(20, 6), nullable=False)
