@@ -334,3 +334,7 @@ router.include_router(v1_cash_statements_router)
 # Treasury Suite Phase 2e — Auto-Reconciliation (owns /v1/cash/reconciliation/*)
 from app.api.routes.v1_cash_reconciliation import router as v1_cash_reconciliation_router
 router.include_router(v1_cash_reconciliation_router)
+
+# Treasury Suite Phase 2f — Cash Pool & Multi-Entity (owns /v1/cash/pools/*)
+from app.api.routes.v1_cash_pools import router as v1_cash_pools_router
+router.include_router(v1_cash_pools_router)

@@ -117,6 +117,7 @@ class CashAuditEventType(str, Enum):
     NETTING_EXECUTED = "NETTING_EXECUTED"
     STATEMENT_IMPORTED = "STATEMENT_IMPORTED"
     RECONCILIATION_RUN = "RECONCILIATION_RUN"
+    CASH_POOL_SWEEP = "CASH_POOL_SWEEP"
 
 
 # ── Models ─────────────────────────────────────────────────────────────────

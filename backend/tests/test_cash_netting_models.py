@@ -92,8 +92,8 @@ class TestNettingAuditEnums:
         assert CashAuditEventType.NETTING_EXECUTED.value == "NETTING_EXECUTED"
 
     def test_enum_count_includes_netting(self):
-        # Original 16 + 3 netting + 1 statement_imported + 1 reconciliation_run = 21
-        assert len(CashAuditEventType) == 21
+        # Original 16 + 3 netting + 1 statement_imported + 1 reconciliation_run + 1 cash_pool_sweep = 22
+        assert len(CashAuditEventType) == 22
 
 
 # ── CashForecastItem counterparty column ─────────────────────────────

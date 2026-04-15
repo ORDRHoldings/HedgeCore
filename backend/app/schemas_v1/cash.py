@@ -434,3 +434,120 @@ class ManualMatchRequest(BaseModel):
     transaction_id: uuid.UUID
     match_type: str  # "SETTLEMENT" or "JOURNAL"
     matched_id: uuid.UUID
+
+
+# ── Treasury Entity ────────────────────────────────────────────────
+
+class TreasuryEntityCreate(BaseModel):
+    name: str
+    entity_type: str = Field(default="SUBSIDIARY", pattern="^(SUBSIDIARY|BRANCH|FUND|HOLDING|SPV)$")
+    base_currency: str = Field(..., min_length=3, max_length=3)
+    country_code: str = Field(..., min_length=2, max_length=2)
+    erp_ref: str | None = None
+    parent_entity_id: uuid.UUID | None = None
+
+
+class TreasuryEntityResponse(BaseModel):
+    id: uuid.UUID
+    company_id: uuid.UUID
+    name: str
+    entity_type: str
+    base_currency: str
+    country_code: str
+    erp_ref: str | None
+    parent_entity_id: uuid.UUID | None
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ── Cash Pool ──────────────────────────────────────────────────────
+
+class CashPoolCreate(BaseModel):
+    name: str
+    pool_type: str = Field(..., pattern="^(NOTIONAL|PHYSICAL|ZBA)$")
+    header_account_id: uuid.UUID
+    currency: str = Field(..., min_length=3, max_length=3)
+    base_currency: str = Field(..., min_length=3, max_length=3)
+
+
+class CashPoolResponse(BaseModel):
+    id: uuid.UUID
+    company_id: uuid.UUID
+    name: str
+    pool_type: str
+    header_account_id: uuid.UUID
+    currency: str
+    base_currency: str
+    is_active: bool
+    member_count: int = 0
+    created_by: uuid.UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CashPoolMemberCreate(BaseModel):
+    account_id: uuid.UUID
+    entity_id: uuid.UUID
+    participation_type: str = Field(default="FULL", pattern="^(FULL|PARTIAL)$")
+    target_balance: Decimal | None = None
+
+
+class CashPoolMemberResponse(BaseModel):
+    id: uuid.UUID
+    pool_id: uuid.UUID
+    account_id: uuid.UUID
+    entity_id: uuid.UUID
+    participation_type: str
+    target_balance: Decimal | None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PoolMemberBalance(BaseModel):
+    account_id: uuid.UUID
+    entity_id: uuid.UUID
+    ledger_balance: Decimal
+    target_balance: Decimal | None
+    excess: Decimal | None
+    is_exception: bool = False
+
+
+class PoolBalanceResponse(BaseModel):
+    pool_id: uuid.UUID
+    pool_type: str
+    consolidated_balance: Decimal
+    header_balance: Decimal | None
+    currency: str
+    member_balances: list[PoolMemberBalance]
+
+
+class SweepPreview(BaseModel):
+    source_account_id: uuid.UUID
+    destination_account_id: uuid.UUID
+    amount: Decimal
+    currency: str
+    direction: str
+
+
+class SweepResponse(BaseModel):
+    id: uuid.UUID
+    pool_id: uuid.UUID
+    source_account_id: uuid.UUID
+    destination_account_id: uuid.UUID
+    amount: Decimal
+    currency: str
+    direction: str
+    status: str
+    triggered_by: uuid.UUID
+    executed_at: datetime | None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
