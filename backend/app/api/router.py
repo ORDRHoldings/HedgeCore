@@ -338,3 +338,7 @@ router.include_router(v1_cash_reconciliation_router)
 # Treasury Suite Phase 2f — Cash Pool & Multi-Entity (owns /v1/cash/pools/*)
 from app.api.routes.v1_cash_pools import router as v1_cash_pools_router
 router.include_router(v1_cash_pools_router)
+
+# Treasury Suite Phase 2g — Payment Initiation (owns /v1/payments/*)
+from app.api.routes.v1_payments import router as v1_payments_router
+router.include_router(v1_payments_router)
