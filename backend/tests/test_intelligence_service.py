@@ -2,7 +2,6 @@
 """Service-layer tests for intelligence_service — AsyncMock DB session."""
 from __future__ import annotations
 
-import hashlib
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 

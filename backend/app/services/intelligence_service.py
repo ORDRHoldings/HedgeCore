@@ -172,6 +172,9 @@ async def query_intelligence(
         raise HTTPException(status_code=502, detail=f"Anthropic API error: {exc}") from exc
     latency_ms = int((time.monotonic() - t0) * 1000)
 
+    text_blocks = [b for b in response.content if hasattr(b, "text")]
+    if not text_blocks:
+        raise HTTPException(status_code=502, detail="Anthropic returned no text content.")
     log_row = await _log_query(
         session, company_id, user_id, "NL_QUERY",
         prompt_hash,
@@ -181,7 +184,7 @@ async def query_intelligence(
     )
     return QueryResponse(
         query_id=str(log_row.id),
-        answer=response.content[0].text,
+        answer=text_blocks[0].text,
         data_refs=[],
         tokens_used=response.usage.input_tokens + response.usage.output_tokens,
         latency_ms=latency_ms,
@@ -233,7 +236,7 @@ async def draft_commentary(
             f"  Positions: {getattr(run, 'position_count', 'N/A')}\n"
         )
     else:
-        raise HTTPException(status_code=404, detail="Report not found.")
+        raise HTTPException(status_code=422, detail=f"Unsupported report_type: {report_type!r}.")
 
     prompt = (
         "You are a treasury reporting assistant. Write a 2-3 paragraph professional "
@@ -255,6 +258,9 @@ async def draft_commentary(
         raise HTTPException(status_code=502, detail=f"Anthropic API error: {exc}") from exc
     latency_ms = int((time.monotonic() - t0) * 1000)
 
+    text_blocks = [b for b in response.content if hasattr(b, "text")]
+    if not text_blocks:
+        raise HTTPException(status_code=502, detail="Anthropic returned no text content.")
     log_row = await _log_query(
         session, company_id, user_id, "REPORT_COMMENTARY",
         prompt_hash,
@@ -264,7 +270,7 @@ async def draft_commentary(
     )
     return CommentaryResponse(
         commentary_id=str(log_row.id),
-        draft=response.content[0].text,
+        draft=text_blocks[0].text,
         report_type=report_type,
         tokens_used=response.usage.input_tokens + response.usage.output_tokens,
     )
