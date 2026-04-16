@@ -342,3 +342,7 @@ router.include_router(v1_cash_pools_router)
 # Treasury Suite Phase 2g — Payment Initiation (owns /v1/payments/*)
 from app.api.routes.v1_payments import router as v1_payments_router
 router.include_router(v1_payments_router)
+
+# Treasury Suite Phase 3 — Intelligence Tier (owns /v1/intelligence/*)
+from app.api.routes.v1_intelligence import router as v1_intelligence_router
+router.include_router(v1_intelligence_router)
