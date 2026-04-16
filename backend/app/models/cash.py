@@ -125,6 +125,8 @@ class CashAuditEventType(str, Enum):
     PAYMENT_TRANSMITTED = "PAYMENT_TRANSMITTED"
     PAYMENT_CANCELLED = "PAYMENT_CANCELLED"
     BENEFICIARY_CREATED = "BENEFICIARY_CREATED"
+    # Intelligence Tier — Phase 3
+    INTELLIGENCE_QUERY = "INTELLIGENCE_QUERY"
 
 
 # ── Models ─────────────────────────────────────────────────────────────────
