@@ -18,6 +18,7 @@ const S = {
   text1: "var(--text-primary)",
   text2: "var(--text-secondary)",
   amber: "var(--accent-amber,#D97706)",
+  err:   "var(--accent-red,#ef4444)",
 } as const;
 
 export default function CmdKOverlay() {
@@ -128,13 +129,22 @@ export default function CmdKOverlay() {
                 <p style={{ fontFamily: S.ui, fontSize: 13, color: S.text1, margin: "0 0 8px", lineHeight: 1.6 }}>
                   {result.answer}
                 </p>
+                {result.data_refs.length > 0 && (
+                  <div style={{ margin: "4px 0 6px", display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {result.data_refs.map((ref, i) => (
+                      <span key={i} style={{ fontFamily: S.mono, fontSize: 10, color: S.cyan, border: `1px solid ${S.rim}`, padding: "1px 5px", borderRadius: 3 }}>
+                        {ref}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div style={{ fontSize: 10, fontFamily: S.mono, color: S.text2 }}>
                   {result.tokens_used} tokens · {result.latency_ms}ms
                 </div>
               </>
             )}
             {error && (
-              <span style={{ fontFamily: S.mono, fontSize: 12, color: "#ef4444" }}>{error}</span>
+              <span style={{ fontFamily: S.mono, fontSize: 12, color: S.err }}>{error}</span>
             )}
           </div>
         )}
