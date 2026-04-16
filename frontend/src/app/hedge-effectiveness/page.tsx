@@ -15,6 +15,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import dynamic from "next/dynamic";
+import { draftCommentary, type CommentaryResponse } from "@/lib/api/intelligenceClient";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
@@ -110,7 +111,7 @@ export default function HedgeEffectivenessPage() {
 }
 
 function HedgeEffectivenessInner() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab") as Tab | null;
@@ -525,7 +526,7 @@ function HedgeEffectivenessInner() {
             handleCsvUpload={handleCsvUpload}
           />
         ) : (
-          <RunsTab runs={runs} onNavigateRun={(id) => router.push(`/hedge-effectiveness/runs/${id}`)} onDeleteRuns={handleDeleteRuns} />
+          <RunsTab runs={runs} onNavigateRun={(id) => router.push(`/hedge-effectiveness/runs/${id}`)} onDeleteRuns={handleDeleteRuns} token={token ?? ""} />
         )}
       </div>
     </div>
@@ -639,6 +640,144 @@ function OverviewTab({
                   {w === 0 ? "ALL" : `LAST ${w}`}
                 </button>
               ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 31.2 Consecutive run streak KPI ── */}
+      {runs.length >= 1 && (() => {
+        const sorted = [...runs].sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+        // Current streak: count from end while effective
+        let current = 0;
+        for (let i = sorted.length - 1; i >= 0; i--) {
+          if (sorted[i].overall_effective) current++;
+          else break;
+        }
+        // Best streak ever
+        let best = 0, run = 0;
+        for (const r of sorted) {
+          if (r.overall_effective) { run++; best = Math.max(best, run); }
+          else run = 0;
+        }
+        const isOnStreak = current > 0;
+        const streakColor = current >= 5 ? HEX.green : current >= 2 ? HEX.cyan : current === 1 ? S.text2 : HEX.red;
+        const lastRun = sorted[sorted.length - 1];
+        const lastEffective = lastRun?.overall_effective;
+        return (
+          <div style={{
+            gridColumn: "1 / -1", padding: "14px 20px", borderRadius: 6,
+            background: S.panel, border: `1px solid ${isOnStreak && current >= 3 ? HEX.green + "40" : S.rim}`,
+            display: "flex", alignItems: "center", gap: 24,
+          }}>
+            <div>
+              <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 6 }}>
+                CURRENT STREAK
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                <span style={{ fontFamily: S.mono, fontSize: 28, fontWeight: 800, color: streakColor, lineHeight: 1 }}>
+                  {current >= 5 ? "🔥 " : ""}{current}
+                </span>
+                <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
+                  {current === 1 ? "run" : "runs"} {lastEffective ? "effective" : "— broken"}
+                </span>
+              </div>
+            </div>
+            <div style={{ width: 1, height: 44, background: S.rim }} />
+            <div>
+              <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 6 }}>
+                BEST STREAK
+              </div>
+              <span style={{ fontFamily: S.mono, fontSize: 22, fontWeight: 800, color: best >= 5 ? HEX.green : S.text2, lineHeight: 1 }}>
+                {best}
+              </span>
+            </div>
+            {!lastEffective && runs.length >= 1 && (
+              <>
+                <div style={{ width: 1, height: 44, background: S.rim }} />
+                <div style={{
+                  padding: "6px 12px", borderRadius: 3,
+                  background: HEX.redBg, border: `1px solid ${HEX.redBorder}`,
+                  fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: HEX.red,
+                }}>
+                  ⚠ STREAK BROKEN — last run ineffective
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── 34.1 Effectiveness regime bar ── */}
+      {runs.length >= 2 && (() => {
+        const sorted = [...runs].sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+        // Collapse into consecutive same-verdict segments
+        const segments: { effective: boolean; count: number }[] = [];
+        for (const r of sorted) {
+          if (segments.length === 0 || segments[segments.length - 1].effective !== r.overall_effective) {
+            segments.push({ effective: r.overall_effective, count: 1 });
+          } else {
+            segments[segments.length - 1].count++;
+          }
+        }
+        const total = sorted.length;
+        const currentRegime = segments[segments.length - 1];
+        return (
+          <div style={{ gridColumn: "1 / -1", padding: "12px 20px", borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+                EFFECTIVENESS REGIME
+              </span>
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>— {total} run{total !== 1 ? "s" : ""}, {segments.length} segment{segments.length !== 1 ? "s" : ""}</span>
+              <div style={{ flex: 1 }} />
+              <span style={{
+                fontFamily: S.mono, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 2,
+                background: currentRegime.effective ? HEX.greenBg : HEX.redBg,
+                color: currentRegime.effective ? HEX.green : HEX.red,
+                border: `1px solid ${currentRegime.effective ? HEX.greenBorder : HEX.redBorder}`,
+              }}>
+                CURRENT: {currentRegime.effective ? "EFFECTIVE" : "INEFFECTIVE"} ×{currentRegime.count}
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: 2, height: 22, borderRadius: 3, overflow: "hidden" }}>
+              {segments.map((seg, i) => {
+                const flex = seg.count;
+                const isLast = i === segments.length - 1;
+                return (
+                  <div
+                    key={i}
+                    title={`${seg.effective ? "EFFECTIVE" : "INEFFECTIVE"}: ${seg.count} run${seg.count !== 1 ? "s" : ""}`}
+                    style={{
+                      flex,
+                      minWidth: 4,
+                      background: seg.effective
+                        ? (isLast ? HEX.green : `${HEX.green}99`)
+                        : (isLast ? HEX.red : `${HEX.red}99`),
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: "default",
+                      borderRight: i < segments.length - 1 ? "1px solid rgba(0,0,0,0.15)" : "none",
+                    }}
+                  >
+                    {(seg.count / total) > 0.08 && (
+                      <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: "#fff", userSelect: "none" }}>
+                        {seg.count}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
+              <span style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>← OLDEST</span>
+              <div style={{ display: "flex", gap: 12 }}>
+                {([["Effective", HEX.green], ["Ineffective", HEX.red]] as const).map(([lbl, color]) => (
+                  <div key={lbl} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 1, background: color }} />
+                    <span style={{ fontFamily: S.ui, fontSize: 10, color: S.text3 }}>{lbl}</span>
+                  </div>
+                ))}
+              </div>
+              <span style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>LATEST →</span>
             </div>
           </div>
         );
@@ -761,6 +900,1113 @@ function OverviewTab({
                 <span style={{ fontFamily: S.ui, fontSize: 12, color: S.text1, lineHeight: 1.5 }}>{a.text}</span>
               </div>
             ))}
+          </div>
+        );
+      })()}
+
+      {/* ── 33.2 Worst performers panel ── */}
+      {(() => {
+        const ineffective = runs
+          .filter((r) => !r.overall_effective && r.dollar_offset_ratio != null)
+          .map((r) => {
+            const ratio = r.dollar_offset_ratio as number;
+            const dist = ratio < 0.80 ? 0.80 - ratio : ratio > 1.25 ? ratio - 1.25 : 0;
+            return { ...r, distFromBand: dist };
+          })
+          .sort((a, b) => b.distFromBand - a.distFromBand)
+          .slice(0, 3);
+        if (ineffective.length === 0) return null;
+        const rankColors = [HEX.red, HEX.amber, HEX.text3];
+        return (
+          <div style={{ gridColumn: "1 / -1", padding: "14px 20px", borderRadius: 6, background: S.panel, border: `1px solid ${HEX.redBorder}` }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: HEX.red, letterSpacing: "0.14em", marginBottom: 12 }}>
+              WORST PERFORMERS
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {ineffective.map((r, i) => (
+                <div key={r.run_id} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{
+                    fontFamily: S.mono, fontSize: 10, fontWeight: 800, letterSpacing: "0.06em",
+                    width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: `${rankColors[i]}18`, color: rankColors[i], border: `1px solid ${rankColors[i]}40`,
+                  }}>
+                    #{i + 1}
+                  </span>
+                  <span style={{ fontFamily: S.ui, fontSize: 12, color: S.text1, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {r.dataset_name}
+                  </span>
+                  <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: HEX.red, flexShrink: 0 }}>
+                    {(r.dollar_offset_ratio as number).toFixed(4)}
+                  </span>
+                  <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, flexShrink: 0, minWidth: 80 }}>
+                    {r.distFromBand.toFixed(4)} from band
+                  </span>
+                  {r.created_at && (
+                    <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, flexShrink: 0 }}>
+                      {new Date(r.created_at).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 42.1 Audit readiness score card ── */}
+      {totalRuns >= 1 && (() => {
+        // 40pts: pass rate
+        const passScore = 40 * (runs.filter((r) => r.overall_effective).length / runs.length);
+        // 20pts: period sufficiency — avg fraction of datasets meeting IAS 39 ≥8
+        const suffCount = datasets.filter((ds) => ds.period_count >= 8).length;
+        const suffScore = datasets.length > 0 ? 20 * (suffCount / datasets.length) : 0;
+        // 20pts: recency — fraction of datasets with a run within 30 days
+        const recentDs = datasets.filter((ds) => {
+          const last = runs.filter((r) => r.dataset_id === ds.id && r.created_at)
+            .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))[0];
+          if (!last?.created_at) return false;
+          return (Date.now() - new Date(last.created_at).getTime()) < 30 * 86400000;
+        }).length;
+        const recencyScore = datasets.length > 0 ? 20 * (recentDs / datasets.length) : 0;
+        // 20pts: regression coverage — fraction of runs with R² data
+        const r2Count = runs.filter((r) => r.regression_r_squared != null).length;
+        const r2Score = runs.length > 0 ? 20 * (r2Count / runs.length) : 0;
+        const total = Math.round(passScore + suffScore + recencyScore + r2Score);
+        const grade = total >= 90 ? "A" : total >= 75 ? "B" : total >= 60 ? "C" : total >= 40 ? "D" : "F";
+        const gradeColor = total >= 90 ? HEX.green : total >= 75 ? HEX.cyan : total >= 60 ? HEX.amber : HEX.red;
+        const gradeBg = total >= 90 ? HEX.greenBg : total >= 75 ? "rgba(6,182,212,0.10)" : total >= 60 ? "rgba(217,119,6,0.10)" : HEX.redBg;
+        const gradeBorder = total >= 90 ? HEX.greenBorder : total >= 75 ? "rgba(6,182,212,0.30)" : total >= 60 ? "rgba(217,119,6,0.30)" : HEX.redBorder;
+        const breakdown = [
+          { label: "Pass Rate",   score: Math.round(passScore),    max: 40 },
+          { label: "Sufficiency", score: Math.round(suffScore),    max: 20 },
+          { label: "Recency",     score: Math.round(recencyScore), max: 20 },
+          { label: "Regression",  score: Math.round(r2Score),      max: 20 },
+        ];
+        return (
+          <div style={{ borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`, padding: "14px 20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 8, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                background: gradeBg, border: `2px solid ${gradeBorder}`, flexShrink: 0 }}>
+                <span style={{ fontFamily: S.mono, fontSize: 20, fontWeight: 900, color: gradeColor, lineHeight: 1 }}>{grade}</span>
+              </div>
+              <div>
+                <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>AUDIT READINESS</div>
+                <div style={{ fontFamily: S.mono, fontSize: 22, fontWeight: 800, color: gradeColor, lineHeight: 1.1 }}>{total}<span style={{ fontSize: 12, color: S.text3, fontWeight: 500 }}>/100</span></div>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
+              {breakdown.map((b) => (
+                <div key={b.label}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                    <span style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>{b.label.toUpperCase()}</span>
+                    <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: b.score === b.max ? HEX.green : S.text2 }}>{b.score}/{b.max}</span>
+                  </div>
+                  <div style={{ height: 3, borderRadius: 2, background: S.sub }}>
+                    <div style={{ height: "100%", width: `${(b.score / b.max) * 100}%`, borderRadius: 2,
+                      background: b.score === b.max ? HEX.green : b.score >= b.max * 0.5 ? HEX.cyan : HEX.amber, transition: "width 0.3s" }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 38.1 Top performers panel ── */}
+      {(() => {
+        const dsGroups = datasets.map((ds) => {
+          const dsRuns = runs.filter((r) => r.dataset_id === ds.id);
+          if (dsRuns.length < 2) return null;
+          const effCount = dsRuns.filter((r) => r.overall_effective).length;
+          const passRate = Math.round((effCount / dsRuns.length) * 100);
+          const doRatios = dsRuns.map((r) => r.dollar_offset_ratio).filter((v): v is number => v != null);
+          const avgDo = doRatios.length > 0 ? doRatios.reduce((s, v) => s + v, 0) / doRatios.length : null;
+          return { name: ds.name, pair: ds.currency_pair, passRate, total: dsRuns.length, effCount, avgDo };
+        }).filter((d): d is NonNullable<typeof d> => d !== null)
+          .sort((a, b) => b.passRate - a.passRate || b.total - a.total)
+          .slice(0, 3);
+        if (dsGroups.length === 0) return null;
+        return (
+          <div style={{
+            gridColumn: "1 / -1", padding: "12px 20px", borderRadius: 6,
+            background: S.panel, border: `1px solid ${S.rim}`,
+          }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
+              TOP PERFORMING DATASETS
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {dsGroups.map((d, i) => {
+                const medalColor = i === 0 ? "#F59E0B" : i === 1 ? HEX.text3 : "#92400E";
+                const passColor = d.passRate >= 80 ? HEX.green : d.passRate >= 60 ? HEX.amber : HEX.red;
+                return (
+                  <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{
+                      fontFamily: S.mono, fontSize: 11, fontWeight: 800, color: medalColor,
+                      width: 20, textAlign: "center", flexShrink: 0,
+                    }}>#{i + 1}</span>
+                    <span style={{ fontFamily: S.ui, fontSize: 12, fontWeight: 600, color: S.text1, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {d.name}
+                    </span>
+                    {d.pair && <span style={{ fontFamily: S.mono, fontSize: 11, color: HEX.cyan, flexShrink: 0 }}>{d.pair}</span>}
+                    <div style={{ flex: 1, height: 4, borderRadius: 2, background: S.rim, overflow: "hidden", maxWidth: 160 }}>
+                      <div style={{ width: `${d.passRate}%`, height: "100%", borderRadius: 2, background: passColor, transition: "width 0.4s" }} />
+                    </div>
+                    <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 800, color: passColor, minWidth: 38, textAlign: "right" }}>{d.passRate}%</span>
+                    <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, minWidth: 48 }}>
+                      {d.effCount}/{d.total} runs
+                    </span>
+                    {d.avgDo != null && (
+                      <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>
+                        D.O. {d.avgDo.toFixed(4)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 43.1 Hedge type distribution card ── */}
+      {totalRuns >= 1 && (() => {
+        // Map run → dataset hedge_type
+        const dsHedgeType: Record<string, string> = {};
+        datasets.forEach((ds) => { dsHedgeType[ds.id] = ds.hedge_type; });
+        const typeGroups = runs.reduce<Record<string, { total: number; effective: number }>>((acc, r) => {
+          const ht = (dsHedgeType[r.dataset_id] ?? "UNKNOWN").replace(/_/g, " ");
+          if (!acc[ht]) acc[ht] = { total: 0, effective: 0 };
+          acc[ht].total++;
+          if (r.overall_effective) acc[ht].effective++;
+          return acc;
+        }, {});
+        const entries = Object.entries(typeGroups).sort((a, b) => b[1].total - a[1].total);
+        if (entries.length === 0) return null;
+        const typeColors: Record<string, string> = {
+          "CASH FLOW": HEX.cyan,
+          "FAIR VALUE": HEX.amber,
+          "NET INVESTMENT": "#A78BFA",
+        };
+        return (
+          <div style={{ borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`, padding: "14px 20px" }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
+              BY HEDGE TYPE
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {entries.map(([type, stats]) => {
+                const pct = Math.round((stats.effective / stats.total) * 100);
+                const color = typeColors[type] ?? S.text2;
+                return (
+                  <div key={type}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: color, display: "inline-block", flexShrink: 0 }} />
+                        <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text2 }}>{type}</span>
+                      </div>
+                      <div style={{ display: "flex", gap: 10 }}>
+                        <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>{stats.total} run{stats.total !== 1 ? "s" : ""}</span>
+                        <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: pct === 100 ? HEX.green : pct >= 50 ? HEX.amber : HEX.red }}>{pct}%</span>
+                      </div>
+                    </div>
+                    <div style={{ height: 4, borderRadius: 2, background: S.sub, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${pct}%`, background: color, opacity: 0.8, borderRadius: 2, transition: "width 0.3s" }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 49.1 Top performer highlight card ── */}
+      {datasets.length >= 1 && totalRuns >= 1 && (() => {
+        type PerfRow = { ds: typeof datasets[0]; passRate: number; avgDo: number | null; runCount: number };
+        const rows: PerfRow[] = datasets
+          .map((ds) => {
+            const dsRuns = runs.filter((r) => r.dataset_id === ds.id);
+            if (dsRuns.length === 0) return null;
+            const passRate = dsRuns.filter((r) => r.overall_effective).length / dsRuns.length;
+            const doVals = dsRuns.map((r) => r.dollar_offset_ratio).filter((v): v is number => v != null);
+            const avgDo = doVals.length > 0 ? doVals.reduce((s, v) => s + v, 0) / doVals.length : null;
+            return { ds, passRate, avgDo, runCount: dsRuns.length };
+          })
+          .filter((r): r is PerfRow => r !== null);
+        if (rows.length === 0) return null;
+        // Score: passRate 70% + D.O. proximity to 1.0 (30%)
+        const scored = rows.map((r) => ({
+          ...r,
+          score: r.passRate * 0.7 + (r.avgDo != null ? Math.max(0, 1 - Math.abs(r.avgDo - 1.0) / 0.25) * 0.3 : 0),
+        })).sort((a, b) => b.score - a.score);
+        const top = scored[0];
+        return (
+          <div style={{ borderRadius: 6, background: HEX.greenBg, border: `1px solid ${HEX.greenBorder}`, padding: "14px 20px" }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: HEX.green, letterSpacing: "0.14em", marginBottom: 8 }}>
+              TOP PERFORMER
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <span style={{ fontFamily: S.ui, fontSize: 13, fontWeight: 700, color: S.text1, flex: 1, minWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {top.ds.name}
+              </span>
+              {top.ds.currency_pair && (
+                <span style={{ fontFamily: S.mono, fontSize: 12, color: HEX.cyan }}>{top.ds.currency_pair}</span>
+              )}
+              <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: HEX.green }}>
+                {Math.round(top.passRate * 100)}% PASS
+              </span>
+              {top.avgDo != null && (
+                <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text2 }}>
+                  AVG D.O. {top.avgDo.toFixed(4)}
+                </span>
+              )}
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>{top.runCount} {top.runCount === 1 ? "RUN" : "RUNS"}</span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 52.1 Worst performer card ── */}
+      {datasets.length >= 2 && totalRuns >= 2 && (() => {
+        type PerfRow = { ds: typeof datasets[0]; passRate: number; avgDo: number | null; runCount: number; score: number };
+        const rows: PerfRow[] = datasets
+          .map((ds) => {
+            const dsRuns = runs.filter((r) => r.dataset_id === ds.id);
+            if (dsRuns.length === 0) return null;
+            const passRate = dsRuns.filter((r) => r.overall_effective).length / dsRuns.length;
+            const doVals = dsRuns.map((r) => r.dollar_offset_ratio).filter((v): v is number => v != null);
+            const avgDo = doVals.length > 0 ? doVals.reduce((s, v) => s + v, 0) / doVals.length : null;
+            const score = passRate * 0.7 + (avgDo != null ? Math.max(0, 1 - Math.abs(avgDo - 1.0) / 0.25) * 0.3 : 0);
+            return { ds, passRate, avgDo, runCount: dsRuns.length, score };
+          })
+          .filter((r): r is PerfRow => r !== null);
+        if (rows.length < 2) return null;
+        const worst = [...rows].sort((a, b) => a.score - b.score)[0];
+        const failRate = Math.round((1 - worst.passRate) * 100);
+        return (
+          <div style={{ borderRadius: 6, background: HEX.redBg, border: `1px solid ${HEX.redBorder}`, padding: "14px 20px" }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: HEX.red, letterSpacing: "0.14em", marginBottom: 8 }}>
+              NEEDS IMPROVEMENT
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <span style={{ fontFamily: S.ui, fontSize: 13, fontWeight: 700, color: S.text1, flex: 1, minWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {worst.ds.name}
+              </span>
+              {worst.ds.currency_pair && (
+                <span style={{ fontFamily: S.mono, fontSize: 12, color: HEX.cyan }}>{worst.ds.currency_pair}</span>
+              )}
+              <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: HEX.red }}>
+                {failRate}% FAIL
+              </span>
+              {worst.avgDo != null && (
+                <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text2 }}>
+                  AVG D.O. {worst.avgDo.toFixed(4)}
+                </span>
+              )}
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>{worst.runCount} {worst.runCount === 1 ? "RUN" : "RUNS"}</span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 48.1 D.O. ratio distribution histogram ── */}
+      {totalRuns >= 1 && (() => {
+        const BANDS = [
+          { label: "< 0.80", min: -Infinity, max: 0.80, color: HEX.red, bg: HEX.redBg, border: HEX.redBorder },
+          { label: "0.80–0.94", min: 0.80, max: 0.95, color: HEX.amber, bg: "rgba(217,119,6,0.10)", border: "rgba(217,119,6,0.30)" },
+          { label: "0.95–1.05", min: 0.95, max: 1.05, color: HEX.green, bg: HEX.greenBg, border: HEX.greenBorder },
+          { label: "1.05–1.25", min: 1.05, max: 1.25, color: HEX.amber, bg: "rgba(217,119,6,0.10)", border: "rgba(217,119,6,0.30)" },
+          { label: "> 1.25", min: 1.25, max: Infinity, color: HEX.red, bg: HEX.redBg, border: HEX.redBorder },
+        ] as const;
+        const doRuns = runs.filter((r) => r.dollar_offset_ratio != null);
+        if (doRuns.length === 0) return null;
+        const counts = BANDS.map((b) => doRuns.filter((r) => (r.dollar_offset_ratio as number) >= b.min && (r.dollar_offset_ratio as number) < b.max).length);
+        const maxCount = Math.max(...counts, 1);
+        return (
+          <div style={{ borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`, padding: "14px 20px" }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 12 }}>
+              D.O. RATIO DISTRIBUTION
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-end", height: 60 }}>
+              {BANDS.map((b, i) => {
+                const h = counts[i] === 0 ? 4 : Math.max(8, Math.round((counts[i] / maxCount) * 52));
+                return (
+                  <div key={b.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: b.color }}>{counts[i]}</span>
+                    <div style={{ width: "100%", height: h, borderRadius: 2, background: counts[i] === 0 ? S.sub : b.bg, border: `1px solid ${counts[i] === 0 ? S.rim : b.border}` }} />
+                    <span style={{ fontFamily: S.mono, fontSize: 8, color: S.text3, textAlign: "center", letterSpacing: "0.03em", lineHeight: 1.2 }}>{b.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 45.1 Standard coverage matrix ── */}
+      {datasets.length >= 1 && (() => {
+        const STDS = ["IAS_39", "IFRS_9", "ASC_815"] as const;
+        // For each dataset × standard: has at least one run?
+        const matrix = datasets.map((ds) => {
+          const dsRuns = runs.filter((r) => r.dataset_id === ds.id);
+          return {
+            name: ds.name.length > 20 ? ds.name.slice(0, 18) + "…" : ds.name,
+            coverage: STDS.map((std) => ({
+              std,
+              tested: dsRuns.some((r) => r.standard === std),
+              passed: dsRuns.filter((r) => r.standard === std).every((r) => r.overall_effective) && dsRuns.some((r) => r.standard === std),
+            })),
+          };
+        });
+        return (
+          <div style={{ borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`, padding: "14px 20px" }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
+              STANDARD COVERAGE MATRIX
+            </div>
+            {/* Header row */}
+            <div style={{ display: "grid", gridTemplateColumns: `1fr repeat(${STDS.length}, 72px)`, gap: 4, marginBottom: 6 }}>
+              <span />
+              {STDS.map((std) => (
+                <span key={std} style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.10em", textAlign: "center" }}>
+                  {std.replace("_", " ")}
+                </span>
+              ))}
+            </div>
+            {matrix.map((row) => (
+              <div key={row.name} style={{ display: "grid", gridTemplateColumns: `1fr repeat(${STDS.length}, 72px)`, gap: 4, marginBottom: 4, alignItems: "center" }}>
+                <span style={{ fontFamily: S.ui, fontSize: 11, color: S.text2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.name}</span>
+                {row.coverage.map(({ std, tested, passed }) => (
+                  <span key={std} style={{
+                    fontFamily: S.mono, fontSize: 9, fontWeight: 700, textAlign: "center",
+                    padding: "2px 4px", borderRadius: 2,
+                    background: !tested ? S.sub : passed ? HEX.greenBg : HEX.redBg,
+                    color: !tested ? S.text3 : passed ? HEX.green : HEX.red,
+                    border: `1px solid ${!tested ? S.rim : passed ? HEX.greenBorder : HEX.redBorder}`,
+                  }}>
+                    {!tested ? "—" : passed ? "PASS" : "FAIL"}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
+      {/* ── 46.1 Datasets needing attention panel ── */}
+      {datasets.length >= 1 && (() => {
+        const NOW = Date.now();
+        const STALE_DAYS = 14;
+        const atRisk = datasets.filter((ds) => {
+          const dsRuns = runs.filter((r) => r.dataset_id === ds.id && r.created_at);
+          if (dsRuns.length === 0) return true; // never tested
+          const lastRun = [...dsRuns].sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))[0];
+          const daysSince = Math.floor((NOW - new Date(lastRun.created_at as string).getTime()) / 86400000);
+          const lastIneffective = !lastRun.overall_effective;
+          return daysSince > STALE_DAYS || lastIneffective;
+        });
+        if (atRisk.length === 0) return (
+          <div style={{ borderRadius: 6, background: HEX.greenBg, border: `1px solid ${HEX.greenBorder}`, padding: "12px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 14 }}>✓</span>
+            <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: HEX.green, letterSpacing: "0.06em" }}>ALL DATASETS CURRENT — no attention needed</span>
+          </div>
+        );
+        return (
+          <div style={{ borderRadius: 6, background: S.panel, border: `1px solid ${HEX.redBorder}`, padding: "14px 20px" }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: HEX.red, letterSpacing: "0.14em", marginBottom: 10 }}>
+              NEEDS ATTENTION ({atRisk.length})
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {atRisk.map((ds) => {
+                const dsRuns = runs.filter((r) => r.dataset_id === ds.id && r.created_at);
+                const reason = dsRuns.length === 0
+                  ? "No assessments run"
+                  : !dsRuns.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))[0].overall_effective
+                  ? "Last assessment ineffective"
+                  : `Last assessed ${Math.floor((NOW - new Date((dsRuns.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))[0].created_at as string)).getTime()) / 86400000)}d ago`;
+                return (
+                  <div key={ds.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontFamily: S.ui, fontSize: 12, color: S.text1, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ds.name}</span>
+                    <span style={{ fontFamily: S.mono, fontSize: 10, color: HEX.amber }}>{reason}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 55.1 Portfolio latency card ── */}
+      {datasets.length >= 1 && (() => {
+        const NOW = Date.now();
+        const daysSinceArr: number[] = datasets
+          .map((ds) => {
+            const dsRuns = runs.filter((r) => r.dataset_id === ds.id && r.created_at);
+            if (dsRuns.length === 0) return null;
+            const lastDate = dsRuns.reduce((m, r) => (r.created_at ?? "") > m ? (r.created_at ?? "") : m, "");
+            return Math.floor((NOW - new Date(lastDate).getTime()) / 86400000);
+          })
+          .filter((d): d is number => d !== null);
+        if (daysSinceArr.length === 0) return null;
+        const avg = Math.round(daysSinceArr.reduce((s, v) => s + v, 0) / daysSinceArr.length);
+        const sorted = [...daysSinceArr].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        const median = sorted.length % 2 === 1 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+        const unassessed = datasets.length - daysSinceArr.length;
+        const avgColor = avg <= 7 ? HEX.green : avg <= 30 ? HEX.amber : HEX.red;
+        const medColor = median <= 7 ? HEX.green : median <= 30 ? HEX.amber : HEX.red;
+        return (
+          <div style={{ borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`, padding: "14px 20px" }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
+              PORTFOLIO ASSESSMENT LATENCY
+            </div>
+            <div style={{ display: "flex", gap: 24, alignItems: "center", flexWrap: "wrap" }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, letterSpacing: "0.10em", marginBottom: 4 }}>AVG DAYS SINCE</div>
+                <div style={{ fontFamily: S.mono, fontSize: 22, fontWeight: 800, color: avgColor, lineHeight: 1 }}>{avg}</div>
+                <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, marginTop: 2 }}>days</div>
+              </div>
+              <div style={{ width: 1, height: 40, background: S.rim }} />
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, letterSpacing: "0.10em", marginBottom: 4 }}>MEDIAN DAYS SINCE</div>
+                <div style={{ fontFamily: S.mono, fontSize: 22, fontWeight: 800, color: medColor, lineHeight: 1 }}>{median}</div>
+                <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, marginTop: 2 }}>days</div>
+              </div>
+              {unassessed > 0 && (
+                <>
+                  <div style={{ width: 1, height: 40, background: S.rim }} />
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, letterSpacing: "0.10em", marginBottom: 4 }}>UNASSESSED</div>
+                    <div style={{ fontFamily: S.mono, fontSize: 22, fontWeight: 800, color: HEX.amber, lineHeight: 1 }}>{unassessed}</div>
+                    <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, marginTop: 2 }}>datasets</div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 47.1 Month-over-month comparison card ── */}
+      {totalRuns >= 1 && (() => {
+        const now = new Date();
+        const thisMonth = now.getMonth();
+        const thisYear = now.getFullYear();
+        const lastMonthDate = new Date(thisYear, thisMonth - 1, 1);
+        const thisMonthRuns = runs.filter((r) => {
+          if (!r.created_at) return false;
+          const d = new Date(r.created_at);
+          return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+        });
+        const lastMonthRuns = runs.filter((r) => {
+          if (!r.created_at) return false;
+          const d = new Date(r.created_at);
+          return d.getMonth() === lastMonthDate.getMonth() && d.getFullYear() === lastMonthDate.getFullYear();
+        });
+        const delta = thisMonthRuns.length - lastMonthRuns.length;
+        const thisPass = thisMonthRuns.filter((r) => r.overall_effective).length;
+        const lastPass = lastMonthRuns.filter((r) => r.overall_effective).length;
+        const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+        return (
+          <div style={{ borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`, padding: "14px 20px" }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
+              MONTH-OVER-MONTH
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 12, alignItems: "center" }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, letterSpacing: "0.10em", marginBottom: 4 }}>{MONTHS[lastMonthDate.getMonth()]}</div>
+                <div style={{ fontFamily: S.mono, fontSize: 22, fontWeight: 700, color: S.text2, lineHeight: 1 }}>{lastMonthRuns.length}</div>
+                <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, marginTop: 2 }}>{lastPass} pass</div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <span style={{
+                  fontFamily: S.mono, fontSize: 12, fontWeight: 700,
+                  color: delta > 0 ? HEX.green : delta < 0 ? HEX.red : S.text3,
+                  padding: "4px 8px", borderRadius: 3,
+                  background: delta > 0 ? HEX.greenBg : delta < 0 ? HEX.redBg : S.sub,
+                  border: `1px solid ${delta > 0 ? HEX.greenBorder : delta < 0 ? HEX.redBorder : S.rim}`,
+                }}>
+                  {delta > 0 ? `↑ +${delta}` : delta < 0 ? `↓ ${delta}` : "= SAME"}
+                </span>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontFamily: S.mono, fontSize: 9, color: HEX.cyan, letterSpacing: "0.10em", marginBottom: 4 }}>{MONTHS[thisMonth]} ◂ NOW</div>
+                <div style={{ fontFamily: S.mono, fontSize: 22, fontWeight: 700, color: S.text1, lineHeight: 1 }}>{thisMonthRuns.length}</div>
+                <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, marginTop: 2 }}>{thisPass} pass</div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 44.1 Current pass streak card ── */}
+      {totalRuns >= 1 && (() => {
+        const sorted = [...runs]
+          .filter((r) => r.created_at)
+          .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+        let streak = 0;
+        for (const r of sorted) {
+          if (r.overall_effective) streak++;
+          else break;
+        }
+        const pct = Math.round((streak / sorted.length) * 100);
+        const color = streak === 0 ? HEX.red : streak >= sorted.length ? HEX.green : HEX.amber;
+        const bg = streak === 0 ? HEX.redBg : streak >= sorted.length ? HEX.greenBg : "rgba(217,119,6,0.10)";
+        const border = streak === 0 ? HEX.redBorder : streak >= sorted.length ? HEX.greenBorder : "rgba(217,119,6,0.30)";
+        return (
+          <div style={{ borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`, padding: "14px 20px" }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
+              CURRENT PASS STREAK
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <span style={{
+                fontFamily: S.mono, fontSize: 28, fontWeight: 700, color,
+                lineHeight: 1,
+              }}>{streak}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: S.mono, fontSize: 11, color: S.text2, marginBottom: 6 }}>
+                  {streak === 0
+                    ? "No consecutive effective assessments"
+                    : streak >= sorted.length
+                    ? `All ${streak} run${streak !== 1 ? "s" : ""} effective — perfect record`
+                    : `${streak} of ${sorted.length} most recent run${sorted.length !== 1 ? "s" : ""} effective`}
+                </div>
+                <div style={{ height: 4, borderRadius: 2, background: S.sub, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 2, transition: "width 0.3s" }} />
+                </div>
+              </div>
+              <span style={{
+                fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                padding: "3px 8px", borderRadius: 3, background: bg, color, border: `1px solid ${border}`,
+              }}>
+                {streak === 0 ? "BROKEN" : streak >= sorted.length ? "PERFECT" : `${pct}%`}
+              </span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 53.1 Pass rate trend indicator ── */}
+      {totalRuns >= 4 && (() => {
+        const dated = runs
+          .filter((r) => r.created_at)
+          .sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+        const half = Math.floor(dated.length / 2);
+        const older = dated.slice(0, half);
+        const newer = dated.slice(half);
+        const olderRate = older.filter((r) => r.overall_effective).length / older.length;
+        const newerRate = newer.filter((r) => r.overall_effective).length / newer.length;
+        const delta = newerRate - olderRate;
+        const THRESHOLD = 0.05; // 5 pp to count as a trend
+        const trend = delta > THRESHOLD ? "IMPROVING" : delta < -THRESHOLD ? "DECLINING" : "STABLE";
+        const trendColor = trend === "IMPROVING" ? HEX.green : trend === "DECLINING" ? HEX.red : HEX.cyan;
+        const trendBg = trend === "IMPROVING" ? HEX.greenBg : trend === "DECLINING" ? HEX.redBg : "rgba(6,182,212,0.07)";
+        const trendBorder = trend === "IMPROVING" ? HEX.greenBorder : trend === "DECLINING" ? HEX.redBorder : "rgba(6,182,212,0.25)";
+        const trendIcon = trend === "IMPROVING" ? "↗" : trend === "DECLINING" ? "↘" : "→";
+        return (
+          <div style={{ borderRadius: 6, background: trendBg, border: `1px solid ${trendBorder}`, padding: "12px 20px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+              <div>
+                <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 4 }}>
+                  PASS RATE TREND
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontFamily: S.mono, fontSize: 20, fontWeight: 800, color: trendColor, lineHeight: 1 }}>
+                    {trendIcon} {trend}
+                  </span>
+                  <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
+                    {delta > 0 ? "+" : ""}{Math.round(delta * 100)} pp
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, letterSpacing: "0.08em", marginBottom: 3 }}>OLDER HALF</div>
+                  <div style={{ fontFamily: S.mono, fontSize: 16, fontWeight: 700, color: S.text2 }}>
+                    {Math.round(olderRate * 100)}%
+                  </div>
+                  <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>{older.length} runs</div>
+                </div>
+                <div style={{ width: 1, height: 36, background: trendBorder }} />
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontFamily: S.mono, fontSize: 9, color: trendColor, letterSpacing: "0.08em", marginBottom: 3 }}>NEWER HALF</div>
+                  <div style={{ fontFamily: S.mono, fontSize: 16, fontWeight: 700, color: trendColor }}>
+                    {Math.round(newerRate * 100)}%
+                  </div>
+                  <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>{newer.length} runs</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 50.1 Assessment calendar heatmap (12-week rolling) ── */}
+      {totalRuns >= 1 && (() => {
+        const NOW = Date.now();
+        const DAY = 86400000;
+        const WEEK_COUNT = 12;
+        const DAY_COUNT = WEEK_COUNT * 7;
+        // Build a map: dateStr (YYYY-MM-DD) -> { total, passed }
+        const dayMap = new Map<string, { total: number; passed: number }>();
+        for (const r of runs) {
+          if (!r.created_at) continue;
+          const d = new Date(r.created_at);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          const cur = dayMap.get(key) ?? { total: 0, passed: 0 };
+          cur.total += 1;
+          if (r.overall_effective) cur.passed += 1;
+          dayMap.set(key, cur);
+        }
+        // Build 12×7 grid anchored to today (column = week, row = day-of-week)
+        // today = rightmost column's last row
+        const todayMs = new Date(new Date().toDateString()).getTime(); // midnight local
+        // cols: 0=oldest week, WEEK_COUNT-1=current week
+        // rows: 0=Sun … 6=Sat
+        const todayDow = new Date(todayMs).getDay(); // 0=Sun
+        // last cell index in the grid = WEEK_COUNT*7 - 1 - (6 - todayDow)
+        // cell i = todayMs - (lastCellIdx - i) * DAY
+        const lastCellIdx = WEEK_COUNT * 7 - 1 - (6 - todayDow);
+        const cells: Array<{ date: Date; key: string; total: number; passed: number; isFuture: boolean }> = [];
+        for (let i = 0; i < WEEK_COUNT * 7; i++) {
+          const offset = i - lastCellIdx;
+          const ms = todayMs + offset * DAY;
+          const d = new Date(ms);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          const entry = dayMap.get(key) ?? { total: 0, passed: 0 };
+          cells.push({ date: d, key, total: entry.total, passed: entry.passed, isFuture: ms > todayMs });
+        }
+        const maxInDay = Math.max(...cells.map((c) => c.total), 1);
+        const DOW_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+        const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        // Month labels: show month name at first cell of each month
+        const monthLabels: Array<{ col: number; label: string }> = [];
+        for (let col = 0; col < WEEK_COUNT; col++) {
+          const firstRowCell = cells[col * 7];
+          if (firstRowCell) {
+            const prevColCell = col > 0 ? cells[(col - 1) * 7] : null;
+            if (!prevColCell || prevColCell.date.getMonth() !== firstRowCell.date.getMonth()) {
+              monthLabels.push({ col, label: MONTHS[firstRowCell.date.getMonth()] });
+            }
+          }
+        }
+        const cellColor = (c: typeof cells[0]) => {
+          if (c.isFuture) return "transparent";
+          if (c.total === 0) return S.sub;
+          const passRate = c.passed / c.total;
+          const intensity = Math.max(0.25, c.total / maxInDay);
+          if (passRate === 1) return `rgba(34,197,94,${(0.25 + intensity * 0.65).toFixed(2)})`;
+          if (passRate === 0) return `rgba(239,68,68,${(0.25 + intensity * 0.65).toFixed(2)})`;
+          return `rgba(217,119,6,${(0.25 + intensity * 0.65).toFixed(2)})`;
+        };
+        const cellBorder = (c: typeof cells[0]) => {
+          if (c.isFuture || c.total === 0) return S.rim;
+          const passRate = c.passed / c.total;
+          if (passRate === 1) return HEX.greenBorder;
+          if (passRate === 0) return HEX.redBorder;
+          return "rgba(217,119,6,0.30)";
+        };
+        return (
+          <div style={{ borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`, padding: "14px 20px" }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
+              ASSESSMENT CALENDAR — LAST {WEEK_COUNT} WEEKS
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {/* Day-of-week labels */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 2, paddingTop: 16 }}>
+                {DOW_LABELS.map((d, i) => (
+                  <div key={i} style={{ height: 11, fontFamily: S.mono, fontSize: 8, color: i % 2 === 1 ? S.text3 : "transparent", lineHeight: "11px", textAlign: "right", minWidth: 8 }}>{d}</div>
+                ))}
+              </div>
+              {/* Grid */}
+              <div style={{ flex: 1, overflowX: "auto" }}>
+                {/* Month labels row */}
+                <div style={{ display: "grid", gridTemplateColumns: `repeat(${WEEK_COUNT}, 1fr)`, gap: 2, marginBottom: 2 }}>
+                  {Array.from({ length: WEEK_COUNT }, (_, col) => {
+                    const lbl = monthLabels.find((m) => m.col === col);
+                    return (
+                      <div key={col} style={{ fontFamily: S.mono, fontSize: 8, color: S.text3, whiteSpace: "nowrap", overflow: "hidden" }}>
+                        {lbl ? lbl.label : ""}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Day cells: 7 rows × WEEK_COUNT cols */}
+                <div style={{ display: "grid", gridTemplateColumns: `repeat(${WEEK_COUNT}, 1fr)`, gridTemplateRows: "repeat(7, 11px)", gap: 2 }}>
+                  {cells.map((c, i) => {
+                    const col = Math.floor(i / 7);
+                    const row = i % 7;
+                    const title = c.isFuture ? "" : c.total === 0
+                      ? `${c.key}: no assessments`
+                      : `${c.key}: ${c.total} run${c.total !== 1 ? "s" : ""}, ${c.passed} passed`;
+                    return (
+                      <div
+                        key={c.key + i}
+                        title={title}
+                        style={{
+                          gridColumn: col + 1,
+                          gridRow: row + 1,
+                          borderRadius: 2,
+                          background: cellColor(c),
+                          border: `1px solid ${cellBorder(c)}`,
+                          cursor: c.total > 0 ? "default" : "default",
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            {/* Legend */}
+            <div style={{ display: "flex", gap: 16, marginTop: 8, alignItems: "center" }}>
+              <span style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>LEGEND:</span>
+              {[
+                { bg: S.sub, border: S.rim, label: "No runs" },
+                { bg: `rgba(34,197,94,0.60)`, border: HEX.greenBorder, label: "All pass" },
+                { bg: `rgba(217,119,6,0.60)`, border: "rgba(217,119,6,0.30)", label: "Mixed" },
+                { bg: `rgba(239,68,68,0.60)`, border: HEX.redBorder, label: "All fail" },
+              ].map((item) => (
+                <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 2, background: item.bg, border: `1px solid ${item.border}` }} />
+                  <span style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>{item.label}</span>
+                </div>
+              ))}
+              <span style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, marginLeft: "auto" }}>
+                Darker = more runs
+              </span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 54.1 Standard coverage gap card ── */}
+      {datasets.length >= 1 && (() => {
+        const STDS = [
+          { key: "IAS_39", label: "IAS 39" },
+          { key: "IFRS_9", label: "IFRS 9" },
+          { key: "ASC_815", label: "ASC 815" },
+        ] as const;
+        return (
+          <div style={{ borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`, padding: "14px 20px" }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
+              COVERAGE GAP BY STANDARD
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+              {STDS.map(({ key, label }) => {
+                const tested = datasets.filter((ds) => runs.some((r) => r.dataset_id === ds.id && r.standard === key)).length;
+                const untested = datasets.length - tested;
+                const pct = datasets.length > 0 ? Math.round((tested / datasets.length) * 100) : 0;
+                const color = pct === 100 ? HEX.green : pct >= 50 ? HEX.amber : HEX.red;
+                const bg = pct === 100 ? HEX.greenBg : pct >= 50 ? "rgba(217,119,6,0.08)" : HEX.redBg;
+                const border = pct === 100 ? HEX.greenBorder : pct >= 50 ? "rgba(217,119,6,0.25)" : HEX.redBorder;
+                return (
+                  <div key={key} style={{ borderRadius: 4, background: bg, border: `1px solid ${border}`, padding: "10px 14px" }}>
+                    <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color, letterSpacing: "0.12em", marginBottom: 6 }}>{label}</div>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
+                      <span style={{ fontFamily: S.mono, fontSize: 18, fontWeight: 800, color, lineHeight: 1 }}>{tested}</span>
+                      <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>/ {datasets.length}</span>
+                    </div>
+                    <div style={{ height: 3, borderRadius: 2, background: S.sub, overflow: "hidden", marginBottom: 4 }}>
+                      <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 2, transition: "width 0.3s" }} />
+                    </div>
+                    <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>
+                      {untested > 0 ? `${untested} untested` : "full coverage"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 51.1 Year-to-date summary card ── */}
+      {totalRuns >= 1 && (() => {
+        const now = new Date();
+        const thisYear = now.getFullYear();
+        const priorYear = thisYear - 1;
+        const ytdRuns = runs.filter((r) => r.created_at && new Date(r.created_at).getFullYear() === thisYear);
+        const priorRuns = runs.filter((r) => r.created_at && new Date(r.created_at).getFullYear() === priorYear);
+        if (ytdRuns.length === 0 && priorRuns.length === 0) return null;
+        const ytdPass = ytdRuns.filter((r) => r.overall_effective).length;
+        const priorPass = priorRuns.filter((r) => r.overall_effective).length;
+        const ytdDo = ytdRuns.filter((r) => r.dollar_offset_ratio != null);
+        const priorDo = priorRuns.filter((r) => r.dollar_offset_ratio != null);
+        const ytdAvgDo = ytdDo.length > 0 ? ytdDo.reduce((s, r) => s + (r.dollar_offset_ratio as number), 0) / ytdDo.length : null;
+        const priorAvgDo = priorDo.length > 0 ? priorDo.reduce((s, r) => s + (r.dollar_offset_ratio as number), 0) / priorDo.length : null;
+        const ytdRate = ytdRuns.length > 0 ? Math.round((ytdPass / ytdRuns.length) * 100) : null;
+        const priorRate = priorRuns.length > 0 ? Math.round((priorPass / priorRuns.length) * 100) : null;
+        const KPIS = [
+          { label: "RUNS", ytd: ytdRuns.length, prior: priorRuns.length, fmt: (v: number) => String(v) },
+          { label: "PASS RATE", ytd: ytdRate, prior: priorRate, fmt: (v: number) => `${v}%` },
+          { label: "AVG D.O.", ytd: ytdAvgDo, prior: priorAvgDo, fmt: (v: number) => v.toFixed(4) },
+        ] as const;
+        return (
+          <div style={{ borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`, padding: "14px 20px" }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
+              YEAR-TO-DATE {thisYear}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${KPIS.length}, 1fr)`, gap: 12 }}>
+              {KPIS.map((kpi) => {
+                const ytdVal = kpi.ytd;
+                const priorVal = kpi.prior;
+                const delta = ytdVal != null && priorVal != null ? (ytdVal as number) - (priorVal as number) : null;
+                const deltaColor = delta == null ? S.text3 : delta > 0 ? HEX.green : delta < 0 ? HEX.red : S.text3;
+                return (
+                  <div key={kpi.label} style={{ textAlign: "center" }}>
+                    <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, letterSpacing: "0.10em", marginBottom: 4 }}>{kpi.label}</div>
+                    <div style={{ fontFamily: S.mono, fontSize: 20, fontWeight: 700, color: S.text1, lineHeight: 1 }}>
+                      {ytdVal != null ? kpi.fmt(ytdVal as number) : "—"}
+                    </div>
+                    {priorVal != null && (
+                      <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, marginTop: 3 }}>
+                        {priorYear}: {kpi.fmt(priorVal as number)}
+                        {delta != null && delta !== 0 && (
+                          <span style={{ color: deltaColor, marginLeft: 4 }}>
+                            {delta > 0 ? `↑` : `↓`}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 40.1 Regression test coverage card ── */}
+      {totalRuns >= 1 && (() => {
+        const STANDARDS = ["IAS_39", "IFRS_9", "ASC_815"] as const;
+        const rows = STANDARDS.map((std) => {
+          const stdRuns = runs.filter((r) => r.standard === std);
+          if (stdRuns.length === 0) return null;
+          const withR2 = stdRuns.filter((r) => r.regression_r_squared != null).length;
+          const doOnly = stdRuns.length - withR2;
+          const r2Pct = Math.round((withR2 / stdRuns.length) * 100);
+          return { std, total: stdRuns.length, withR2, doOnly, r2Pct };
+        }).filter((r): r is NonNullable<typeof r> => r !== null);
+        if (rows.length === 0) return null;
+        const stdLabels: Record<string, string> = { IAS_39: "IAS 39", IFRS_9: "IFRS 9", ASC_815: "ASC 815" };
+        return (
+          <div style={{ borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`, padding: "14px 20px" }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
+              TEST METHOD COVERAGE
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {rows.map((row) => (
+                <div key={row.std}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                    <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text2 }}>{stdLabels[row.std]}</span>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <span style={{ fontFamily: S.mono, fontSize: 10, color: HEX.cyan }}>{row.withR2} w/ R²</span>
+                      <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>{row.doOnly} D.O. only</span>
+                      <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700,
+                        color: row.r2Pct >= 50 ? HEX.green : HEX.amber }}>{row.r2Pct}%</span>
+                    </div>
+                  </div>
+                  <div style={{ height: 5, borderRadius: 2, background: S.sub, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${row.r2Pct}%`, background: HEX.cyan, borderRadius: 2, transition: "width 0.3s" }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 36.1 Assessment velocity card ── */}
+      {runs.length >= 2 && (() => {
+        const now = Date.now();
+        const DAY = 86400000;
+        const runsLast7  = runs.filter((r) => r.created_at && now - new Date(r.created_at).getTime() < 7  * DAY).length;
+        const runsLast30 = runs.filter((r) => r.created_at && now - new Date(r.created_at).getTime() < 30 * DAY).length;
+        const runsW1to4  = runs.filter((r) => r.created_at && now - new Date(r.created_at).getTime() < 28 * DAY).length;
+        const runsW5to8  = runs.filter((r) => r.created_at && now - new Date(r.created_at).getTime() >= 28 * DAY && now - new Date(r.created_at).getTime() < 56 * DAY).length;
+        const weeklyRate = runsLast30 > 0 ? (runsLast30 / 4).toFixed(1) : "0";
+        const cadence = runsW1to4 > runsW5to8 + 1 ? "ACCELERATING" : runsW1to4 < runsW5to8 - 1 ? "DECELERATING" : "STABLE";
+        const cadenceColor = cadence === "ACCELERATING" ? HEX.green : cadence === "DECELERATING" ? HEX.amber : HEX.cyan;
+        return (
+          <div style={{
+            gridColumn: "1 / -1", padding: "14px 20px", borderRadius: 6,
+            background: S.panel, border: `1px solid ${S.rim}`,
+            display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap",
+          }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", width: "100%", marginBottom: 2 }}>
+              ASSESSMENT VELOCITY
+            </div>
+            {([
+              { label: "LAST 7 DAYS", value: runsLast7, suffix: "runs" },
+              { label: "LAST 30 DAYS", value: runsLast30, suffix: "runs" },
+              { label: "AVG / WEEK", value: weeklyRate, suffix: "runs" },
+            ] as const).map((kpi, i) => (
+              <div key={kpi.label} style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                {i > 0 && <div style={{ width: 1, height: 36, background: S.rim }} />}
+                <div>
+                  <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.12em", marginBottom: 4 }}>{kpi.label}</div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+                    <span style={{ fontFamily: S.mono, fontSize: 24, fontWeight: 800, color: Number(kpi.value) > 0 ? S.text1 : S.text3, lineHeight: 1 }}>{kpi.value}</span>
+                    <span style={{ fontFamily: S.ui, fontSize: 11, color: S.text3 }}>{kpi.suffix}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div style={{ width: 1, height: 36, background: S.rim }} />
+            <div>
+              <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.12em", marginBottom: 6 }}>CADENCE</div>
+              <span style={{
+                fontFamily: S.mono, fontSize: 11, fontWeight: 800, letterSpacing: "0.08em",
+                padding: "3px 10px", borderRadius: 3,
+                background: cadence === "ACCELERATING" ? HEX.greenBg : cadence === "DECELERATING" ? "rgba(217,119,6,0.10)" : "rgba(28,98,242,0.07)",
+                color: cadenceColor,
+                border: `1px solid ${cadence === "ACCELERATING" ? HEX.greenBorder : cadence === "DECELERATING" ? "rgba(217,119,6,0.25)" : "rgba(28,98,242,0.2)"}`,
+              }}>{cadence}</span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 37.1 Compliance scorecard table ── */}
+      {totalRuns >= 1 && (() => {
+        const STANDARDS = [
+          { key: "IAS_39",  label: "IAS 39",  desc: "Dollar Offset 80–125%" },
+          { key: "IFRS_9",  label: "IFRS 9",  desc: "Dollar Offset + Regression" },
+          { key: "ASC_815", label: "ASC 815", desc: "Dollar Offset 80–125%" },
+        ] as const;
+        return (
+          <div style={{ gridColumn: "1 / -1", borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`, overflow: "hidden" }}>
+            <div style={{ padding: "10px 20px", borderBottom: `1px solid ${S.rim}` }}>
+              <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>COMPLIANCE SCORECARD</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
+              {STANDARDS.map((std, i) => {
+                const stdRuns = runs.filter((r) => r.standard === std.key);
+                const lastRun = [...stdRuns].sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))[0] ?? null;
+                const passRate = stdRuns.length > 0 ? Math.round((stdRuns.filter((r) => r.overall_effective).length / stdRuns.length) * 100) : null;
+                const status = stdRuns.length === 0 ? "NOT TESTED" : lastRun?.overall_effective ? "COMPLIANT" : "NON-COMPLIANT";
+                const statusColor = status === "COMPLIANT" ? HEX.green : status === "NON-COMPLIANT" ? HEX.red : S.text3;
+                const statusBg = status === "COMPLIANT" ? HEX.greenBg : status === "NON-COMPLIANT" ? HEX.redBg : S.sub;
+                const statusBorder = status === "COMPLIANT" ? HEX.greenBorder : status === "NON-COMPLIANT" ? HEX.redBorder : S.rim;
+                return (
+                  <div key={std.key} style={{
+                    padding: "14px 20px",
+                    borderRight: i < 2 ? `1px solid ${S.rim}` : "none",
+                  }}>
+                    <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.12em", marginBottom: 3 }}>
+                      {std.label}
+                    </div>
+                    <div style={{ fontFamily: S.ui, fontSize: 10, color: S.text3, marginBottom: 8 }}>{std.desc}</div>
+                    <span style={{
+                      fontFamily: S.mono, fontSize: 10, fontWeight: 800, letterSpacing: "0.08em",
+                      padding: "2px 8px", borderRadius: 3,
+                      background: statusBg, color: statusColor, border: `1px solid ${statusBorder}`,
+                    }}>{status}</span>
+                    {passRate != null && (
+                      <div style={{ marginTop: 8, fontFamily: S.mono, fontSize: 11, color: statusColor, fontWeight: 700 }}>
+                        {passRate}% pass rate
+                        <span style={{ fontFamily: S.ui, fontSize: 10, fontWeight: 400, color: S.text3, marginLeft: 5 }}>
+                          ({stdRuns.length} run{stdRuns.length !== 1 ? "s" : ""})
+                        </span>
+                      </div>
+                    )}
+                    {lastRun?.created_at && (
+                      <div style={{ marginTop: 4, fontFamily: S.ui, fontSize: 10, color: S.text3 }}>
+                        Last: {new Date(lastRun.created_at).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 39.1 D.O. ratio band distribution bar ── */}
+      {totalRuns >= 1 && (() => {
+        const doRuns = runs.filter((r) => r.dollar_offset_ratio != null);
+        if (doRuns.length === 0) return null;
+        const below = doRuns.filter((r) => (r.dollar_offset_ratio as number) < 0.80).length;
+        const inBand = doRuns.filter((r) => (r.dollar_offset_ratio as number) >= 0.80 && (r.dollar_offset_ratio as number) <= 1.25).length;
+        const above = doRuns.filter((r) => (r.dollar_offset_ratio as number) > 1.25).length;
+        const total = doRuns.length;
+        const belowPct = Math.round((below / total) * 100);
+        const inPct = Math.round((inBand / total) * 100);
+        const abovePct = 100 - belowPct - inPct;
+        const segments = [
+          { label: "< 0.80", count: below, pct: belowPct, color: HEX.red, bg: HEX.redBg, border: HEX.redBorder },
+          { label: "0.80 – 1.25", count: inBand, pct: inPct, color: HEX.green, bg: HEX.greenBg, border: HEX.greenBorder },
+          { label: "> 1.25", count: above, pct: abovePct, color: HEX.amber, bg: "rgba(217,119,6,0.10)", border: "rgba(217,119,6,0.30)" },
+        ];
+        return (
+          <div style={{ gridColumn: "1 / -1", borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`, padding: "14px 20px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>D.O. RATIO BAND DISTRIBUTION</span>
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>{total} RUN{total !== 1 ? "S" : ""} WITH D.O. DATA</span>
+            </div>
+            {/* Stacked bar */}
+            <div style={{ display: "flex", height: 18, borderRadius: 3, overflow: "hidden", marginBottom: 10 }}>
+              {segments.map((seg) => seg.pct > 0 && (
+                <div key={seg.label} title={`${seg.label}: ${seg.count} run${seg.count !== 1 ? "s" : ""} (${seg.pct}%)`}
+                  style={{ width: `${seg.pct}%`, background: seg.color, opacity: 0.85, transition: "width 0.3s" }} />
+              ))}
+            </div>
+            {/* Legend */}
+            <div style={{ display: "flex", gap: 16 }}>
+              {segments.map((seg) => (
+                <div key={seg.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: seg.color, flexShrink: 0, display: "inline-block" }} />
+                  <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>{seg.label}</span>
+                  <span style={{
+                    fontFamily: S.mono, fontSize: 10, fontWeight: 700,
+                    padding: "0px 5px", borderRadius: 2,
+                    background: seg.bg, color: seg.color, border: `1px solid ${seg.border}`,
+                  }}>{seg.pct}%</span>
+                  <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>({seg.count})</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 41.1 Period sufficiency matrix ── */}
+      {datasets.length >= 1 && (() => {
+        const STANDARDS = [
+          { key: "IAS_39",  label: "IAS 39",  min: 8  },
+          { key: "ASC_815", label: "ASC 815", min: 8  },
+          { key: "IFRS_9",  label: "IFRS 9",  min: 30 },
+        ] as const;
+        return (
+          <div style={{ gridColumn: "1 / -1", borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`, overflow: "hidden" }}>
+            <div style={{ padding: "10px 20px", borderBottom: `1px solid ${S.rim}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>PERIOD SUFFICIENCY</span>
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>IFRS 9 ≥30 · IAS 39 / ASC 815 ≥8</span>
+            </div>
+            <div style={{ padding: "12px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+              {datasets.map((ds) => (
+                <div key={ds.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontFamily: S.ui, fontSize: 12, color: S.text2, minWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ds.name}</span>
+                  <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, minWidth: 60 }}>{ds.period_count} periods</span>
+                  <div style={{ display: "flex", gap: 5 }}>
+                    {STANDARDS.map((std) => {
+                      const ok = ds.period_count >= std.min;
+                      return (
+                        <span key={std.key} title={`${std.label}: requires ≥${std.min} periods`} style={{
+                          fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                          padding: "1px 6px", borderRadius: 3, cursor: "default",
+                          background: ok ? HEX.greenBg : HEX.redBg,
+                          color: ok ? HEX.green : HEX.red,
+                          border: `1px solid ${ok ? HEX.greenBorder : HEX.redBorder}`,
+                        }}>
+                          {std.label} {ok ? "✓" : `NEEDS ${std.min - ds.period_count}+`}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         );
       })()}
@@ -1888,6 +3134,227 @@ function OverviewTab({
           </div>
         );
       })()}
+
+      {/* ── 32.1 Standard breakdown donut + pass-rate bars ── */}
+      {totalRuns >= 1 && (() => {
+        const STD_META: Record<string, { label: string; color: string }> = {
+          IAS_39:  { label: "IAS 39",  color: HEX.cyan  },
+          IFRS_9:  { label: "IFRS 9",  color: HEX.green },
+          ASC_815: { label: "ASC 815", color: HEX.amber },
+        };
+        const stdData = Object.entries(
+          runs.reduce<Record<string, number>>((acc, r) => {
+            acc[r.standard] = (acc[r.standard] ?? 0) + 1;
+            return acc;
+          }, {})
+        ).map(([std, count]) => ({
+          std,
+          label: STD_META[std]?.label ?? std,
+          count,
+          color: STD_META[std]?.color ?? HEX.text3,
+          passRate: Math.round(
+            (runs.filter((r) => r.standard === std && r.overall_effective).length / count) * 100
+          ),
+        }));
+        if (stdData.length === 0) return null;
+        const donutOption = {
+          backgroundColor: "transparent",
+          tooltip: { trigger: "item" as const, formatter: "{b}: {c} ({d}%)" },
+          series: [{
+            type: "pie" as const,
+            radius: ["52%", "78%"],
+            center: ["50%", "50%"],
+            data: stdData.map((d) => ({ name: d.label, value: d.count, itemStyle: { color: d.color, borderWidth: 0 } })),
+            label: { show: false },
+            emphasis: { scale: false },
+          }],
+        };
+        return (
+          <div style={{
+            gridColumn: "1 / -1", padding: "14px 20px", borderRadius: 6,
+            background: S.panel, border: `1px solid ${S.rim}`,
+            display: "flex", alignItems: "center", gap: 24,
+          }}>
+            <div>
+              <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
+                BY STANDARD
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div style={{ width: 90, height: 90, flexShrink: 0 }}>
+                  <ReactECharts option={donutOption} style={{ width: 90, height: 90 }} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                  {stdData.map((d) => (
+                    <div key={d.std} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: d.color, flexShrink: 0 }} />
+                      <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text2, minWidth: 58 }}>{d.label}</span>
+                      <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text1 }}>{d.count}</span>
+                      <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>
+                        ({Math.round((d.count / totalRuns) * 100)}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{ width: 1, height: 72, background: S.rim, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
+                PASS RATE BY STANDARD
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                {stdData.map((d) => (
+                  <div key={d.std} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, minWidth: 58 }}>{d.label}</span>
+                    <div style={{ flex: 1, height: 4, borderRadius: 2, background: S.rim, overflow: "hidden" }}>
+                      <div style={{ width: `${d.passRate}%`, height: "100%", borderRadius: 2, background: d.color, transition: "width 0.4s" }} />
+                    </div>
+                    <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: d.color, minWidth: 34, textAlign: "right" }}>
+                      {d.passRate}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 35.1 Currency pair distribution panel ── */}
+      {totalRuns >= 1 && (() => {
+        const pairMap = runs.reduce<Record<string, { total: number; effective: number }>>((acc, r) => {
+          const key = r.currency_pair ?? "MULTI";
+          if (!acc[key]) acc[key] = { total: 0, effective: 0 };
+          acc[key].total++;
+          if (r.overall_effective) acc[key].effective++;
+          return acc;
+        }, {});
+        const pairData = Object.entries(pairMap)
+          .map(([pair, stats]) => ({
+            pair,
+            total: stats.total,
+            effective: stats.effective,
+            passRate: Math.round((stats.effective / stats.total) * 100),
+          }))
+          .sort((a, b) => b.total - a.total);
+        if (pairData.length === 0) return null;
+        return (
+          <div style={{
+            gridColumn: "1 / -1", padding: "14px 20px", borderRadius: 6,
+            background: S.panel, border: `1px solid ${S.rim}`,
+          }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
+              BY CURRENCY PAIR
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {pairData.map((d) => {
+                const passColor = d.passRate >= 80 ? HEX.green : d.passRate >= 60 ? HEX.amber : HEX.red;
+                return (
+                  <div key={d.pair} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: HEX.cyan, minWidth: 70 }}>
+                      {d.pair}
+                    </span>
+                    <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, minWidth: 48 }}>
+                      {d.total} run{d.total !== 1 ? "s" : ""}
+                    </span>
+                    <div style={{ flex: 1, height: 4, borderRadius: 2, background: S.rim, overflow: "hidden", maxWidth: 200 }}>
+                      <div style={{ width: `${d.passRate}%`, height: "100%", borderRadius: 2, background: passColor, transition: "width 0.4s" }} />
+                    </div>
+                    <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: passColor, minWidth: 34, textAlign: "right" }}>
+                      {d.passRate}%
+                    </span>
+                    <span style={{ fontFamily: S.ui, fontSize: 10, color: S.text3 }}>
+                      {d.effective}/{d.total} effective
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 30.3 Effectiveness timeline scatter ── */}
+      {runs.length >= 2 && (() => {
+        const sorted = [...runs]
+          .filter((r) => r.created_at && r.dollar_offset_ratio != null)
+          .sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""))
+          .slice(-30);
+        if (sorted.length < 2) return null;
+        const timelineOption = {
+          backgroundColor: "transparent",
+          tooltip: {
+            trigger: "item" as const,
+            backgroundColor: "#1e293b", borderColor: HEX.border,
+            textStyle: { color: "#fff", fontSize: 11, fontFamily: "'IBM Plex Mono',monospace" },
+            formatter: (params: { data: [string, number, boolean, string] }) => {
+              const [date, ratio, effective, name] = params.data;
+              const d = new Date(date).toLocaleDateString();
+              return `<b>${name}</b><br/>${d}<br/>D.O. <b style="color:${effective ? HEX.green : HEX.red}">${ratio.toFixed(4)}</b><br/>${effective ? "✓ EFFECTIVE" : "✗ INEFFECTIVE"}`;
+            },
+          },
+          grid: { top: 24, right: 16, bottom: 32, left: 50 },
+          xAxis: {
+            type: "time" as const,
+            axisLabel: { color: HEX.text3, fontSize: 10, fontFamily: "'IBM Plex Mono',monospace" },
+            axisLine: { lineStyle: { color: HEX.border } }, axisTick: { show: false },
+          },
+          yAxis: {
+            type: "value" as const, name: "D.O. Ratio",
+            nameTextStyle: { color: HEX.text3, fontSize: 10, fontFamily: "'IBM Plex Mono',monospace" },
+            min: Math.max(0, Math.min(0.7, ...sorted.map((r) => r.dollar_offset_ratio as number)) - 0.05),
+            max: Math.max(1.35, ...sorted.map((r) => r.dollar_offset_ratio as number)) + 0.05,
+            axisLabel: { color: HEX.text3, fontSize: 10, fontFamily: "'IBM Plex Mono',monospace", formatter: (v: number) => v.toFixed(2) },
+            splitLine: { lineStyle: { color: HEX.border, type: "dashed" as const } },
+            axisLine: { show: false },
+          },
+          series: [
+            // Band lines
+            {
+              type: "line" as const, silent: true, symbol: "none", lineStyle: { color: HEX.green, type: "dashed" as const, width: 1, opacity: 0.5 },
+              markLine: {
+                silent: true, symbol: "none", lineStyle: { color: HEX.green, type: "dashed" as const, width: 1, opacity: 0.5 },
+                data: [{ yAxis: 0.80, label: { formatter: "0.80", color: HEX.green, fontSize: 9 } }, { yAxis: 1.25, label: { formatter: "1.25", color: HEX.green, fontSize: 9 } }],
+              },
+              data: [],
+            },
+            // Scatter points
+            {
+              type: "scatter" as const,
+              symbolSize: 9,
+              data: sorted.map((r) => [r.created_at, r.dollar_offset_ratio, r.overall_effective, r.dataset_name]),
+              itemStyle: {
+                color: (params: { data: [string, number, boolean, string] }) => params.data[2] ? HEX.green : HEX.red,
+                borderColor: "#fff", borderWidth: 1.5,
+                shadowBlur: 4, shadowColor: (params: { data: [string, number, boolean, string] }) => params.data[2] ? HEX.green + "60" : HEX.red + "60",
+              },
+            },
+          ],
+        };
+        return (
+          <div style={{
+            gridColumn: "1 / -1", padding: "16px 20px 8px", borderRadius: 6,
+            background: S.panel, border: `1px solid ${S.rim}`, marginTop: 4,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
+              <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+                EFFECTIVENESS TIMELINE
+              </span>
+              <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>— last {sorted.length} runs with D.O. data</span>
+              <div style={{ flex: 1 }} />
+              <div style={{ display: "flex", gap: 12 }}>
+                {[["Effective", HEX.green], ["Ineffective", HEX.red]].map(([label, color]) => (
+                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
+                    <span style={{ fontFamily: S.ui, fontSize: 11, color: S.text3 }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <ReactECharts option={timelineOption} style={{ height: 180 }} />
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -1924,7 +3391,26 @@ function DatasetsTab({
 }) {
   const [dsSearch, setDsSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [dsSort, setDsSort] = useState<"name" | "runs" | "created" | "lastAssessed">("created");
+  const [expandAll, setExpandAll] = useState(false);
+  const [dsSort, setDsSort] = useState<"name" | "runs" | "created" | "lastAssessed" | "compliance">("created");
+  // ── 45.3 Hedge-type filter ──
+  const [dsHedgeFilter, setDsHedgeFilter] = useState<string | null>(null);
+  const [dsUntestedOnly, setDsUntestedOnly] = useState(false); // ── 53.3
+  const [dsLastFailOnly, setDsLastFailOnly] = useState(false); // ── 55.3
+  // ── 54.3 Per-dataset risk level tag ──
+  const DS_RISK_KEY = "hec_ds_risk";
+  const [dsRisk, setDsRisk] = useState<Record<string, "HIGH" | "MEDIUM" | "LOW">>(() => {
+    try { return JSON.parse(localStorage.getItem(DS_RISK_KEY) || "{}"); }
+    catch { return {}; }
+  });
+  const cycleRisk = (id: string) => {
+    const cur = dsRisk[id] ?? null;
+    const next = cur === null ? "HIGH" : cur === "HIGH" ? "MEDIUM" : cur === "MEDIUM" ? "LOW" : null;
+    const updated = { ...dsRisk };
+    if (next === null) delete updated[id]; else updated[id] = next;
+    setDsRisk(updated);
+    localStorage.setItem(DS_RISK_KEY, JSON.stringify(updated));
+  };
   // ── 29.2 Clone state ──
   const [cloningId, setCloningId] = useState<string | null>(null);
   // ── 28.2 Period data viewer ──
@@ -1998,12 +3484,50 @@ function DatasetsTab({
     return acc;
   }, {});
 
-  const filteredDs = dsSearch.trim()
-    ? datasets.filter((ds) =>
-        ds.name.toLowerCase().includes(dsSearch.toLowerCase()) ||
-        (ds.currency_pair ?? "").toLowerCase().includes(dsSearch.toLowerCase())
-      )
-    : datasets;
+  // ── 32.2 D.O. drift per dataset (latest run - previous run) ──
+  const dsDrift = datasets.reduce<Record<string, number | null>>((acc, ds) => {
+    const withDO = runs
+      .filter((r) => r.dataset_id === ds.id && r.dollar_offset_ratio != null)
+      .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+    acc[ds.id] = withDO.length >= 2
+      ? (withDO[0].dollar_offset_ratio as number) - (withDO[1].dollar_offset_ratio as number)
+      : null;
+    return acc;
+  }, {});
+
+  // ── 38.3 Dataset health score (0–100 composite) ──
+  const dsHealth = datasets.reduce<Record<string, number>>((acc, ds) => {
+    const dsRuns = runs.filter((r) => r.dataset_id === ds.id);
+    if (dsRuns.length === 0) { acc[ds.id] = 0; return acc; }
+    const effCount = dsRuns.filter((r) => r.overall_effective).length;
+    const passScore = 40 * (effCount / dsRuns.length);
+    const lastRunDate = dsRuns
+      .filter((r) => r.created_at)
+      .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))[0]?.created_at ?? null;
+    const daysSince = lastRunDate ? Math.floor((Date.now() - new Date(lastRunDate).getTime()) / 86400000) : 90;
+    const recencyScore = 30 * Math.max(0, 1 - daysSince / 90);
+    const countScore = Math.min(20, dsRuns.length * 4);
+    const drift = dsDrift[ds.id];
+    const driftScore = drift == null || Math.abs(drift) < 0.10 ? 10 : 0;
+    acc[ds.id] = Math.round(passScore + recencyScore + countScore + driftScore);
+    return acc;
+  }, {});
+
+  const filteredDs = datasets.filter((ds) => {
+    if (dsSearch.trim()) {
+      const q = dsSearch.toLowerCase();
+      if (!ds.name.toLowerCase().includes(q) && !(ds.currency_pair ?? "").toLowerCase().includes(q)) return false;
+    }
+    if (dsHedgeFilter && ds.hedge_type !== dsHedgeFilter) return false;
+    if (dsUntestedOnly && runs.some((r) => r.dataset_id === ds.id)) return false; // ── 53.3
+    if (dsLastFailOnly) { // ── 55.3
+      const dsRuns = runs.filter((r) => r.dataset_id === ds.id && r.created_at);
+      if (dsRuns.length === 0) return false;
+      const lastRun = dsRuns.reduce((a, b) => (a.created_at ?? "") > (b.created_at ?? "") ? a : b);
+      if (lastRun.overall_effective !== false) return false;
+    }
+    return true;
+  });
 
   const displayDs = [...filteredDs].sort((a, b) => {
     if (dsSort === "name") return a.name.localeCompare(b.name);
@@ -2014,6 +3538,20 @@ function DatasetsTab({
       const aLast = aRuns.reduce((m, r) => (r.created_at ?? "") > m ? (r.created_at ?? "") : m, "");
       const bLast = bRuns.reduce((m, r) => (r.created_at ?? "") > m ? (r.created_at ?? "") : m, "");
       return bLast.localeCompare(aLast);
+    }
+    // ── 50.3 Compliance sort ──
+    if (dsSort === "compliance") {
+      const compScore = (ds: typeof a) => {
+        const dr = runs.filter((r) => r.dataset_id === ds.id);
+        if (dr.length === 0) return -1;
+        const passRate = dr.filter((r) => r.overall_effective).length / dr.length;
+        const lastRun = [...dr].sort((x, y) => (y.created_at ?? "").localeCompare(x.created_at ?? ""))[0];
+        const daysSince = lastRun?.created_at ? Math.floor((Date.now() - new Date(lastRun.created_at).getTime()) / 86400000) : 90;
+        const recency = Math.max(0, 1 - daysSince / 90);
+        const sufficiency = ds.period_count >= 8 ? 1 : ds.period_count / 8;
+        return passRate * 0.5 + recency * 0.3 + sufficiency * 0.2;
+      };
+      return compScore(b) - compScore(a);
     }
     // default: "created" — newest first
     return (b.created_at ?? "").localeCompare(a.created_at ?? "");
@@ -2071,11 +3609,145 @@ function DatasetsTab({
           <option value="name">Name A–Z</option>
           <option value="runs">Most runs</option>
           <option value="lastAssessed">Last assessed</option>
+          <option value="compliance">Compliance score</option>
         </select>
         <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>
           {filteredDs.length} OF {datasets.length}
         </span>
+        {/* ── 48.3 Total periods aggregate ── */}
+        {(() => {
+          const totalPeriods = filteredDs.reduce((sum, ds) => sum + ds.period_count, 0);
+          if (totalPeriods === 0) return null;
+          return (
+            <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
+              <span style={{ color: S.text2, fontWeight: 600 }}>{totalPeriods}</span> PERIODS
+            </span>
+          );
+        })()}
+        {/* ── 53.3 Untested-only gap filter ── */}
+        {datasets.some((ds) => !runs.some((r) => r.dataset_id === ds.id)) && (
+          <button
+            onClick={() => setDsUntestedOnly((v) => !v)}
+            title="Show only datasets that have never been assessed"
+            style={{
+              fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+              padding: "5px 10px", borderRadius: 3, cursor: "pointer",
+              background: dsUntestedOnly ? HEX.redBg : S.sub,
+              color: dsUntestedOnly ? HEX.red : S.text3,
+              border: `1px solid ${dsUntestedOnly ? HEX.redBorder : S.rim}`,
+              transition: "background 0.15s, color 0.15s",
+            }}
+          >
+            UNTESTED
+          </button>
+        )}
+        {/* ── 55.3 Last-run fail filter ── */}
+        {datasets.some((ds) => {
+          const dsRuns = runs.filter((r) => r.dataset_id === ds.id && r.created_at);
+          if (dsRuns.length === 0) return false;
+          const last = dsRuns.reduce((a, b) => (a.created_at ?? "") > (b.created_at ?? "") ? a : b);
+          return last.overall_effective === false;
+        }) && (
+          <button
+            onClick={() => setDsLastFailOnly((v) => !v)}
+            title="Show only datasets whose most recent run was ineffective"
+            style={{
+              fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+              padding: "5px 10px", borderRadius: 3, cursor: "pointer",
+              background: dsLastFailOnly ? HEX.redBg : S.sub,
+              color: dsLastFailOnly ? HEX.red : S.text3,
+              border: `1px solid ${dsLastFailOnly ? HEX.redBorder : S.rim}`,
+              transition: "background 0.15s, color 0.15s",
+            }}
+          >
+            LAST FAIL
+          </button>
+        )}
+        {/* ── 44.3 Expand-all / collapse-all toggle ── */}
+        <button
+          onClick={() => { setExpandAll((v) => !v); setExpandedId(null); }}
+          title={expandAll ? "Collapse all datasets" : "Expand all datasets"}
+          style={{
+            fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+            padding: "5px 10px", borderRadius: 3, cursor: "pointer",
+            background: expandAll ? "rgba(6,182,212,0.10)" : S.sub,
+            color: expandAll ? HEX.cyan : S.text3,
+            border: `1px solid ${expandAll ? "rgba(6,182,212,0.30)" : S.rim}`,
+            transition: "background 0.15s, color 0.15s",
+          }}>
+          {expandAll ? "⊟ COLLAPSE ALL" : "⊞ EXPAND ALL"}
+        </button>
+        {/* ── 52.3 Export datasets CSV ── */}
+        <button
+          onClick={() => {
+            const headers = ["name", "currency_pair", "hedge_type", "period_count", "runs", "pass_rate_pct", "last_assessed"];
+            const rows = filteredDs.map((ds) => {
+              const dsRuns = runs.filter((r) => r.dataset_id === ds.id);
+              const passCount = dsRuns.filter((r) => r.overall_effective).length;
+              const passRate = dsRuns.length > 0 ? Math.round((passCount / dsRuns.length) * 100) : "";
+              const lastRun = [...dsRuns].sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))[0];
+              return [
+                `"${(ds.name ?? "").replace(/"/g, '""')}"`,
+                ds.currency_pair ?? "",
+                ds.hedge_type ?? "",
+                ds.period_count ?? 0,
+                dsRuns.length,
+                passRate,
+                lastRun?.created_at?.slice(0, 10) ?? "",
+              ].join(",");
+            });
+            const csv = [headers.join(","), ...rows].join("\n");
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url; a.download = "datasets.csv"; a.click();
+            URL.revokeObjectURL(url);
+          }}
+          style={{
+            fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+            padding: "5px 10px", borderRadius: 3, cursor: "pointer",
+            background: "transparent", color: HEX.cyan,
+            border: `1px solid rgba(28,98,242,0.25)`,
+            display: "flex", alignItems: "center", gap: 4,
+            transition: "all 0.15s",
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = "rgba(28,98,242,0.04)"}
+          onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+          title="Export filtered datasets as CSV"
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+          </svg>
+          CSV
+        </button>
       </div>
+      {/* ── 45.3 Hedge-type filter chips ── */}
+      {(() => {
+        const types = [...new Set(datasets.map((ds) => ds.hedge_type))].sort();
+        if (types.length < 2) return null;
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, paddingBottom: 8, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, letterSpacing: "0.08em" }}>TYPE:</span>
+            {[null, ...types].map((ht) => {
+              const active = dsHedgeFilter === ht;
+              const label = ht == null ? "ALL" : ht.replace(/_/g, " ");
+              return (
+                <button key={ht ?? "all"}
+                  onClick={() => setDsHedgeFilter(ht)}
+                  style={{
+                    fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                    padding: "3px 8px", borderRadius: 3, cursor: "pointer",
+                    background: active ? "rgba(6,182,212,0.12)" : S.sub,
+                    color: active ? HEX.cyan : S.text3,
+                    border: `1px solid ${active ? "rgba(6,182,212,0.35)" : S.rim}`,
+                  }}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Column headers */}
       <div style={{
@@ -2096,14 +3768,14 @@ function DatasetsTab({
       ) : displayDs.map((ds) => {
         const stats = dsStats[ds.id];
         return (
-        <div key={ds.id} style={{ borderRadius: 4, border: `1px solid ${expandedId === ds.id ? HEX.cyan + "40" : S.rim}`, overflow: "hidden", transition: "border-color 0.15s" }}>
+        <div key={ds.id} style={{ borderRadius: 4, border: `1px solid ${(expandAll || expandedId === ds.id) ? HEX.cyan + "40" : S.rim}`, overflow: "hidden", transition: "border-color 0.15s" }}>
           {/* Main row */}
           <div style={{
             display: "grid", gridTemplateColumns: "2fr 80px 100px 80px 100px 140px",
             gap: 8, padding: "14px 20px", alignItems: "center",
             background: S.panel, cursor: "pointer",
           }}
-            onClick={() => setExpandedId(expandedId === ds.id ? null : ds.id)}
+            onClick={() => { setExpandAll(false); setExpandedId(expandedId === ds.id ? null : ds.id); }}
             onMouseEnter={(e) => (e.currentTarget.style.background = HEX.bgSub)}
             onMouseLeave={(e) => (e.currentTarget.style.background = "var(--bg-panel)")}
           >
@@ -2111,13 +3783,82 @@ function DatasetsTab({
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <svg
                   width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={HEX.text3} strokeWidth="2"
-                  style={{ transform: expandedId === ds.id ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", flexShrink: 0 }}
+                  style={{ transform: (expandAll || expandedId === ds.id) ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", flexShrink: 0 }}
                 >
                   <path d="M9 18l6-6-6-6"/>
                 </svg>
                 <div style={{ fontFamily: S.ui, fontSize: 13, fontWeight: 600, color: S.text1 }}>
                   <HighlightMatch text={ds.name} query={dsSearch} />
                 </div>
+                {/* ── 32.2 D.O. drift badge ── */}
+                {(() => {
+                  const drift = dsDrift[ds.id];
+                  if (drift == null || Math.abs(drift) < 0.10) return null;
+                  const isPos = drift > 0;
+                  const isBig = Math.abs(drift) >= 0.15;
+                  return (
+                    <span style={{
+                      fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                      padding: "1px 6px", borderRadius: 3, flexShrink: 0,
+                      background: isBig ? (isPos ? HEX.greenBg : HEX.redBg) : "rgba(217,119,6,0.12)",
+                      color: isBig ? (isPos ? HEX.green : HEX.red) : HEX.amber,
+                      border: `1px solid ${isBig ? (isPos ? HEX.greenBorder : HEX.redBorder) : "rgba(217,119,6,0.35)"}`,
+                    }}>
+                      ⚠ DRIFT {isPos ? "+" : ""}{drift.toFixed(3)}
+                    </span>
+                  );
+                })()}
+                {/* ── 49.3 Duplicate pair badge ── */}
+                {ds.currency_pair && (() => {
+                  const dupeCount = datasets.filter((d) => d.id !== ds.id && d.currency_pair === ds.currency_pair).length;
+                  if (dupeCount === 0) return null;
+                  return (
+                    <span title={`${dupeCount} other dataset${dupeCount > 1 ? "s" : ""} share this currency pair`}
+                      style={{
+                        fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                        padding: "1px 6px", borderRadius: 3, flexShrink: 0, cursor: "default",
+                        background: "rgba(217,119,6,0.10)", color: HEX.amber,
+                        border: "1px solid rgba(217,119,6,0.30)",
+                      }}>
+                      ⊕ {dupeCount + 1} DATASETS
+                    </span>
+                  );
+                })()}
+              {/* ── 54.3 Risk level tag ── */}
+              {(() => {
+                const lvl = dsRisk[ds.id] ?? null;
+                if (lvl === null) return (
+                  <span
+                    onClick={(e) => { e.stopPropagation(); cycleRisk(ds.id); }}
+                    title="Click to assign risk level (HIGH → MEDIUM → LOW → clear)"
+                    style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, cursor: "pointer",
+                      padding: "1px 5px", borderRadius: 3, border: `1px dashed ${S.rim}`,
+                      opacity: 0.5, flexShrink: 0, letterSpacing: "0.06em",
+                    }}
+                  >RISK</span>
+                );
+                return null; // handled below when dsRisk[ds.id] set
+              })()}
+              {dsRisk[ds.id] && (() => {
+                const lvl = dsRisk[ds.id];
+                const cfg = lvl === "HIGH"
+                  ? { bg: HEX.redBg, color: HEX.red, border: HEX.redBorder }
+                  : lvl === "MEDIUM"
+                  ? { bg: "rgba(217,119,6,0.10)", color: HEX.amber, border: "rgba(217,119,6,0.30)" }
+                  : { bg: "rgba(6,182,212,0.08)", color: HEX.cyan, border: "rgba(6,182,212,0.25)" };
+                return (
+                  <span
+                    onClick={(e) => { e.stopPropagation(); cycleRisk(ds.id); }}
+                    title="Click to cycle risk level (HIGH → MEDIUM → LOW → clear)"
+                    style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                      padding: "1px 6px", borderRadius: 3, cursor: "pointer", flexShrink: 0,
+                      background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`,
+                    }}
+                  >
+                    {lvl} RISK
+                  </span>
+                );
+              })()}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, paddingLeft: 16 }}>
                 {ds.currency_pair && (
@@ -2140,7 +3881,166 @@ function DatasetsTab({
                     </span>
                   </>
                 )}
+                {/* ── 37.3 Dataset staleness badge ── */}
+                {(() => {
+                  const lastRunDate = runs
+                    .filter((r) => r.dataset_id === ds.id && r.created_at)
+                    .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))[0]?.created_at ?? null;
+                  if (!lastRunDate) return null;
+                  const days = Math.floor((Date.now() - new Date(lastRunDate).getTime()) / 86400000);
+                  if (days < 7) return null;
+                  const isStale = days >= 30;
+                  return (
+                    <span style={{
+                      fontFamily: S.mono, fontSize: 9, fontWeight: 700,
+                      padding: "1px 6px", borderRadius: 3,
+                      background: isStale ? HEX.redBg : "rgba(217,119,6,0.10)",
+                      color: isStale ? HEX.red : HEX.amber,
+                      border: `1px solid ${isStale ? HEX.redBorder : "rgba(217,119,6,0.30)"}`,
+                    }}>
+                      {isStale ? `${days}D STALE` : `${days}D AGO`}
+                    </span>
+                  );
+                })()}
+                {/* ── 38.3 Dataset health score badge ── */}
+                {(() => {
+                  const dsRuns = runs.filter((r) => r.dataset_id === ds.id);
+                  if (dsRuns.length === 0) return null;
+                  const score = dsHealth[ds.id] ?? 0;
+                  const tier = score >= 80 ? "A" : score >= 60 ? "B" : score >= 40 ? "C" : "D";
+                  const tierColor = score >= 80 ? HEX.green : score >= 60 ? HEX.cyan : score >= 40 ? HEX.amber : HEX.red;
+                  const tierBg = score >= 80 ? HEX.greenBg : score >= 60 ? "rgba(6,182,212,0.10)" : score >= 40 ? "rgba(217,119,6,0.10)" : HEX.redBg;
+                  const tierBorder = score >= 80 ? HEX.greenBorder : score >= 60 ? "rgba(6,182,212,0.30)" : score >= 40 ? "rgba(217,119,6,0.30)" : HEX.redBorder;
+                  return (
+                    <span title={`Health score: ${score}/100 (pass rate + recency + volume + stability)`} style={{
+                      fontFamily: S.mono, fontSize: 9, fontWeight: 700,
+                      padding: "1px 6px", borderRadius: 3,
+                      background: tierBg, color: tierColor, border: `1px solid ${tierBorder}`,
+                      cursor: "default",
+                    }}>
+                      {tier} {score}
+                    </span>
+                  );
+                })()}
+                {/* ── 47.3 Standards compliance badge ── */}
+                {(() => {
+                  const dsRuns = runs.filter((r) => r.dataset_id === ds.id);
+                  const STDS = ["IAS_39", "IFRS_9", "ASC_815"] as const;
+                  const testedCount = STDS.filter((std) => dsRuns.some((r) => r.standard === std)).length;
+                  if (testedCount === 0) return null;
+                  const label = testedCount === 3 ? "3/3 STD" : `${testedCount}/3 STD`;
+                  const isComplete = testedCount === 3;
+                  return (
+                    <span title={`Tested under ${testedCount} of 3 standards (IAS 39 / IFRS 9 / ASC 815)`}
+                      style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, cursor: "default",
+                        padding: "1px 6px", borderRadius: 3,
+                        background: isComplete ? HEX.greenBg : "rgba(139,92,246,0.10)",
+                        color: isComplete ? HEX.green : "#A78BFA",
+                        border: `1px solid ${isComplete ? HEX.greenBorder : "rgba(139,92,246,0.25)"}` }}>
+                      {label}
+                    </span>
+                  );
+                })()}
+                {/* ── 40.3 Assessment frequency badge ── */}
+                {(() => {
+                  const dsRuns = runs.filter((r) => r.dataset_id === ds.id && r.created_at);
+                  if (dsRuns.length < 2) return null;
+                  const sorted = [...dsRuns].sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+                  const firstDate = new Date(sorted[0].created_at as string);
+                  const monthsSpan = Math.max(1, (Date.now() - firstDate.getTime()) / (30 * 86400000));
+                  const perMonth = dsRuns.length / monthsSpan;
+                  const label = perMonth >= 1 ? `${perMonth.toFixed(1)}/MO` : `${(perMonth * 30).toFixed(0)}D CADENCE`;
+                  return (
+                    <span title={`${dsRuns.length} runs over ${monthsSpan.toFixed(1)} months`}
+                      style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700,
+                        padding: "1px 6px", borderRadius: 3, cursor: "default",
+                        background: "rgba(6,182,212,0.08)", color: HEX.cyan, border: "1px solid rgba(6,182,212,0.25)" }}>
+                      {label}
+                    </span>
+                  );
+                })()}
+                {/* ── 39.3 Next assessment due badge ── */}
+                {(() => {
+                  const dsRuns = runs.filter((r) => r.dataset_id === ds.id && r.created_at);
+                  if (dsRuns.length === 0) return (
+                    <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 3,
+                      background: "rgba(100,116,139,0.10)", color: S.text3, border: `1px solid rgba(100,116,139,0.20)` }}>
+                      NOT SCHEDULED
+                    </span>
+                  );
+                  const lastRunDate = dsRuns
+                    .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))[0].created_at as string;
+                  const daysSince = Math.floor((Date.now() - new Date(lastRunDate).getTime()) / 86400000);
+                  const CADENCE = 30;
+                  const daysUntil = CADENCE - daysSince;
+                  const isOverdue = daysUntil < 0;
+                  const isDueSoon = !isOverdue && daysUntil <= 7;
+                  if (!isOverdue && !isDueSoon) return null; // suppress when plenty of time left
+                  return (
+                    <span title={`30-day assessment cadence · Last run ${daysSince} day${daysSince !== 1 ? "s" : ""} ago`}
+                      style={{
+                        fontFamily: S.mono, fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 3,
+                        cursor: "default",
+                        background: isOverdue ? HEX.redBg : "rgba(217,119,6,0.10)",
+                        color: isOverdue ? HEX.red : HEX.amber,
+                        border: `1px solid ${isOverdue ? HEX.redBorder : "rgba(217,119,6,0.30)"}`,
+                      }}>
+                      {isOverdue ? `OVERDUE ${Math.abs(daysUntil)}D` : `DUE IN ${daysUntil}D`}
+                    </span>
+                  );
+                })()}
+                {/* ── 41.3 Last 5 runs verdict sparkline ── */}
+                {(() => {
+                  const recent = runs
+                    .filter((r) => r.dataset_id === ds.id && r.created_at)
+                    .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
+                    .slice(0, 5);
+                  if (recent.length === 0) return null;
+                  return (
+                    <div title={`Last ${recent.length} run verdicts (newest → oldest)`}
+                      style={{ display: "flex", alignItems: "center", gap: 2, cursor: "default" }}>
+                      {recent.map((r, i) => (
+                        <span key={r.run_id} title={`${r.overall_effective ? "Effective" : "Ineffective"} · ${r.created_at?.slice(0, 10) ?? ""}`}
+                          style={{
+                            width: 8, height: 8, borderRadius: 2, display: "inline-block",
+                            background: r.overall_effective ? HEX.green : HEX.red,
+                            opacity: 1 - i * 0.12,
+                          }} />
+                      ))}
+                    </div>
+                  );
+                })()}
+                {/* ── 42.3 Designation date / hedge age badge ── */}
+                {(() => {
+                  if (!ds.designation_date) return null;
+                  const days = Math.floor((Date.now() - new Date(ds.designation_date).getTime()) / 86400000);
+                  if (days < 0) return null;
+                  const label = days >= 365
+                    ? `${(days / 365).toFixed(1)}YR HEDGE`
+                    : days >= 30
+                    ? `${Math.floor(days / 30)}MO HEDGE`
+                    : `${days}D HEDGE`;
+                  return (
+                    <span title={`Designated: ${ds.designation_date}`}
+                      style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 3,
+                        cursor: "default", background: "rgba(139,92,246,0.10)", color: "#A78BFA",
+                        border: "1px solid rgba(139,92,246,0.25)" }}>
+                      {label}
+                    </span>
+                  );
+                })()}
               </div>
+              {/* ── 43.3 Description preview ── */}
+              {ds.description && (
+                <div style={{
+                  paddingLeft: 16, marginTop: 3,
+                  fontFamily: S.ui, fontSize: 11, color: S.text3,
+                  maxWidth: 420, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  fontStyle: "italic",
+                }}>
+                  {ds.description}
+                </div>
+              )}
             </div>
             <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.text2 }}>
               {ds.period_count}
@@ -2154,8 +4054,19 @@ function DatasetsTab({
             }}>
               {ds.source.toUpperCase()}
             </span>
-            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, display: "flex", flexDirection: "column", gap: 2 }}>
               {ds.created_at ? new Date(ds.created_at).toLocaleDateString() : "\u2014"}
+              {/* ── 46.3 Relative age chip ── */}
+              {ds.created_at && (() => {
+                const days = Math.floor((Date.now() - new Date(ds.created_at).getTime()) / 86400000);
+                const label = days === 0 ? "TODAY" : days === 1 ? "1D AGO" : days < 30 ? `${days}D AGO` : days < 365 ? `${Math.floor(days / 30)}MO AGO` : `${(days / 365).toFixed(1)}YR AGO`;
+                return (
+                  <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 600, color: days === 0 ? HEX.green : S.text3,
+                    letterSpacing: "0.05em" }}>
+                    {label}
+                  </span>
+                );
+              })()}
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <button
@@ -2219,17 +4130,51 @@ function DatasetsTab({
           </div>
 
           {/* Accordion expand — edit form or last 3 runs */}
-          {expandedId === ds.id && (() => {
-            const dsRuns = [...runs]
+          {(expandAll || expandedId === ds.id) && (() => {
+            const allDsRuns = [...runs]
               .filter((r) => r.dataset_id === ds.id)
-              .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
-              .slice(0, 3);
+              .sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? "")); // oldest first
+            const dsRuns = [...allDsRuns].reverse().slice(0, 3); // newest first for table
             return (
               <div style={{
                 borderTop: `1px solid ${S.rim}`,
                 background: S.sub, padding: "12px 20px",
                 display: "flex", flexDirection: "column", gap: 6,
               }}>
+                {/* ── 51.3 Recent runs mini-timeline ── */}
+                {allDsRuns.length > 0 && (() => {
+                  const MAX_CELLS = 20;
+                  const cells = allDsRuns.slice(-MAX_CELLS); // last N, oldest→newest
+                  return (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, paddingBottom: 8, borderBottom: `1px solid ${S.rim}`, marginBottom: 2 }}>
+                      <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.10em", flexShrink: 0 }}>
+                        RUNS
+                      </span>
+                      <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
+                        {cells.map((r, i) => {
+                          const label = r.overall_effective ? "PASS" : "FAIL";
+                          const bg = r.overall_effective ? `rgba(34,197,94,0.55)` : `rgba(239,68,68,0.55)`;
+                          const border = r.overall_effective ? HEX.greenBorder : HEX.redBorder;
+                          const tip = [r.created_at ? r.created_at.slice(0, 10) : "", label, r.standard ? r.standard.replace("_", " ") : ""].filter(Boolean).join(" · ");
+                          return (
+                            <div
+                              key={r.run_id + i}
+                              title={tip}
+                              style={{
+                                width: 10, height: 14, borderRadius: 2,
+                                background: bg, border: `1px solid ${border}`,
+                                cursor: "default", flexShrink: 0,
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                      <span style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>
+                        ({allDsRuns.length} total{allDsRuns.length > MAX_CELLS ? `, last ${MAX_CELLS} shown` : ""})
+                      </span>
+                    </div>
+                  );
+                })()}
                 {/* ── 27.2 Edit metadata strip ── */}
                 {editingDsId === ds.id && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "12px 0 14px", borderBottom: `1px solid ${S.rim}`, marginBottom: 8 }}>
@@ -2304,6 +4249,83 @@ function DatasetsTab({
                     </div>
                   </div>
                 )}
+                {/* ── 31.3 Dataset statistics summary ── */}
+                {dsRuns.length >= 1 && (() => {
+                  const ratios = dsRuns.map((r) => r.dollar_offset_ratio).filter((v): v is number => v != null);
+                  if (ratios.length === 0) return null;
+                  const mean = ratios.reduce((s, v) => s + v, 0) / ratios.length;
+                  const stdDev = Math.sqrt(ratios.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / ratios.length);
+                  const min = Math.min(...ratios);
+                  const max = Math.max(...ratios);
+                  const passCount = dsRuns.filter((r) => r.overall_effective).length;
+                  const stats = [
+                    { label: "MEAN D.O.", value: mean.toFixed(4), color: mean >= 0.80 && mean <= 1.25 ? HEX.green : HEX.red },
+                    { label: "STD DEV", value: stdDev.toFixed(4), color: stdDev < 0.05 ? HEX.green : stdDev < 0.10 ? HEX.amber : HEX.red },
+                    { label: "MIN", value: min.toFixed(4), color: min >= 0.80 ? HEX.green : HEX.red },
+                    { label: "MAX", value: max.toFixed(4), color: max <= 1.25 ? HEX.green : HEX.red },
+                    { label: "PASS RATE", value: `${Math.round((passCount / dsRuns.length) * 100)}%`, color: passCount === dsRuns.length ? HEX.green : passCount > 0 ? HEX.amber : HEX.red },
+                  ];
+                  return (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+                      {stats.map(({ label, value, color }) => (
+                        <div key={label} style={{
+                          padding: "6px 10px", borderRadius: 3,
+                          background: S.sub, border: `1px solid ${S.rim}`,
+                          display: "flex", flexDirection: "column", gap: 2, minWidth: 70,
+                        }}>
+                          <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.10em" }}>{label}</span>
+                          <span style={{ fontFamily: S.mono, fontSize: 13, fontWeight: 800, color }}>{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+                {/* ── 36.2 Multi-standard breakdown table ── */}
+                {dsRuns.length >= 2 && (() => {
+                  const stdGroups = dsRuns.reduce<Record<string, { total: number; effective: number; ratios: number[] }>>((acc, r) => {
+                    if (!acc[r.standard]) acc[r.standard] = { total: 0, effective: 0, ratios: [] };
+                    acc[r.standard].total++;
+                    if (r.overall_effective) acc[r.standard].effective++;
+                    if (r.dollar_offset_ratio != null) acc[r.standard].ratios.push(r.dollar_offset_ratio);
+                    return acc;
+                  }, {});
+                  const stdKeys = Object.keys(stdGroups);
+                  if (stdKeys.length < 2) return null;
+                  const STD_LABELS: Record<string, string> = { IAS_39: "IAS 39", IFRS_9: "IFRS 9", ASC_815: "ASC 815" };
+                  return (
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 6 }}>
+                        BY STANDARD
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: `repeat(${stdKeys.length}, 1fr)`, gap: 8 }}>
+                        {stdKeys.map((std) => {
+                          const g = stdGroups[std];
+                          const passRate = Math.round((g.effective / g.total) * 100);
+                          const passColor = passRate >= 80 ? HEX.green : passRate >= 60 ? HEX.amber : HEX.red;
+                          const avgDo = g.ratios.length > 0 ? g.ratios.reduce((s, v) => s + v, 0) / g.ratios.length : null;
+                          return (
+                            <div key={std} style={{ padding: "8px 12px", borderRadius: 4, background: S.sub, border: `1px solid ${S.rim}` }}>
+                              <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.1em", marginBottom: 4 }}>
+                                {STD_LABELS[std] ?? std}
+                              </div>
+                              <div style={{ fontFamily: S.mono, fontSize: 18, fontWeight: 800, color: passColor, lineHeight: 1, marginBottom: 2 }}>
+                                {passRate}%
+                              </div>
+                              <div style={{ fontFamily: S.ui, fontSize: 10, color: S.text3, marginBottom: 2 }}>
+                                {g.effective}/{g.total} effective
+                              </div>
+                              {avgDo != null && (
+                                <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text2 }}>
+                                  D.O. {avgDo.toFixed(4)}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
                 <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 4 }}>
                   ASSESSMENT HISTORY
                 </div>
@@ -2918,13 +4940,15 @@ type SortKey = "dataset" | "do_ratio" | "r2" | "verdict" | "date" | null;
 
 const STARRED_KEY = "hec_starred_runs";
 
-function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigateRun: (id: string) => void; onDeleteRuns: (ids: string[]) => Promise<void> }) {
+function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; onNavigateRun: (id: string) => void; onDeleteRuns: (ids: string[]) => Promise<void>; token: string }) {
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [stdFilter, setStdFilter] = useState("ALL");
   const [verdictFilter, setVerdictFilter] = useState<"ALL" | "EFFECTIVE" | "INEFFECTIVE">("ALL");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [showStarredOnly, setShowStarredOnly] = useState(false);
+  const [showR2Only, setShowR2Only] = useState(false); // ── 51.2
   const [starredIds, setStarredIds] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem(STARRED_KEY) || "[]")); }
     catch { return new Set(); }
@@ -2952,8 +4976,10 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
   const [doMax, setDoMax] = useState("");
   const [density, setDensity] = useState<"compact" | "normal">("normal");
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 25;
+  // ── 38.2 Dynamic page size ──
+  const [pageSize, setPageSize] = useState<25 | 50 | 0>(25);
   const [groupByDataset, setGroupByDataset] = useState(false);
+  const [copyIdsFlash, setCopyIdsFlash] = useState(false); // ── 54.2
   // ── Column visibility ──
   const [colVis, setColVis] = useState({ standard: true, do_ratio: true, r2: true, verdict: true, date: true });
   const [showColMenu, setShowColMenu] = useState(false);
@@ -2994,6 +5020,80 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
   };
 
 
+  // ── 30.1 Per-run analyst notes ──
+  const RUN_NOTES_KEY = "hec_run_notes";
+  const [runNotes, setRunNotes] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem(RUN_NOTES_KEY) || "{}"); }
+    catch { return {}; }
+  });
+  const [editNoteRunId, setEditNoteRunId] = useState<string | null>(null);
+  const saveRunNote = (runId: string, text: string) => {
+    const next = { ...runNotes };
+    if (text.trim()) next[runId] = text.trim();
+    else delete next[runId];
+    setRunNotes(next);
+    localStorage.setItem(RUN_NOTES_KEY, JSON.stringify(next));
+    setEditNoteRunId(null);
+  };
+
+  // ── 33.1 Pin-to-top runs ──
+  const PINNED_KEY = "hec_pinned_runs";
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(PINNED_KEY) || "[]")); }
+    catch { return new Set(); }
+  });
+  useEffect(() => {
+    localStorage.setItem(PINNED_KEY, JSON.stringify([...pinnedIds]));
+  }, [pinnedIds]);
+  const togglePin = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPinnedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) { next.delete(id); }
+      else if (next.size < 3) { next.add(id); }
+      return next;
+    });
+  };
+
+  // ── 30.2 Evidence binder download ──
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const downloadBinder = async (runId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (downloadingId) return;
+    setDownloadingId(runId);
+    try {
+      const data = await dashboardFetch(`/api/v1/hedge-effectiveness/runs/${runId}/export`, token);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `he-binder-${runId.slice(0, 8)}.json`;
+      a.click(); URL.revokeObjectURL(url);
+    } catch { /* silently ignore */ }
+    finally { setDownloadingId(null); }
+  };
+
+  // ── AI commentary draft ──
+  const [commentaryRunId, setCommentaryRunId] = useState<string | null>(null);
+  const [commentary, setCommentary] = useState<CommentaryResponse | null>(null);
+  const [commentaryDraft, setCommentaryDraft] = useState("");
+  const [commentaryBusy, setCommentaryBusy] = useState(false);
+
+  const requestCommentary = async (runId: string) => {
+    if (!token || commentaryBusy) return;
+    setCommentaryRunId(runId);
+    setCommentaryBusy(true);
+    setCommentary(null);
+    try {
+      const res = await draftCommentary("hedge_effectiveness", runId, token);
+      setCommentary(res);
+      setCommentaryDraft(res.draft);
+    } catch {
+      setCommentaryDraft("Failed to generate commentary. Please try again.");
+    } finally {
+      setCommentaryBusy(false);
+    }
+  };
+
   // ── Filter presets ──
   const PRESETS_KEY = "hec_filter_presets";
   type Preset = { name: string; search: string; stdFilter: string; verdictFilter: "ALL" | "EFFECTIVE" | "INEFFECTIVE"; doMin: string; doMax: string };
@@ -3003,6 +5103,19 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
   });
   const [presetName, setPresetName] = useState("");
   const [showPresets, setShowPresets] = useState(false);
+
+  // ── 36.3 Keyboard shortcut help overlay ──
+  const [showHelp, setShowHelp] = useState(false);
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "SELECT") return;
+      if (e.key === "?") { e.preventDefault(); setShowHelp((v) => !v); }
+      if (e.key === "Escape") setShowHelp(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const savePreset = () => {
     const name = presetName.trim();
@@ -3028,7 +5141,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
   }, [starredIds]);
 
   // Reset page whenever any filter changes
-  useEffect(() => { setPage(1); }, [search, stdFilter, verdictFilter, showStarredOnly, dateFrom, dateTo, doMin, doMax, tagFilter]);
+  useEffect(() => { setPage(1); }, [search, stdFilter, verdictFilter, showStarredOnly, showR2Only, dateFrom, dateTo, doMin, doMax, tagFilter]);
 
   const toggleStar = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -3078,8 +5191,10 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
       if (doMax !== "" && (r.dollar_offset_ratio == null || r.dollar_offset_ratio > parseFloat(doMax))) return false;
       return true;
     })
-    .filter((r) => tagFilter === "ALL" || tags[r.run_id] === tagFilter);
+    .filter((r) => tagFilter === "ALL" || tags[r.run_id] === tagFilter)
+    .filter((r) => !showR2Only || r.regression_r_squared != null); // ── 51.2
 
+  const PAGE_SIZE = pageSize === 0 ? filteredRuns.length || 1 : pageSize;
   const totalPages = Math.max(1, Math.ceil(filteredRuns.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
 
@@ -3112,16 +5227,39 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusIdx, displayRuns, page, totalPages, onNavigateRun]);
 
+  // ── 34.3 Human-readable run age ──
+  const [showAge, setShowAge] = useState(false);
+  const runAge = (dateStr: string | null): string => {
+    if (!dateStr) return "—";
+    const ms = Date.now() - new Date(dateStr).getTime();
+    const sec = Math.floor(ms / 1000);
+    if (sec < 60) return `${sec}s`;
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min}m`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr}h`;
+    const day = Math.floor(hr / 24);
+    if (day < 7) return `${day}d`;
+    const week = Math.floor(day / 7);
+    if (week < 5) return `${week}w`;
+    const month = Math.floor(day / 30);
+    if (month < 12) return `${month}mo`;
+    return `${Math.floor(day / 365)}y`;
+  };
+
+  // ── 34.2 Enhanced CSV export (includes note + tag) ──
   const handleExportCsv = (onlySelected = false) => {
     const source = onlySelected
       ? filteredRuns.filter((r) => selectedIds.has(r.run_id))
       : filteredRuns;
-    const header = "run_id,dataset_name,currency_pair,standard,dollar_offset_ratio,regression_r_squared,overall_effective,run_hash,created_at";
+    const header = "run_id,dataset_name,currency_pair,standard,dollar_offset_ratio,regression_r_squared,overall_effective,run_hash,created_at,note,tag";
     const rows = source.map((r) =>
       [
         r.run_id, `"${r.dataset_name}"`, r.currency_pair ?? "",
         r.standard, r.dollar_offset_ratio ?? "", r.regression_r_squared ?? "",
         r.overall_effective, r.run_hash, r.created_at ?? "",
+        `"${(runNotes[r.run_id] ?? "").replace(/"/g, '""')}"`,
+        tags[r.run_id] ?? "",
       ].join(",")
     );
     const csv = [header, ...rows].join("\n");
@@ -3185,6 +5323,25 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
             type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
             style={{ ...inputBase, cursor: "pointer", width: 130 }}
           />
+          {/* ── 40.2 Quick date range presets ── */}
+          {([7, 30, 90] as const).map((days) => {
+            const from = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+            const active = dateFrom === from && dateTo === "";
+            return (
+              <button key={days}
+                onClick={() => { setDateFrom(from); setDateTo(""); }}
+                title={`Last ${days} days`}
+                style={{
+                  fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                  padding: "3px 7px", borderRadius: 3, cursor: "pointer", border: "none",
+                  background: active ? HEX.cyan : S.sub,
+                  color: active ? "#fff" : S.text3,
+                  transition: "all 0.15s",
+                }}>
+                {days}D
+              </button>
+            );
+          })}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>D.O.</span>
@@ -3227,6 +5384,21 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
           </svg>
           STARRED{starredIds.size > 0 ? ` (${starredIds.size})` : ""}
+        </button>
+        {/* ── 51.2 R²-only filter toggle ── */}
+        <button
+          onClick={() => setShowR2Only((v) => !v)}
+          style={{
+            fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+            padding: "5px 12px", borderRadius: 3, cursor: "pointer",
+            background: showR2Only ? HEX.cyan : S.sub,
+            color: showR2Only ? "#fff" : S.text3,
+            border: "none", display: "flex", alignItems: "center", gap: 4,
+            transition: "all 0.15s",
+          }}
+          title="Show only runs that include regression R² data"
+        >
+          R² DATA
         </button>
         {/* ── 26.1 Tag filter ── */}
         {(["ALL", "REVIEW", "APPROVED", "FLAGGED"] as const).map((t) => (
@@ -3303,6 +5475,18 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
             </div>
           )}
         </div>
+        <button
+          onClick={() => setShowHelp((v) => !v)}
+          title="Keyboard shortcuts (?)"
+          style={{
+            fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+            padding: "5px 10px", borderRadius: 3, cursor: "pointer",
+            background: showHelp ? S.sub : "transparent",
+            color: showHelp ? S.text1 : S.text3,
+            border: `1px solid ${showHelp ? S.rim : "transparent"}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >?</button>
         <div style={{ flex: 1 }} />
         {/* Column visibility menu */}
         <div style={{ position: "relative" }}>
@@ -3412,6 +5596,32 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
           </svg>
           {selectedIds.size > 0 ? `EXPORT SELECTED (${selectedIds.size})` : "EXPORT CSV"}
         </button>
+        {/* ── 54.2 Copy filtered run IDs ── */}
+        {filteredRuns.length > 0 && (
+          <button
+            onClick={() => {
+              const ids = filteredRuns.map((r) => r.run_id).join("\n");
+              navigator.clipboard.writeText(ids).catch(() => {});
+              setCopyIdsFlash(true);
+              setTimeout(() => setCopyIdsFlash(false), 1500);
+            }}
+            title={`Copy ${filteredRuns.length} run ID${filteredRuns.length !== 1 ? "s" : ""} to clipboard`}
+            style={{
+              fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+              padding: "5px 12px", borderRadius: 3, cursor: "pointer",
+              background: copyIdsFlash ? HEX.greenBg : "transparent",
+              color: copyIdsFlash ? HEX.green : S.text3,
+              border: `1px solid ${copyIdsFlash ? HEX.greenBorder : "transparent"}`,
+              display: "flex", alignItems: "center", gap: 4,
+              transition: "all 0.2s",
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+            </svg>
+            {copyIdsFlash ? "COPIED!" : "COPY IDS"}
+          </button>
+        )}
         {selectedIds.size >= 2 && (
           <button
             onClick={() => setCompareOpen(true)}
@@ -3541,6 +5751,288 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
         )}
       </div>
 
+      {/* ── 49.2 Selection summary bar ── */}
+      {selectedIds.size >= 1 && (() => {
+        const sel = runs.filter((r) => selectedIds.has(r.run_id));
+        const selEff = sel.filter((r) => r.overall_effective).length;
+        const selDo = sel.map((r) => r.dollar_offset_ratio).filter((v): v is number => v != null);
+        const avgSelDo = selDo.length > 0 ? selDo.reduce((s, v) => s + v, 0) / selDo.length : null;
+        const passRate = Math.round((selEff / sel.length) * 100);
+        const color = passRate === 100 ? HEX.green : passRate >= 50 ? HEX.amber : HEX.red;
+        return (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap",
+            padding: "6px 14px", borderRadius: 4,
+            background: "rgba(28,98,242,0.05)", border: "1px solid rgba(28,98,242,0.18)",
+          }}>
+            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.12em" }}>
+              SELECTION ({selectedIds.size})
+            </span>
+            <div style={{ width: 1, height: 14, background: "rgba(28,98,242,0.2)" }} />
+            <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color }}>
+              {selEff}/{sel.length} EFFECTIVE
+            </span>
+            <span style={{ fontFamily: S.mono, fontSize: 10, color, letterSpacing: "0.06em" }}>{passRate}% PASS</span>
+            {avgSelDo != null && (
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text2 }}>
+                AVG D.O. {avgSelDo.toFixed(4)}
+              </span>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── 35.2 Active filter pill bar ── */}
+      {(() => {
+        const activeFilters: { label: string; onClear: () => void }[] = [];
+        if (search.trim()) activeFilters.push({ label: `⌕ "${search.trim()}"`, onClear: () => setSearch("") });
+        if (stdFilter !== "ALL") activeFilters.push({ label: `STD: ${stdFilter.replace("_", " ")}`, onClear: () => setStdFilter("ALL") });
+        if (verdictFilter !== "ALL") activeFilters.push({ label: `VERDICT: ${verdictFilter}`, onClear: () => setVerdictFilter("ALL") });
+        if (tagFilter !== "ALL") activeFilters.push({ label: `TAG: ${tagFilter}`, onClear: () => setTagFilter("ALL") });
+        if (showStarredOnly) activeFilters.push({ label: "★ STARRED", onClear: () => setShowStarredOnly(false) });
+        if (showR2Only) activeFilters.push({ label: "R² DATA ONLY", onClear: () => setShowR2Only(false) }); // ── 51.2
+        if (dateFrom) activeFilters.push({ label: `FROM: ${dateFrom}`, onClear: () => setDateFrom("") });
+        if (dateTo) activeFilters.push({ label: `TO: ${dateTo}`, onClear: () => setDateTo("") });
+        if (doMin) activeFilters.push({ label: `D.O. \u2265 ${doMin}`, onClear: () => setDoMin("") });
+        if (doMax) activeFilters.push({ label: `D.O. \u2264 ${doMax}`, onClear: () => setDoMax("") });
+        if (activeFilters.length === 0) return null;
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", padding: "2px 0" }}>
+            <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, letterSpacing: "0.08em" }}>FILTERS:</span>
+            {activeFilters.map((f) => (
+              <span
+                key={f.label}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                  padding: "3px 7px", borderRadius: 3,
+                  background: "rgba(28,98,242,0.07)", color: HEX.cyan,
+                  border: "1px solid rgba(28,98,242,0.18)",
+                }}
+              >
+                {f.label}
+                <button
+                  onClick={(e) => { e.stopPropagation(); f.onClear(); }}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: HEX.cyan, padding: "0 0 0 2px", fontSize: 13, lineHeight: 1,
+                    opacity: 0.7,
+                  }}
+                  title={`Clear filter`}
+                >×</button>
+              </span>
+            ))}
+            {activeFilters.length >= 2 && (
+              <button
+                onClick={() => {
+                  setSearch(""); setStdFilter("ALL"); setVerdictFilter("ALL");
+                  setTagFilter("ALL"); setShowStarredOnly(false);
+                  setDateFrom(""); setDateTo(""); setDoMin(""); setDoMax("");
+                }}
+                style={{
+                  fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                  padding: "3px 8px", borderRadius: 3, cursor: "pointer",
+                  background: "transparent", color: S.text3,
+                  border: `1px solid ${S.rim}`,
+                }}
+              >CLEAR ALL</button>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── 41.2 Filter statistics summary row ── */}
+      {filteredRuns.length > 0 && (() => {
+        const STD_LABELS: Record<string, string> = { IAS_39: "IAS 39", IFRS_9: "IFRS 9", ASC_815: "ASC 815" };
+        const stdKeys = Array.from(new Set(filteredRuns.map((r) => r.standard))).sort();
+        if (stdKeys.length < 2) return null; // only show when ≥2 standards in view
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 2px", flexWrap: "wrap" }}>
+            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>BY STD:</span>
+            {stdKeys.map((std) => {
+              const stdRuns = filteredRuns.filter((r) => r.standard === std);
+              const pass = stdRuns.filter((r) => r.overall_effective).length;
+              const pct = Math.round((pass / stdRuns.length) * 100);
+              const color = pct === 100 ? HEX.green : pct >= 50 ? HEX.amber : HEX.red;
+              return (
+                <span key={std} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text2 }}>{STD_LABELS[std] ?? std}</span>
+                  <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>{stdRuns.length}×</span>
+                  <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color }}>{pct}%</span>
+                </span>
+              );
+            })}
+          </div>
+        );
+      })()}
+
+      {/* ── 53.2 Verdict ratio visual bar ── */}
+      {filteredRuns.length >= 1 && (() => {
+        const passCount = filteredRuns.filter((r) => r.overall_effective).length;
+        const failCount = filteredRuns.length - passCount;
+        const passPct = (passCount / filteredRuns.length) * 100;
+        const failPct = 100 - passPct;
+        const passColor = passPct >= 80 ? HEX.green : passPct >= 50 ? HEX.amber : HEX.red;
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <div style={{ height: 8, borderRadius: 3, overflow: "hidden", display: "flex", background: S.sub }}>
+              {passCount > 0 && (
+                <div
+                  title={`${passCount} effective (${Math.round(passPct)}%)`}
+                  style={{ width: `${passPct}%`, background: passColor, opacity: 0.7, transition: "width 0.3s" }}
+                />
+              )}
+              {failCount > 0 && (
+                <div
+                  title={`${failCount} ineffective (${Math.round(failPct)}%)`}
+                  style={{ width: `${failPct}%`, background: HEX.red, opacity: 0.5, transition: "width 0.3s" }}
+                />
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              {passCount > 0 && (
+                <span style={{ fontFamily: S.mono, fontSize: 9, color: passColor, fontWeight: 700 }}>
+                  ■ {passCount} PASS
+                </span>
+              )}
+              {failCount > 0 && (
+                <span style={{ fontFamily: S.mono, fontSize: 9, color: HEX.red, fontWeight: 700 }}>
+                  ■ {failCount} FAIL
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 32.3 Monthly performance heatmap ── */}
+      {runs.length >= 1 && (() => {
+        const year = new Date().getFullYear();
+        const currentMonth = new Date().getMonth() + 1;
+        const months = Array.from({ length: 12 }, (_, i) => {
+          const month = i + 1;
+          const mRuns = runs.filter((r) => {
+            if (!r.created_at) return false;
+            const d = new Date(r.created_at);
+            return d.getFullYear() === year && d.getMonth() + 1 === month;
+          });
+          const passRate = mRuns.length === 0 ? null
+            : Math.round((mRuns.filter((r) => r.overall_effective).length / mRuns.length) * 100);
+          return {
+            month,
+            label: ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][i],
+            total: mRuns.length,
+            passRate,
+          };
+        });
+        if (!months.some((m) => m.total > 0)) return null;
+        return (
+          <div style={{
+            padding: "8px 12px", borderRadius: 4, background: S.panel, border: `1px solid ${S.rim}`,
+            display: "flex", alignItems: "center", gap: 8,
+          }}>
+            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.12em", flexShrink: 0 }}>
+              {year}
+            </span>
+            <div style={{ display: "flex", gap: 2, flex: 1 }}>
+              {months.map(({ month, label, total, passRate }) => {
+                const isCurrent = month === currentMonth;
+                const bg = passRate === null ? "transparent"
+                  : passRate >= 80 ? "rgba(5,150,105,0.14)"
+                  : passRate >= 60 ? "rgba(217,119,6,0.14)"
+                  : "rgba(220,38,38,0.14)";
+                const borderColor = passRate === null ? S.rim
+                  : passRate >= 80 ? HEX.greenBorder
+                  : passRate >= 60 ? "rgba(217,119,6,0.40)"
+                  : HEX.redBorder;
+                const textColor = passRate === null ? S.text3
+                  : passRate >= 80 ? HEX.green
+                  : passRate >= 60 ? HEX.amber
+                  : HEX.red;
+                return (
+                  <div
+                    key={month}
+                    title={total === 0 ? `${label}: no runs` : `${label}: ${passRate}% pass rate (${total} run${total !== 1 ? "s" : ""})`}
+                    style={{
+                      flex: 1, padding: "4px 2px", borderRadius: 3, textAlign: "center",
+                      background: bg,
+                      border: `1px solid ${isCurrent ? HEX.cyan + "60" : borderColor}`,
+                      boxShadow: isCurrent ? `0 0 0 1px ${HEX.cyan}20` : "none",
+                      cursor: "default",
+                    }}
+                  >
+                    <div style={{ fontFamily: S.mono, fontSize: 8, color: isCurrent ? HEX.cyan : S.text3, marginBottom: 1 }}>
+                      {label}
+                    </div>
+                    <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: textColor, lineHeight: 1 }}>
+                      {passRate !== null ? `${passRate}%` : "—"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 33.3 Inline delta bar (2 selected, compare modal closed) ── */}
+      {selectedIds.size === 2 && !compareOpen && (() => {
+        const [idA, idB] = [...selectedIds];
+        const rA = runs.find((r) => r.run_id === idA);
+        const rB = runs.find((r) => r.run_id === idB);
+        if (!rA || !rB) return null;
+        const doDelta = rA.dollar_offset_ratio != null && rB.dollar_offset_ratio != null
+          ? rA.dollar_offset_ratio - rB.dollar_offset_ratio : null;
+        const r2Delta = rA.regression_r_squared != null && rB.regression_r_squared != null
+          ? rA.regression_r_squared - rB.regression_r_squared : null;
+        const verdictMatch = rA.overall_effective === rB.overall_effective;
+        const fmtDelta = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(4)}`;
+        return (
+          <div style={{
+            padding: "7px 20px", borderRadius: 4, background: "rgba(28,98,242,0.05)",
+            border: `1px solid rgba(28,98,242,0.20)`, display: "flex", alignItems: "center", gap: 20,
+          }}>
+            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.12em" }}>
+              QUICK Δ
+            </span>
+            <div style={{ width: 1, height: 16, background: S.rim }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>D.O.</span>
+              {doDelta != null ? (
+                <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: Math.abs(doDelta) < 0.01 ? S.text3 : doDelta > 0 ? HEX.green : HEX.red }}>
+                  {fmtDelta(doDelta)}
+                </span>
+              ) : <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>—</span>}
+            </div>
+            <div style={{ width: 1, height: 16, background: S.rim }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>R²</span>
+              {r2Delta != null ? (
+                <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: Math.abs(r2Delta) < 0.01 ? S.text3 : r2Delta > 0 ? HEX.green : HEX.red }}>
+                  {fmtDelta(r2Delta)}
+                </span>
+              ) : <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>—</span>}
+            </div>
+            <div style={{ width: 1, height: 16, background: S.rim }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>VERDICT</span>
+              <span style={{
+                fontFamily: S.mono, fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 2,
+                background: verdictMatch ? HEX.greenBg : HEX.redBg,
+                color: verdictMatch ? HEX.green : HEX.red,
+                border: `1px solid ${verdictMatch ? HEX.greenBorder : HEX.redBorder}`,
+              }}>
+                {verdictMatch ? "AGREE" : "DISAGREE"}
+              </span>
+            </div>
+            <div style={{ flex: 1 }} />
+            <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>
+              {rA.dataset_name.slice(0, 16)}{rA.dataset_name.length > 16 ? "…" : ""} vs {rB.dataset_name.slice(0, 16)}{rB.dataset_name.length > 16 ? "…" : ""}
+            </span>
+          </div>
+        );
+      })()}
+
       {/* Column headers */}
       {(() => {
         const cols = [
@@ -3550,7 +6042,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
           { label: "R²",         key: "r2" as SortKey,       vis: colVis.r2,              w: "80px" },
           { label: "VERDICT",    key: "verdict" as SortKey,  vis: colVis.verdict,         w: "100px"},
           { label: "HASH",       key: null,                   vis: true,                   w: "120px"},
-          { label: "DATE",       key: "date" as SortKey,     vis: colVis.date,            w: "90px" },
+          { label: showAge ? "AGE" : "DATE", key: "date" as SortKey, vis: colVis.date, w: "90px" },
         ];
         const visibleCols = cols.filter((c) => c.vis);
         const gridCols = ["28px", ...visibleCols.map((c) => c.w)].join(" ");
@@ -3635,17 +6127,51 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
                   onMouseEnter={(e) => { if (!selectedIds.has(r.run_id)) e.currentTarget.style.background = HEX.bgSub; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = selectedIds.has(r.run_id) ? "rgba(28,98,242,0.04)" : "var(--bg-panel)"; }}
                 >
-                  <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, borderRadius: "0", background: r.overall_effective ? HEX.green : HEX.red }} />
+                  <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, borderRadius: "0", background: pinnedIds.has(r.run_id) ? HEX.cyan : (r.overall_effective ? HEX.green : HEX.red) }} />
                   <div style={{ display: "flex", alignItems: "center" }}>
                     <input type="checkbox" checked={selectedIds.has(r.run_id)} onChange={() => {}} onClick={(e) => toggleSelect(r.run_id, e)} style={{ cursor: "pointer", accentColor: HEX.cyan, width: 13, height: 13 }} />
                   </div>
-                  <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>{r.run_id.slice(0, 8)}…</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>{r.run_id.slice(0, 8)}…</span>
+                    {/* ── 45.2 Copy run ID button ── */}
+                    <button
+                      title={`Copy full run ID: ${r.run_id}`}
+                      onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(r.run_id).catch(() => {}); }}
+                      style={{
+                        background: "none", border: "none", padding: "1px 3px", cursor: "pointer",
+                        color: S.text3, borderRadius: 2, lineHeight: 1, fontSize: 10,
+                        display: "flex", alignItems: "center",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = HEX.cyan)}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = S.text3)}
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                      </svg>
+                    </button>
+                  </span>
                   <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2 }}>{r.standard.replace("_", " ")}</span>
                   <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: r.dollar_offset_ratio != null && r.dollar_offset_ratio >= 0.80 && r.dollar_offset_ratio <= 1.25 ? HEX.green : S.text2 }}>
                     {r.dollar_offset_ratio != null ? r.dollar_offset_ratio.toFixed(4) : "—"}
                   </span>
-                  <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: r.regression_r_squared != null && r.regression_r_squared >= 0.80 ? HEX.green : S.text2 }}>
-                    {r.regression_r_squared != null ? r.regression_r_squared.toFixed(4) : "—"}
+                  <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: r.regression_r_squared != null && r.regression_r_squared >= 0.80 ? HEX.green : S.text2 }}>
+                      {r.regression_r_squared != null ? r.regression_r_squared.toFixed(4) : "—"}
+                    </span>
+                    {/* ── 46.2 R² quality badge ── */}
+                    {r.regression_r_squared != null && (() => {
+                      const v = r.regression_r_squared;
+                      const label = v >= 0.80 ? "STRONG" : v >= 0.60 ? "MOD" : "WEAK";
+                      const color = v >= 0.80 ? HEX.green : v >= 0.60 ? HEX.amber : HEX.red;
+                      const bg = v >= 0.80 ? HEX.greenBg : v >= 0.60 ? "rgba(217,119,6,0.10)" : HEX.redBg;
+                      const border = v >= 0.80 ? HEX.greenBorder : v >= 0.60 ? "rgba(217,119,6,0.30)" : HEX.redBorder;
+                      return (
+                        <span style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, letterSpacing: "0.06em",
+                          padding: "1px 4px", borderRadius: 2, background: bg, color, border: `1px solid ${border}` }}>
+                          {label}
+                        </span>
+                      );
+                    })()}
                   </span>
                   <span style={{ display: "flex", alignItems: "center" }}>
                     <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 800, padding: "2px 7px", borderRadius: 2, background: r.overall_effective ? HEX.greenBg : HEX.redBg, color: r.overall_effective ? HEX.green : HEX.red, border: `1px solid ${r.overall_effective ? HEX.greenBorder : HEX.redBorder}` }}>
@@ -3660,7 +6186,48 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
             </div>
           );
         });
-      })() : displayRuns.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE).map((r, rowIdx) => {
+      })() : (() => {
+        // ── 33.1 Separate pinned runs ──
+        const pinnedRows = filteredRuns.filter((r) => pinnedIds.has(r.run_id));
+        const unpinnedRows = displayRuns.filter((r) => !pinnedIds.has(r.run_id));
+        const pageRows = unpinnedRows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+        const allRows = [...pinnedRows, ...pageRows];
+        const pinnedSeparatorIdx = pinnedRows.length;
+        // ── 35.3 Dataset-relative rank map ──
+        const dsRunGroups = runs.reduce<Record<string, Run[]>>((acc, r) => {
+          if (!acc[r.dataset_id]) acc[r.dataset_id] = [];
+          acc[r.dataset_id].push(r);
+          return acc;
+        }, {});
+        const dsRankMap: Record<string, number> = {};
+        for (const [, dsRuns] of Object.entries(dsRunGroups)) {
+          if (dsRuns.length < 2) continue;
+          const ranked = [...dsRuns].sort((a, b) => {
+            const da = a.dollar_offset_ratio != null ? Math.abs(a.dollar_offset_ratio - 1.00) : Infinity;
+            const db = b.dollar_offset_ratio != null ? Math.abs(b.dollar_offset_ratio - 1.00) : Infinity;
+            return da - db;
+          });
+          ranked.forEach((r, i) => { dsRankMap[r.run_id] = i + 1; });
+        }
+        // ── 43.2 First run per dataset map ──
+        const dsFirstRunMap: Record<string, string> = {};
+        for (const [dsId, dsRuns] of Object.entries(dsRunGroups)) {
+          const earliest = [...dsRuns]
+            .filter((r) => r.created_at)
+            .sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""))[0];
+          if (earliest) dsFirstRunMap[dsId] = earliest.run_id;
+        }
+        // ── 44.2 Run sequence map (chronological position within dataset) ──
+        const dsSeqMap: Record<string, { seq: number; total: number }> = {};
+        for (const [, dsRuns] of Object.entries(dsRunGroups)) {
+          const ordered = [...dsRuns]
+            .filter((r) => r.created_at)
+            .sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+          ordered.forEach((r, i) => {
+            dsSeqMap[r.run_id] = { seq: i + 1, total: ordered.length };
+          });
+        }
+        return allRows.map((r, rowIdx) => {
         const visCols = [
           { vis: true,             w: "2fr"   },
           { vis: colVis.standard,  w: "90px"  },
@@ -3689,11 +6256,11 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
             position: "relative",
           }}
         >
-          {/* Left verdict indicator */}
+          {/* Left verdict/pin indicator */}
           <div style={{
             position: "absolute", left: 0, top: 0, bottom: 0, width: 3,
             borderRadius: "4px 0 0 4px",
-            background: r.overall_effective ? HEX.green : HEX.red,
+            background: pinnedIds.has(r.run_id) ? HEX.cyan : (r.overall_effective ? HEX.green : HEX.red),
           }} />
 
           {/* Checkbox */}
@@ -3715,7 +6282,154 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
               {r.currency_pair && (
                 <span style={{ fontFamily: S.mono, fontSize: 12, color: HEX.cyan }}>{r.currency_pair}</span>
               )}
+              {/* ── 35.3 Dataset-relative rank badge ── */}
+              {dsRankMap[r.run_id] != null && dsRunGroups[r.dataset_id]?.length >= 2 && (
+                <span style={{
+                  fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.05em",
+                  padding: "1px 5px", borderRadius: 2, display: "inline-block", marginTop: 2,
+                  background: dsRankMap[r.run_id] === 1 ? HEX.greenBg : dsRankMap[r.run_id] === 2 ? "rgba(28,98,242,0.07)" : "transparent",
+                  color: dsRankMap[r.run_id] === 1 ? HEX.green : dsRankMap[r.run_id] === 2 ? HEX.cyan : S.text3,
+                  border: `1px solid ${dsRankMap[r.run_id] === 1 ? HEX.greenBorder : dsRankMap[r.run_id] === 2 ? "rgba(28,98,242,0.2)" : S.rim}`,
+                }}>
+                  #{dsRankMap[r.run_id]}{dsRankMap[r.run_id] === 1 ? " BEST" : ""}
+                </span>
+              )}
+              {/* ── 43.2 First run badge ── */}
+              {dsFirstRunMap[r.dataset_id] === r.run_id && (
+                <span style={{
+                  fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.05em",
+                  padding: "1px 5px", borderRadius: 2, display: "inline-block", marginTop: 2,
+                  background: "rgba(139,92,246,0.10)", color: "#A78BFA",
+                  border: "1px solid rgba(139,92,246,0.25)",
+                }}>1ST</span>
+              )}
+              {/* ── 44.2 Run sequence badge ── */}
+              {dsSeqMap[r.run_id] != null && (
+                <span title={`Run ${dsSeqMap[r.run_id].seq} of ${dsSeqMap[r.run_id].total} for this dataset`}
+                  style={{
+                    fontFamily: S.mono, fontSize: 9, fontWeight: 600, letterSpacing: "0.04em",
+                    padding: "1px 5px", borderRadius: 2, display: "inline-block", marginTop: 2,
+                    background: S.sub, color: S.text3, border: `1px solid ${S.rim}`,
+                  }}>
+                  RUN {dsSeqMap[r.run_id].seq}/{dsSeqMap[r.run_id].total}
+                </span>
+              )}
+              {/* ── 30.1 Per-run analyst note ── */}
+              {editNoteRunId === r.run_id ? (
+                <input
+                  autoFocus
+                  defaultValue={runNotes[r.run_id] ?? ""}
+                  placeholder="Add analyst note…"
+                  onClick={(e) => e.stopPropagation()}
+                  onBlur={(e) => saveRunNote(r.run_id, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveRunNote(r.run_id, (e.target as HTMLInputElement).value);
+                    if (e.key === "Escape") setEditNoteRunId(null);
+                  }}
+                  style={{
+                    display: "block", marginTop: 3, width: "100%", maxWidth: 260,
+                    fontFamily: S.mono, fontSize: 10, color: S.text2,
+                    background: S.sub, border: `1px solid ${S.rim}`, borderRadius: 3,
+                    padding: "2px 6px", outline: "none",
+                  }}
+                />
+              ) : runNotes[r.run_id] ? (
+                <div
+                  onClick={(e) => { e.stopPropagation(); setEditNoteRunId(r.run_id); }}
+                  title="Click to edit note"
+                  style={{
+                    marginTop: 2, fontFamily: S.mono, fontSize: 10, fontStyle: "italic",
+                    color: S.text3, cursor: "text", maxWidth: 260,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}
+                >
+                  {runNotes[r.run_id]}
+                </div>
+              ) : hoverId === r.run_id ? (
+                <div
+                  onClick={(e) => { e.stopPropagation(); setEditNoteRunId(r.run_id); }}
+                  style={{
+                    marginTop: 2, fontFamily: S.mono, fontSize: 10, color: S.text3,
+                    cursor: "text", opacity: 0.5,
+                  }}
+                >+ note</div>
+              ) : null}
             </div>
+            {/* ── 30.2 Evidence binder download ── */}
+            <button
+              onClick={(e) => downloadBinder(r.run_id, e)}
+              title="Download evidence binder (JSON)"
+              style={{
+                background: "transparent", border: "none", cursor: downloadingId === r.run_id ? "wait" : "pointer",
+                padding: "2px 4px", borderRadius: 3, flexShrink: 0,
+                color: downloadingId === r.run_id ? HEX.cyan : S.text3,
+                opacity: downloadingId === r.run_id ? 1 : 0.4,
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = HEX.cyan; }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = downloadingId === r.run_id ? "1" : "0.4";
+                e.currentTarget.style.color = downloadingId === r.run_id ? HEX.cyan : HEX.text3;
+              }}
+            >
+              {downloadingId === r.run_id ? (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
+                </svg>
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                </svg>
+              )}
+            </button>
+            {/* ── AI commentary (intelligence tier only) ── */}
+            {user?.plan_tier === "intelligence" && (
+              <>
+                <button
+                  onClick={() => requestCommentary(r.run_id)}
+                  disabled={commentaryBusy && commentaryRunId === r.run_id}
+                  title="Draft AI commentary"
+                  style={{
+                    padding: "4px 10px", borderRadius: 3, border: "none",
+                    background: "rgba(0,200,200,0.15)", color: "var(--accent-cyan)",
+                    fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+                    fontSize: 10, letterSpacing: 1, cursor: "pointer",
+                    flexShrink: 0,
+                  }}
+                >
+                  {commentaryBusy && commentaryRunId === r.run_id ? "..." : "✦ AI"}
+                </button>
+                {commentary && commentaryRunId === r.run_id && (
+                  <div
+                    style={{
+                      position: "absolute", left: 0, right: 0, top: "100%", zIndex: 20,
+                      marginTop: 4, padding: 12,
+                      background: "var(--bg-sub)", border: "1px solid var(--accent-cyan)",
+                      borderRadius: 4,
+                    }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <div style={{ fontSize: 10, fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", color: "var(--accent-cyan)", marginBottom: 6 }}>
+                      AI COMMENTARY DRAFT — AI-assisted · human review required
+                    </div>
+                    <textarea
+                      value={commentaryDraft}
+                      onChange={e => setCommentaryDraft(e.target.value)}
+                      rows={6}
+                      style={{
+                        width: "100%", background: "transparent", border: "1px solid var(--border-rim)",
+                        color: "var(--text-primary)", fontFamily: "var(--font-terminal,'IBM Plex Sans',sans-serif)",
+                        fontSize: 12, padding: 8, borderRadius: 3, resize: "vertical",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                    <div style={{ fontSize: 10, color: "var(--text-secondary)", marginTop: 4 }}>
+                      {`AI-assisted, human-reviewed: ${new Date().toISOString().slice(0, 10)} ${user?.email ?? ""}`}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
             <button
               onClick={(e) => toggleStar(r.run_id, e)}
               title={starredIds.has(r.run_id) ? "Unstar" : "Star this run"}
@@ -3736,6 +6450,24 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
                 fill={starredIds.has(r.run_id) ? "#D97706" : "none"}
                 stroke={starredIds.has(r.run_id) ? "#D97706" : "currentColor"} strokeWidth="2">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </button>
+            {/* ── 33.1 Pin button ── */}
+            <button
+              onClick={(e) => togglePin(r.run_id, e)}
+              title={pinnedIds.has(r.run_id) ? "Unpin" : pinnedIds.size >= 3 ? "Max 3 pinned" : "Pin to top"}
+              style={{
+                background: "transparent", border: "none", cursor: pinnedIds.size >= 3 && !pinnedIds.has(r.run_id) ? "not-allowed" : "pointer",
+                padding: "2px 4px", borderRadius: 3, flexShrink: 0,
+                color: pinnedIds.has(r.run_id) ? HEX.cyan : S.text3,
+                opacity: pinnedIds.has(r.run_id) ? 1 : 0.35,
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => { if (pinnedIds.size < 3 || pinnedIds.has(r.run_id)) { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = HEX.cyan; } }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = pinnedIds.has(r.run_id) ? "1" : "0.35"; e.currentTarget.style.color = pinnedIds.has(r.run_id) ? HEX.cyan : HEX.text3; }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill={pinnedIds.has(r.run_id) ? HEX.cyan : "none"} stroke={pinnedIds.has(r.run_id) ? HEX.cyan : "currentColor"} strokeWidth="2">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>
             </button>
             {/* ── 25.2 Tag button ── */}
@@ -3776,14 +6508,60 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
               {r.standard}
             </span>
           )}
-          {colVis.do_ratio && (
-            <span style={{
-              fontFamily: S.mono, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center",
-              color: r.dollar_offset_ratio != null && r.dollar_offset_ratio >= 0.80 && r.dollar_offset_ratio <= 1.25 ? HEX.green : S.text2,
-            }}>
-              {r.dollar_offset_ratio != null ? r.dollar_offset_ratio.toFixed(4) : "\u2014"}
-            </span>
-          )}
+          {/* ── 31.1 D.O. band-position bar ── */}
+          {colVis.do_ratio && (() => {
+            const ratio = r.dollar_offset_ratio;
+            if (ratio == null) return (
+              <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, display: "flex", alignItems: "center" }}>—</span>
+            );
+            const inBand = ratio >= 0.80 && ratio <= 1.25;
+            const nearEdge = !inBand ? false : (ratio < 0.84 || ratio > 1.21);
+            const barColor = inBand ? (nearEdge ? HEX.amber : HEX.green) : HEX.red;
+            // Clamp position within 0.70–1.35 display range
+            const pct = Math.max(0, Math.min(100, ((ratio - 0.70) / (1.35 - 0.70)) * 100));
+            return (
+              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 3 }}>
+                <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: barColor }}>
+                  {ratio.toFixed(4)}
+                </span>
+                <div style={{ position: "relative", height: 3, borderRadius: 2, background: S.rim }}>
+                  {/* Band zone highlight */}
+                  <div style={{
+                    position: "absolute",
+                    left: `${((0.80 - 0.70) / 0.65) * 100}%`,
+                    width: `${((1.25 - 0.80) / 0.65) * 100}%`,
+                    top: 0, bottom: 0, borderRadius: 2,
+                    background: "rgba(5,150,105,0.15)",
+                  }} />
+                  {/* Position marker */}
+                  <div style={{
+                    position: "absolute", left: `${pct}%`, transform: "translateX(-50%)",
+                    width: 5, height: 5, borderRadius: "50%", top: -1,
+                    background: barColor, boxShadow: `0 0 4px ${barColor}80`,
+                  }} />
+                </div>
+                {/* ── 42.2 D.O. delta vs prior run on same dataset ── */}
+                {(() => {
+                  const sameDs = runs
+                    .filter((x) => x.dataset_id === r.dataset_id && x.dollar_offset_ratio != null && x.created_at && x.run_id !== r.run_id)
+                    .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+                  // find prior run (most recent run before this one)
+                  const prior = sameDs.find((x) => (x.created_at ?? "") < (r.created_at ?? "")) ?? null;
+                  if (!prior) return null;
+                  const delta = ratio - (prior.dollar_offset_ratio as number);
+                  if (Math.abs(delta) < 0.0001) return null;
+                  const isPos = delta > 0;
+                  return (
+                    <span title={`vs prior run (${prior.created_at?.slice(0,10)}): ${isPos ? "+" : ""}${delta.toFixed(4)}`}
+                      style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700,
+                        color: isPos ? HEX.green : HEX.red }}>
+                      {isPos ? "▲" : "▼"}{Math.abs(delta).toFixed(4)}
+                    </span>
+                  );
+                })()}
+              </div>
+            );
+          })()}
           {colVis.r2 && (
             <span style={{
               fontFamily: S.mono, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center",
@@ -3793,7 +6571,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
             </span>
           )}
           {colVis.verdict && (
-            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 800, letterSpacing: "0.1em", display: "flex", alignItems: "center" }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 800, letterSpacing: "0.1em", display: "flex", alignItems: "center", gap: 4 }}>
               <span style={{
                 padding: "3px 8px", borderRadius: 3,
                 background: r.overall_effective ? HEX.greenBg : HEX.redBg,
@@ -3802,14 +6580,53 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
               }}>
                 {r.overall_effective ? "EFFECTIVE" : "INEFFECTIVE"}
               </span>
+              {/* ── 50.2 Out-of-band warning badge ── */}
+              {r.overall_effective && r.dollar_offset_ratio != null && (() => {
+                const do_ = r.dollar_offset_ratio as number;
+                const outOfBand = do_ < 0.80 || do_ > 1.25;
+                if (!outOfBand) return null;
+                return (
+                  <span title={`D.O. ratio ${do_.toFixed(4)} is outside the 80–125% effectiveness band — review required`}
+                    style={{
+                      fontFamily: S.mono, fontSize: 8, fontWeight: 700, letterSpacing: "0.06em",
+                      padding: "1px 4px", borderRadius: 2, cursor: "default",
+                      background: HEX.redBg, color: HEX.red, border: `1px solid ${HEX.redBorder}`,
+                    }}>
+                    ⚠ OOB
+                  </span>
+                );
+              })()}
+              {/* ── 39.2 Per-run efficiency score badge ── */}
+              {(() => {
+                if (r.dollar_offset_ratio == null) return null;
+                const do_ = r.dollar_offset_ratio as number;
+                const inBand = do_ >= 0.80 && do_ <= 1.25;
+                const proximity = inBand ? Math.max(0, 1 - Math.abs(do_ - 1.00) / 0.25) : 0;
+                const r2Score = r.regression_r_squared != null ? (r.regression_r_squared as number) : 0.5;
+                const score = Math.round(proximity * 70 + r2Score * 30);
+                const color = score >= 80 ? HEX.green : score >= 55 ? HEX.cyan : score >= 35 ? HEX.amber : HEX.red;
+                return (
+                  <span title={`Efficiency score: ${score}/100 (D.O. proximity 70% + R² 30%)`}
+                    style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color, cursor: "default", letterSpacing: "0.04em" }}>
+                    {score}
+                  </span>
+                );
+              })()}
             </span>
           )}
           <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, display: "flex", alignItems: "center" }}>
             {r.run_hash?.slice(0, 10)}...
           </span>
           {colVis.date && (
-            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, display: "flex", alignItems: "center" }}>
-              {r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}
+            <span
+              style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, display: "flex", alignItems: "center", cursor: "pointer" }}
+              title={showAge ? "Click to show date" : "Click to show age"}
+              onClick={(e) => { e.stopPropagation(); setShowAge((v) => !v); }}
+            >
+              {/* ── 34.3 Age / date toggle ── */}
+              {r.created_at
+                ? (showAge ? runAge(r.created_at) : new Date(r.created_at).toLocaleDateString())
+                : ""}
             </span>
           )}
 
@@ -3840,7 +6657,177 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
           )}
         </div>
         );
-      })}
+      });
+      })()}
+
+      {/* ── 36.3 Keyboard shortcut help overlay ── */}
+      {showHelp && (
+        <div
+          onClick={() => setShowHelp(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 500,
+            background: "rgba(0,0,0,0.35)", backdropFilter: "blur(1px)",
+            display: "flex", alignItems: "flex-end", justifyContent: "flex-end",
+            padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 6,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.2)", padding: "20px 24px",
+              minWidth: 280,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 800, letterSpacing: "0.14em", color: S.text1 }}>
+                KEYBOARD SHORTCUTS
+              </span>
+              <button
+                onClick={() => setShowHelp(false)}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: S.text3, padding: 2 }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6 6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+            {([
+              ["↑ / ↓",  "Navigate rows"],
+              ["Enter",  "Open selected run"],
+              ["Space",  "Select / deselect row"],
+              ["Esc",    "Clear selection"],
+              ["?",      "Show / hide shortcuts"],
+            ] as const).map(([key, desc]) => (
+              <div key={key} style={{
+                display: "flex", alignItems: "center", gap: 14,
+                padding: "6px 0", borderTop: `1px solid ${S.rim}`,
+              }}>
+                <kbd style={{
+                  fontFamily: S.mono, fontSize: 11, fontWeight: 700,
+                  padding: "2px 8px", borderRadius: 3, minWidth: 54, textAlign: "center",
+                  background: S.sub, border: `1px solid ${S.rim}`, color: S.text2,
+                }}>{key}</kbd>
+                <span style={{ fontFamily: S.ui, fontSize: 12, color: S.text2 }}>{desc}</span>
+              </div>
+            ))}
+            <div style={{ marginTop: 12, fontFamily: S.ui, fontSize: 10, color: S.text3, textAlign: "center" }}>
+              Press <strong>?</strong> or <strong>Esc</strong> to close
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 37.2 Filtered-runs summary footer ── */}
+      {filteredRuns.length > 0 && (() => {
+        const doVals = filteredRuns.map((r) => r.dollar_offset_ratio).filter((v): v is number => v != null);
+        const r2Vals = filteredRuns.map((r) => r.regression_r_squared).filter((v): v is number => v != null);
+        const avgDo = doVals.length > 0 ? doVals.reduce((s, v) => s + v, 0) / doVals.length : null;
+        const avgR2 = r2Vals.length > 0 ? r2Vals.reduce((s, v) => s + v, 0) / r2Vals.length : null;
+        const effCount = filteredRuns.filter((r) => r.overall_effective).length;
+        const effRate = Math.round((effCount / filteredRuns.length) * 100);
+        const effColor = effRate >= 80 ? HEX.green : effRate >= 60 ? HEX.amber : HEX.red;
+        const isFiltered = filteredRuns.length < runs.length;
+        // ── 48.2 Run age stats ──
+        const datedRuns = filteredRuns.filter((r) => r.created_at);
+        const ageStats = datedRuns.length >= 1 ? (() => {
+          const dates = datedRuns.map((r) => new Date(r.created_at as string).getTime());
+          const newest = Math.max(...dates);
+          const oldest = Math.min(...dates);
+          const newestDays = Math.floor((Date.now() - newest) / 86400000);
+          const spanDays = Math.floor((newest - oldest) / 86400000);
+          return { newestDays, spanDays };
+        })() : null;
+        const kpis = [
+          { label: "EFFECTIVE", value: `${effCount} / ${filteredRuns.length}`, color: effColor },
+          { label: "PASS RATE", value: `${effRate}%`, color: effColor },
+          ...(avgDo != null ? [{ label: "AVG D.O.", value: avgDo.toFixed(4), color: avgDo >= 0.80 && avgDo <= 1.25 ? HEX.green : HEX.amber }] : []),
+          ...(avgR2 != null ? [{ label: "AVG R\u00B2", value: avgR2.toFixed(4), color: S.text2 as string }] : []),
+          ...(ageStats != null ? [
+            { label: "NEWEST", value: ageStats.newestDays === 0 ? "TODAY" : `${ageStats.newestDays}D AGO`, color: ageStats.newestDays <= 1 ? HEX.green : S.text2 as string },
+            ...(ageStats.spanDays > 0 ? [{ label: "SPAN", value: `${ageStats.spanDays}D`, color: S.text3 as string }] : []),
+          ] : []),
+        ];
+        return (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap",
+            padding: "8px 16px", borderRadius: 4,
+            background: S.panel, border: `1px solid ${S.rim}`, marginTop: 4,
+          }}>
+            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
+              {isFiltered ? `FILTERED — ${filteredRuns.length} RUNS` : `ALL ${runs.length} RUNS`}
+            </span>
+            <div style={{ width: 1, height: 18, background: S.rim }} />
+            {kpis.map((kpi) => (
+              <div key={kpi.label} style={{ display: "flex", gap: 5, alignItems: "baseline" }}>
+                <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.1em" }}>{kpi.label}</span>
+                <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 800, color: kpi.color }}>{kpi.value}</span>
+              </div>
+            ))}
+            {/* ── 55.2 Dataset coverage count ── */}
+            {(() => {
+              const uniqueDs = new Set(filteredRuns.map((r) => r.dataset_id)).size;
+              if (uniqueDs <= 1) return null;
+              return (
+                <>
+                  <div style={{ width: 1, height: 18, background: S.rim }} />
+                  <div style={{ display: "flex", gap: 5, alignItems: "baseline" }}>
+                    <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.1em" }}>DATASETS</span>
+                    <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 800, color: S.text2 }}>{uniqueDs}</span>
+                  </div>
+                </>
+              );
+            })()}
+            {/* ── 52.2 Per-standard breakdown pills ── */}
+            {(() => {
+              const STDS = ["IAS_39", "IFRS_9", "ASC_815"] as const;
+              const stdCounts = STDS.map((std) => ({ std, count: filteredRuns.filter((r) => r.standard === std).length })).filter((s) => s.count > 0);
+              if (stdCounts.length < 2) return null;
+              return (
+                <>
+                  <div style={{ width: 1, height: 18, background: S.rim }} />
+                  {stdCounts.map(({ std, count }) => (
+                    <button
+                      key={std}
+                      onClick={() => setStdFilter(stdFilter === std ? "ALL" : std)}
+                      title={`Filter to ${std.replace("_", " ")} runs`}
+                      style={{
+                        fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                        padding: "2px 7px", borderRadius: 3, cursor: "pointer", border: "none",
+                        background: stdFilter === std ? HEX.cyan : S.sub,
+                        color: stdFilter === std ? "#fff" : S.text3,
+                        transition: "all 0.12s",
+                      }}
+                    >
+                      {std.replace("_", " ")} {count}
+                    </button>
+                  ))}
+                </>
+              );
+            })()}
+          </div>
+        );
+      })()}
+
+      {/* ── 38.2 Page size selector ── */}
+      {filteredRuns.length > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 0 0", justifyContent: "flex-end" }}>
+          <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.1em" }}>PER PAGE</span>
+          {([25, 50, 0] as const).map((sz) => (
+            <button
+              key={sz}
+              onClick={() => { setPageSize(sz); setPage(1); }}
+              style={{
+                fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                padding: "3px 8px", borderRadius: 3, cursor: "pointer", border: "none",
+                background: pageSize === sz ? HEX.cyan : S.sub,
+                color: pageSize === sz ? "#fff" : S.text3,
+                transition: "all 0.12s",
+              }}
+            >{sz === 0 ? "ALL" : sz}</button>
+          ))}
+        </div>
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -3906,6 +6893,29 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns }: { runs: Run[]; onNavigat
           <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, marginLeft: 4 }}>
             PAGE {safePage} OF {totalPages}
           </span>
+          {/* ── 47.2 Page-jump input ── */}
+          {totalPages > 5 && (
+            <span style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: 8 }}>
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>GO</span>
+              <input
+                type="number" min={1} max={totalPages}
+                defaultValue={safePage}
+                key={safePage}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const v = parseInt((e.target as HTMLInputElement).value, 10);
+                    if (!isNaN(v)) setPage(Math.max(1, Math.min(totalPages, v)));
+                  }
+                }}
+                style={{
+                  width: 44, fontFamily: S.mono, fontSize: 11, textAlign: "center",
+                  background: S.panel, color: S.text1, border: `1px solid ${S.rim}`,
+                  borderRadius: 3, padding: "3px 4px", outline: "none",
+                }}
+              />
+            </span>
+          )}
         </div>
       )}
 
