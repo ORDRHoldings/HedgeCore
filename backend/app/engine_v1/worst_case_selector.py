@@ -156,15 +156,15 @@ def select_worst_case(
 
     # Worst case = largest absolute post-hedge loss
     worst = min(all_losses, key=lambda s: s.post_hedge_loss)
-    # Pre-hedge worst
-    pre_worst = min(all_losses, key=lambda s: s.pre_hedge_loss)
 
+    # pre_hedge_worst_case and delta_improvement both use the same worst-case
+    # scenario so the improvement is measured within one consistent scenario.
     return WorstCaseResult(
         worst_case_scenario=worst.scenario_name,
         worst_case_loss=worst.post_hedge_loss,
-        pre_hedge_worst_case=pre_worst.pre_hedge_loss,
+        pre_hedge_worst_case=worst.pre_hedge_loss,
         post_hedge_worst_case=worst.post_hedge_loss,
-        delta_improvement=abs(pre_worst.pre_hedge_loss) - abs(worst.post_hedge_loss),
+        delta_improvement=abs(worst.pre_hedge_loss) - abs(worst.post_hedge_loss),
         all_scenarios=all_losses,
         scenario_count=len(all_losses),
     )

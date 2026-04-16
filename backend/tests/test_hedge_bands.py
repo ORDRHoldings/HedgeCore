@@ -260,3 +260,43 @@ class TestCheckHedgeBands:
         }]
         result = check_hedge_bands(buckets, self._policy_with_bands())
         assert result.all_compliant is True
+
+    def test_zero_hedge_position_not_masked_by_action_field(self):
+        """
+        Regression test: a genuine zero hedge_position_local must be treated as 0.0,
+        not fall through to action_local via a falsy `or` chain.
+
+        Old bug: `0.0 or action_local` evaluated action_local because 0.0 is falsy.
+        A fully-closed hedge position (hedge_position_local=0) would report the
+        *intended action* instead of the actual zero position.
+        """
+        buckets = [{
+            "bucket": "2025-07", "confidence": "confirmed",
+            "hedge_position_local": 0.0,      # genuine zero — hedge fully exited
+            "action_local": 700_000,           # intended action (must NOT be used)
+            "commercial_exposure_local": 1_000_000,
+        }]
+        result = check_hedge_bands(buckets, self._policy_with_bands())
+        # hedge_pos=0, exposure=1M → ratio=0.0 → CRITICAL UNDER_HEDGED
+        assert result.all_compliant is False
+        assert len(result.violations) == 1
+        v = result.violations[0]
+        assert v.violation_type == "UNDER_HEDGED"
+        assert v.effective_ratio == pytest.approx(0.0)
+
+    def test_zero_exposure_not_masked_by_gross_field(self):
+        """
+        Parallel regression test for the exposure fallback chain.
+        A zero commercial_exposure_local must stop the search; gross_exposure fields
+        must not be used as substitute.
+        """
+        buckets = [{
+            "bucket": "2025-07", "confidence": "confirmed",
+            "hedge_position_local": 700_000,
+            "commercial_exposure_local": 0.0,  # genuine zero
+            "gross_exposure_local": 1_000_000, # must NOT be used
+        }]
+        result = check_hedge_bands(buckets, self._policy_with_bands())
+        # exposure < 1.0 threshold (it's 0.0) → skip → compliant
+        assert result.all_compliant is True
+        assert result.buckets_compliant == 1

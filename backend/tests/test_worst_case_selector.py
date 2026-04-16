@@ -95,3 +95,29 @@ class TestSelectWorstCase:
         assert "all_scenarios" in d
         assert isinstance(d["all_scenarios"], list)
         assert d["all_scenarios"][0]["scenario_name"] == "Test"
+
+    def test_delta_improvement_uses_same_scenario(self):
+        """
+        Regression test: delta_improvement must be pre_hedge - post_hedge for the
+        SAME worst-case scenario, not a cross-scenario subtraction.
+
+        Scenario A: small pre-loss (-10K), large post-loss (-50K) → worst post-hedge
+        Scenario B: large pre-loss (-200K), small post-loss (-5K)
+
+        Old buggy code selected pre_worst from Scenario B and worst from Scenario A,
+        yielding delta_improvement = |−200K| − |−50K| = 150K (cross-scenario nonsense).
+        Fixed code: delta_improvement = |−10K| − |−50K| = −40K (hedge made things worse).
+        """
+        extended = {
+            "scenarios": [
+                {"scenario_name": "Worst Post", "pre_hedge_loss_usd": -10_000, "post_hedge_loss_usd": -50_000},
+                {"scenario_name": "Worst Pre", "pre_hedge_loss_usd": -200_000, "post_hedge_loss_usd": -5_000},
+            ]
+        }
+        result = select_worst_case({}, extended)
+        assert result.worst_case_scenario == "Worst Post"
+        assert result.worst_case_loss == -50_000
+        # pre_hedge_worst_case must come from the same worst-case scenario
+        assert result.pre_hedge_worst_case == -10_000
+        # delta: |pre| - |post| for the same scenario
+        assert result.delta_improvement == pytest.approx(-40_000)

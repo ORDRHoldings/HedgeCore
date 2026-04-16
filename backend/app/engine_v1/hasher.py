@@ -15,7 +15,9 @@ def sha256_of_dict(d: dict[str, Any]) -> str:
 
 
 def sha256_of_dataframe(df: pd.DataFrame) -> str:
-    canonical = df.to_json(orient="records", date_format="iso")
+    # Sort columns before serialisation so that DataFrames built with columns
+    # in different insertion orders produce the same hash (determinism guarantee).
+    canonical = df[sorted(df.columns)].to_json(orient="records", date_format="iso")
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
