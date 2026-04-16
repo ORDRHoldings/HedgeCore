@@ -60,7 +60,7 @@ export default function IntelligencePage() {
     }
   };
 
-  const canToggle = user?.roles?.includes("admin") || user?.is_superuser;
+  const canToggle = user?.roles?.includes("admin") || user?.roles?.includes("cfo") || user?.is_superuser;
 
   return (
     <div style={{ minHeight: "100vh", background: S.deep, padding: 32, fontFamily: S.ui }}>
