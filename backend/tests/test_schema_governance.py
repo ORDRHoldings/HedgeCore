@@ -276,16 +276,23 @@ class TestReadinessChecksResponseSchema:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestScenarioEngineEffectivenessRegression:
-    """Prove the scenario_engine fix: max(0, -hedge_pnl) semantics.
+    """Prove the scenario_engine A2 fix: max(0, hedge_pnl) semantics.
 
-    These tests validate the corrected IAS-39/IFRS-9 offset convention:
-    - When hedge profits (+), portfolio losses (-): offset=0, effectiveness=0
-    - When hedge breaks-even (0), portfolio loses: offset=0, effectiveness=0
-    - When hedge also loses (-), portfolio loses: offset>0, effectiveness>0
+    These tests validate the corrected hedge effectiveness convention (A2 fix):
+    - The hedge *absorbs* portfolio loss by *profiting* → offset = max(0, hedge_pnl)
+    - When hedge profits (+), portfolio loses (-): effectiveness > 0 (hedge is working)
+    - When hedge breaks-even (0), portfolio loses: effectiveness = 0
+    - When hedge also loses (-), portfolio loses: effectiveness = 0 (harmful, not helpful)
+
+    Pre-A2 (buggy): offset = max(0, -hedge_pnl) — was inverted: 0% when hedge worked, >0% when broken.
     """
 
-    def test_hedge_profit_portfolio_loss_effectiveness_zero(self):
-        """Case 01 regression: short futures profit when equity falls → effectiveness=0."""
+    def test_hedge_profit_portfolio_loss_effectiveness_positive(self):
+        """Case 01 regression: short futures profit when equity falls → effectiveness > 0 (A2 fix).
+
+        Pre-A2 bug: max(0, -hedge_pnl) with hedge_pnl=+35k gave offset=0, effectiveness=0.
+        A2 fix:     max(0, +hedge_pnl) with hedge_pnl=+35k gives offset=35k, effectiveness=2.0 (clamped).
+        """
         from app.engine.scenario_engine import run_scenarios
         payload = {
             "portfolio": {"exposures": {"delta_usd": 100_000.0, "vega_usd": 20_000.0}},
@@ -309,12 +316,19 @@ class TestScenarioEngineEffectivenessRegression:
         out = run_scenarios(copy.deepcopy(payload))
         assert out["rejected"] == []
         r = out["results"][0]
-        assert r["net"]["hedge_effectiveness"] == 0.0, (
-            f"Expected 0.0 (hedge profits don't offset portfolio loss), got {r['net']['hedge_effectiveness']}"
+        # portfolio_pnl = 100k * (-0.10) = -10_000 (vega=0 for vol_move=0)
+        # hedge_pnl = -10 * 2 * 17500 * (-0.10) = +35_000 (short profits when market falls)
+        # offset = max(0, +35000) = 35000; denom=10000; raw=3.5 → clamped to 2.0
+        assert r["net"]["hedge_effectiveness"] == pytest.approx(2.0), (
+            f"Expected 2.0 (working hedge absorbs loss), got {r['net']['hedge_effectiveness']}"
         )
 
-    def test_hedge_loss_portfolio_loss_effectiveness_nonzero(self):
-        """When hedge also loses money, it absorbs some portfolio loss → effectiveness > 0."""
+    def test_hedge_loss_portfolio_loss_effectiveness_zero(self):
+        """When hedge also loses money (bad hedge), offset = 0 → effectiveness = 0.
+
+        Pre-A2 bug: max(0, -hedge_pnl) with hedge_pnl=-17.5k gave offset=17.5k, effectiveness>0.
+        A2 fix:     max(0, -17.5k) = 0, effectiveness = 0 (hedge is harmful, not helpful).
+        """
         from app.engine.scenario_engine import run_scenarios
         # Long futures + equity down → both portfolio and hedge lose
         payload = {
@@ -338,12 +352,10 @@ class TestScenarioEngineEffectivenessRegression:
         }
         out = run_scenarios(copy.deepcopy(payload))
         r = out["results"][0]
-        # portfolio_pnl = delta * equity_move = 100k * -0.10 = -10k
-        # hedge_pnl: long 5 contracts * 2 * 17500 * -0.10 = -17500 (hedge also loses)
-        # offset = max(0, -(-17500)) = 17500
-        # effectiveness = 17500 / 10000 = 1.75 → clamped to 2.0
-        assert r["net"]["hedge_effectiveness"] is not None
-        assert r["net"]["hedge_effectiveness"] > 0.0
+        # portfolio_pnl = 100k * (-0.10) = -10_000
+        # hedge_pnl = 5 * 2 * 17500 * (-0.10) = -17_500 (long futures also loses)
+        # offset = max(0, -17500) = 0 → effectiveness = 0 (hedge is harmful)
+        assert r["net"]["hedge_effectiveness"] == pytest.approx(0.0)
 
     def test_hedge_breakeven_effectiveness_zero(self):
         """When hedge PnL = 0, effectiveness = 0 (no offset)."""
@@ -360,7 +372,7 @@ class TestScenarioEngineEffectivenessRegression:
         }
         out = run_scenarios(copy.deepcopy(payload))
         r = out["results"][0]
-        # No hedges → hedge_pnl = 0 → offset = max(0, -0) = 0 → effectiveness = 0
+        # No hedges → hedge_pnl = 0 → offset = max(0, 0) = 0 → effectiveness = 0
         assert r["net"]["hedge_effectiveness"] == 0.0
 
     def test_portfolio_profit_effectiveness_none(self):

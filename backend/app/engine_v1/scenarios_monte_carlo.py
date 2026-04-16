@@ -85,13 +85,18 @@ _INTER_REGION_CORR = 0.30
 
 
 def _get_pair_region(pair: str) -> str:
-    """Heuristic region classification."""
+    """Heuristic region classification.
+
+    Checks the first leg (pair[:3]) before the second leg to guarantee
+    deterministic results for cross pairs whose legs span different regions.
+    Using a set was non-deterministic for such pairs.
+    """
     latam = {"MXN", "BRL", "COP", "CLP", "PEN", "ARS"}
     asia = {"CNY", "CNH", "INR", "KRW", "TWD", "IDR", "PHP", "THB", "MYR", "VND"}
     ceemea = {"TRY", "ZAR", "PLN", "HUF", "CZK", "RON", "ILS", "EGP", "NGN"}
     g10 = {"EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "NZD", "SEK", "NOK", "DKK"}
 
-    ccys = {pair[:3], pair[3:6]} if len(pair) >= 6 else {pair}
+    ccys = [pair[:3], pair[3:6]] if len(pair) >= 6 else [pair]
     for ccy in ccys:
         if ccy in latam:
             return "EM_LATAM"

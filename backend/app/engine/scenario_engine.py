@@ -617,10 +617,10 @@ def run_scenarios(payload: Mapping[str, Any], *, policy: Mapping[str, Any] | Non
 
         if portfolio_pnl < 0.0:
 
-            # Effectiveness = fraction of portfolio loss absorbed by the hedge incurring its own loss.
-            # When hedge_pnl > 0 (hedge profits while portfolio loses), offset=0 (IAS-39/IFRS-9 convention).
-            # When hedge_pnl < 0 (hedge loses), max(0, -hedge_pnl) captures the absorbed loss.
-            offset = max(0.0, -hedge_pnl)
+            # Effectiveness = fraction of portfolio loss absorbed (offset) by the hedge.
+            # The hedge offsets portfolio losses when it PROFITS (hedge_pnl > 0).
+            # When hedge_pnl <= 0 the hedge adds to the loss → 0% offset.
+            offset = max(0.0, hedge_pnl)
 
             denom = abs(portfolio_pnl)
 

@@ -202,6 +202,8 @@ def test_scenario_engine_case01_math_sanity() -> None:
     assert pytest.approx(net_pnl, rel=1e-12, abs=1e-6) == 25_000.0
 
     # Effectiveness is defined because portfolio_pnl < 0:
-    # offset = max(0, -hedge_pnl) = 0 because hedge_pnl positive (profit), hedge_total_pnl=+35000 => -hedge=-35000
-    # BUT engine defines offset as max(0, -hedge_total_pnl); hedge_total_pnl=+35000 => offset=0 => effectiveness=0
-    assert r["net"]["hedge_effectiveness"] == 0.0
+    # offset = max(0, hedge_pnl) = 35_000 (hedge profits → absorbs portfolio loss)
+    # denom = abs(portfolio_pnl) = 10_000
+    # raw = 35_000 / 10_000 = 3.5 → clamped to 2.0 (200% cap)
+    # A2 fix: old formula max(0, -hedge_pnl) was inverted (0% when hedge works).
+    assert r["net"]["hedge_effectiveness"] == pytest.approx(2.0)

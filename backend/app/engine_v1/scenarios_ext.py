@@ -216,9 +216,13 @@ def apply_extended_scenarios(
                 weighted_duration = 0.25  # Conservative fallback
             rate_impact = hedge_notional_usd * (scenario.rate_shock_bps / 10000.0) * weighted_duration
 
-        # Add rate impact to losses (rate shocks always amplify loss magnitude)
-        pre_hedge_loss -= abs(rate_impact) * 0.5  # FIX-02: rate shock increases loss
-        post_hedge_loss -= abs(rate_impact)        # FIX-02: longer duration = larger impact
+        # Rate impact on post-hedge only: the hedge carries a funding cost that
+        # changes when rates move (up → more expensive; down → cheaper).
+        # The pre-hedge scenario has NO hedge and therefore NO funding cost —
+        # applying any rate impact there was incorrect.
+        # rate_impact sign is preserved: positive bps → cost rises → loss grows;
+        # negative bps → cost falls → loss shrinks.
+        post_hedge_loss -= rate_impact
 
         # Margin impact
         margin_impact = margin_total * scenario.margin_shock if scenario.margin_shock else 0.0

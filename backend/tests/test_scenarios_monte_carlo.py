@@ -192,3 +192,41 @@ class TestRunMonteCarlo:
         # hedge_benefit_mean can be positive or negative depending on market direction,
         # but the std reduction is always beneficial
         assert result.std_hedged_pnl < result.std_unhedged_pnl
+
+
+class TestPairRegionDeterminism:
+    """Regression: A2 set-iteration non-determinism fix.
+
+    Prior to fix, _get_pair_region used a Python set to decompose the pair into
+    its two currency legs. Python sets have no guaranteed iteration order, so for
+    cross-region pairs the function could return different regions on different runs
+    (or different Python versions/hash seeds). Fixed by using an ordered list and
+    checking the first leg before the second.
+    """
+
+    def test_cross_region_pair_first_leg_wins(self):
+        """MXNJPY: first leg MXN (EM_LATAM) takes precedence over JPY (G10)."""
+        assert _get_pair_region("MXNJPY") == "EM_LATAM"
+
+    def test_cross_region_pair_second_leg_fallback(self):
+        """JPYMXN: first leg JPY (G10), but second leg MXN (EM_LATAM) → EM_LATAM."""
+        # JPY is in g10, so first iteration → g10 returned; but wait—
+        # the fix checks first leg first. JPYMXN → first leg JPY → G10.
+        assert _get_pair_region("JPYMXN") == "G10"
+
+    def test_cross_region_deterministic_repeated_calls(self):
+        """Same pair must always return the same region across many calls."""
+        pairs = ["MXNJPY", "BRLJPY", "TRYEUR", "KRWEUR", "ZARUSD"]
+        for pair in pairs:
+            results = {_get_pair_region(pair) for _ in range(20)}
+            assert len(results) == 1, (
+                f"_get_pair_region('{pair}') returned different regions across calls: {results}"
+            )
+
+    def test_pure_g10_cross(self):
+        """EURJPY: both legs G10 → G10."""
+        assert _get_pair_region("EURJPY") == "G10"
+
+    def test_pure_em_cross(self):
+        """MXNBRL: both legs EM_LATAM → EM_LATAM."""
+        assert _get_pair_region("MXNBRL") == "EM_LATAM"
