@@ -2,6 +2,7 @@ import "./globals.css";
 import ClientProviders from "../components/pipeline/ClientProviders";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import { SkipToContent } from "@/components/layout/SkipToContent";
+import CmdKOverlay from "@/components/intelligence/CmdKOverlay";
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
 
@@ -71,6 +72,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <ClientProviders>{children}</ClientProviders>
           </main>
         </ThemeProvider>
+        <CmdKOverlay />
       </body>
     </html>
   );
