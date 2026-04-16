@@ -1,5 +1,114 @@
 # Changelog (AI-maintained)
 
+## 2026-04-15 — Treasury Suite Phase 2 §4.4: Payment Initiation (Paper Mode)
+
+### Added
+- **2 ORM models** (`backend/app/models/payment.py`): `PaymentBeneficiary` (tenant-scoped whitelist, unique on company+bank_code+account_number) + `PaymentInstruction` (5-state machine, per-record SHA-256 hash, SoD-enforced approval).
+- **Alembic migration** (`migrations/versions/p1a2b3c4d5e6_payment_initiation.py`): payment_beneficiaries then payment_instructions (FK ordering). `down_revision = "k1a2b3c4d5e6"`.
+- **6 audit enum values** added to `CashAuditEventType`: PAYMENT_INITIATED, PAYMENT_APPROVED, PAYMENT_REJECTED, PAYMENT_TRANSMITTED, PAYMENT_CANCELLED, BENEFICIARY_CREATED. Total now 28.
+- **7 Pydantic schemas** added to `backend/app/schemas_v1/cash.py`: BeneficiaryCreate, BeneficiaryUpdate, BeneficiaryResponse, PaymentInitiate (Decimal gt=0, reference ≤140), PaymentReject, PaymentInstructionResponse (includes beneficiary_name), PaymentListResponse.
+- **`payment_service.py`** (`backend/app/services/payment_service.py`): `compute_instruction_hash` (SHA-256 of 9 pipe-separated fields), beneficiary CRUD (active-only guard, uniqueness validation), `initiate_payment` (whitelist + type validation), `approve_payment` / `reject_payment` (SoD 403, state 409), `transmit_payment`, `cancel_payment`, `list_payments` (5-filter + count subquery), `get_payment`.
+- **`v1_payments.py`** (`backend/app/api/routes/v1_payments.py`): `APIRouter(prefix="/v1/payments")`, 11 endpoints, `_require_enterprise`/`_require_write` guards, `_to_response()` helper.
+- **`/payments` frontend page** (`frontend/src/app/payments/page.tsx`): Bloomberg-grade 3-tab (INITIATE form, PAYMENTS filterable list with row expand + SoD action buttons, BENEFICIARIES CRUD). PAYMENT_TYPES = ["SEPA","SWIFT","ACH","CHAPS","FPS"].
+- **11 cashClient API functions**: listBeneficiaries, createBeneficiary, updateBeneficiary, deactivateBeneficiary, initiatePayment, listPayments, getPayment, approvePayment, rejectPayment, transmitPayment, cancelPayment.
+- **AppSidebar nav entry**: Payments (CreditCard icon, enterprise tier, ACCOUNTING group, after Bank Statements).
+- **19 tests**: 12 service (hash determinism, CRUD, lifecycle, SoD) + 7 route tests. All pass.
+
+### Modified
+- `backend/app/models/cash.py` — 6 new audit enum values (total: 28)
+- `backend/app/schemas_v1/cash.py` — 7 new payment schemas
+- `backend/app/api/router.py` — registered v1_payments_router
+- `frontend/src/lib/api/cashClient.ts` — 4 interfaces + 11 API functions
+- `frontend/src/components/layout/AppSidebar.tsx` — Payments nav entry + route prefix
+- `backend/tests/test_cash_netting_models.py` — enum count updated 22→28
+
+### Test evidence
+- Backend: 4801+ passed, 0 failed (1 pre-existing flake: test_trace_bundle_fingerprint_deterministic).
+- tsc --noEmit: CLEAN. next build: PASS (exit code 0).
+
+### Commits
+- 9 commits on master: `4c667d5` through `194435f`
+
+---
+
+## 2026-04-15 — Phase 2 Frontend Pages: Cash Management & Bank Statements
+
+### Added
+- **`/cash-management` page** (`frontend/src/app/cash-management/page.tsx`): 3-tab dashboard — POOLS (expandable detail with consolidated/header balance, member table, sweep calculate/execute), ENTITIES (CRUD), SWEEPS (pool selector + history table). Bloomberg-grade design: KPI strip, icon header box, PHASE 2f badge.
+- **`/bank-statements` page** (`frontend/src/app/bank-statements/page.tsx`): 3-tab dashboard — STATEMENTS (account filter, upload form for MT940/CAMT053/BAI2), TRANSACTIONS (filterable list with mark-exception/unmatch actions), RECONCILIATION (account selector, auto-recon button, KPI tiles, manual match form). 5-column KPI strip with match rate.
+- **17 typed API functions** in `cashClient.ts`: 5 reconciliation (run, summary, manual match, mark exception, unmatch) + 12 pool management (entities CRUD, pools CRUD, balance, sweeps calculate/execute/list).
+- **2 AppSidebar nav entries**: Cash Pools (Layers icon), Bank Statements (FileSpreadsheet icon) — ACCOUNTING group, professional tier gate.
+
+### Modified
+- `frontend/src/lib/api/cashClient.ts` — 7 interfaces + 17 functions
+- `frontend/src/components/layout/AppSidebar.tsx` — 2 nav items + 2 icon imports + route prefixes
+
+### Test evidence
+- tsc --noEmit: CLEAN. next build: PASS (/cash-management 6.02KB, /bank-statements 5.92KB).
+- User reviewed and approved.
+
+### Commits
+- 5 commits on master: `4d1cc62` through `e2ae8b9`
+
+---
+
+## 2026-04-14 — Treasury Suite Phase 2b: Cash Flow Forecasting
+
+### Added
+- **2 ORM models** (`backend/app/models/cash_forecast.py`): `CashForecastItem` (recurring/one-time forecast items with 6 frequency types) + `CashForecastSnapshot` (point-in-time forecast snapshots).
+- **Migration 0022** (`0022_cash_forecast.py`): Both tables with indexes + unique constraint.
+- **`forecast_engine.py`** (`backend/app/services/forecast_engine.py`): Pure-function engine — `compute_forecast` (13-week + 12-month buckets), `expand_recurring_items` (ONCE/WEEKLY/BIWEEKLY/MONTHLY/QUARTERLY/ANNUALLY), scenario shifts, liquidity gap detection, multi-currency tracking, confidence breakdowns.
+- **`forecast_service.py`** (`backend/app/services/forecast_service.py`): DB orchestrator — get_forecast, create/list/update forecast items, run_scenario, get_liquidity_gaps, save_snapshot, get_variance.
+- **`v1_cash_forecast.py`** (`backend/app/api/routes/v1_cash_forecast.py`): 10 route endpoints (consolidated, entity, gaps, scenarios, variance, items CRUD, snapshots; `/{entity_id}` last).
+- **10 Pydantic schemas** added to `backend/app/schemas_v1/cash.py`: ForecastItemCreate/Response/Update, ScenarioRequest, ForecastBucket, ForecastResponse, LiquidityGap/Response, VarianceRow/Response.
+- **2 enum values** added to `CashAuditEventType` in `backend/app/models/cash.py`: FORECAST_CREATED, FORECAST_SCENARIO_RUN.
+- **3 test files** (19 tests total): test_forecast_engine (12 pure-function), test_forecast_service (4 AsyncMock), test_v1_cash_forecast_routes (3 route).
+- **Frontend `/cash-forecast` page** (`frontend/src/app/cash-forecast/page.tsx`): 4-tab dashboard — FORECAST waterfall chart, GAPS alerts, VARIANCE table, ITEMS CRUD form with scenario analysis panel.
+- **`cashClient.ts`**: 5 interfaces + 8 API functions for forecast endpoints.
+- **AppSidebar**: Cash Forecast nav item (TrendingUp icon, professional tier gate).
+
+### Modified
+- `backend/app/models/cash.py` — added 2 audit event types
+- `backend/app/schemas_v1/cash.py` — added 10 forecast schemas
+- `backend/app/api/router.py` — registered v1_cash_forecast_router
+- `frontend/src/lib/api/cashClient.ts` — 5 interfaces + 8 functions
+- `frontend/src/components/layout/AppSidebar.tsx` — Cash Forecast nav entry
+
+### Test evidence
+- Backend: **4896 passed, 158 skipped (PG-only), 0 failed** (1 pre-existing flake: `test_trace_bundle_fingerprint_deterministic`).
+- tsc --noEmit: CLEAN. next build: PASS. Dev server `/cash-forecast`: HTTP 200.
+
+### Commits
+- 9 commits on master: `cde5bd9` through `dee20d8`
+
+---
+
+## 2026-04-14 — Treasury Suite Phase 2a: Cash Positions, Bank Accounts & Legal Entities
+
+### Added
+- **5 ORM models** (`backend/app/models/cash.py`): `LegalEntity`, `BankConnection`, `BankAccount`, `CashBalance`, `CashAuditEvent`. Partial WORM on `cash_balances` (14 financial columns immutable); full WORM on `cash_audit_events` (no UPDATE/DELETE). SHA-256 hash chain on audit events.
+- **Migrations 0017–0021**: legal_entities, bank_connections, bank_accounts, cash_balances, cash_audit_events — with appropriate PG WORM enforcement.
+- **`legal_entity_service`**: create/update/close lifecycle, tree fetch.
+- **`bank_account_service`**: state machine (PENDING_VERIFICATION → ACTIVE → FROZEN/CLOSED); SoD enforcement; AES-256-GCM field encryption for `account_number` and IBAN.
+- **`bank_connection_service`**: OAuth flow (`get_auth_url`, `handle_callback`); circuit-breaker trips at 3 consecutive failures; SoD on callback approval.
+- **`cash_balance_service`**: enter/bulk-enter balances; reconcile (RECONCILED/DISPUTED only; tenant-scoped JOIN).
+- **`cash_audit_service`**: hash-chained `append_event` + `verify_chain`.
+- **`cash_encryption`** (`backend/app/services/cash_encryption.py`): AES-256-GCM encrypt/decrypt/mask.
+- **15 Pydantic schemas** (`backend/app/schemas_v1/cash.py`).
+- **5 route files** registered in `app/api/router.py`: `v1_legal_entities` (5 ep), `v1_bank_accounts` (9 ep), `v1_bank_connections` (6 ep), `v1_cash_positions` (7 ep), `v1_cash_audit` (2 ep).
+- **7 test files**: test_bank_account_service, test_bank_connection_service, test_cash_audit_service, test_cash_balance_service, test_cash_models, test_legal_entity_service, test_v1_cash_routes.
+- **Frontend `cashClient.ts`** (`frontend/src/lib/api/cashClient.ts`): 29 typed API functions, 8 interfaces.
+- **Frontend pages**: `/cash-positions` (3-tab: CONSOLIDATED/BY_ENTITY/BY_ACCOUNT), `/settings/legal-entities`, `/settings/bank-accounts` (SoD-aware verify button), `/settings/bank-connections` (inline confirm for revoke).
+- **AppSidebar**: 4 new nav entries for cash/treasury pages.
+
+### Test evidence
+- Backend: **4877 passed, 158 skipped (PG-only), 0 failed** (1 pre-existing flake: `test_trace_bundle_fingerprint_deterministic` — ordering-dependent, predates Phase 2a at commit 23715a2).
+
+### Commits
+- Final merge commit: `328dd65` (feat/treasury-suite-phase2a → master, branch deleted)
+
+---
+
 ## 2026-04-13 — Sprint 56-61: Treasury Suite Phase 1 — GL Journals, Settlement & ERP Pull
 
 ### Added
