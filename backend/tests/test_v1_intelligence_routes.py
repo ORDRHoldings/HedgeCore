@@ -172,3 +172,55 @@ async def test_get_settings_returns_200():
         assert "queries_this_month" in data
     finally:
         app.dependency_overrides.clear()
+
+
+# ── PATCH /v1/intelligence/settings ───────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_patch_settings_returns_200_for_admin():
+    """PATCH /v1/intelligence/settings returns 200 for admin role."""
+    user = _mock_user()
+    user.role = "admin"
+    user.is_superuser = False
+
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_session] = _noop_session
+    try:
+        with patch(
+            "app.api.routes.v1_intelligence.get_usage_stats",
+            new_callable=AsyncMock,
+            return_value={"queries_this_month": 0, "tokens_this_month": 0},
+        ):
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+                resp = await ac.patch(
+                    "/api/v1/intelligence/settings",
+                    json={"enabled": True},
+                    headers=_BEARER,
+                )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["enabled"] is True
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_patch_settings_returns_403_for_analyst():
+    """PATCH /v1/intelligence/settings returns 403 for analyst role."""
+    user = _mock_user()
+    user.role = "analyst"
+    user.is_superuser = False
+
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_session] = _noop_session
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            resp = await ac.patch(
+                "/api/v1/intelligence/settings",
+                json={"enabled": True},
+                headers=_BEARER,
+            )
+        assert resp.status_code == 403
+    finally:
+        app.dependency_overrides.clear()

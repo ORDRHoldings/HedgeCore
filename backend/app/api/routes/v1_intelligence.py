@@ -37,7 +37,7 @@ class QueryResponse(BaseModel):
 
 
 class CommentaryRequest(BaseModel):
-    report_type: Literal["hedge_effectiveness", "committee_pack"]
+    report_type: Literal["hedge_effectiveness"]  # committee_pack deferred to Phase 3b
     report_id: str
 
 
