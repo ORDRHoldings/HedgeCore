@@ -705,3 +705,102 @@ export async function executeSweeps(token: string, poolId: string): Promise<{ sw
 export async function listSweeps(token: string, poolId: string): Promise<SweepRecord[]> {
   return _fetchJson(`/v1/cash/pools/${poolId}/sweeps`, token);
 }
+
+// ── Payment Initiation — Phase 2 §4.4 ────────────────────────────────────
+
+export interface Beneficiary {
+  id: string;
+  company_id: string;
+  name: string;
+  bank_name: string;
+  bank_code: string;
+  account_number: string;
+  country_code: string;
+  currency: string;
+  payment_types: string[];
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface PaymentInstruction {
+  id: string;
+  company_id: string;
+  beneficiary_id: string;
+  beneficiary_name: string;
+  payment_type: string;
+  amount: string;
+  currency: string;
+  execution_date: string;
+  reference: string;
+  memo: string | null;
+  status: string;
+  created_by: string;
+  approved_by: string | null;
+  approved_at: string | null;
+  rejected_by: string | null;
+  rejection_reason: string | null;
+  transmission_mode: string;
+  transmitted_at: string | null;
+  instruction_hash: string;
+  created_at: string;
+}
+
+export interface PaymentListResponse {
+  items: PaymentInstruction[];
+  total: number;
+}
+
+export const listBeneficiaries = (token: string, activeOnly = true) =>
+  _fetchJson<Beneficiary[]>(`/v1/payments/beneficiaries?active_only=${activeOnly}`, token);
+
+export const createBeneficiary = (token: string, body: {
+  name: string; bank_name: string; bank_code: string; account_number: string;
+  country_code: string; currency: string; payment_types: string[];
+}) => _fetchJson<Beneficiary>("/v1/payments/beneficiaries", token, {
+  method: "POST", body: JSON.stringify(body),
+});
+
+export const updateBeneficiary = (token: string, id: string, body: {
+  name?: string; bank_name?: string; is_active?: boolean; payment_types?: string[];
+}) => _fetchJson<Beneficiary>(`/v1/payments/beneficiaries/${id}`, token, {
+  method: "PATCH", body: JSON.stringify(body),
+});
+
+export const deactivateBeneficiary = (token: string, id: string) =>
+  _fetchJson<void>(`/v1/payments/beneficiaries/${id}`, token, { method: "DELETE" });
+
+export const initiatePayment = (token: string, body: {
+  beneficiary_id: string; payment_type: string; amount: string;
+  currency: string; execution_date: string; reference: string; memo?: string;
+}) => _fetchJson<PaymentInstruction>("/v1/payments/initiate", token, {
+  method: "POST", body: JSON.stringify(body),
+});
+
+export const listPayments = (token: string, params?: {
+  status?: string; payment_type?: string; date_from?: string; date_to?: string;
+  limit?: number; offset?: number;
+}) => {
+  const q = new URLSearchParams(
+    Object.fromEntries(
+      Object.entries(params ?? {}).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)])
+    )
+  ).toString();
+  return _fetchJson<PaymentListResponse>(`/v1/payments/${q ? `?${q}` : ""}`, token);
+};
+
+export const getPayment = (token: string, id: string) =>
+  _fetchJson<PaymentInstruction>(`/v1/payments/${id}`, token);
+
+export const approvePayment = (token: string, id: string) =>
+  _fetchJson<PaymentInstruction>(`/v1/payments/${id}/approve`, token, { method: "POST" });
+
+export const rejectPayment = (token: string, id: string, reason: string) =>
+  _fetchJson<PaymentInstruction>(`/v1/payments/${id}/reject`, token, {
+    method: "POST", body: JSON.stringify({ reason }),
+  });
+
+export const transmitPayment = (token: string, id: string) =>
+  _fetchJson<PaymentInstruction>(`/v1/payments/${id}/transmit`, token, { method: "POST" });
+
+export const cancelPayment = (token: string, id: string) =>
+  _fetchJson<PaymentInstruction>(`/v1/payments/${id}/cancel`, token, { method: "POST" });

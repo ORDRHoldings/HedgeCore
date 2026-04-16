@@ -90,7 +90,7 @@ const NAV: NavSection[] = [
   },
   {
     label: "Hedge Desk", href: "/hedge-desk", icon: Play,
-    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/policies", "/results", "/hedge-effectiveness", "/gl-postings", "/settlement", "/erp-sync", "/cash-positions", "/cash-forecast", "/intercompany-netting", "/cash-management", "/bank-statements"],
+    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/policies", "/results", "/hedge-effectiveness", "/gl-postings", "/settlement", "/erp-sync", "/cash-positions", "/cash-forecast", "/intercompany-netting", "/cash-management", "/bank-statements", "/payments"],
     header: "HEDGE DESK",
     items: [
       // ── PRIMARY OPERATING LANE
@@ -113,6 +113,7 @@ const NAV: NavSection[] = [
       { label: "IC Netting", desc: "Intercompany netting & settlement optimization",  href: "/intercompany-netting", icon: GitMerge, group: "ACCOUNTING", minTier: "professional" as PlanTier },
       { label: "Cash Pools", desc: "Multi-entity cash pooling & sweep management",  href: "/cash-management", icon: Layers, group: "ACCOUNTING", minTier: "professional" as PlanTier },
       { label: "Bank Statements", desc: "Statement import & auto-reconciliation",  href: "/bank-statements", icon: FileSpreadsheet, group: "ACCOUNTING", minTier: "professional" as PlanTier },
+      { label: "Payments", desc: "Paper-mode payment initiation with 4-eyes approval", href: "/payments", icon: CreditCard, group: "ACCOUNTING", minTier: "enterprise" as PlanTier },
     ],
   },
   {
