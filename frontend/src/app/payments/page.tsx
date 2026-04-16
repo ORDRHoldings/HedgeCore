@@ -42,7 +42,7 @@ const statusColor: Record<string, string> = {
   DRAFT: HEX.gray,
 };
 
-const PAYMENT_TYPES = ["SWIFT", "SEPA_CT", "BACS", "ACH", "CHAPS", "DOMESTIC_WIRE", "CHECK"];
+const PAYMENT_TYPES = ["SEPA", "SWIFT", "ACH", "CHAPS", "FPS"] as const;
 const CURRENCIES = ["USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "SGD", "HKD", "NOK", "SEK", "DKK"];
 
 type Tab = "PAYMENTS" | "INITIATE" | "BENEFICIARIES";
@@ -415,7 +415,7 @@ function PaymentsInner() {
                     )}
                     {payments.map(p => {
                       const isExpanded = expandedId === p.id;
-                      const isCreator = p.created_by === user?.email || p.created_by === user?.id;
+                      const isCreator = p.created_by === (user as any)?.id;
                       const isRejecting = rejectingId === p.id;
                       const busy = actionLoading === p.id;
 
@@ -566,17 +566,6 @@ function PaymentsInner() {
                                         letterSpacing: "0.06em", opacity: busy ? 0.6 : 1,
                                       }}>
                                       {busy ? "..." : "TRANSMIT (PAPER)"}
-                                    </button>
-                                    <button
-                                      disabled={busy}
-                                      onClick={e => { e.stopPropagation(); handleCancel(p.id); }}
-                                      style={{
-                                        padding: "8px 18px", background: "transparent", color: HEX.gray,
-                                        border: `1px solid ${HEX.gray}33`, borderRadius: 4,
-                                        fontSize: 11, fontFamily: S.mono, fontWeight: 700,
-                                        cursor: busy ? "not-allowed" : "pointer", letterSpacing: "0.06em",
-                                      }}>
-                                      CANCEL
                                     </button>
                                   </div>
                                 )}
