@@ -101,6 +101,11 @@ class Company(Base):
         doc="Subscription plan tier: starter | professional | enterprise.",
     )
 
+    intelligence_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false",
+        doc="Opt-in flag for Intelligence tier features.",
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
