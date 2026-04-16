@@ -163,12 +163,17 @@ def generate_roll_ladder(
             fwd_new = fwd_points.get(next_bucket, 0.0)
 
             # Carry cost: (fwd_new - fwd_old) × notional / spot
+            # Sign is preserved: positive = cost (rolling into steeper curve),
+            # negative = benefit (rolling into flatter/cheaper curve).
             carry_cost = (fwd_new - fwd_old) * notional / spot if spot > 0 else 0.0
 
             # Slippage: notional × (spread_bps / 10000)
             slippage = notional * (spread_bps / 10000.0)
 
-            total_cost = abs(carry_cost) + slippage
+            # Net economic impact: positive = net cost, negative = net benefit.
+            # Do NOT take abs(carry_cost) — a cheaper new forward is a genuine benefit
+            # and should reduce total_roll_cost_usd, not inflate it.
+            total_cost = carry_cost + slippage
 
             # FIX-08: detect instrument transition for next tenor
             next_instrument = instrument

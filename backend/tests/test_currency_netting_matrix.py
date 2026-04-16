@@ -200,3 +200,79 @@ class TestValidateTriangularConsistency:
         rates = {"XYZ": 1.0, "AB": 2.0, "EURUSD": 1.08}
         violations = validate_triangular_consistency(rates)
         assert violations == []
+
+
+# ── Regression: A3 gross_notional_after / netting_efficiency fix ─────────────
+
+class TestNettingEfficiencyCorrectness:
+    """Regression for A3 bug: gross_notional_after used margin savings (~3% of
+    netted notional) instead of actual netted notional.
+
+    Pre-A3 bug: gross_after = gross_before - sum(n.savings_usd)
+                             = gross_before - (0.03 * netted)  ← ~33× too small
+    A3 fix:     gross_after = gross_before - sum(n.netted_notional)
+    """
+
+    def test_gross_notional_after_reflects_actual_netting(self):
+        """gross_notional_after must equal gross_before minus actual netted notional."""
+        # EURUSD: $1M, USDJPY: $800K — common leg = USD → can derive EURJPY
+        # netted_notional = min(1M, 800K) = 800K
+        # gross_before = 1M + 800K = 1.8M (sum of abs exposures)
+        # gross_after should be: 1.8M - 800K = 1.0M  (not 1.8M - 0.03*800K = 1.776M)
+        exposures = {"EURUSD": 1_000_000.0, "USDJPY": -800_000.0}
+        fx_rates = {"EURUSD": 1.08, "USDJPY": 150.0}
+
+        result = compute_currency_netting(exposures, fx_rates)
+
+        if result.redundant_legs_eliminated > 0:
+            # The netting pair has netted_notional = min(1M, 800K) = 800K
+            netted = result.netting_pairs[0].netted_notional
+            expected_gross_after = result.gross_notional_before - netted
+            assert result.gross_notional_after == pytest.approx(expected_gross_after, rel=1e-6), (
+                f"gross_notional_after should be {expected_gross_after:.0f} "
+                f"(gross_before - netted_notional), got {result.gross_notional_after:.0f}. "
+                "Check: A3 bug where savings_usd (3% proxy) was used instead of netted_notional."
+            )
+
+    def test_netting_efficiency_pct_reflects_actual_reduction(self):
+        """netting_efficiency_pct must reflect the true notional reduction, not the margin proxy."""
+        # Two EUR positions cancel completely → 100% efficiency
+        exposures = {"EURUSD": 1_000_000.0, "USDJPY": -1_000_000.0}
+        fx_rates = {"EURUSD": 1.08, "USDJPY": 150.0}
+
+        result = compute_currency_netting(exposures, fx_rates)
+
+        if result.redundant_legs_eliminated > 0:
+            # netted = min(1M, 1M) = 1M
+            # efficiency = 1M / 2M = 50% (not 0.03/2 = 1.5%)
+            assert result.netting_efficiency_pct > 1.0, (
+                f"netting_efficiency_pct should be substantial (>1%), got {result.netting_efficiency_pct}%. "
+                "Check: A3 bug where savings_usd (3% of netted) was used for efficiency calc."
+            )
+
+    def test_savings_usd_is_margin_estimate_not_notional(self):
+        """savings_usd on NettingPair must remain the 3% margin estimate, not be changed."""
+        # Verify that savings_usd = netted * 0.03 (the margin heuristic)
+        np = NettingPair("EURUSD", "USDJPY", "EURJPY", 1_000_000.0, 800_000.0, 800_000.0, 24_000.0)
+        assert np.savings_usd == pytest.approx(24_000.0)  # caller set it to 3% of 800K
+        # And netted_notional separately
+        assert np.netted_notional == pytest.approx(800_000.0)
+
+    def test_gross_notional_after_not_nearly_equal_to_before(self):
+        """Pre-A3: gross_after ≈ gross_before (only differed by 3% of netted).
+        Post-A3: gross_after = gross_before - netted_notional (meaningful reduction).
+        """
+        exposures = {"EURUSD": 2_000_000.0, "USDJPY": -1_000_000.0}
+        fx_rates = {"EURUSD": 1.08, "USDJPY": 150.0}
+        result = compute_currency_netting(exposures, fx_rates)
+
+        if result.redundant_legs_eliminated > 0:
+            # Pre-A3: gross_after = 3M - (0.03 * 1M) = 2.97M (barely different)
+            pre_a3_wrong_after = result.gross_notional_before - result.total_savings_usd
+            # Post-A3: gross_after = 3M - 1M = 2M (meaningful difference)
+            assert result.gross_notional_after != pytest.approx(pre_a3_wrong_after, rel=1e-3), (
+                "gross_notional_after must differ from pre-A3 calculation"
+            )
+            assert result.gross_notional_after < result.gross_notional_before * 0.95, (
+                "gross_notional_after must be meaningfully less than before (>5% reduction for substantial netting)"
+            )

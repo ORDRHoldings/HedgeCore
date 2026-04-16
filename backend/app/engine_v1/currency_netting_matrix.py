@@ -211,9 +211,13 @@ def compute_currency_netting(
                     used.add(pair2)
                     break
 
-    gross_after = gross_before - sum(n.savings_usd for n in netting_pairs)
-    total_savings = sum(n.savings_usd for n in netting_pairs)
-    efficiency = (total_savings / gross_before * 100.0) if gross_before > 0 else 0.0
+    # total_notional_netted: actual exposure reduction from netting (e.g. min(amt1, amt2))
+    # total_savings_usd: margin savings ESTIMATE only (3% of netted notional — heuristic)
+    # These are different quantities — do not conflate them.
+    total_notional_netted = sum(n.netted_notional for n in netting_pairs)
+    total_savings = sum(n.savings_usd for n in netting_pairs)  # margin savings estimate
+    gross_after = gross_before - total_notional_netted  # actual post-netting notional
+    efficiency = (total_notional_netted / gross_before * 100.0) if gross_before > 0 else 0.0
 
     # FIX-10: triangulation consistency check
     tri_checks = validate_netting_triangulation(netting_pairs, fx_rates)
