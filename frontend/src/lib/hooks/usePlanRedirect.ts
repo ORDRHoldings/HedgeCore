@@ -16,6 +16,7 @@ const TIER_RANK: Record<PlanTier, number> = {
   smb: 0,
   professional: 1,
   enterprise: 2,
+  intelligence: 3,
 };
 
 export function usePlanRedirect(minTier: PlanTier): boolean {

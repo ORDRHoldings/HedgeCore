@@ -27,7 +27,7 @@ import { setAuthState } from "./store/slices/authSlice";
 import { API_BASE } from "@/lib/api/apiBase";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-export type PlanTier = "lite" | "smb" | "professional" | "enterprise";
+export type PlanTier = "lite" | "smb" | "professional" | "enterprise" | "intelligence";
 
 export interface UserContext {
   id: string;

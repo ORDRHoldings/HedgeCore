@@ -26,7 +26,7 @@ import {
   ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen,
   Target, Cpu, PenSquare, Download, Key, User, Ticket, CircleHelp, Database,
   DollarSign, RefreshCw, BarChart2, Building2, CreditCard, Link2, TrendingUp, GitMerge,
-  Layers, FileSpreadsheet,
+  Layers, FileSpreadsheet, Brain,
 } from "lucide-react";
 import { Icon } from "@/components/ui/Icon";
 import { T } from "@/lib/design/tokens";
@@ -90,7 +90,7 @@ const NAV: NavSection[] = [
   },
   {
     label: "Hedge Desk", href: "/hedge-desk", icon: Play,
-    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/policies", "/results", "/hedge-effectiveness", "/gl-postings", "/settlement", "/erp-sync", "/cash-positions", "/cash-forecast", "/intercompany-netting", "/cash-management", "/bank-statements", "/payments"],
+    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/policies", "/results", "/hedge-effectiveness", "/gl-postings", "/settlement", "/erp-sync", "/cash-positions", "/cash-forecast", "/intercompany-netting", "/cash-management", "/bank-statements", "/payments", "/intelligence"],
     header: "HEDGE DESK",
     items: [
       // ── PRIMARY OPERATING LANE
@@ -202,6 +202,21 @@ const NAV: NavSection[] = [
       { label: "API Key Management", desc: "Generate and revoke API keys",        href: "/settings?tab=api_key_mgmt",  icon: Key, minTier: "professional" as PlanTier },
       { label: "Organisation",       desc: "Company, branches, governance",       href: "/settings?tab=organisation",  icon: Database, minTier: "enterprise" as PlanTier },
       { label: "Audit Trail",        desc: "Immutable event log",                 href: "/settings?tab=audit_trail",   icon: Shield, minTier: "enterprise" as PlanTier },
+    ],
+  },
+  // ── INTELLIGENCE ──────────────────────────────────────────────
+  {
+    label: "Intelligence", href: "/intelligence", icon: Brain,
+    prefixes: ["/intelligence"],
+    header: "INTELLIGENCE",
+    items: [
+      {
+        label: "Intelligence",
+        desc: "Natural language treasury query + AI report commentary",
+        href: "/intelligence",
+        icon: Brain,
+        minTier: "intelligence" as PlanTier,
+      },
     ],
   },
   {
