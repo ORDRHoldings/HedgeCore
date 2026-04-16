@@ -209,6 +209,7 @@ const NAV: NavSection[] = [
     label: "Intelligence", href: "/intelligence", icon: Brain,
     prefixes: ["/intelligence"],
     header: "INTELLIGENCE",
+    minTier: "intelligence" as PlanTier,
     items: [
       {
         label: "Intelligence",
