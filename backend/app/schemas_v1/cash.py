@@ -551,3 +551,84 @@ class SweepResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ── Payment Initiation — Phase 2 §4.4 ────────────────────────────────────
+
+class BeneficiaryCreate(BaseModel):
+    name: str
+    bank_name: str
+    bank_code: str = Field(..., max_length=34)
+    account_number: str = Field(..., max_length=34)
+    country_code: str = Field(..., min_length=2, max_length=2)
+    currency: str = Field(..., min_length=3, max_length=3)
+    payment_types: list[str]  # subset of SEPA, SWIFT, ACH, CHAPS, FPS
+
+
+class BeneficiaryUpdate(BaseModel):
+    name: str | None = None
+    bank_name: str | None = None
+    is_active: bool | None = None
+    payment_types: list[str] | None = None
+
+
+class BeneficiaryResponse(BaseModel):
+    id: uuid.UUID
+    company_id: uuid.UUID
+    name: str
+    bank_name: str
+    bank_code: str
+    account_number: str
+    country_code: str
+    currency: str
+    payment_types: list[str]
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PaymentInitiate(BaseModel):
+    beneficiary_id: uuid.UUID
+    payment_type: str  # SEPA | SWIFT | ACH | CHAPS | FPS
+    amount: Decimal = Field(..., gt=0)
+    currency: str = Field(..., min_length=3, max_length=3)
+    execution_date: date
+    reference: str = Field(..., max_length=140)
+    memo: str | None = None
+
+
+class PaymentReject(BaseModel):
+    reason: str
+
+
+class PaymentInstructionResponse(BaseModel):
+    id: uuid.UUID
+    company_id: uuid.UUID
+    beneficiary_id: uuid.UUID
+    beneficiary_name: str
+    payment_type: str
+    amount: Decimal
+    currency: str
+    execution_date: date
+    reference: str
+    memo: str | None
+    status: str
+    created_by: uuid.UUID
+    approved_by: uuid.UUID | None
+    approved_at: datetime | None
+    rejected_by: uuid.UUID | None
+    rejection_reason: str | None
+    transmission_mode: str
+    transmitted_at: datetime | None
+    instruction_hash: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PaymentListResponse(BaseModel):
+    items: list[PaymentInstructionResponse]
+    total: int
