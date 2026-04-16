@@ -33,6 +33,7 @@ PLAN_HIERARCHY: dict[str, int] = {
     "starter": 0,
     "professional": 1,
     "enterprise": 2,
+    "intelligence": 3,
 }
 
 _DEFAULT_TIER = "starter"
@@ -43,7 +44,7 @@ def require_plan_tier(min_tier: str) -> Callable:
     Return a FastAPI dependency that enforces a minimum plan tier.
 
     Args:
-        min_tier: Minimum required tier ("starter" | "professional" | "enterprise").
+        min_tier: Minimum required tier ("starter" | "professional" | "enterprise" | "intelligence").
 
     Returns:
         An async dependency function that returns the current user or raises HTTP 402.
