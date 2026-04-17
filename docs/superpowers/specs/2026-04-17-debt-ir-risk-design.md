@@ -472,7 +472,7 @@ Target: ≥ 50 new tests, maintaining ≥ 75% coverage. Route tests must explici
 ## 10. Build Sequence
 
 1. Five engine modules + unit tests
-2. Four ORM models + two Alembic migrations
+2. Six ORM models + three Alembic migrations
 3. Three services + service tests
 4. Two route files + route tests
 5. WORM trigger + WORM tests
