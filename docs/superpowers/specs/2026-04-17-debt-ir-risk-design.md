@@ -45,7 +45,7 @@ pages:    /debt   /debt/[id]   /ir-risk
 
 - **No curve persistence** — yield curves are recomputed on demand from existing market data snapshots. Avoids stale-curve NPV bugs.
 - **Scheduler integration** — `mark_to_market_all` plugs into the existing market data scheduler (fail-open: last known NPV preserved on bootstrap failure).
-- **Multi-entity** — `DebtFacility` and `IRSwap` both FK to `LegalEntity` (existing model), supporting corporate + fund structures.
+- **Multi-entity** — `DebtFacility` and `IRSwap` both FK to `LegalEntity` (existing model at `backend/app/models/cash.py`), supporting corporate + fund structures.
 - **Plan gating** — new sidebar section gated at `professional:2`.
 
 ---
@@ -147,7 +147,7 @@ class SwaptionValuation:
 
 **Model selection:** Black-76 (log-normal) when forward rate > 0.5%; Bachelier (normal) when forward rate ≤ 0.5%. This handles negative rate environments (EURIBOR 2014–2022) where Black-76 produces mathematically invalid negative premiums.
 
-Vol surface sourced from existing `options_snapshots` table.
+**Vol surface:** IR swaption vols (by swap tenor / option expiry / strike) are distinct from FX option vols. A new `ir_vol_snapshots` table is required — it is NOT the existing `options_snapshots` table (which stores FX implied vol by currency pair). `ir_vol_snapshots` schema: `(id, tenant_id, index, option_expiry, swap_tenor, strike, implied_vol_normal, implied_vol_lognormal, as_of, created_at)`. Populated initially via manual entry; market data scheduler can extend to auto-populate from IBKR rate vol feeds.
 
 ---
 
@@ -210,7 +210,7 @@ class IREffectivenessResult:
 
 ---
 
-## 4. ORM Models (4 new models)
+## 4. ORM Models (5 new models)
 
 ### 4.1 `DebtFacility`
 
@@ -243,6 +243,7 @@ Append-only in practice (amend via new superseding record). SHA-256 hash for tam
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | UUID PK | |
+| `tenant_id` | FK → Company | multi-tenant (enables direct tenant-scoped queries without facility join) |
 | `facility_id` | FK → DebtFacility | |
 | `drawdown_date` | date | |
 | `amount` | Numeric(20,6) | |
@@ -258,13 +259,16 @@ Append-only in practice (amend via new superseding record). SHA-256 hash for tam
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | UUID PK | |
+| `tenant_id` | FK → Company | multi-tenant |
 | `facility_id` | FK → DebtFacility | |
 | `covenant_type` | enum | DSCR, LTV, INTEREST_COVERAGE, NET_LEVERAGE, MIN_LIQUIDITY |
 | `threshold` | Numeric | breach level |
-| `current_value` | Numeric | updated on each effectiveness run |
+| `current_value` | Numeric | updated on each retest |
 | `headroom_pct` | Numeric | computed: (current − threshold) / threshold × 100 |
 | `status` | enum | COMPLIANT, WARNING, BREACH |
-| `tested_at` | timestamp | |
+| `created_at` | timestamp | |
+| `updated_at` | timestamp | updated on every retest — tracks value history via updated_at |
+| `tested_at` | timestamp | last explicit retest timestamp |
 
 ---
 
@@ -292,10 +296,30 @@ Append-only in practice (amend via new superseding record). SHA-256 hash for tam
 | `last_mtm_at` | timestamp | |
 | `status` | enum | ACTIVE, TERMINATED, EXPIRED |
 | `created_at` | timestamp | |
+| `updated_at` | timestamp | updated on every MTM run |
 
 ---
 
-### 4.5 `IRHedgeRun` (WORM)
+### 4.5 `IRVolSnapshot`
+
+Stores IR swaption vol surface data. Distinct from `options_snapshots` (FX vols). Populated via manual entry initially; scheduler-extendable.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID PK | |
+| `tenant_id` | FK → Company | |
+| `index` | str | SOFR, EURIBOR, SONIA |
+| `option_expiry` | str | "1M", "3M", "6M", "1Y", "2Y" |
+| `swap_tenor` | str | "1Y", "2Y", "5Y", "10Y", "30Y" |
+| `strike` | Numeric | ATM = 0, or absolute rate |
+| `implied_vol_normal` | Numeric | Bachelier normal vol (bps/year) |
+| `implied_vol_lognormal` | Numeric | Black-76 lognormal vol |
+| `as_of` | date | |
+| `created_at` | timestamp | |
+
+---
+
+### 4.6 `IRHedgeRun` (WORM)
 
 Append-only, hash-chained. Mirrors `CalculationRun`.
 
@@ -306,6 +330,7 @@ Append-only, hash-chained. Mirrors `CalculationRun`.
 | `swap_id` | FK → IRSwap | |
 | `facility_id` | FK → DebtFacility | |
 | `run_at` | timestamp | |
+| `created_at` | timestamp | server_default=NOW() — WORM insert-time proof |
 | `method` | str | DOLLAR_OFFSET, REGRESSION |
 | `ratio` | Numeric | |
 | `passed` | bool | |
@@ -334,8 +359,8 @@ Append-only, hash-chained. Mirrors `CalculationRun`.
 | Function | Purpose |
 |----------|---------|
 | `create_swap(tenant_id, spec)` | Create IRSwap, validate notional ≤ facility notional, audit event |
-| `mark_to_market(swap_id)` | Bootstrap IR curve, call swap_valuator, update last_npv + last_dv01 |
-| `mark_to_market_all(tenant_id)` | Batch MTM all ACTIVE swaps, fail-open on curve error |
+| `mark_to_market(swap_id)` | Bootstrap IR curve, call swap_valuator, update last_npv + last_dv01 + updated_at, post IR_SWAP_MTM audit event |
+| `mark_to_market_all(tenant_id)` | Batch MTM all ACTIVE swaps, fail-open on curve error, post IR_SWAP_MTM_BATCH audit event |
 | `terminate_swap(swap_id)` | Set TERMINATED, record termination P&L, audit event |
 | `get_dv01_ladder(tenant_id)` | Aggregate DV01 by tenor bucket (1Y/2Y/5Y/10Y/30Y) |
 
@@ -359,7 +384,7 @@ GET    /v1/debt/facilities                    list (filter: entity, status, curr
 GET    /v1/debt/facilities/{id}               facility detail + drawdowns + covenants
 POST   /v1/debt/facilities/{id}/drawdowns     record drawdown
 GET    /v1/debt/maturity-calendar             all facilities sorted by maturity
-GET    /v1/debt/schedule                      amortization + interest expense schedule
+GET    /v1/debt/facilities/{id}/schedule      amortization + interest expense for one facility
 GET    /v1/debt/covenants                     all covenants: headroom + status
 GET    /v1/debt/exposure                      total drawn by currency + entity
 ```
@@ -415,9 +440,10 @@ Gated at `professional:2` plan tier.
 
 ## 8. Migrations
 
-Two Alembic migrations:
-- `migration_XXXX`: `debt_facilities`, `debt_drawdowns`, `debt_covenants` tables + indexes
-- `migration_XXXX+1`: `ir_swaps`, `ir_hedge_runs` tables + WORM trigger on `ir_hedge_runs` + indexes
+Three Alembic migrations:
+- `migration_XXXX`: `debt_facilities`, `debt_drawdowns`, `debt_covenants` tables + indexes on `(tenant_id, status)`, `(tenant_id, maturity_date)`, `(facility_id)`
+- `migration_XXXX+1`: `ir_swaps`, `ir_hedge_runs`, `ir_vol_snapshots` tables + WORM trigger on `ir_hedge_runs` + indexes on `(tenant_id, status)`, `(linked_facility_id)`, `(tenant_id, run_at)`
+- `migration_XXXX+2`: INSERT four new RBAC permissions: `debt:read`, `debt:write`, `ir_risk:read`, `ir_risk:write` into the `permissions` table. Assign to ANALYST (read), TRADER (read+write), ADMIN (all) roles.
 
 WORM trigger on `ir_hedge_runs`: PostgreSQL `BEFORE UPDATE OR DELETE` trigger raising exception (mirrors existing WORM triggers on `calculation_runs`).
 
@@ -427,16 +453,19 @@ WORM trigger on `ir_hedge_runs`: PostgreSQL `BEFORE UPDATE OR DELETE` trigger ra
 
 | Layer | Tests |
 |-------|-------|
-| Engine unit tests | `test_ir_curve_engine.py` — curve bootstrap accuracy vs. known fixtures |
-| | `test_swap_valuator.py` — NPV = 0 at inception (par swap), DV01 sign convention |
-| | `test_swaption_engine.py` — Black-76 vs. Bachelier switch, put-call parity |
-| | `test_debt_cashflow_engine.py` — amortization sum = principal, day count accuracy |
-| | `test_ir_hedge_effectiveness.py` — 80/125 boundary cases |
-| Service tests | `test_debt_service.py`, `test_ir_swap_service.py`, `test_ir_hedge_service.py` — AsyncMock |
-| Route tests | `test_v1_debt_routes.py`, `test_v1_ir_risk_routes.py` — httpx AsyncClient |
-| WORM tests | Verify IRHedgeRun cannot be updated or deleted (requires_postgres marker) |
+| Engine unit tests | `test_ir_curve_engine.py` — bootstrap accuracy vs. known fixtures; forward rates sum to zero-coupon; round-trip discount factor |
+| | `test_swap_valuator.py` — NPV = 0 at inception (par swap); DV01 sign convention (pay-fixed DV01 is negative); amortizing schedule cashflow sum |
+| | `test_swaption_engine.py` — Black-76 vs. Bachelier switch at 0.5% threshold; put-call parity; zero-vol premium = intrinsic value |
+| | `test_debt_cashflow_engine.py` — amortization cashflow sum = principal; ACT/360 vs. 30/360 day count differences; covenant DSCR boundary |
+| | `test_ir_hedge_effectiveness.py` — 80% boundary (pass), 79% boundary (fail), 125% boundary (pass), 126% (fail); regression R² threshold |
+| Service tests | `test_debt_service.py` — AsyncMock: create_facility posts audit event; record_drawdown updates drawn_amount; check_covenants sets BREACH status |
+| | `test_ir_swap_service.py` — mark_to_market posts IR_SWAP_MTM audit event; mark_to_market_all is fail-open (curve error does not raise); terminate sets TERMINATED |
+| | `test_ir_hedge_service.py` — run_effectiveness_test writes IRHedgeRun with correct hash chain; get_hedge_ratio returns DV01 ratio |
+| Route tests | `test_v1_debt_routes.py` — each endpoint: 200 happy path; 401 unauthenticated; 403 missing `debt:read`/`debt:write` permission; 404 facility not found |
+| | `test_v1_ir_risk_routes.py` — each endpoint: 200 happy path; 401 unauthenticated; 403 missing `ir_risk:read`/`ir_risk:write`; 422 invalid swap spec |
+| WORM tests | `@pytest.mark.requires_postgres`: verify IRHedgeRun UPDATE raises exception; verify DELETE raises exception; verify hash chain links correctly across two sequential runs |
 
-Target: ≥ 30 new tests, maintaining ≥ 75% coverage.
+Target: ≥ 50 new tests, maintaining ≥ 75% coverage. Route tests must explicitly verify 401 and 403 on every endpoint.
 
 ---
 
