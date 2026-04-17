@@ -1,5 +1,31 @@
 # Changelog (AI-maintained)
 
+## 2026-04-17 — Audit Lab UX Overhaul COMPLETE
+
+### Changed (frontend-only, no new routes)
+**Demo page (`frontend/src/app/audit-lab/demo/page.tsx`) — full rebuild:**
+- 6-act narrative: nav strip → hero → KPI strip (4 cards) → charts → findings → trust rail → CTA
+- Dynamic imports for MarkupByMonthChart + CounterpartyMatrix (ssr: false)
+- Public page (no auth), CSS variable design tokens, lucide-react icons
+- Primary CTA: "AUDIT MY FX DATA →" → `/auth/signup`; secondary: SIGN IN → `/auth/login`
+
+**Fixture (`frontend/src/lib/fixtures/audit-lab-demo.ts`) — enriched:**
+- `markupByMonth` (3 months), `transactions` (11 rows, 3 counterparties with `spread_classification`)
+- `findings` (3 items: MARKUP_EXCESS/HIGH, FEE_OPACITY/MEDIUM, COUNTERPARTY_DIVERGENCE/LOW)
+- `trustSignals` (3 items), `getDemoCounterpartyStats()` aggregation helper
+
+**Quality fixes (e9c6724):** `cpStats` empty guard, `findings[2]` → `.find(f => f.id === "f3")`, division-by-zero in multiplier, `sevColor` camelCase
+
+**Pre-implemented (verified):** upload UX (sample CSV, dynamic dates, hidden UUID), hub page (no BETA badge, guided empty state, run list with dataset names), run detail (5 KPIs, hash in header, expandable findings, Verification tab), sidebar Activity Log rename
+
+### Validation
+- `next build`: clean (exit 0) — 115+ pages compiled
+- `tsc --noEmit`: clean
+- Browser: `/audit-lab/demo` screenshot confirmed — all 6 acts rendering correctly
+- Commits: c89b97d (demo rebuild) + e9c6724 (quality fixes)
+
+---
+
 ## 2026-04-17 — Phase 4: Debt Management + Interest Rate Risk COMPLETE
 
 ### Added
