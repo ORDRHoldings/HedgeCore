@@ -56,6 +56,18 @@ def test_result_has_evidence_bundle():
     assert "ratio" in result.evidence_bundle
 
 
+def test_dollar_offset_pass_at_80_boundary():
+    """Lower inclusive boundary: ratio == 0.80 must pass."""
+    from app.engine_v1.ir_hedge_effectiveness import test_ir_effectiveness
+    result = test_ir_effectiveness(
+        hedged_item_fv_changes=[-100.0],
+        instrument_fv_changes=[80.0],
+        method="DOLLAR_OFFSET",
+    )
+    assert result.passed is True
+    assert abs(result.ratio - 0.80) < 1e-9
+
+
 def test_regression_pass_high_r_squared():
     """Regression method passes when R² >= 0.80 and slope in [-1.25, -0.80]."""
     from app.engine_v1.ir_hedge_effectiveness import test_ir_effectiveness

@@ -26,6 +26,7 @@ class IREffectivenessResult:
             "passed": self.passed,
             "prospective": self.prospective,
             "retrospective": self.retrospective,
+            "evidence_bundle": self.evidence_bundle,
         }
 
 
@@ -54,6 +55,8 @@ def _dollar_offset(
     hedged: list[float],
     instrument: list[float],
 ) -> IREffectivenessResult:
+    if len(hedged) != len(instrument):
+        raise ValueError(f"Length mismatch: {len(hedged)} hedged vs {len(instrument)} instrument periods")
     sum_hedged = sum(hedged)
     sum_instrument = sum(instrument)
 
@@ -85,6 +88,8 @@ def _regression(
     hedged: list[float],
     instrument: list[float],
 ) -> IREffectivenessResult:
+    if len(hedged) != len(instrument):
+        raise ValueError(f"Length mismatch: {len(hedged)} hedged vs {len(instrument)} instrument periods")
     n = len(hedged)
     if n < 2:
         return IREffectivenessResult(
