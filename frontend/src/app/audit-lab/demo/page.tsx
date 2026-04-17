@@ -36,14 +36,14 @@ function fmt(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
 }
 
-function SevColor(sev: string) {
+function sevColor(sev: string) {
   if (sev === "HIGH")   return S.red;
   if (sev === "MEDIUM") return S.amber;
   return S.green;
 }
 
 function SevIcon({ sev }: { sev: string }) {
-  const color = SevColor(sev);
+  const color = sevColor(sev);
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 4,
       fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
@@ -119,6 +119,7 @@ export default function AuditLabDemoPage() {
         </div>
 
         {/* Counterparty callout + matrix */}
+        {cpStats.length > 0 && (
         <div style={{ marginBottom: 40 }}>
           {/* Narrative callout */}
           <div style={{ background: `color-mix(in srgb, ${S.amber} 5%, transparent)`, border: `1px solid color-mix(in srgb, ${S.amber} 20%, transparent)`,
@@ -130,10 +131,10 @@ export default function AuditLabDemoPage() {
               </div>
               <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, lineHeight: 1.6 }}>
                 <strong style={{ color: S.primary }}>{worst.name}</strong> charged {worst.avgBps} bps on average —{" "}
-                {Math.round(worst.avgBps / best.avgBps)}× higher than{" "}
+                {best.avgBps > 0 ? Math.round(worst.avgBps / best.avgBps) : "N/A"}× higher than{" "}
                 <strong style={{ color: S.primary }}>{best.name}</strong> ({best.avgBps} bps) on comparable trades.{" "}
                 Switching those {worst.tradeCount} trades would have saved approximately{" "}
-                <strong style={{ color: S.green }}>{fmt(d.findings[2].amount_usd)}</strong>.
+                <strong style={{ color: S.green }}>{fmt(d.findings.find(f => f.id === "f3")?.amount_usd ?? 0)}</strong>.
               </div>
             </div>
           </div>
@@ -141,7 +142,7 @@ export default function AuditLabDemoPage() {
             COUNTERPARTY PERFORMANCE MATRIX
           </div>
           <CounterpartyMatrix transactions={d.transactions as never[]} />
-        </div>
+        </div>)}
 
         {/* ── Act 4: Findings ──────────────────────────────────────────────── */}
         <div style={{ marginBottom: 40 }}>
