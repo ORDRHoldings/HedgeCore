@@ -7,11 +7,21 @@
 ## Last Updated: 2026-04-16
 
 ## Current Sprint
-**Phase 3 — Intelligence Tier (AI Add-On)** — COMPLETE (2026-04-16)
-- Items: 12/12 done, 15 commits on master (b0ab322 through a232d6c)
+**Phase 4 — Debt Management + Interest Rate Risk** — COMPLETE (2026-04-17)
+- Items: 16/16 done, 15 commits on master (d12d904 through 55717b6)
 - Next sprint: TBD
 
-## Recent Work (2026-04-16) — Phase 3: Intelligence Tier COMPLETE
+## Recent Work (2026-04-17) — Phase 4: Debt Management + IR Risk COMPLETE
+
+- Engine: `ir_curve_engine`, `swap_valuator`, `swaption_engine` (annuity bug fixed), `debt_cashflow_engine`, `ir_hedge_effectiveness` (IFRS 9)
+- Models: `DebtFacility/Drawdown/Covenant` + `IRSwap/VolSnapshot/HedgeRun` (WORM + hash chain)
+- Services: `debt_service` (6 ops), `ir_swap_service` (MTM + DV01), `ir_hedge_service` (WORM run + evidence bundle)
+- Routes: `v1_debt` (8 endpoints) + `v1_ir_risk` (7 endpoints); `debt.read/write` + `ir_risk.read/write` RBAC
+- Migrations: 3 Alembic migrations incl. WORM PG trigger + 4 new RBAC permissions
+- Frontend: `debtClient.ts` (12 API fns), `/debt`, `/debt/[id]`, `/ir-risk` pages, sidebar DEBT & IR RISK section
+- 28 new tests all pass; `next build` clean; `tsc --noEmit` clean
+
+## Previous Work (2026-04-16) — Phase 3: Intelligence Tier COMPLETE
 
 - `IntelligenceQueryLog` ORM model (9 cols, composite index) + migration q1a2b3c4d5e6
 - `intelligence_service.py`: advisory-only — query_intelligence, draft_commentary, get_usage_stats, build_treasury_context; prompt hashes (SHA-256) stored, never raw prompts

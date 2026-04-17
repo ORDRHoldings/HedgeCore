@@ -1,5 +1,49 @@
 # Changelog (AI-maintained)
 
+## 2026-04-17 — Phase 4: Debt Management + Interest Rate Risk COMPLETE
+
+### Added
+**Engine (5 new pure-function modules — `backend/app/engine_v1/`):**
+- `ir_curve_engine.py`: OIS bootstrapper (SOFR/EURIBOR/SONIA/FIXED), zero-coupon discount factors, par/spot/forward rate extraction, 5 tenors
+- `swap_valuator.py`: IRS/XCCY fixed-float swap NPV + DV01 via discounting; ACTACT day-count guard
+- `swaption_engine.py`: Black-76 + Bachelier swaption pricing; annuity scaling bug fixed (`annuity_dollar = pvbp / 0.0001`)
+- `debt_cashflow_engine.py`: BULLET/AMORTIZING/BALLOON schedules; ACT360/ACT365/30_360 day-count; DSCR/LTV/ICR/NET_LEVERAGE covenant evaluation
+- `ir_hedge_effectiveness.py`: IFRS 9.6.4.1 dollar-offset (ratio 0.80–1.25) + OLS regression (R²≥0.80, slope [-1.25,-0.80])
+
+**Models (`backend/app/models/`):**
+- `debt.py`: `DebtFacility`, `DebtDrawdown` (SHA-256 drawdown hash), `DebtCovenant`
+- `ir_risk.py`: `IRSwap`, `IRVolSnapshot`, `IRHedgeRun` (WORM + SHA-256 hash chain)
+
+**Migrations (`backend/migrations/versions/`):**
+- `r1a2b3c4d5e6`: `debt_facilities`, `debt_drawdowns`, `debt_covenants` + 4 composite indexes
+- `s1a2b3c4d5e6`: `ir_swaps`, `ir_vol_snapshots`, `ir_hedge_runs` + WORM PG trigger + 2 indexes
+- `t1a2b3c4d5e6`: 4 RBAC permissions (`debt.read/write`, `ir_risk.read/write`) assigned to risk_analyst/supervisor/admin
+
+**Services (`backend/app/services/`):**
+- `debt_service.py`: `create_facility`, `record_drawdown`, `get_maturity_calendar`, `get_debt_schedule`, `check_covenants`, `get_total_exposure`
+- `ir_swap_service.py`: `create_swap`, `mark_to_market`, `mark_to_market_all` (fail-open), `list_swaps`, `terminate_swap`, `get_dv01_ladder`
+- `ir_hedge_service.py`: `run_effectiveness_test` (WORM hash chain), `get_evidence_bundle`, `get_hedge_ratio`
+
+**Routes (`backend/app/api/routes/`):**
+- `v1_debt.py`: 8 endpoints (`GET/POST /facilities`, `GET /facilities/{id}`, `GET /facilities/{id}/schedule`, `GET /covenants`, `GET /maturity-calendar`, `GET /exposure`, `POST /drawdown`) — `debt.read/write` RBAC
+- `v1_ir_risk.py`: 7 endpoints (`GET/POST /swaps`, `POST /swaps/{id}/terminate`, `POST /mtm-all`, `GET /dv01-ladder`, `POST /effectiveness`, `GET /effectiveness/history`) — `ir_risk.read/write` RBAC
+
+**Frontend:**
+- `debtClient.ts`: 6 interfaces + 12 typed API functions (7 debt + 5 IR risk), `_fetchJson` helper with HTTP error checking
+- `/debt/page.tsx`: Portfolio dashboard — summary bar (committed/drawn/available/facilities), maturity ladder, facility table
+- `/debt/[id]/page.tsx`: Facility detail — 3 tabs (amortization schedule, covenant cards, hedges)
+- `/ir-risk/page.tsx`: IR risk dashboard — DV01 ladder bar chart, swap portfolio table, MTM ALL trigger
+- `AppSidebar.tsx`: `DEBT & IR RISK` group added (Debt Portfolio + IR Risk nav items, professional tier gate)
+
+### Tests
+- 28 new tests across 7 test files (8 IR effectiveness + 4 debt cashflow + 3 debt service + 2 IR swap service + 2 IR hedge service + 5 debt routes + 4 IR risk routes)
+- All 28 Phase 4 tests pass
+- Commits: `d12d904` → `55717b6` (15 commits)
+
+### Build
+- `npx next build`: PASS — `/debt` (static), `/debt/[id]` (dynamic), `/ir-risk` (static) all compiled
+- `tsc --noEmit`: CLEAN
+
 ## 2026-04-16 — Audit Sprint A3: Settlement & Execution Pipeline (2 bug fixes)
 
 ### Fixed
