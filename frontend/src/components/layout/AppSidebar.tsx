@@ -26,7 +26,7 @@ import {
   ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen,
   Target, Cpu, PenSquare, Download, Key, User, Ticket, CircleHelp, Database,
   DollarSign, RefreshCw, BarChart2, Building2, CreditCard, Link2, TrendingUp, GitMerge,
-  Layers, FileSpreadsheet, Brain,
+  Layers, FileSpreadsheet, Brain, TrendingDown,
 } from "lucide-react";
 import { Icon } from "@/components/ui/Icon";
 import { T } from "@/lib/design/tokens";
@@ -90,7 +90,7 @@ const NAV: NavSection[] = [
   },
   {
     label: "Hedge Desk", href: "/hedge-desk", icon: Play,
-    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/policies", "/results", "/hedge-effectiveness", "/gl-postings", "/settlement", "/erp-sync", "/cash-positions", "/cash-forecast", "/intercompany-netting", "/cash-management", "/bank-statements", "/payments", "/intelligence"],
+    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/policies", "/results", "/hedge-effectiveness", "/gl-postings", "/settlement", "/erp-sync", "/cash-positions", "/cash-forecast", "/intercompany-netting", "/cash-management", "/bank-statements", "/payments", "/intelligence", "/debt", "/ir-risk"],
     header: "HEDGE DESK",
     items: [
       // ── PRIMARY OPERATING LANE
@@ -114,6 +114,9 @@ const NAV: NavSection[] = [
       { label: "Cash Pools", desc: "Multi-entity cash pooling & sweep management",  href: "/cash-management", icon: Layers, group: "ACCOUNTING", minTier: "professional" as PlanTier },
       { label: "Bank Statements", desc: "Statement import & auto-reconciliation",  href: "/bank-statements", icon: FileSpreadsheet, group: "ACCOUNTING", minTier: "professional" as PlanTier },
       { label: "Payments", desc: "Paper-mode payment initiation with 4-eyes approval", href: "/payments", icon: CreditCard, group: "ACCOUNTING", minTier: "enterprise" as PlanTier },
+      // ── DEBT & IR RISK
+      { label: "Debt Portfolio", desc: "Debt facilities, drawdowns, maturity calendar",  href: "/debt",    icon: CreditCard,   group: "DEBT & IR RISK", minTier: "professional" as PlanTier },
+      { label: "IR Risk",        desc: "IR swaps, DV01 ladder, IFRS 9 effectiveness",   href: "/ir-risk", icon: TrendingDown, group: "DEBT & IR RISK", minTier: "professional" as PlanTier },
     ],
   },
   {
