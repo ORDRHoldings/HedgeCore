@@ -28,25 +28,25 @@ export const DEMO_DATASET = {
     "2025-12": 46_800,
   } as Record<string, number>,
 
-  // Used by CounterpartyMatrix — spread_classification is required by that component
+  // Used by CounterpartyMatrix
   transactions: [
     // HSBC — worst performer
-    { id: "t1",  row_index: 1,  trade_date: "2025-10-03", currency_sold: "EUR", currency_bought: "USD", amount_sold: 800_000,   amount_bought: 872_400,   effective_rate: 1.0905, benchmark_rate: 1.0870, markup_cost_usd: 2_800, markup_direction: "ADVERSE", markup_bps: 32, counterparty: "HSBC",         spread_classification: "ADVERSE"   },
-    { id: "t2",  row_index: 2,  trade_date: "2025-10-08", currency_sold: "GBP", currency_bought: "USD", amount_sold: 500_000,   amount_bought: 631_500,   effective_rate: 1.2630, benchmark_rate: 1.2710, markup_cost_usd: 4_000, markup_direction: "ADVERSE", markup_bps: 63, counterparty: "HSBC",         spread_classification: "ADVERSE"   },
-    { id: "t3",  row_index: 3,  trade_date: "2025-10-14", currency_sold: "EUR", currency_bought: "USD", amount_sold: 1_200_000, amount_bought: 1_308_000, effective_rate: 1.0900, benchmark_rate: 1.0847, markup_cost_usd: 6_360, markup_direction: "ADVERSE", markup_bps: 49, counterparty: "HSBC",         spread_classification: "ADVERSE"   },
-    { id: "t4",  row_index: 4,  trade_date: "2025-11-02", currency_sold: "EUR", currency_bought: "USD", amount_sold: 600_000,   amount_bought: 653_820,   effective_rate: 1.0897, benchmark_rate: 1.0847, markup_cost_usd: 3_000, markup_direction: "ADVERSE", markup_bps: 50, counterparty: "HSBC",         spread_classification: "ADVERSE"   },
+    { id: "t1",  row_index: 1,  trade_date: "2025-10-03", currency_sold: "EUR", currency_bought: "USD", amount_sold: 800_000,  amount_bought: 872_400,   effective_rate: 1.0905, benchmark_rate: 1.0870, markup_cost_usd: 2_800, markup_direction: "ADVERSE", markup_bps: 32, counterparty: "HSBC",         spread_classification: "ADVERSE" },
+    { id: "t2",  row_index: 2,  trade_date: "2025-10-08", currency_sold: "GBP", currency_bought: "USD", amount_sold: 500_000,  amount_bought: 631_500,   effective_rate: 1.2630, benchmark_rate: 1.2710, markup_cost_usd: 4_000, markup_direction: "ADVERSE", markup_bps: 63, counterparty: "HSBC",         spread_classification: "ADVERSE" },
+    { id: "t3",  row_index: 3,  trade_date: "2025-10-14", currency_sold: "EUR", currency_bought: "USD", amount_sold: 1_200_000, amount_bought: 1_308_000, effective_rate: 1.0900, benchmark_rate: 1.0847, markup_cost_usd: 6_360, markup_direction: "ADVERSE", markup_bps: 49, counterparty: "HSBC",         spread_classification: "ADVERSE" },
+    { id: "t4",  row_index: 4,  trade_date: "2025-11-02", currency_sold: "EUR", currency_bought: "USD", amount_sold: 600_000,  amount_bought: 653_820,   effective_rate: 1.0897, benchmark_rate: 1.0847, markup_cost_usd: 3_000, markup_direction: "ADVERSE", markup_bps: 50, counterparty: "HSBC",         spread_classification: "ADVERSE" },
     // Deutsche Bank — best performer
     { id: "t5",  row_index: 5,  trade_date: "2025-10-05", currency_sold: "EUR", currency_bought: "USD", amount_sold: 2_000_000, amount_bought: 2_172_000, effective_rate: 1.0860, benchmark_rate: 1.0847, markup_cost_usd: 2_600, markup_direction: "ADVERSE", markup_bps: 13, counterparty: "Deutsche Bank", spread_classification: "FAVORABLE" },
-    { id: "t6",  row_index: 6,  trade_date: "2025-11-10", currency_sold: "GBP", currency_bought: "USD", amount_sold: 800_000,   amount_bought: 1_017_600, effective_rate: 1.2720, benchmark_rate: 1.2710, markup_cost_usd: 800,   markup_direction: "ADVERSE", markup_bps: 10, counterparty: "Deutsche Bank", spread_classification: "FAVORABLE" },
+    { id: "t6",  row_index: 6,  trade_date: "2025-11-10", currency_sold: "GBP", currency_bought: "USD", amount_sold: 800_000,  amount_bought: 1_017_600, effective_rate: 1.2720, benchmark_rate: 1.2710, markup_cost_usd: 800,   markup_direction: "ADVERSE", markup_bps: 10, counterparty: "Deutsche Bank", spread_classification: "FAVORABLE" },
     { id: "t7",  row_index: 7,  trade_date: "2025-12-04", currency_sold: "EUR", currency_bought: "USD", amount_sold: 1_500_000, amount_bought: 1_629_750, effective_rate: 1.0865, benchmark_rate: 1.0847, markup_cost_usd: 2_700, markup_direction: "ADVERSE", markup_bps: 12, counterparty: "Deutsche Bank", spread_classification: "FAVORABLE" },
-    { id: "t8",  row_index: 8,  trade_date: "2025-12-15", currency_sold: "EUR", currency_bought: "USD", amount_sold: 900_000,   amount_bought: 978_300,   effective_rate: 1.0870, benchmark_rate: 1.0847, markup_cost_usd: 2_070, markup_direction: "ADVERSE", markup_bps: 23, counterparty: "Deutsche Bank", spread_classification: "FAVORABLE" },
+    { id: "t8",  row_index: 8,  trade_date: "2025-12-15", currency_sold: "EUR", currency_bought: "USD", amount_sold: 900_000,  amount_bought: 978_300,   effective_rate: 1.0870, benchmark_rate: 1.0847, markup_cost_usd: 2_070, markup_direction: "ADVERSE", markup_bps: 23, counterparty: "Deutsche Bank", spread_classification: "FAVORABLE" },
     // Barclays — mid performer
-    { id: "t9",  row_index: 9,  trade_date: "2025-10-20", currency_sold: "EUR", currency_bought: "USD", amount_sold: 700_000,   amount_bought: 762_300,   effective_rate: 1.0890, benchmark_rate: 1.0847, markup_cost_usd: 3_010, markup_direction: "ADVERSE", markup_bps: 43, counterparty: "Barclays",      spread_classification: "ADVERSE"   },
-    { id: "t10", row_index: 10, trade_date: "2025-11-18", currency_sold: "GBP", currency_bought: "USD", amount_sold: 400_000,   amount_bought: 507_360,   effective_rate: 1.2684, benchmark_rate: 1.2710, markup_cost_usd: 1_040, markup_direction: "ADVERSE", markup_bps: 26, counterparty: "Barclays",      spread_classification: "ADVERSE"   },
-    { id: "t11", row_index: 11, trade_date: "2025-12-02", currency_sold: "EUR", currency_bought: "USD", amount_sold: 550_000,   amount_bought: 598_806,   effective_rate: 1.0887, benchmark_rate: 1.0847, markup_cost_usd: 2_200, markup_direction: "ADVERSE", markup_bps: 40, counterparty: "Barclays",      spread_classification: "ADVERSE"   },
+    { id: "t9",  row_index: 9,  trade_date: "2025-10-20", currency_sold: "EUR", currency_bought: "USD", amount_sold: 700_000,  amount_bought: 762_300,   effective_rate: 1.0890, benchmark_rate: 1.0847, markup_cost_usd: 3_010, markup_direction: "ADVERSE", markup_bps: 43, counterparty: "Barclays",      spread_classification: "ADVERSE" },
+    { id: "t10", row_index: 10, trade_date: "2025-11-18", currency_sold: "GBP", currency_bought: "USD", amount_sold: 400_000,  amount_bought: 507_360,   effective_rate: 1.2684, benchmark_rate: 1.2710, markup_cost_usd: 1_040, markup_direction: "ADVERSE", markup_bps: 26, counterparty: "Barclays",      spread_classification: "ADVERSE" },
+    { id: "t11", row_index: 11, trade_date: "2025-12-02", currency_sold: "EUR", currency_bought: "USD", amount_sold: 550_000,  amount_bought: 598_806,   effective_rate: 1.0887, benchmark_rate: 1.0847, markup_cost_usd: 2_200, markup_direction: "ADVERSE", markup_bps: 40, counterparty: "Barclays",      spread_classification: "ADVERSE" },
   ],
 
-  // Pre-written audit findings
+  // Pre-written audit findings for the demo
   findings: [
     {
       id: "f1",
@@ -55,7 +55,7 @@ export const DEMO_DATASET = {
       currency_pair: "EUR/USD",
       counterparty: "HSBC",
       amount_usd: 89_600,
-      narrative: "HSBC charged an average of 49 bps above the mid-market rate on EUR/USD trades — 3.8x the rate observed from Deutsche Bank on identical settlement conditions.",
+      narrative: "HSBC charged an average of 49 bps above the mid-market rate on EUR/USD trades — 3.8× the rate observed from Deutsche Bank on identical settlement conditions.",
     },
     {
       id: "f2",
@@ -98,7 +98,7 @@ export function getDemoCounterpartyStats() {
   return Object.entries(byCounterparty).map(([name, d]) => ({
     name,
     totalCostUsd: d.totalCost,
-    tradeCount:   d.tradeCount,
-    avgBps:       Math.round(d.bpsSum / d.tradeCount),
+    tradeCount: d.tradeCount,
+    avgBps: Math.round(d.bpsSum / d.tradeCount),
   })).sort((a, b) => b.avgBps - a.avgBps);
 }
