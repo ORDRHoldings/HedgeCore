@@ -346,3 +346,10 @@ router.include_router(v1_payments_router)
 # Treasury Suite Phase 3 — Intelligence Tier (owns /v1/intelligence/*)
 from app.api.routes.v1_intelligence import router as v1_intelligence_router
 router.include_router(v1_intelligence_router)
+
+# Phase 4 — Debt Management + IR Risk
+from app.api.routes.v1_debt import router as v1_debt_router
+router.include_router(v1_debt_router)
+
+from app.api.routes.v1_ir_risk import router as v1_ir_risk_router
+router.include_router(v1_ir_risk_router)
