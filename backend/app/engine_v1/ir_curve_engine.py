@@ -39,7 +39,8 @@ class IRCurve:
         if not self.nodes:
             return 1.0
         if years <= self.nodes[0].years:
-            return self.nodes[0].discount_factor
+            n0 = self.nodes[0]
+            return math.exp(math.log(n0.discount_factor) * years / n0.years)
         if years >= self.nodes[-1].years:
             n = self.nodes[-1]
             return math.exp(math.log(n.discount_factor) * years / n.years)
@@ -62,7 +63,8 @@ _TENOR_YEARS: dict[str, float] = {
 def bootstrap_curve(quotes: list[RateQuote], as_of: date) -> IRCurve:
     """Bootstrap a discount curve from a list of rate quotes.
 
-    Uses simple annual compounding for OIS/IRS: df = 1 / (1 + r*t).
+    Uses simple compounding for short-end (<1Y): df = 1 / (1 + r*t).
+    Uses annual compounding for tenors >=1Y: df = 1 / (1 + r)^t.
     Returns nodes sorted by tenor ascending.
     """
     if not quotes:
@@ -77,7 +79,10 @@ def bootstrap_curve(quotes: list[RateQuote], as_of: date) -> IRCurve:
 
     for q in sorted_quotes:
         t = _TENOR_YEARS.get(q.tenor, 1.0)
-        df = 1.0 / (1.0 + q.rate * t)
+        if q.instrument in ("OIS", "FRA") and t < 1.0:
+            df = 1.0 / (1.0 + q.rate * t)
+        else:
+            df = 1.0 / ((1.0 + q.rate) ** t)
         zero_rate = -math.log(df) / t if t > 0 and df > 0 else q.rate
         # Forward rate between prev node and this node
         if t > prev_t and prev_df > 0 and df > 0:
