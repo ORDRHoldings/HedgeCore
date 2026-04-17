@@ -100,30 +100,36 @@ def price_swaption(spec: SwaptionSpec, curve: IRCurve, as_of: date) -> SwaptionV
     is_payer = spec.underlying_swap.pay_fixed
     K = spec.strike
 
-    if model == "BLACK76" and F > 0 and K > 0:
+    if model == "BLACK76":
+        if F <= 0 or K <= 0:
+            raise ValueError(
+                f"BLACK76 requires positive forward rate and strike; F={F:.6f}, K={K:.6f}. "
+                "Use model='BACHELIER' or 'AUTO'."
+            )
         premium, delta, vega = _black76(F, K, T, spec.vol, df, is_payer)
     else:
         premium, delta, vega = _bachelier(F, K, T, spec.vol, df, is_payer)
-        model = "BACHELIER"
 
-    # Scale to notional (Black-76/Bachelier returns per-unit rate premium)
-    premium_scaled = premium * spec.notional
+    # annuity_dollar = Σ(notional × τᵢ × DFᵢ) = PVBP / 1bp
+    # Black-76 / Bachelier formulas return per-unit-of-annuity values; scale here.
+    annuity_dollar = val.pvbp / 0.0001
+    premium_scaled = premium * annuity_dollar
 
     # Theta (time decay per day)
     if T > 1 / 365:
         T_minus = T - 1 / 365
-        if model == "BLACK76" and F > 0 and K > 0:
+        if model == "BLACK76":
             p2, _, _ = _black76(F, K, T_minus, spec.vol, df, is_payer)
         else:
             p2, _, _ = _bachelier(F, K, T_minus, spec.vol, df, is_payer)
-        theta = (p2 - premium) * spec.notional
+        theta = (p2 - premium) * annuity_dollar
     else:
         theta = 0.0
 
     return SwaptionValuation(
         premium=max(0.0, premium_scaled),
         delta=delta,
-        vega=vega * spec.notional,
+        vega=vega * annuity_dollar,
         theta=theta,
         model_used=model,
     )
