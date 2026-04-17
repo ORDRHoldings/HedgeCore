@@ -68,8 +68,12 @@ def _year_frac(start: date, end: date, day_count: str) -> float:
 
 def compute_debt_schedule(spec: DebtFacilitySpec) -> DebtSchedule:
     """Compute full amortization schedule and covenant ratios."""
+    if spec.maturity_date <= spec.start_date:
+        raise ValueError(f"maturity_date ({spec.maturity_date}) must be after start_date ({spec.start_date})")
+    if spec.payment_frequency not in _FREQ_MONTHS:
+        raise ValueError(f"Unknown payment_frequency: {spec.payment_frequency!r}. Valid: {list(_FREQ_MONTHS)}")
     rate = spec.index_rate + spec.margin_bps / 10_000.0
-    months = _FREQ_MONTHS.get(spec.payment_frequency, 12)
+    months = _FREQ_MONTHS[spec.payment_frequency]
     outstanding = spec.principal
 
     periods = []
@@ -90,16 +94,16 @@ def compute_debt_schedule(spec: DebtFacilitySpec) -> DebtSchedule:
         else:  # BALLOON
             principal_pmt = outstanding * 0.1 if not is_last else outstanding
 
-        principal_pmt = min(principal_pmt, outstanding)
-        outstanding_after = outstanding - principal_pmt
+        principal_pmt = round(min(principal_pmt, outstanding), 2)
+        outstanding_after = round(outstanding - principal_pmt, 2)
 
         periods.append({
             "period_start": current,
             "period_end": next_d,
-            "principal_payment": round(principal_pmt, 2),
+            "principal_payment": principal_pmt,
             "interest_payment": round(interest, 2),
             "total_payment": round(principal_pmt + interest, 2),
-            "outstanding_balance": round(outstanding_after, 2),
+            "outstanding_balance": outstanding_after,
         })
         outstanding = outstanding_after
         current = next_d
