@@ -20,7 +20,7 @@ def test_par_swap_npv_is_zero():
         amortization_schedule=None, fx_basis_bps=0.0,
     )
     val = value_swap(spec, curve)
-    assert abs(val.npv) < 1000.0  # par swap ≈ 0 NPV (within rounding)
+    assert abs(val.npv) < 0.01  # par swap NPV is exactly $0 to float precision
 
 
 def test_pay_fixed_dv01_is_negative():

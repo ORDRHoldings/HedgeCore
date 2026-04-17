@@ -6,6 +6,7 @@ Pure computation — no I/O, no state.
 """
 from __future__ import annotations
 
+import calendar
 from dataclasses import dataclass
 from datetime import date
 
@@ -54,8 +55,10 @@ def _year_fraction(start: date, end: date, day_count: str) -> float:
     days = (end - start).days
     if day_count in ("ACT360",):
         return days / 360.0
-    if day_count in ("ACT365", "ACTACT"):
+    if day_count in ("ACT365",):
         return days / 365.0
+    if day_count == "ACTACT":
+        raise NotImplementedError("ACTACT requires leap-year aware calculation; use ACT365 or ACT360")
     if day_count == "30_360":
         d1, d2 = min(start.day, 30), min(end.day, 30)
         return (360 * (end.year - start.year) + 30 * (end.month - start.month) + (d2 - d1)) / 360.0
@@ -64,9 +67,6 @@ def _year_fraction(start: date, end: date, day_count: str) -> float:
 
 def _payment_schedule(spec: SwapSpec) -> list[tuple[date, date, float]]:
     """Return list of (period_start, period_end, notional) tuples."""
-    import calendar
-    from datetime import date as _date
-
     freq = _FREQ_PERIODS.get(spec.reset_frequency, 1)
     months_per_period = 12 // freq
     periods = []
@@ -78,11 +78,11 @@ def _payment_schedule(spec: SwapSpec) -> list[tuple[date, date, float]]:
         y = current.year + (m - 1) // 12
         m = (m - 1) % 12 + 1
         day = min(current.day, calendar.monthrange(y, m)[1])
-        next_date = min(_date(y, m, day), spec.maturity_date)
+        next_date = min(date(y, m, day), spec.maturity_date)
 
         if spec.amortization_schedule:
             for amort_date, remaining in spec.amortization_schedule:
-                if amort_date <= next_date:
+                if amort_date < next_date:
                     notional = remaining
         periods.append((current, next_date, notional))
         current = next_date
@@ -121,6 +121,7 @@ def value_swap(spec: SwapSpec, curve: IRCurve) -> SwapValuation:
 
     par_rate = floating_leg_pv / annuity if annuity > 0 else spec.fixed_rate
 
+    # DV01: fixed-leg sensitivity to +1bp shift in fixed coupon rate (not a parallel curve shift)
     shifted_fixed = spec.fixed_rate + 0.0001
     bump_fixed_pv = sum(
         notional * shifted_fixed * _year_fraction(ps, pe, spec.day_count) * curve.discount_factor((pe - spec.start_date).days / 365.0)
