@@ -124,10 +124,11 @@ def evaluate_period(
     notional_unhedged = notional_usd - notional_hedged
 
     # PnL calculation (from perspective of USD buyer / MXN seller)
-    # Hedged portion: locked at forward rate
-    # Unhedged portion: exposed to spot at maturity
+    # Hedged portion: locked at forward rate.
+    # When spot_at_maturity > forward_rate (USD strengthened), the hedge was beneficial → positive PnL.
+    # When spot_at_maturity < forward_rate (USD weakened), the hedge locked in above-market rate → negative PnL.
     if period.spot_rate > 0:
-        hedged_pnl = notional_hedged * (forward_rate - spot_at_maturity) / period.spot_rate
+        hedged_pnl = notional_hedged * (spot_at_maturity - forward_rate) / period.spot_rate
         unhedged_pnl = notional_usd * (period.spot_rate - spot_at_maturity) / period.spot_rate
     else:
         hedged_pnl = 0.0

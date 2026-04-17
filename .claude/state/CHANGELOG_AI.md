@@ -1,5 +1,91 @@
 # Changelog (AI-maintained)
 
+## 2026-04-16 — Audit Sprint A3: Settlement & Execution Pipeline (2 bug fixes)
+
+### Fixed
+- **`engine_v1/fx_roll_engine.py`**: `total_cost = abs(carry_cost) + slippage` — `abs()` discarded the sign of carry_cost. When rolling into a cheaper forward, carry is a benefit (negative). Fixed: `total_cost = carry_cost + slippage` (sign preserved; negative total means the roll is economically beneficial).
+- **`engine_v1/currency_netting_matrix.py`**: `gross_notional_after = gross_before - sum(n.savings_usd)` used the 3%-of-notional margin savings proxy instead of the actual netted notional. A $1M netting subtracted $30K instead of $1M, making `gross_notional_after ≈ gross_before` and `netting_efficiency_pct ≈ 0%`. Fixed: `gross_after = gross_before - total_notional_netted`; efficiency uses `total_notional_netted / gross_before`.
+
+### Tests
+- 8 new regression tests in `test_roll_mixed_instrument.py` and `test_currency_netting_matrix.py`.
+- Full suite: **5083 passed, 0 failed, 158 skipped**.
+- Commit: `d2e19b1`
+
+### Audit Findings (non-blocking, deferred)
+- `fx_forward_validator.py`: `domestic`/`foreign` variable names are swapped vs standard CIP convention; formula is mathematically correct — LOW.
+- `transaction_cost_model.py`: USDMXN_1M vol hardcoded for all currency pairs — documented simplification — LOW.
+- `cost_engine.py`: `default=str` in `_canonical_json` silently coerces non-standard types — inputs are all standard in practice — LOW.
+- `instrument_mapper.py`: `list(inst.eligible_axes)` may produce non-deterministic ordering if the source is a Python set — LOW.
+
+## 2026-04-16 — Audit Sprint A2: Scenario & Risk Engine (3 bug fixes)
+
+### Fixed
+- **`engine_v1/scenarios_ext.py`**: Rate shock was applied to `pre_hedge_loss` — wrong, because the pre-hedge scenario has no hedge and therefore no funding cost. Also, `abs()` on `rate_impact` stripped the sign, making rate decreases incorrectly *increase* post-hedge loss. Fixed: `pre_hedge_loss` unchanged; `post_hedge_loss -= rate_impact` (sign preserved).
+- **`engine/scenario_engine.py`**: Hedge effectiveness formula was inverted — `offset = max(0, -hedge_pnl)` reported 0% when the hedge profited (correct functioning) and positive values when it also lost (broken). Fixed: `offset = max(0, hedge_pnl)`. Effectiveness now correctly measures the fraction of portfolio loss absorbed by the hedge's profit.
+- **`engine_v1/scenarios_monte_carlo.py`**: `_get_pair_region` used a Python `set` to decompose pairs. Sets have no guaranteed iteration order; cross-region pairs (e.g., MXNJPY: first=EM_LATAM, second=G10) could return different regions across runs. Fixed: ordered list, first leg always wins.
+
+### Tests
+- 20 new regression tests added; 3 pre-existing tests updated to reflect correct semantics.
+- New file: `test_scenario_engine.py` (13 tests covering effectiveness math, reject paths, costs, trace fingerprint).
+- Full suite: **5076 passed, 0 failed, 158 skipped**.
+- Commit: `d76da49`
+
+### Audit Findings (non-blocking, deferred)
+- `waterfall.py` weight normalisation: minor floating-point rounding in V-code weight normalisation (LOW severity, no correctness impact at standard precision).
+- `factor_covariance.py` MCTR label: comment says "Marginal Contribution" but formula computes absolute risk share; label imprecision only, internally consistent.
+
+## 2026-04-16 — Audit Sprint A1: Hedge Calculation Core (3 bug fixes)
+
+### Fixed
+- **`engine_v1/worst_case_selector.py`**: `delta_improvement` and `pre_hedge_worst_case` were computed from two independently-selected min() calls (cross-scenario mismatch). Fixed to use `worst` (worst post-hedge scenario) for both fields, so improvement is measured within one consistent scenario.
+- **`engine_v1/hedge_bands.py`**: Fallback chains for `hedge_pos` and `exposure` used Python `or`, treating `0.0` as falsy. A genuinely zero `hedge_position_local` (fully-exited hedge) would fall through to `action_local`, reporting intended action instead of actual position. Fixed with `next(k in bucket)` key-presence checks.
+- **`engine_v1/hasher.py`**: `sha256_of_dataframe` serialised columns in DataFrame insertion order. Same logical data with columns built in different order produced different hashes, breaking replay determinism. Fixed with `df[sorted(df.columns)]` before `to_json`.
+
+### Tests
+- 16 regression tests added (`test_worst_case_selector.py`, `test_hedge_bands.py`, `test_hasher.py` new file).
+- Full suite: **5056 passed, 0 failed, 158 skipped**.
+- Commit: `a03e036`
+
+### Audit Findings (non-blocking, deferred)
+- `normalizer_multi.py`: non-USD cross pairs (e.g., GBPJPY) may extract wrong local currency. No current test coverage for cross pairs — deferred to A2.
+- `hedge_effectiveness_engine.py`: `TraceEvent.timestamp` uses wall-clock time (non-deterministic) but is correctly excluded from all output hashes — invariant preserved.
+- `hedge_sizer.py`: `REASON_CONSTRAINTS_BLOCKED` guard is logically unreachable when `min_contract > 0` — dead code, no correctness impact.
+
+## 2026-04-16 — Phase 3: Intelligence Tier (AI Add-On)
+
+### Added
+- **`backend/app/models/intelligence.py`**: `IntelligenceQueryLog` ORM model (9 cols: tenant, user, query_type, prompt_hash SHA-256, tokens_in/out, latency_ms, model, error; composite index on company_id+created_at).
+- **`backend/app/services/intelligence_service.py`**: Advisory-only service — `query_intelligence`, `draft_commentary`, `get_usage_stats`, `build_treasury_context`, `_hash_prompt`, `_get_client`, `_log_query`. All outputs marked advisory; no writes to WORM tables.
+- **`backend/app/api/routes/v1_intelligence.py`**: 4 endpoints — POST /query, POST /commentary, GET /settings, PATCH /settings. Error mapping: APIError→502, missing key→503, unsupported type→422, not found→404, wrong tier→402, wrong role→403.
+- **Migration** (`q1a2b3c4d5e6_intelligence.py`): intelligence_query_logs table.
+- **`docs/architecture/adr/0014-ai-advisory-only-contract.md`**: ADR formalising advisory-only contract; AI output never writes to audit_events, calculation_runs, or policy_revisions.
+- **`frontend/src/lib/api/intelligenceClient.ts`**: `queryIntelligence`, `draftCommentary`, `getIntelligenceSettings`, `patchIntelligenceSettings`.
+- **`frontend/src/components/intelligence/CmdKOverlay.tsx`**: Global CMD+K overlay, hooks-safe, advisory disclaimer banner.
+- **`frontend/src/app/intelligence/page.tsx`**: Intelligence settings + usage dashboard (query log, token stats, model info).
+- **14 tests**: 7 service + 7 route. All pass.
+
+### Modified
+- `backend/app/core/config.py` — `ANTHROPIC_API_KEY` + `ANTHROPIC_MODEL` config fields
+- `backend/app/core/plan_enforcement.py` — `PLAN_HIERARCHY` extended with `intelligence:3`
+- `backend/app/models/organization.py` — `intelligence_enabled` boolean column on Company
+- `backend/app/main.py` — `ALTER TABLE companies ADD COLUMN IF NOT EXISTS intelligence_enabled` in `_ensure_tables()`
+- `backend/app/models/cash.py` — `INTELLIGENCE_QUERY` added to `CashAuditEventType` (now 29 values)
+- `backend/app/api/router.py` — `v1_intelligence_router` registered
+- `frontend/src/lib/authContext.tsx` — `PlanTier` union extended with `"intelligence"`
+- `frontend/src/components/layout/AppSidebar.tsx` — INTELLIGENCE nav section (Brain icon, /intelligence, minTier: "intelligence")
+- `frontend/src/components/ui/PlanGate.tsx` + `usePlanGate.ts` + `usePlanRedirect.ts` — `intelligence:3` added to `TIER_RANK`
+- `frontend/src/app/layout.tsx` — `CmdKOverlay` mounted in root
+- `frontend/src/app/hedge-effectiveness/page.tsx` — AI commentary button on run rows (intelligence-tier only)
+
+### Test evidence
+- Backend: 5040 passed, 0 failed, 158 skipped. Intelligence tests: 14/14 pass.
+- tsc --noEmit: CLEAN. next build: PASS.
+
+### Commits
+- 15 commits on master: `b0ab322` through `a232d6c`
+
+---
+
 ## 2026-04-15 — Treasury Suite Phase 2 §4.4: Payment Initiation (Paper Mode)
 
 ### Added

@@ -13,3 +13,19 @@
 - **Status**: CLOSED
 - **Gaps closed**: C-01 (gitleaks CI), C-03 (Dependabot), C-05 (coverage gate 60%), C-06 (Trivy), B-01 (pg_backup.sh), B-02 (restore_verify.sh), B-03/B-04 (DR plan, RTO/RPO), D-03 (SLOs), M-01/M-02/M-03 (monitoring guide), D-01 (onboarding), D-04 (postmortem template), D-02 (data retention), DB-01/DB-02/B-05 (db-maintenance), D-05 (docker-compose), I-02 (frontend Dockerfile)
 - **Remaining deferred**: C-04 (mypy hard gate), S-01 (secret rotation — human action), I-01 (blueprint sync pending)
+
+## RISK-ERP-01: ERP live credentials not provisioned for any tenant
+- **Severity**: MEDIUM
+- **Component**: erp_connector_service, gl_posting_service
+- **Description**: Posting adapters (QuickBooks, Xero, NetSuite) and ERP pull adapters run in paper mode by default. No tenant has live ERP credentials stored in `company.settings`. No live writes or pulls will succeed until credentials are added.
+- **Mitigation**: Credentials stored in `company.settings` JSONB; settings UI page exists at `/settings/gl-accounts`. Paper mode is safe — no data loss risk.
+- **Status**: Open
+- **Opened**: 2026-04-14
+
+## RISK-GIT-02: master ~50 commits ahead of origin/master
+- **Severity**: MEDIUM
+- **Component**: git / CI
+- **Description**: Fast-forward merge from feat/treasury-suite-phase1 → master completed at HEAD 6b2856e. Push to origin deferred at user's discretion. CI gates have not been run against remote since before this sprint.
+- **Mitigation**: All tests pass locally (4839/0/158). tsc + next build clean. No frozen file changes without ADR. Ready to push when user approves.
+- **Status**: Open
+- **Opened**: 2026-04-14

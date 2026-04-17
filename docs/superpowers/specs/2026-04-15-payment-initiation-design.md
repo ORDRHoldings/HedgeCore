@@ -281,7 +281,7 @@ One new migration adding both tables. `payment_beneficiaries` first (referenced 
 | Action | Path |
 |--------|------|
 | Create | `backend/app/models/payment.py` |
-| Create | `backend/alembic/versions/0026_payment_initiation.py` |
+| Create | `backend/migrations/versions/<hash>_payment_initiation.py` |
 | Create | `backend/app/services/payment_service.py` |
 | Create | `backend/app/api/routes/v1_payments.py` |
 | Create | `backend/tests/test_payment_service.py` |

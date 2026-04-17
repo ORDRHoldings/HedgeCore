@@ -16,8 +16,17 @@ from app.engine_v1.nav_attribution_engine import (
 # ---------------------------------------------------------------------------
 
 class TestEstimateMonths:
-    def test_standard_bucket(self):
-        assert _estimate_months("2026-06") == 6
+    def test_same_year_forward(self):
+        # "2026-09" is 6 months from as_of="2026-03"
+        assert _estimate_months("2026-09", as_of="2026-03") == 6
+
+    def test_one_year_from_reference(self):
+        # "2027-03" is 12 months from as_of="2026-03"
+        assert _estimate_months("2027-03", as_of="2026-03") == 12
+
+    def test_two_years_from_reference(self):
+        # "2028-03" is 24 months from as_of="2026-03"
+        assert _estimate_months("2028-03", as_of="2026-03") == 24
 
     def test_single_part_defaults_to_3(self):
         assert _estimate_months("bucket") == 3
@@ -28,11 +37,13 @@ class TestEstimateMonths:
     def test_empty_defaults_to_3(self):
         assert _estimate_months("") == 3
 
-    def test_zero_month_clamped_to_1(self):
-        assert _estimate_months("2026-00") == 1
+    def test_same_month_as_reference_clamped_to_1(self):
+        # Maturity == as_of → 0 months difference → clamped to 1
+        assert _estimate_months("2026-03", as_of="2026-03") == 1
 
-    def test_twelve_month(self):
-        assert _estimate_months("2026-12") == 12
+    def test_cross_year_boundary(self):
+        # "2027-02" from as_of="2026-11" = 3 months
+        assert _estimate_months("2027-02", as_of="2026-11") == 3
 
 
 class TestGetRate:
@@ -115,13 +126,14 @@ class TestComputeNavAttribution:
         positions = [{
             "trade_id": "T1", "currency": "MXN",
             "amount_local": 100_000, "amount_usd": 5_800,
-            "maturity": "2026-06",  # 6 months
+            "maturity": "2026-09",  # 6 months from as_of="2026-03"
         }]
         market = {
             "interest_curves": {
                 "USD": {"3M": 5.0},
                 "MXN": {"3M": 11.0},
             },
+            "as_of": "2026-03",  # explicit reference for deterministic maturity calc
         }
         result = compute_nav_attribution(positions, market)
         pa = result.positions[0]
@@ -147,9 +159,12 @@ class TestComputeNavAttribution:
         positions = [{
             "trade_id": "T1", "currency": "MXN",
             "amount_local": 0, "amount_usd": 10_000,
-            "maturity": "2026-12",  # 12 months
+            "maturity": "2027-03",  # 12 months from as_of="2026-03"
         }]
-        market = {"funding_rate_bps": 20.0}
+        market = {
+            "funding_rate_bps": 20.0,
+            "as_of": "2026-03",  # explicit reference for deterministic maturity calc
+        }
         result = compute_nav_attribution(positions, market)
         expected_funding = 10_000 * (20.0 / 10000.0) * (12 / 12.0)
         assert result.positions[0].funding_contribution == pytest.approx(expected_funding)
@@ -232,3 +247,73 @@ class TestComputeNavAttribution:
         positions = [{"trade_id": "T1", "currency": "MXN", "amount_local": 100_000, "amount_usd": 0}]
         result = compute_nav_attribution(positions, {}, fx_delta=0.05)
         assert result.positions[0].fx_contribution == 0.0
+
+
+# ── Regression: A4 _estimate_months fix ──────────────────────────────────────
+
+class TestEstimateMonthsCorrectness:
+    """Regression for A4 bug: _estimate_months returned month-of-year digit
+    instead of actual months from reference date to maturity.
+
+    Pre-A4 bug: _estimate_months("2027-03") = int("03") = 3
+                (returns March's month digit, not 12 months from 2026-03)
+    A4 fix:     _estimate_months("2027-03", as_of="2026-03") = 12
+                (correct months-to-maturity; 2-year = 24, etc.)
+
+    Impact: time_frac = maturity_months / 12 was wrong for multi-year tenors.
+    "2027-03" (12-month forward) reported time_frac = 0.25 instead of 1.0 →
+    carry and funding contributions underestimated by 4×.
+    """
+
+    def test_multi_year_tenor_returns_actual_months(self):
+        """12-month forward must return 12, not 3 (the March digit)."""
+        result = _estimate_months("2027-03", as_of="2026-03")
+        assert result == 12, (
+            f"'2027-03' from '2026-03' should be 12 months. Got {result}. "
+            "Check A4 bug: parts[1] returns month digit (3), not months-to-maturity (12)."
+        )
+
+    def test_two_year_tenor_returns_24_months(self):
+        """2-year forward must return 24, not 3 (the March digit)."""
+        result = _estimate_months("2028-03", as_of="2026-03")
+        assert result == 24, (
+            f"'2028-03' from '2026-03' should be 24 months. Got {result}. "
+            "Pre-A4 would return 3 (same March digit as a 1-year forward)."
+        )
+
+    def test_carry_scales_with_maturity_years(self):
+        """2-year forward should have exactly 2× the carry of a 1-year forward."""
+        market_base = {
+            "interest_curves": {"USD": {"3M": 5.0}, "MXN": {"3M": 11.0}},
+            "as_of": "2026-03",
+        }
+        positions_1y = [{"trade_id": "T1", "currency": "MXN", "amount_local": 0, "amount_usd": 100_000, "maturity": "2027-03"}]
+        positions_2y = [{"trade_id": "T1", "currency": "MXN", "amount_local": 0, "amount_usd": 100_000, "maturity": "2028-03"}]
+
+        result_1y = compute_nav_attribution(positions_1y, market_base)
+        result_2y = compute_nav_attribution(positions_2y, market_base)
+
+        carry_1y = result_1y.positions[0].carry_contribution
+        carry_2y = result_2y.positions[0].carry_contribution
+
+        assert carry_2y == pytest.approx(carry_1y * 2, rel=1e-6), (
+            f"2-year carry ({carry_2y:.2f}) must be 2× 1-year carry ({carry_1y:.2f}). "
+            "Pre-A4 bug: both '2027-03' and '2028-03' returned parts[1]=3, "
+            "so both got identical time_frac (3/12=0.25) regardless of year."
+        )
+
+    def test_funding_scales_with_maturity_years(self):
+        """2-year forward funding cost must be 2× that of a 1-year forward."""
+        market_base = {"funding_rate_bps": 30.0, "as_of": "2026-03"}
+        positions_1y = [{"trade_id": "T1", "currency": "MXN", "amount_local": 0, "amount_usd": 100_000, "maturity": "2027-03"}]
+        positions_2y = [{"trade_id": "T1", "currency": "MXN", "amount_local": 0, "amount_usd": 100_000, "maturity": "2028-03"}]
+
+        result_1y = compute_nav_attribution(positions_1y, market_base)
+        result_2y = compute_nav_attribution(positions_2y, market_base)
+
+        fund_1y = result_1y.positions[0].funding_contribution
+        fund_2y = result_2y.positions[0].funding_contribution
+
+        assert fund_2y == pytest.approx(fund_1y * 2, rel=1e-6), (
+            f"2-year funding ({fund_2y:.2f}) must be 2× 1-year funding ({fund_1y:.2f})."
+        )

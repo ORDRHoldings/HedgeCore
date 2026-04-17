@@ -1,4 +1,4 @@
-# ORDR Terminal — Constitution
+# ORDR TreasuryFX — Constitution
 
 ## Execution Mode
 
@@ -10,7 +10,7 @@
 
 ## Project Identity
 
-- **Product**: ORDR Terminal - Institutional FX hedge calculation & governance platform
+- **Product**:  Institutional FX hedge calculation & governance platform
 - **Domain**: Treasury/risk management for corporate FX exposure hedging
 - **Stage**: v1 (architecture-frozen, no ML/auto-learning/broker execution)
 
@@ -66,7 +66,7 @@ No task is complete until:
 - State is written back to memory
 - Next step is recorded
 
-**DONE = browser tested + user approved.** A sprint item or task is NOT marked done based on tests alone. Mark it `[PENDING BROWSER CONFIRMATION]` until the user confirms it works end-to-end in the browser and gives explicit approval.
+**DONE = browser tested + user approved.** A sprint item or task is NOT marked done based on tests alone. Claude MUST perform autonomous browser verification using `mcp__claude-in-chrome__*` tools: navigate to the relevant page, exercise every deliverable, capture a screenshot as evidence, then mark items DONE. Only escalate to the user if something is broken. Do NOT mark `[PENDING BROWSER CONFIRMATION]` and wait — that blocks sprints indefinitely.
 
 ## Quick Reference
 
@@ -87,17 +87,38 @@ No task is complete until:
 | Changelog | `.claude/state/CHANGELOG_AI.md` |
 | Memory DB | `.claude/state/memory.db` |
 
+## Production Gotchas
+
+**Schema drift (ORM vs prod DB)**
+Symptom: `/auth/me` returns 500 swallowed as 401 → dashboard black screen for all users.
+Root cause: ORM model has columns absent from the production DB (e.g. `users.ui_preferences`, `companies.stripe_customer_id`). SQLAlchemy `SELECT *` → `ProgrammingError`.
+Fix: Add `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` to `_ensure_tables()` in `app/core/db.py`. Large JSONB columns should be marked `deferred()` in the ORM model to avoid loading them on every query.
+
+**PageShell nesting**
+`PageShell` is a full-page layout wrapper. Never nest it inside a component that already renders inside a PageShell layout (e.g. inside `RunsTab`, inside a map callback).
+Symptom: double-header, broken layout. Fix: remove inner PageShell import entirely.
+
+**Redis cache is fail-open (intentional)**
+Redis outage must NOT block market data. The cache client is fail-open by design — a Redis error falls through silently. Do not change this to fail-closed.
+
 ## Build & Deploy
 
 ```bash
-# Frontend
+# Frontend build
 cd frontend && npx next build
 
-# Backend
+# Frontend TypeScript check (no emit)
+cd frontend && npx tsc --noEmit
+
+# Backend dev server
 cd backend && python -m uvicorn app.main:app --reload
 
-# Tests
+# Backend tests
 cd backend && JWT_SECRET="test-secret-key-for-ci-at-least-32-chars-long" DATABASE_URL="sqlite+aiosqlite://" python -m pytest tests/ -x -q --tb=short
+
+# Alembic migrations
+cd backend && alembic upgrade head
+cd backend && alembic revision --autogenerate -m "description"
 
 # psql
 "C:\Program Files\PostgreSQL\17\bin\psql.exe" "postgresql://hedge_user:...@dpg-...render.com/hedge"

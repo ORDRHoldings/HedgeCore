@@ -106,7 +106,7 @@ def compute_nav_attribution(
         currency = pos.get("currency", pos.get("asset_currency", "MXN"))
         amount_local = pos.get("amount_local", 0.0)
         amount_usd = pos.get("amount_usd", 0.0)
-        maturity_months = _estimate_months(pos.get("maturity", ""))
+        maturity_months = _estimate_months(pos.get("maturity", ""), market.get("as_of", ""))
 
         # FX rate for this currency
         if base_currency == "USD":
@@ -205,9 +205,39 @@ def _get_rate(curves: dict[str, dict[str, float]], currency: str) -> float:
     return curve.get("3M", 0.0)
 
 
-def _estimate_months(maturity: str) -> int:
+def _estimate_months(maturity: str, as_of: str = "") -> int:
+    """Return months from as_of to maturity.
+
+    Parameters
+    ----------
+    maturity : str
+        Target date as "YYYY-MM" string.
+    as_of : str
+        Reference date as "YYYY-MM" string. Defaults to current month when empty.
+
+    Returns
+    -------
+    int
+        Months from as_of to maturity, clamped to at least 1.
+        Returns 3 on parse error (conservative fallback).
+    """
     try:
         parts = maturity.split("-")
-        return max(1, int(parts[1])) if len(parts) >= 2 else 3
+        if len(parts) < 2:
+            return 3
+        mat_year = int(parts[0])
+        mat_month = int(parts[1])
+
+        if as_of:
+            ref_parts = as_of.split("-")
+            ref_year = int(ref_parts[0])
+            ref_month = int(ref_parts[1])
+        else:
+            from datetime import date
+            today = date.today()
+            ref_year, ref_month = today.year, today.month
+
+        months = (mat_year - ref_year) * 12 + (mat_month - ref_month)
+        return max(1, months)
     except (ValueError, IndexError):
         return 3
