@@ -80,6 +80,8 @@ _safe_import("app.models.staging")
 _safe_import("app.models.support_ticket")
 _safe_import("app.models.user_mfa")
 _safe_import("app.models.user_watchlist")
+_safe_import("app.models.debt")
+_safe_import("app.models.ir_risk")
 
 # -------------------------------------------------------------------
 # ?? Alembic configuration
