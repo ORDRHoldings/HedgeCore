@@ -1,5 +1,43 @@
 # Changelog (AI-maintained)
 
+## 2026-04-18 — P0-C: Counterparty Scoring Hub COMPLETE
+
+### Added
+**Backend**
+- `app/models/counterparty.py` — `Counterparty` (with cached exposure metrics) + `CreditLimit` ORMs
+- `migrations/versions/0029_counterparty_tables.py` — 2 tables, 6 indexes, unique(tenant_id, name)
+- `migrations/versions/0030_counterparty_permissions.py` — `counterparty.read` / `counterparty.write` → admin/treasurer/risk_analyst/trader (read)/viewer (read)
+- `app/schemas_v1/counterparty.py` — 9 Pydantic classes (CRUD + Exposure + PortfolioRisk + LimitBreach)
+- `app/services/counterparty_service.py` — CRUD counterparty + CRUD credit limits + compute_exposure (wraps engine_v1.counterparty_risk) + compute_portfolio_risk + WORM audit via hash-chain FOR UPDATE
+- `app/api/routes/v1_counterparty.py` — 9 endpoints under `/v1/counterparties` (CRUD, limits, exposure, portfolio-risk); `CounterpartyApiError` mapping (404/409/422)
+- `app/api/router.py` — wired router
+
+**Frontend**
+- `lib/api/counterpartyClient.ts` — typed API wrapper + `CounterpartyApiError`
+- `app/counterparties/layout.tsx` — PlanGate(professional) + PageShell
+- `app/counterparties/page.tsx` — list table with inline create form; color-coded risk level badges (CRITICAL/HIGH/MEDIUM/LOW)
+- `app/counterparties/[id]/page.tsx` — detail page: metadata + cached exposure panel + credit-limits CRUD table + ad-hoc exposure compute with breach table
+- `components/layout/AppSidebar.tsx` — "Counterparties" nav entry under DEBT & IR RISK (Users icon, professional gate); `/counterparties` added to hedge-desk prefixes
+
+### Architectural Decisions
+- Positions for `compute_exposure` are **caller-supplied** (Position ORM has no counterparty_id column in v1) — API accepts positions array in request body
+- Breach severity: ≥80% → WARNING, ≥100% → BREACH
+- Single-active-per-type credit-limit invariant: creating new deactivates prior
+- Cached Counterparty risk columns are NOT WORM; audit emits COUNTERPARTY_EXPOSURE_COMPUTED on each compute to preserve lineage
+- Reused P0-B hash-chain audit pattern (SELECT FOR UPDATE on prev_hash)
+
+### Commits
+- `258b59c` feat(counterparty): Counterparty Hub backend — ORM, migrations 0029/0030, service, 9 routes
+- `68559db` feat(counterparty): Hub UI — /counterparties list + detail + sidebar nav
+
+### Validation
+- tsc --noEmit: 0 errors
+- next build: 0 errors, `/counterparties` + `/counterparties/[id]` artifacts generated
+- Backend imports: all 9 routes registered; ORM + service + schemas load cleanly
+- Alembic chain: 0028 → 0029 → 0030 clean
+
+---
+
 ## 2026-04-18 — P0-B: Pre-Trade TCA COMPLETE
 
 ### Added
