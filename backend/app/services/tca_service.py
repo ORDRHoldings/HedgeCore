@@ -67,6 +67,7 @@ async def _emit_tca_audit(
         .where(AuditEvent.company_id == tenant_id)
         .order_by(AuditEvent.created_at.desc())
         .limit(1)
+        .with_for_update()
     )).scalar_one_or_none()
     prev_hash = prev_hash_row or GENESIS_HASH
     event = build_audit_event(
@@ -161,11 +162,11 @@ async def estimate_pre_trade(
         total_cost_bps=Decimal(str(round(position.total_cost_bps, 4))),
     )
     db.add(estimate)
-    await db.commit()
-    await db.refresh(estimate)
+    await db.flush()
 
     await _emit_tca_audit(db, tenant_id, user_id, "TCA_ESTIMATE_CREATED", estimate.id)
     await db.commit()
+    await db.refresh(estimate)
 
     # Attach benchmark (as a cached attribute — not persisted, re-derived on read)
     estimate._benchmark = await _compute_benchmark(db, tenant_id, request.pair, position.total_cost_bps)
@@ -174,10 +175,11 @@ async def estimate_pre_trade(
 
 
 async def _find_estimate_by_run_id(
-    db: AsyncSession, calculation_run_id: str,
+    db: AsyncSession, calculation_run_id: str, tenant_id: UUID,
 ) -> TransactionCostEstimate | None:
     stmt = select(TransactionCostEstimate).where(
-        TransactionCostEstimate.calculation_run_id == calculation_run_id
+        TransactionCostEstimate.calculation_run_id == calculation_run_id,
+        TransactionCostEstimate.tenant_id == tenant_id,
     )
     return (await db.execute(stmt)).scalar_one_or_none()
 
@@ -194,7 +196,7 @@ async def attach_to_calc_run(
     market_snapshot_id: UUID,
 ) -> TransactionCostEstimate:
     """Eagerly called from v1_calculate.py at run time. Idempotent."""
-    existing = await _find_estimate_by_run_id(db, calculation_run_id)
+    existing = await _find_estimate_by_run_id(db, calculation_run_id, tenant_id)
     if existing is not None:
         return existing
 
@@ -223,29 +225,34 @@ async def attach_to_calc_run(
         total_cost_bps=Decimal(str(round(result.total_cost_bps, 4))),
     )
     db.add(estimate)
-    await db.commit()
-    await db.refresh(estimate)
+    await db.flush()
 
     await _emit_tca_audit(db, tenant_id, user_id, "TCA_ESTIMATE_CREATED", estimate.id)
     await db.commit()
+    await db.refresh(estimate)
     return estimate
 
 
 async def _load_estimate_and_settlement(
-    db: AsyncSession, estimate_id: UUID, settlement_event_id: UUID,
+    db: AsyncSession,
+    estimate_id: UUID,
+    settlement_event_id: UUID,
+    caller_tenant_id: UUID | None = None,
 ):
     from app.models.settlement_event import SettlementEvent
-    est = (await db.execute(
-        select(TransactionCostEstimate).where(TransactionCostEstimate.id == estimate_id)
-    )).scalar_one_or_none()
+    est_stmt = select(TransactionCostEstimate).where(TransactionCostEstimate.id == estimate_id)
+    if caller_tenant_id is not None:
+        est_stmt = est_stmt.where(TransactionCostEstimate.tenant_id == caller_tenant_id)
+    est = (await db.execute(est_stmt)).scalar_one_or_none()
     if est is None:
         raise TCAServiceError("estimate_not_found")
-    settle = (await db.execute(
-        select(SettlementEvent).where(SettlementEvent.id == settlement_event_id)
-    )).scalar_one_or_none()
+    settle_stmt = select(SettlementEvent).where(SettlementEvent.id == settlement_event_id)
+    if caller_tenant_id is not None:
+        settle_stmt = settle_stmt.where(SettlementEvent.company_id == caller_tenant_id)
+    settle = (await db.execute(settle_stmt)).scalar_one_or_none()
     if settle is None:
         raise TCAServiceError("settlement_not_found")
-    # Cross-tenant isolation guard
+    # Cross-tenant isolation guard (belt-and-suspenders)
     if settle.company_id != est.tenant_id:
         raise TCAServiceError("cross_tenant", "settlement and estimate belong to different tenants")
     return est, settle
@@ -256,6 +263,7 @@ async def reconcile_actual(
     estimate_id: UUID,
     settlement_event_id: UUID,
     reconciling_user_id: UUID,
+    caller_tenant_id: UUID | None = None,
 ) -> TransactionCostEstimate:
     """Backfill actual_cost_usd + variance_bps from settlement.pnl_impact.
 
@@ -263,7 +271,7 @@ async def reconcile_actual(
     Pre-trade estimates can be self-reconciled (advisory, not governance).
     """
     estimate, settlement = await _load_estimate_and_settlement(
-        db, estimate_id, settlement_event_id,
+        db, estimate_id, settlement_event_id, caller_tenant_id=caller_tenant_id,
     )
     if estimate.reconciled_at is not None:
         raise TCAServiceError("already_reconciled")
@@ -280,13 +288,14 @@ async def reconcile_actual(
     estimate.variance_bps = Decimal(str(round(variance_bps, 4)))
     estimate.settlement_event_id = settlement.id
     estimate.reconciled_at = datetime.now(UTC)
-    await db.commit()
+    await db.flush()
 
     await _emit_tca_audit(
         db, estimate.tenant_id, reconciling_user_id,
         "TCA_RECONCILED", estimate.id,
     )
     await db.commit()
+    await db.refresh(estimate)
     return estimate
 
 
@@ -320,6 +329,7 @@ async def auto_reconcile_on_settlement(
             estimate_id=matches[0].id,
             settlement_event_id=settlement_event.id,
             reconciling_user_id=UUID("00000000-0000-0000-0000-000000000000"),  # system
+            caller_tenant_id=settlement_event.company_id,
         )
     except Exception:  # non-fatal
         import logging

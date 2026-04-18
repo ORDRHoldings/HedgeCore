@@ -170,6 +170,14 @@ async def confirm_settlement(
             except GLMappingNotConfiguredError:
                 pass
 
+    # Commit the settlement + draft JE before invoking the TCA hook.
+    # auto_reconcile_on_settlement calls reconcile_actual which commits internally;
+    # we must NOT let it promote an incomplete outer transaction.
+    await session.commit()
+    await session.refresh(se)
+    if draft_je is not None:
+        await session.refresh(draft_je)
+
     # After SettlementEvent.commit — best-effort TCA reconcile
     from app.services.tca_service import auto_reconcile_on_settlement
     await auto_reconcile_on_settlement(session, se)
