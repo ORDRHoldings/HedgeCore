@@ -12,6 +12,7 @@ import dynamic from "next/dynamic";
 
 import { PageShell } from "@/components/layout/PageShell";
 import { Microscope, Lock } from "lucide-react";
+import { TCATab } from "@/components/tca/TCATab";
 
 const MarkupByMonthChart = dynamic(() => import("@/components/audit-lab/MarkupByMonthChart"), { ssr: false });
 const RateScatterChart = dynamic(() => import("@/components/audit-lab/RateScatterChart"), { ssr: false });
@@ -116,7 +117,7 @@ export default function AuditRunDetailPage() {
   const [exporting, setExporting] = useState(false);
   const [exportingBoard, setExportingBoard] = useState(false);
   const [exportingXlsx, setExportingXlsx] = useState(false);
-  const [activeTab, setActiveTab] = useState<"findings" | "pairs" | "counterparties" | "transactions" | "evidence">("findings");
+  const [activeTab, setActiveTab] = useState<"findings" | "pairs" | "counterparties" | "transactions" | "tca" | "evidence">("findings");
   const [transactions, setTransactions] = useState<Array<Record<string, unknown>>>([]);
   const [txnLoaded, setTxnLoaded] = useState(false);
   const [expandedFinding, setExpandedFinding] = useState<string | null>(null);
@@ -302,12 +303,13 @@ export default function AuditRunDetailPage() {
 
       {/* Tabs */}
       <div style={{ display: "flex", gap: 0, marginBottom: 0, borderBottom: `1px solid ${S.rim}` }}>
-        {(["findings", "pairs", "counterparties", "transactions", "evidence"] as const).map(tab => {
+        {(["findings", "pairs", "counterparties", "transactions", "tca", "evidence"] as const).map(tab => {
           const labels: Record<string, string> = {
             findings: `Findings (${run.findings.length})`,
             pairs: "By Pair",
             counterparties: "By Counterparty",
             transactions: "Transactions",
+            tca: "Transaction Costs",
             evidence: "Verification",
           };
           return (
@@ -470,6 +472,13 @@ export default function AuditRunDetailPage() {
                 </table>
               </>
             )}
+          </div>
+        )}
+
+        {/* Transaction Costs (TCA) tab */}
+        {activeTab === "tca" && (
+          <div style={{ padding: "20px 24px" }}>
+            <TCATab runId={run_id} />
           </div>
         )}
 
