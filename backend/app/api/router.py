@@ -353,3 +353,7 @@ router.include_router(v1_debt_router)
 
 from app.api.routes.v1_ir_risk import router as v1_ir_risk_router
 router.include_router(v1_ir_risk_router)
+
+# Pre-Trade TCA (owns /v1/tca)
+from app.api.routes.v1_tca import router as v1_tca_router
+router.include_router(v1_tca_router)
