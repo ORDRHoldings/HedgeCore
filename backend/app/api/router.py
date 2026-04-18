@@ -357,3 +357,7 @@ router.include_router(v1_ir_risk_router)
 # Pre-Trade TCA (owns /v1/tca)
 from app.api.routes.v1_tca import router as v1_tca_router
 router.include_router(v1_tca_router)
+
+# Counterparty Hub (owns /v1/counterparties)
+from app.api.routes.v1_counterparty import router as v1_counterparty_router
+router.include_router(v1_counterparty_router)
