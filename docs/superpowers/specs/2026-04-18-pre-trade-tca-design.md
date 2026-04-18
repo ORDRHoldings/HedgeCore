@@ -76,9 +76,9 @@ AUTO-RECONCILE HOOK (settlement_service.py)
 
 **Not WORM:** Estimates are advisory artifacts. `actual_cost_usd`, `variance_bps`, `settlement_event_id`, `reconciled_at` are mutable for reconciliation backfill. All other columns immutable post-insert (service-layer enforcement).
 
-**Audit events:** Every create → `TCA_ESTIMATE_CREATED`; every reconcile → `TCA_RECONCILED` emitted into existing hash-chain `audit_events` table.
+**Audit events:** Every create → `TCA_ESTIMATE_CREATED`; every reconcile → `TCA_RECONCILED` emitted via `build_audit_event()` into the existing hash-chain `audit_events` table as string-literal `event_type` values. Do NOT extend `CashAuditEventType` — that enum belongs to the cash management subsystem only.
 
-**Migration:** `0023_transaction_cost_estimates` — table + indexes + 2 new `CashAuditEventType` enum values.
+**Migration:** `0027_transaction_cost_estimates` — table + indexes. No enum changes required (audit event_type is a plain `String(32)` column).
 
 ## API Surface
 
@@ -112,9 +112,12 @@ Response (200):
     "exchange_fee": 250.00,
     "clearing_fee": 100.00,
     "vol_drift_adjustment": 875.20,
-    "total_cost_usd": 2887.70,
+    "total_cost": 2887.70,
     "total_cost_bps": 5.78
   },
+  // Note: breakdown is sourced from PositionCost.to_dict() on the single synthetic
+  // hedge_action (pre_trade), or TransactionCostResult.to_dict() for post_calc.
+  // Field names match PositionCost.to_dict() keys from transaction_cost_model.py.
   "benchmark": {
     "historical_avg_bps_same_pair": 6.12,
     "percentile": 42,
@@ -138,7 +141,7 @@ Full estimate detail including reconciliation fields if present.
 
 ### GET /v1/tca/calc-runs/{run_id}
 RBAC: `tca.read`
-Idempotent: if estimate exists return it; otherwise compute + persist on first call.
+Read-only lookup of the TCA estimate attached at calculation time. Returns 404 if no TCA was computed for this run (e.g., run predates the TCA feature). The frontend Transaction Costs tab must handle 404 gracefully (hide the tab rather than show an error).
 
 ### POST /v1/tca/estimates/{id}/reconcile
 RBAC: `tca.estimate`
@@ -169,19 +172,25 @@ Two new permissions added to seed migration:
 6. Persist row, emit `TCA_ESTIMATE_CREATED`, return.
 
 ### attach_to_calc_run()
-1. Query for existing estimate by `calculation_run_id`. If found → return (idempotent).
-2. Load `CalculationRun.result_payload` → extract `hedge_actions`, `slippage_estimates`, `market`, `policy`.
-3. Run engine, persist with `estimate_type='post_calc'`, emit audit event.
+**Called eagerly from `v1_calculate.py` at the end of every successful `POST /v1/calculate` run**, while `hedge_actions`, `slippage_estimates`, `market`, and `policy` are still live in memory. NOT called lazily on first read — `CalculationRun.run_envelope` stores only hashes, not the full input dicts; lazy re-computation is architecturally impossible.
+
+1. Query for existing estimate by `calculation_run_id`. If found → return (idempotent — safe to call twice).
+2. Call `compute_transaction_costs(hedge_actions, slippage_estimates, market, policy)` with the live in-memory inputs passed in by `v1_calculate.py`.
+3. Persist with `estimate_type='post_calc'`, `calculation_run_id` set, `market_snapshot_id` from the run's market snapshot. Emit `TCA_ESTIMATE_CREATED` audit event.
+
+`GET /v1/tca/calc-runs/{run_id}` therefore does a **read-only lookup** (not auto-generate): returns 404 if TCA was not computed at run time (e.g., run predates this feature). Clients should handle 404 gracefully (hide the tab).
+
+**Implementation note:** `attach_to_calc_run()` must be wired into BOTH `calculate()` (single-entity) AND `calculate_extended()` (multi-entity) endpoints in `v1_calculate.py`. `calculate_extended()` calls `calculate()` internally — ensure TCA is attached exactly once per run (idempotency guard in step 1 covers double-call).
 
 ### reconcile_actual()
-1. Load estimate + settlement event.
-2. SoD check (post_calc estimates only).
-3. `actual_cost_usd` from `settlement_event.fees` JSONB.
-4. `variance_bps = (actual − estimate) / notional × 10000`.
-5. Persist backfill, emit `TCA_RECONCILED`.
+1. Load estimate + settlement event. Enforce `settlement_event.company_id == estimate.tenant_id` (cross-tenant isolation guard — required on all FK lookups in this codebase).
+2. SoD check: if `estimate.estimate_type == 'post_calc'` AND `reconciling_user_id == estimate.user_id` → `SODViolationError` → 403. Pre-trade estimates may be self-reconciled (intentional asymmetry — pre-trade is advisory; post-calc is a governance artifact tied to an approved run).
+3. `actual_cost_usd = abs(float(settlement_event.pnl_impact))` — v1 proxy: total realized rate-deviation cost. `abs()` ensures favourable fills produce positive cost (not negative variance). This does not decompose into sub-components; full broker fee breakdown requires future broker fee API integration.
+4. `variance_bps = (actual_cost_usd − estimate.total_cost_usd) / float(estimate.inputs['notional_usd']) × 10000`. Uses the original estimated notional as denominator (not `settlement_event.hedge_amount`) to keep `variance_bps` directly comparable to `total_cost_bps` on the estimate — both use the same notional base.
+5. Persist backfill, emit `TCA_RECONCILED` via `build_audit_event()` with string literal event_type.
 
 ### Auto-reconcile hook (in settlement_service.py)
-After `SettlementEvent` commit: match on `±5% notional`, `±4h timestamp`, same `tenant+pair+direction`, `reconciled_at IS NULL`. If exactly 1 match → call `reconcile_actual()`. Zero or >1 matches → skip, log warning. Wrapped in `try/except` — settlement write never fails on reconcile error.
+After `SettlementEvent` commit: match on `±5% hedge_amount`, `settlement_date == settlement_event.settlement_date` (date equality — not ±4h `created_at` which reflects DB insert time, not trade timing), same `company_id`, `reconciled_at IS NULL`. No pair/direction matching — `SettlementEvent` has no `pair` or `direction` columns. If exactly 1 match → call `reconcile_actual()`. Zero or >1 matches → skip, log warning. Wrapped in `try/except` — settlement write never fails on reconcile error.
 
 ## Frontend
 
@@ -236,10 +245,12 @@ No `@pytest.mark.requires_postgres` needed — all tests SQLite-compatible. Accu
 | `calculation_run_id` not found | 404 |
 | Engine ValueError | 422 with detail |
 | `settlement_event_id` not found | 404 |
-| SoD violation on reconcile | 403 |
+| SoD violation on reconcile (`post_calc` only) | 403 — creator cannot reconcile their own post-calc estimate; pre-trade self-reconcile is allowed (advisory artifact, not governance) |
+| Cross-tenant settlement lookup | 403 — `settlement_event.company_id` must equal `estimate.tenant_id` |
+| Market snapshot belongs to different tenant | 403 — snapshot lookup always includes `AND company_id = current_user.company_id` |
 | Auto-reconcile hook failure | Swallowed — settlement write succeeds, warning logged |
 | Plan tier check fails | 402 |
-| Benchmark `sample_size < 5` | Benchmark omitted from response |
+| Benchmark `sample_size < 5` | Benchmark omitted from response (not null — field absent) |
 
 ## Error Map
 
