@@ -326,3 +326,64 @@ async def auto_reconcile_on_settlement(
             "auto_reconcile_on_settlement failed for settlement_event=%s", settlement_event.id,
             exc_info=True,
         )
+
+
+async def get_accuracy_report(
+    db: AsyncSession,
+    tenant_id: UUID,
+    period: str,
+    group_by: str = "pair",
+):
+    from app.schemas_v1.tca import AccuracyBucket, AccuracyReportResponse
+    import math
+
+    # Load all reconciled estimates for the tenant (period filter in Python for SQLite compat)
+    stmt = (
+        select(TransactionCostEstimate)
+        .where(
+            TransactionCostEstimate.tenant_id == tenant_id,
+            TransactionCostEstimate.reconciled_at.isnot(None),
+        )
+    )
+    rows = (await db.execute(stmt)).scalars().all()
+
+    if not rows:
+        return AccuracyReportResponse(
+            period=period, group_by=group_by,
+            total_reconciled=0, buckets=[],
+        )
+
+    # Group by key
+    groups: dict[str, list[float]] = {}
+    for r in rows:
+        if group_by == "pair":
+            key = r.inputs.get("pair", "UNKNOWN")
+        elif group_by == "instrument":
+            key = r.inputs.get("instrument", "UNKNOWN")
+        elif group_by == "month":
+            key = r.reconciled_at.strftime("%Y-%m")
+        else:
+            key = "all"
+        groups.setdefault(key, []).append(float(r.variance_bps or 0))
+
+    buckets = []
+    for key, values in sorted(groups.items()):
+        n = len(values)
+        mean = sum(values) / n
+        stdev = math.sqrt(sum((v - mean) ** 2 for v in values) / n) if n > 1 else 0.0
+        mae = sum(abs(v) for v in values) / n
+        rmse = math.sqrt(sum(v ** 2 for v in values) / n)
+        bias = "OVER_ESTIMATE" if mean > 0.1 else "UNDER_ESTIMATE" if mean < -0.1 else "NEUTRAL"
+        buckets.append(AccuracyBucket(
+            key=key, sample_size=n,
+            mean_variance_bps=round(mean, 4),
+            stdev_variance_bps=round(stdev, 4),
+            mae_bps=round(mae, 4),
+            rmse_bps=round(rmse, 4),
+            bias_direction=bias,
+        ))
+
+    return AccuracyReportResponse(
+        period=period, group_by=group_by,
+        total_reconciled=len(rows), buckets=buckets,
+    )

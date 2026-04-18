@@ -205,3 +205,20 @@ async def test_reconcile_pre_trade_allows_self(monkeypatch):
         reconciling_user_id=same_user,
     )
     assert result.reconciled_at is not None
+
+
+@pytest.mark.asyncio
+async def test_accuracy_report_empty_returns_empty_buckets(monkeypatch):
+    from app.services import tca_service
+
+    mock_db = AsyncMock()
+    mock_exec = MagicMock()
+    mock_exec.scalars = MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))
+    mock_db.execute = AsyncMock(return_value=mock_exec)
+
+    report = await tca_service.get_accuracy_report(
+        db=mock_db, tenant_id=uuid4(),
+        period="Q4-2025", group_by="pair",
+    )
+    assert report.total_reconciled == 0
+    assert report.buckets == []
