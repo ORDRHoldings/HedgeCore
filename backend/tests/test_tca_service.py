@@ -49,7 +49,7 @@ async def test_estimate_pre_trade_persists_row(monkeypatch):
     mock_snapshot = MagicMock(
         id=snapshot_id,
         company_id=tenant_id,
-        market_data={"fee_schedule": {"FWD": {"exchange": 0.5}}, "vol_surface": {"USDMXN_1M": 12.0}},
+        payload={"fee_schedule": {"FWD": {"exchange": 0.5}}, "vol_surface": {"USDMXN_1M": 12.0}},
     )
     mock_db = AsyncMock()
     mock_db.commit = AsyncMock()

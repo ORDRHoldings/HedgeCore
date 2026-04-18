@@ -70,13 +70,14 @@ async def _emit_tca_audit(
     )).scalar_one_or_none()
     prev_hash = prev_hash_row or GENESIS_HASH
     event = build_audit_event(
-        company_id=tenant_id,
-        user_id=user_id,
         event_type=event_type,  # "TCA_ESTIMATE_CREATED" or "TCA_RECONCILED"
+        description=f"{event_type} for transaction_cost_estimate {entity_id}",
+        payload={"entity_id": str(entity_id)},
+        prev_event_hash=prev_hash,
+        company_id=tenant_id,
+        actor_id=user_id,
         entity_type="transaction_cost_estimate",
-        entity_id=entity_id,
-        prev_hash=prev_hash,
-        payload={},
+        entity_id=str(entity_id),
     )
     db.add(event)
 
@@ -129,7 +130,7 @@ async def estimate_pre_trade(
     }]
     slippage_estimates = _estimate_slippage(request.pair, float(request.notional_usd))
 
-    market = snapshot.market_data or {}
+    market = snapshot.payload or {}
     policy = {
         "broker_commission_bps": market.get("default_broker_bps", 2.5),
         "execution_product": request.instrument,
