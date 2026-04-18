@@ -182,6 +182,7 @@ async def post_reconcile(
             estimate_id=estimate_id,
             settlement_event_id=request.settlement_event_id,
             reconciling_user_id=current_user.id,
+            caller_tenant_id=current_user.company_id,
         )
     except SODViolationError as e:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=e.message)
