@@ -170,3 +170,61 @@ async def estimate_pre_trade(
     estimate._benchmark = await _compute_benchmark(db, tenant_id, request.pair, position.total_cost_bps)
 
     return estimate
+
+
+async def _find_estimate_by_run_id(
+    db: AsyncSession, calculation_run_id: str,
+) -> TransactionCostEstimate | None:
+    stmt = select(TransactionCostEstimate).where(
+        TransactionCostEstimate.calculation_run_id == calculation_run_id
+    )
+    return (await db.execute(stmt)).scalar_one_or_none()
+
+
+async def attach_to_calc_run(
+    db: AsyncSession,
+    calculation_run_id: str,
+    tenant_id: UUID,
+    user_id: UUID,
+    hedge_actions: list[dict],
+    slippage_estimates: list[dict],
+    market: dict,
+    policy: dict,
+    market_snapshot_id: UUID,
+) -> TransactionCostEstimate:
+    """Eagerly called from v1_calculate.py at run time. Idempotent."""
+    existing = await _find_estimate_by_run_id(db, calculation_run_id)
+    if existing is not None:
+        return existing
+
+    result = compute_transaction_costs(
+        hedge_actions=hedge_actions,
+        slippage_estimates=slippage_estimates,
+        market=market,
+        policy=policy,
+    )
+    outputs = result.to_dict()
+    total_notional = sum(abs(float(a.get("action_usd", 0))) for a in hedge_actions)
+
+    estimate = TransactionCostEstimate(
+        tenant_id=tenant_id,
+        user_id=user_id,
+        estimate_type="post_calc",
+        calculation_run_id=calculation_run_id,
+        market_snapshot_id=market_snapshot_id,
+        inputs={
+            "calculation_run_id": calculation_run_id,
+            "hedge_actions_count": len(hedge_actions),
+            "total_notional_usd": total_notional,
+        },
+        outputs=outputs,
+        total_cost_usd=Decimal(str(round(result.total_transaction_cost, 2))),
+        total_cost_bps=Decimal(str(round(result.total_cost_bps, 4))),
+    )
+    db.add(estimate)
+    await db.commit()
+    await db.refresh(estimate)
+
+    await _emit_tca_audit(db, tenant_id, user_id, "TCA_ESTIMATE_CREATED", estimate.id)
+    await db.commit()
+    return estimate

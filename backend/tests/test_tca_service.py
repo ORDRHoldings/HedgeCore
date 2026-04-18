@@ -95,3 +95,25 @@ async def test_estimate_pre_trade_no_snapshot_raises(monkeypatch):
             db=AsyncMock(), tenant_id=uuid4(), user_id=uuid4(), request=req,
         )
     assert exc_info.value.code == "no_market_snapshot"
+
+
+@pytest.mark.asyncio
+async def test_attach_to_calc_run_idempotent(monkeypatch):
+    from app.services import tca_service
+
+    existing = MagicMock(id=uuid4(), estimate_type="post_calc")
+    mock_db = AsyncMock()
+
+    async def fake_query_existing(db, run_id):
+        return existing
+    monkeypatch.setattr(tca_service, "_find_estimate_by_run_id", fake_query_existing)
+
+    result = await tca_service.attach_to_calc_run(
+        db=mock_db,
+        calculation_run_id="run-abc",
+        tenant_id=uuid4(), user_id=uuid4(),
+        hedge_actions=[], slippage_estimates=[],
+        market={}, policy={}, market_snapshot_id=uuid4(),
+    )
+    assert result is existing
+    mock_db.add.assert_not_called()  # idempotent — no new insert
