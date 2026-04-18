@@ -28,7 +28,7 @@ class TransactionCostEstimate(Base):
         PGUUID(as_uuid=True), ForeignKey("companies.id"), nullable=False, index=True
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
     )
     estimate_type: Mapped[str] = mapped_column(String(16), nullable=False)  # pre_trade|post_calc
     calculation_run_id: Mapped[str | None] = mapped_column(
@@ -42,7 +42,7 @@ class TransactionCostEstimate(Base):
     total_cost_usd: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     total_cost_bps: Mapped[Decimal] = mapped_column(Numeric(10, 4), nullable=False)
     settlement_event_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), nullable=True
+        PGUUID(as_uuid=True), ForeignKey("settlement_events.id"), nullable=True
     )
     actual_cost_usd: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
     variance_bps: Mapped[Decimal | None] = mapped_column(Numeric(10, 4), nullable=True)

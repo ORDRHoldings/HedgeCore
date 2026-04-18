@@ -29,7 +29,7 @@ def upgrade() -> None:
         sa.Column("outputs", postgresql.JSONB, nullable=False),
         sa.Column("total_cost_usd", sa.Numeric(18, 2), nullable=False),
         sa.Column("total_cost_bps", sa.Numeric(10, 4), nullable=False),
-        sa.Column("settlement_event_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("settlement_event_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("settlement_events.id"), nullable=True),
         sa.Column("actual_cost_usd", sa.Numeric(18, 2), nullable=True),
         sa.Column("variance_bps", sa.Numeric(10, 4), nullable=True),
         sa.Column("reconciled_at", sa.DateTime(timezone=True), nullable=True),
@@ -38,9 +38,11 @@ def upgrade() -> None:
     op.create_index("ix_tca_tenant_created", "transaction_cost_estimates", ["tenant_id", "created_at"])
     op.create_index("ix_tca_tenant_type_reconciled", "transaction_cost_estimates", ["tenant_id", "estimate_type", "reconciled_at"])
     op.create_index("ix_tca_calc_run_id", "transaction_cost_estimates", ["calculation_run_id"])
+    op.create_index("ix_tca_user_id", "transaction_cost_estimates", ["user_id"])
 
 
 def downgrade() -> None:
+    op.drop_index("ix_tca_user_id", table_name="transaction_cost_estimates")
     op.drop_index("ix_tca_calc_run_id", table_name="transaction_cost_estimates")
     op.drop_index("ix_tca_tenant_type_reconciled", table_name="transaction_cost_estimates")
     op.drop_index("ix_tca_tenant_created", table_name="transaction_cost_estimates")
