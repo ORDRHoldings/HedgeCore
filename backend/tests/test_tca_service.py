@@ -13,3 +13,21 @@ def test_transaction_cost_estimate_model_has_required_columns():
     }
     columns = {c.name for c in TransactionCostEstimate.__table__.columns}
     assert required.issubset(columns), f"missing: {required - columns}"
+
+
+def test_tca_schemas_importable():
+    from app.schemas_v1.tca import (
+        PreTradeEstimateRequest,
+        TCAEstimateResponse,
+        TCABreakdown,
+        TCABenchmark,
+        ReconcileRequest,
+        AccuracyReportResponse,
+        AccuracyBucket,
+    )
+    # Basic shape check
+    req = PreTradeEstimateRequest(
+        pair="EURUSD", notional_usd=1_000_000, direction="BUY",
+        instrument="FWD", execution_window_hours=24,
+    )
+    assert req.pair == "EURUSD"
