@@ -678,6 +678,70 @@ async def calculate(
 
 
 
+    # --- Step 6b: Eagerly attach TCA estimate to this run (non-fatal) ---
+
+    try:
+
+        from app.services.tca_service import attach_to_calc_run as _tca_attach
+
+        _hedge_actions = (
+
+            [b.model_dump(mode="json") for b in hedge_plan.buckets]
+
+            if hedge_plan else []
+
+        )
+
+        _market_snapshot_id = None
+
+        if _snapshot_meta and _snapshot_meta.get("market_snapshot_id"):
+
+            import uuid as _tca_uuid
+
+            try:
+
+                _market_snapshot_id = _tca_uuid.UUID(_snapshot_meta["market_snapshot_id"])
+
+            except (ValueError, TypeError):
+
+                _market_snapshot_id = None
+
+        if _market_snapshot_id is not None:
+
+            await _tca_attach(
+
+                db=session,
+
+                calculation_run_id=run_id,
+
+                tenant_id=current_user.company_id,
+
+                user_id=current_user.id,
+
+                hedge_actions=_hedge_actions,
+
+                slippage_estimates=[],
+
+                market=market_raw,
+
+                policy=policy_raw,
+
+                market_snapshot_id=_market_snapshot_id,
+
+            )
+
+    except Exception:
+
+        import logging
+
+        logging.getLogger(__name__).warning(
+
+            "TCA attach failed for run %s", run_id, exc_info=True,
+
+        )
+
+
+
     # --- Step 7: Emit audit events (non-fatal) ---
 
     try:
