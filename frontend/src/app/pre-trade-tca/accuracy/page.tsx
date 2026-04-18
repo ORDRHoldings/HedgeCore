@@ -23,7 +23,11 @@ const S = {
 
 export default function TcaAccuracyPage() {
   const { token } = useAuth();
-  const [period, setPeriod] = useState("Q4-2025");
+  const [period, setPeriod] = useState(() => {
+    const d = new Date();
+    const q = Math.floor(d.getMonth() / 3) + 1;
+    return `Q${q}-${d.getFullYear()}`;
+  });
   const [groupBy, setGroupBy] = useState<"pair" | "instrument" | "month">("pair");
   const [report, setReport] = useState<AccuracyReport | null>(null);
   const [loading, setLoading] = useState(false);

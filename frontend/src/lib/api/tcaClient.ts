@@ -8,6 +8,15 @@
 
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 
+export class TCAApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "TCAApiError";
+    this.status = status;
+  }
+}
+
 async function _fetchJson<T>(path: string, token: string, options?: RequestInit): Promise<T> {
   const res = await dashboardFetch(path, token, options);
   if (!res.ok) {
@@ -18,7 +27,7 @@ async function _fetchJson<T>(path: string, token: string, options?: RequestInit)
     } catch {
       /* noop */
     }
-    throw new Error(detail);
+    throw new TCAApiError(res.status, detail);
   }
   return res.json() as Promise<T>;
 }
@@ -109,8 +118,7 @@ export async function getCalcRunTCA(token: string, runId: string): Promise<TCAEs
   try {
     return await _fetchJson<TCAEstimate>(`/v1/tca/calc-runs/${runId}`, token);
   } catch (e: unknown) {
-    // 404 → run has no TCA attached (pre-feature run); return null so caller hides tab.
-    if (e instanceof Error && e.message.includes("404")) return null;
+    if (e instanceof TCAApiError && e.status === 404) return null;
     throw e;
   }
 }
