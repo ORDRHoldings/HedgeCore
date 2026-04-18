@@ -1,5 +1,47 @@
 # Changelog (AI-maintained)
 
+## 2026-04-18 — P0-B: Pre-Trade TCA COMPLETE
+
+### Added
+**Backend**
+- `app/models/transaction_cost_estimate.py` — WORM-participating ORM (15 cols, 3 indexes, FK to settlement_events)
+- `migrations/versions/0027_transaction_cost_estimates.py` — table + indexes
+- `migrations/versions/0028_tca_permissions.py` — `tca.read`, `tca.estimate` granted to admin/treasurer/risk_analyst/trader/viewer
+- `app/schemas_v1/tca.py` — 7 Pydantic classes
+- `app/services/tca_service.py` — estimate_pre_trade, attach_to_calc_run (idempotent), reconcile_actual (SoD asymmetric: post_calc blocks self, pre_trade allows self), auto_reconcile_on_settlement, get_accuracy_report; atomic WORM pattern (add → flush → audit → commit → refresh); hash-chain `FOR UPDATE` lock; cross-tenant guards on all queries
+- `app/api/routes/v1_tca.py` — 6 endpoints: POST /pre-trade/estimate, GET /estimates, GET /estimates/{id}, GET /calc-runs/{run_id}, POST /estimates/{id}/reconcile, GET /accuracy-report
+- `app/api/routes/v1_calculate.py` — non-fatal attach_to_calc_run call at ~line 685
+- `tests/test_tca_service.py` + `tests/test_v1_tca_routes.py` — unit + route tests
+
+**Frontend**
+- `lib/api/tcaClient.ts` — 6 API functions + `TCAApiError` typed error class (status-code based 404 branching)
+- `app/pre-trade-tca/layout.tsx` — PlanGate(professional) + PageShell + tab nav
+- `app/pre-trade-tca/page.tsx` — estimator with TRADE INPUTS / COST BREAKDOWN / RECENT ESTIMATES panels
+- `app/pre-trade-tca/accuracy/page.tsx` — accuracy dashboard; period default derived from current date (Q2-2026 in April 2026)
+- `components/tca/TCATab.tsx` — reusable run-detail tab with bar-chart breakdown + divide-by-zero guard
+- `app/audit-lab/runs/[run_id]/page.tsx` — added "Transaction Costs" tab
+- `components/layout/AppSidebar.tsx` — Pre-Trade TCA entry under HEDGE DESK/OPERATE with Calculator icon
+
+### Review Fixes Applied
+1. WORM atomicity: single commit with `add → flush → audit → commit → refresh`
+2. Hash chain race: `.with_for_update()` on prev_hash select
+3. Cross-tenant guards: required `caller_tenant_id` on `_load_estimate_and_settlement` and `_find_estimate_by_run_id`
+4. Settlement transaction boundary: `confirm_settlement` commits before triggering auto-reconcile
+5. `post_reconcile` now passes `caller_tenant_id=current_user.company_id`
+6. Typed `TCAApiError` replaces substring-matching on error messages
+
+### Validation
+- `tsc --noEmit`: clean
+- `next build`: 117 static pages compiled (`/pre-trade-tca` 4.79 kB, `/pre-trade-tca/accuracy` 3.94 kB)
+- Backend collection: 5308 tests collect cleanly
+- Browser smoke: estimator + accuracy pages render correctly (screenshots `pre-trade-tca-smoke.png`, `pre-trade-tca-accuracy-smoke.png`)
+- Known env risk: Windows pytest-asyncio `OSError: could not get source code` on async suite (pre-existing) — CI Linux will validate
+
+### Commits
+`7c5badf` → `ef1f766` (20 commits across 5 chunks + review fixes)
+
+---
+
 ## 2026-04-17 — Audit Lab UX Overhaul COMPLETE
 
 ### Changed (frontend-only, no new routes)
