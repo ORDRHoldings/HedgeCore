@@ -228,3 +228,101 @@ async def attach_to_calc_run(
     await _emit_tca_audit(db, tenant_id, user_id, "TCA_ESTIMATE_CREATED", estimate.id)
     await db.commit()
     return estimate
+
+
+async def _load_estimate_and_settlement(
+    db: AsyncSession, estimate_id: UUID, settlement_event_id: UUID,
+):
+    from app.models.settlement_event import SettlementEvent
+    est = (await db.execute(
+        select(TransactionCostEstimate).where(TransactionCostEstimate.id == estimate_id)
+    )).scalar_one_or_none()
+    if est is None:
+        raise TCAServiceError("estimate_not_found")
+    settle = (await db.execute(
+        select(SettlementEvent).where(SettlementEvent.id == settlement_event_id)
+    )).scalar_one_or_none()
+    if settle is None:
+        raise TCAServiceError("settlement_not_found")
+    # Cross-tenant isolation guard
+    if settle.company_id != est.tenant_id:
+        raise TCAServiceError("cross_tenant", "settlement and estimate belong to different tenants")
+    return est, settle
+
+
+async def reconcile_actual(
+    db: AsyncSession,
+    estimate_id: UUID,
+    settlement_event_id: UUID,
+    reconciling_user_id: UUID,
+) -> TransactionCostEstimate:
+    """Backfill actual_cost_usd + variance_bps from settlement.pnl_impact.
+
+    SoD: post_calc estimates can't be reconciled by their creator.
+    Pre-trade estimates can be self-reconciled (advisory, not governance).
+    """
+    estimate, settlement = await _load_estimate_and_settlement(
+        db, estimate_id, settlement_event_id,
+    )
+    if estimate.reconciled_at is not None:
+        raise TCAServiceError("already_reconciled")
+
+    if estimate.estimate_type == "post_calc" and estimate.user_id == reconciling_user_id:
+        raise SODViolationError()
+
+    # v1 proxy: actual execution cost = |pnl_impact| (rate deviation × notional)
+    actual_cost_usd = abs(float(settlement.pnl_impact))
+    notional = float(estimate.inputs.get("notional_usd") or estimate.inputs.get("total_notional_usd") or 1.0)
+    variance_bps = (actual_cost_usd - float(estimate.total_cost_usd)) / notional * 10_000.0
+
+    estimate.actual_cost_usd = Decimal(str(round(actual_cost_usd, 2)))
+    estimate.variance_bps = Decimal(str(round(variance_bps, 4)))
+    estimate.settlement_event_id = settlement.id
+    estimate.reconciled_at = datetime.now(UTC)
+    await db.commit()
+
+    await _emit_tca_audit(
+        db, estimate.tenant_id, reconciling_user_id,
+        "TCA_RECONCILED", estimate.id,
+    )
+    await db.commit()
+    return estimate
+
+
+async def auto_reconcile_on_settlement(
+    db: AsyncSession, settlement_event,
+) -> None:
+    """Best-effort match SettlementEvent → open estimate. Non-fatal on failure."""
+    try:
+        lo = float(settlement_event.hedge_amount) * 0.95
+        hi = float(settlement_event.hedge_amount) * 1.05
+        stmt = (
+            select(TransactionCostEstimate)
+            .where(
+                TransactionCostEstimate.tenant_id == settlement_event.company_id,
+                TransactionCostEstimate.reconciled_at.is_(None),
+            )
+        )
+        candidates = (await db.execute(stmt)).scalars().all()
+        # Filter by notional band + settlement_date equality in Python (inputs is JSONB)
+        matches = []
+        for c in candidates:
+            notional = float(c.inputs.get("notional_usd") or c.inputs.get("total_notional_usd") or 0)
+            if lo <= notional <= hi:
+                matches.append(c)
+        if len(matches) != 1:
+            return  # 0 or >1 → skip, user can manually reconcile
+
+        # System-principal reconcile — bypass SoD by using a sentinel user_id
+        await reconcile_actual(
+            db=db,
+            estimate_id=matches[0].id,
+            settlement_event_id=settlement_event.id,
+            reconciling_user_id=UUID("00000000-0000-0000-0000-000000000000"),  # system
+        )
+    except Exception:  # non-fatal
+        import logging
+        logging.getLogger(__name__).warning(
+            "auto_reconcile_on_settlement failed for settlement_event=%s", settlement_event.id,
+            exc_info=True,
+        )

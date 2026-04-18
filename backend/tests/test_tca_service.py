@@ -117,3 +117,91 @@ async def test_attach_to_calc_run_idempotent(monkeypatch):
     )
     assert result is existing
     mock_db.add.assert_not_called()  # idempotent — no new insert
+
+
+@pytest.mark.asyncio
+async def test_reconcile_actual_computes_variance(monkeypatch):
+    from app.services import tca_service
+    from decimal import Decimal
+
+    tenant_id, user_id, estimate_id, settle_id = uuid4(), uuid4(), uuid4(), uuid4()
+
+    estimate = MagicMock(
+        id=estimate_id, tenant_id=tenant_id, user_id=user_id,
+        estimate_type="post_calc",
+        total_cost_usd=Decimal("1000.00"),
+        inputs={"notional_usd": 1_000_000, "total_notional_usd": 1_000_000},
+        reconciled_at=None,
+    )
+    settlement = MagicMock(
+        id=settle_id, company_id=tenant_id,
+        pnl_impact=Decimal("-1500.00"),
+        hedge_amount=Decimal("1000000"),
+    )
+    mock_db = AsyncMock()
+    monkeypatch.setattr(tca_service, "_load_estimate_and_settlement",
+                        AsyncMock(return_value=(estimate, settlement)))
+    monkeypatch.setattr(tca_service, "_emit_tca_audit", AsyncMock())
+
+    result = await tca_service.reconcile_actual(
+        db=mock_db, estimate_id=estimate_id,
+        settlement_event_id=settle_id,
+        reconciling_user_id=uuid4(),  # different user → no SoD
+    )
+    assert result.actual_cost_usd == Decimal("1500.00")  # abs(-1500)
+    # variance_bps = (1500 - 1000) / 1_000_000 * 10000 = 5.0 bps
+    assert abs(float(result.variance_bps) - 5.0) < 0.01
+
+
+@pytest.mark.asyncio
+async def test_reconcile_sod_violation(monkeypatch):
+    from app.services import tca_service
+    from app.services.tca_service import SODViolationError
+
+    same_user = uuid4()
+    tenant_id, estimate_id, settle_id = uuid4(), uuid4(), uuid4()
+    estimate = MagicMock(
+        id=estimate_id, tenant_id=tenant_id, user_id=same_user,
+        estimate_type="post_calc", reconciled_at=None,
+    )
+    settlement = MagicMock(id=settle_id, company_id=tenant_id)
+
+    monkeypatch.setattr(tca_service, "_load_estimate_and_settlement",
+                        AsyncMock(return_value=(estimate, settlement)))
+
+    with pytest.raises(SODViolationError):
+        await tca_service.reconcile_actual(
+            db=AsyncMock(), estimate_id=estimate_id,
+            settlement_event_id=settle_id,
+            reconciling_user_id=same_user,  # same user → violation
+        )
+
+
+@pytest.mark.asyncio
+async def test_reconcile_pre_trade_allows_self(monkeypatch):
+    from app.services import tca_service
+    from decimal import Decimal
+    same_user = uuid4()
+    tenant_id, estimate_id, settle_id = uuid4(), uuid4(), uuid4()
+    estimate = MagicMock(
+        id=estimate_id, tenant_id=tenant_id, user_id=same_user,
+        estimate_type="pre_trade",  # pre_trade: self-reconcile allowed
+        total_cost_usd=Decimal("1000"),
+        inputs={"notional_usd": 1_000_000},
+        reconciled_at=None,
+    )
+    settlement = MagicMock(
+        id=settle_id, company_id=tenant_id,
+        pnl_impact=Decimal("-1000"),
+    )
+    monkeypatch.setattr(tca_service, "_load_estimate_and_settlement",
+                        AsyncMock(return_value=(estimate, settlement)))
+    monkeypatch.setattr(tca_service, "_emit_tca_audit", AsyncMock())
+
+    # Should NOT raise
+    result = await tca_service.reconcile_actual(
+        db=AsyncMock(), estimate_id=estimate_id,
+        settlement_event_id=settle_id,
+        reconciling_user_id=same_user,
+    )
+    assert result.reconciled_at is not None

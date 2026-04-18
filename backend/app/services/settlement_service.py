@@ -170,6 +170,10 @@ async def confirm_settlement(
             except GLMappingNotConfiguredError:
                 pass
 
+    # After SettlementEvent.commit — best-effort TCA reconcile
+    from app.services.tca_service import auto_reconcile_on_settlement
+    await auto_reconcile_on_settlement(session, se)
+
     return se, draft_je
 
 
