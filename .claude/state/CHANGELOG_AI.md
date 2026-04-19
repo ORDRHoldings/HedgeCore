@@ -1,5 +1,29 @@
 # Changelog (AI-maintained)
 
+## 2026-04-18 — P1-A: Natural Hedging Optimizer COMPLETE
+
+### Added
+**Backend**
+- `app/services/natural_hedging_service.py` — thin adapter over `engine_v1.currency_netting_matrix.compute_currency_netting`; `analyze` (ad-hoc) + `analyze_from_positions` (tenant-scoped AR/AP aggregation with reporting-currency convention)
+- `app/api/routes/v1_natural_hedging.py` — 2 endpoints at `/v1/natural-hedging/*` (compute-only, professional-tier gate)
+- `app/api/router.py` — wired router
+
+**Frontend**
+- `lib/api/naturalHedgingClient.ts` — typed API wrapper + `NaturalHedgingApiError`
+- `app/natural-hedging/layout.tsx` — PlanGate(professional) + PageShell (GitMerge icon)
+- `app/natural-hedging/page.tsx` — 5-cell KPI strip, triangulation warning banner, 3 sections (recommended nettings, per-currency AR/AP breakdown, net currency positions)
+- `components/layout/AppSidebar.tsx` — "Natural Hedging" nav entry under HEDGE DESK/OPERATE (GitMerge icon, professional gate); `/natural-hedging` added to prefixes
+
+### Architectural Decisions
+- Compute-only — no DB mutation, no WORM, no migration. Engine is pure; service is stateless
+- Position aggregation convention: for each non-reporting currency `CCY`, pair is `<CCY><REPORTING>` with amount = AR − AP in foreign currency units
+- Response shape: `{source: {reporting_currency, derived_exposures, per_currency_breakdown}, netting: NettingResult}` — `source` lets UI explain *why* the optimizer produced its recommendations
+
+### Commit
+- `0ca2762` — feat(natural-hedging): P1-A — natural hedging optimizer (compute-only)
+
+---
+
 ## 2026-04-18 — P0-A: EMIR / MiFID II / Dodd-Frank Regulatory Submissions COMPLETE
 
 ### Added
