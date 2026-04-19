@@ -9,6 +9,7 @@ from __future__ import annotations
 import calendar
 from dataclasses import dataclass
 from datetime import date
+from typing import Any, cast
 
 
 @dataclass
@@ -34,10 +35,10 @@ class DebtFacilitySpec:
 
 @dataclass
 class DebtSchedule:
-    periods: list[dict]          # period_start, period_end, principal_payment, interest_payment, total_payment, outstanding_balance
+    periods: list[dict[str, Any]]          # period_start, period_end, principal_payment, interest_payment, total_payment, outstanding_balance
     total_interest_expense: float
     weighted_avg_life: float
-    covenant_results: list[dict]
+    covenant_results: list[dict[str, Any]]
 
 
 _FREQ_MONTHS: dict[str, int] = {
@@ -109,9 +110,9 @@ def compute_debt_schedule(spec: DebtFacilitySpec) -> DebtSchedule:
         current = next_d
         total_periods += 1
 
-    total_interest = sum(p["interest_payment"] for p in periods)
+    total_interest = sum(cast(float, p["interest_payment"]) for p in periods)
     wal = sum(
-        p["principal_payment"] * (p["period_end"] - spec.start_date).days / 365.0
+        cast(float, p["principal_payment"]) * (cast(date, p["period_end"]) - spec.start_date).days / 365.0
         for p in periods
     ) / spec.principal if spec.principal > 0 else 0.0
 

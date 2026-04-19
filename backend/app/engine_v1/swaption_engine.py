@@ -34,7 +34,7 @@ class SwaptionValuation:
     theta: float
     model_used: str
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, float | str]:
         return {
             "premium": self.premium, "delta": self.delta,
             "vega": self.vega, "theta": self.theta, "model_used": self.model_used,

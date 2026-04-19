@@ -38,7 +38,7 @@ class SwapValuation:
     fixed_leg_pv: float
     floating_leg_pv: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, float]:
         return {
             "npv": self.npv, "dv01": self.dv01, "pvbp": self.pvbp,
             "accrued_interest": self.accrued_interest, "par_rate": self.par_rate,
