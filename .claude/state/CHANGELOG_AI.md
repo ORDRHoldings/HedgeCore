@@ -1,5 +1,29 @@
 # Changelog (AI-maintained)
 
+## 2026-04-18 — P2-A: JSON Batch Position Import API COMPLETE
+
+### Added
+**Backend**
+- `app/services/position_import_service.py` — new `batch_import_json(session, user, positions, *, dry_run)` service function. Reuses the existing `validate_rows()` pure function with an identity column mapping (each canonical field maps to itself), persists an `ImportBatch` for audit trail regardless of outcome, and atomically creates `Position` rows when `dry_run=false` and zero errors.
+- `app/api/routes/v1_position_import.py` — new `POST /v1/positions/import/batch-json` endpoint. Pydantic `PositionInput` schema per row; `BatchJsonRequest` wraps list + `dry_run` flag. Max 5000 positions per call. Requires `trades.create` permission. Emits audit event with source=`json_api`.
+- `tests/test_position_import_json.py` — 12 passing unit tests covering: valid single/batch, float amount preservation, missing field (I-001), invalid currency (I-002), invalid flow type (I-003), negative amount (I-005), bad date (I-006), in-batch duplicate (I-007), existing record_id (I-008), default status fallback, mixed valid/invalid partition, empty-input guard.
+
+### Architectural Decisions
+- **No CSV required** — programmatic clients (ETL jobs, ERP bridges, scripted integrations) push positions directly as JSON. Eliminates the round-trip cost of CSV serialization → upload → validate → commit for API-driven callers.
+- **Pipeline reuse, not duplication** — the JSON path shares the same validation codes (I-001..I-010) and the same `validate_rows()` kernel as the CSV path. No drift possible between the two import surfaces.
+- **Batch persisted on every outcome** — even a fully-invalid request writes an `ImportBatch` with `status=VALIDATED` and the full error list, so the audit trail captures every attempted import.
+- **Atomic commit** — all-or-nothing. Any validation error aborts the whole batch; no partial imports.
+
+### Commits
+- `1e07faa` — feat(positions): P2-A — JSON batch position import API
+
+### Roadmap Status
+- Competitive-gap roadmap (all P0/P1 items) closed as of commit `b938ea8`.
+- P2 backlog — first item shipped (Bulk position import API).
+- Remaining P2 candidates: mobile-responsive layouts, custom report builder, hedge program templates, embedded real-time FX rates widget.
+
+---
+
 ## 2026-04-18 — P1-B: SWIFT MT103 + ISO 20022 pain.001 Wire Messages COMPLETE
 
 ### Added
