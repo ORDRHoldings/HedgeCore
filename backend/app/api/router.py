@@ -369,3 +369,7 @@ router.include_router(v1_regulatory_submissions_router)
 # Natural Hedging Optimizer (owns /v1/natural-hedging)
 from app.api.routes.v1_natural_hedging import router as v1_natural_hedging_router
 router.include_router(v1_natural_hedging_router)
+
+# Hedge Templates Library (owns /v1/hedge-templates)
+from app.api.routes.v1_hedge_templates import router as v1_hedge_templates_router
+router.include_router(v1_hedge_templates_router)
