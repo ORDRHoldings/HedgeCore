@@ -1,5 +1,38 @@
 # Changelog (AI-maintained)
 
+## 2026-04-18 — P2-B: Custom Report Templates Library COMPLETE
+
+### Added
+**Backend**
+- `app/models/custom_report_template.py` — new `CustomReportTemplate` ORM (strict tenant-scope: non-nullable `company_id` + `user_id`, JSONB `sections` / `audience` / `default_bindings` / `tags`, soft-delete via `is_active`). Registered in `app/models/__init__.py`.
+- `migrations/versions/0034_custom_report_templates.py` — creates `custom_report_templates` table + 3 indexes (company_id, (company_id, is_active), user_id). down_revision `0033_hedge_templates`.
+- `app/services/custom_report_template_service.py` — pure-function `validate_section` / `validate_sections` / `validate_category` / `validate_audience`; canonicalises sections (defaults INCLUDED status, page_break=false, trims + caps title at 200 chars); tenant-scoped CRUD with strict company_id filter on every query. Section-type / category / audience whitelists mirror the frontend `reportTypes.ts` enums.
+- `app/api/routes/v1_custom_report_templates.py` — 5 endpoints at `/v1/custom-report-templates`: GET list (category filter + include_inactive), GET detail, POST create (201), PUT update, DELETE soft-delete (204). Professional-tier gated; mutations require `reports.write` (accepts legacy `reports.create` for backward compatibility).
+- `tests/test_custom_report_template_service.py` — 21 passing unit tests: single-section validators, list-level guards (empty/non-list/overflow/error-index-propagation), category and audience enum enforcement, canonical-list return shape.
+
+**Frontend**
+- `lib/api/customReportTemplatesClient.ts` — typed client with `CustomReportTemplateApiError` subclass; `listCustomReportTemplates`, `getCustomReportTemplate`, `createCustomReportTemplate`, `updateCustomReportTemplate`, `deleteCustomReportTemplate` functions.
+- `app/reports/components/studio/TemplateSelector.tsx` — new **MY TEMPLATES** group rendered above the 11 preset category groups (starred icon + accent-coloured header); per-row inline delete button (✕); dedicated metadata panel for custom templates (accent-bordered card with section count + audience chips); auto-refreshed via `customRefreshKey` prop on save.
+- `app/reports/components/studio/SaveAsTemplateModal.tsx` — new modal dialog with name / short_name / category dropdown (11 options) / description / audience chips (8 options) / tags CSV field; serialises current Studio section state (type/title/order/status/page_break_before) and POSTs; handles API errors inline.
+- `app/reports/components/studio/ConfigPanel.tsx` — new **SAVE AS TEMPLATE** button below the template selector (disabled when sections is empty, accent-coloured CTA when valid); prop-drills `token`, `onCustomTemplateSelect`, `onSaveAsTemplate`, `customRefreshKey`.
+- `app/reports/components/studio/StudioTab.tsx` — orchestrates modal open/close, bumps `customRefreshKey` after successful save (forces selector to refetch), handles `onCustomTemplateSelect` by converting custom-template `sections` → `StudioSection[]` with generated IDs.
+
+### Architectural Decisions
+- **Three template concepts coexist by design** — `REPORT_PRESETS` (46 frontend constants, system), `SavedReport` (run-bound snapshot, existing), `CustomReportTemplate` (tenant-scoped reusable blueprint, NEW). The selector dropdown renders MY TEMPLATES at top, preset groups below, and a "+ Custom Report" option for unsaved blank-slate mixes.
+- **Strict tenant scope, no system rows** — unlike HedgeTemplate (NULL-company_id system seeds), every CustomReportTemplate belongs to a single tenant. The curated system library remains the frontend `REPORT_PRESETS` constants.
+- **Pure-function validators** — `validate_sections` et al. are pure and individually unit-tested; CRUD methods only call them + persist. Validation is canonicalising (returns canonical dicts with defaults filled) so no client-sent junk reaches the DB.
+- **Soft delete** — DELETE sets `is_active=false`; LIST filters inactive by default but accepts `include_inactive=true`.
+- **Dual-key RBAC** — route accepts `reports.write` OR legacy `reports.create` to avoid churning existing permission rows.
+
+### Commits
+- `a1e4911` — feat(reports): P2-B — Custom Report Templates Library
+
+### Roadmap Status
+- P2 backlog — third item shipped (Custom Report Templates Library).
+- Remaining P2 candidate: mobile-responsive layouts.
+
+---
+
 ## 2026-04-18 — P2-C: Hedge Program Templates Library COMPLETE
 
 ### Added
