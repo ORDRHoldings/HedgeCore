@@ -1,5 +1,31 @@
 # Current Sprint
 
+Sprint: Webhook Management UI
+Status: COMPLETE (2026-04-19)
+Started: 2026-04-19
+Completed: 2026-04-19
+
+## Goal
+Close the frontend gap on the webhook system: backend (`WebhookEndpoint` ORM,
+`webhook_service`, `v1_webhooks`) was already fully shipped. The settings page
+only had a plain `webhook_url` text input. A proper CRUD panel now lets users
+register/delete up to 5 signed HTTPS endpoints with per-event subscriptions.
+
+## Deliverables
+| # | Item | Status |
+|---|------|--------|
+| W1 | `webhookClient.ts` — typed `listWebhookEndpoints`, `createWebhookEndpoint`, `deleteWebhookEndpoint` + `WebhookApiError` | DONE |
+| W2 | `NotificationsTab` — `WebhookPanel` component with endpoint list, one-time secret banner, inline add-form, event checkboxes, capacity bar | DONE |
+| W3 | `settings/page.tsx` — passes `token` to NotificationsTab | DONE |
+| W4 | tsc clean; `next build` exit 0; 5223 backend tests pass | DONE |
+
+## Commits
+- `c9a1fad` — feat(settings): webhook endpoint management UI
+
+---
+
+## Prior Sprint (P2-B.1 — Update + Duplicate Custom Report Templates)
+
 Sprint: P2-B.1 — Update + Duplicate Custom Report Templates (polish)
 Status: COMPLETE (2026-04-19)
 Started: 2026-04-19
