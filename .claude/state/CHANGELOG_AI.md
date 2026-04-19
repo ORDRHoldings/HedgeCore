@@ -1,5 +1,37 @@
 # Changelog (AI-maintained)
 
+## 2026-04-18 — P2-C: Hedge Program Templates Library COMPLETE
+
+### Added
+**Backend**
+- `app/models/hedge_template.py` — new `HedgeTemplate` ORM (UUID PK, nullable `company_id` for system rows, `JSONB instrument_mix`, `category` enum string, versioning + soft-delete via `is_active`). Registered in `app/models/__init__.py`.
+- `migrations/versions/0033_hedge_templates.py` — creates `hedge_templates` table + 3 indexes (short_name, company_id, category). down_revision `0032_regulatory_permissions`.
+- `app/services/hedge_template_service.py` — pure-function validation (`validate_instrument_mix`), tenant-scoped CRUD, `apply_template_to_position()` projection (notional split + tenor_days→absolute value_date), `seed_system_templates()` idempotent on (short_name, is_system=true). Ships 5 built-in templates: **FWD100** (full-notional forward), **LAY3** (50/30/20 @ 3M/6M/12M), **ROLL12** (12 equal monthly tranches), **COLLAR95** (buy 95% put + sell 105% call), **FWDOPT5050** (50% forward + 50% ATM call).
+- `app/api/routes/v1_hedge_templates.py` — 6 endpoints at `/v1/hedge-templates` with professional-tier gate + `trades.create` RBAC on write routes. Apply endpoint returns resolved legs without creating execution proposals (pure projection).
+- `tests/test_hedge_template_service.py` — 21 passing unit tests (validation, system seed integrity, apply projection math with exact-date arithmetic).
+
+**Frontend**
+- `lib/api/hedgeTemplatesClient.ts` — typed client with `HedgeTemplateApiError` subclass; `listTemplates`, `getTemplate`, `createTemplate`, `updateTemplate`, `deleteTemplate`, `applyTemplate` functions.
+- `app/hedge-templates/layout.tsx` — `PlanGate(minTier="professional")` + `PageShell(icon=Library, title="HEDGE TEMPLATES", breadcrumb=["Hedge Desk","Templates"])`.
+- `app/hedge-templates/page.tsx` — 4-KPI header (total / system / custom / active), category filter bar, template card grid (name + description + leg count + APPLY/Inspect/Delete actions), Detail modal (instrument-mix table), Apply modal (position-ID input → resolved-legs table).
+- `components/layout/AppSidebar.tsx` — new "Templates" item under Hedge Desk (`/hedge-templates`, `Library` icon, professional-tier gate).
+
+### Architectural Decisions
+- **HedgeTemplate is distinct from PolicyTemplate** — PolicyTemplate = rules (hedge ratios, caps, allowed instruments). HedgeTemplate = execution blueprint (exact legs with weights/tenors/strikes/directions). Applying a template projects into leg specs; PolicyTemplate remains the gate.
+- **Apply is a pure projection** — `POST /apply` takes (template_id, position_id) and returns the resolved leg list with absolute value dates and split notionals, but writes nothing. Callers feed the output into the existing execution-proposal pipeline when ready. Keeps the library reviewable and idempotent.
+- **Weight-sum rule: 1.0 (sequential) OR 2.0 (paired)** — layered/rolling/forward tranches sum to 1.0 (slices of one notional). Collar-style paired legs (put + call on same notional) sum to 2.0. Tolerance 1e-4.
+- **System templates are immutable** — `is_system=true` rows cannot be updated or deleted; service raises `HedgeTemplateError`, route maps to 422.
+- **Nullable `company_id` = system row** — visible to every tenant; custom templates are tenant-scoped via explicit filter.
+
+### Commits
+- `e2cca44` — feat(hedge-templates): P2-C — Hedge Program Templates Library
+
+### Roadmap Status
+- P2 backlog — second item shipped (Hedge Program Templates Library).
+- Remaining P2 candidates: mobile-responsive layouts, custom report builder.
+
+---
+
 ## 2026-04-18 — P2-A: JSON Batch Position Import API COMPLETE
 
 ### Added
