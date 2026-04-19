@@ -802,5 +802,24 @@ export const rejectPayment = (token: string, id: string, reason: string) =>
 export const transmitPayment = (token: string, id: string) =>
   _fetchJson<PaymentInstruction>(`/v1/payments/${id}/transmit`, token, { method: "POST" });
 
+export type PaymentMessageFormat = "mt103" | "pain001";
+
+export interface PaymentMessageResponse {
+  payment_id: string;
+  format: PaymentMessageFormat;
+  content: string;
+  message_hash: string;
+  message_reference: string;
+  payment_type: string;
+  supported_formats: PaymentMessageFormat[];
+  instruction_hash: string;
+}
+
+export const getPaymentMessage = (
+  token: string, id: string, format: PaymentMessageFormat = "mt103",
+) => _fetchJson<PaymentMessageResponse>(
+  `/v1/payments/${id}/message?format=${format}`, token,
+);
+
 export const cancelPayment = (token: string, id: string) =>
   _fetchJson<PaymentInstruction>(`/v1/payments/${id}/cancel`, token, { method: "POST" });

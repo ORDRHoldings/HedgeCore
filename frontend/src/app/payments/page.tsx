@@ -4,10 +4,11 @@ import { useAuth } from "@/lib/authContext";
 import {
   listPayments, listBeneficiaries, initiatePayment, approvePayment,
   rejectPayment, transmitPayment, cancelPayment, createBeneficiary,
-  updateBeneficiary, deactivateBeneficiary,
+  updateBeneficiary, deactivateBeneficiary, getPaymentMessage,
   type PaymentInstruction, type Beneficiary,
+  type PaymentMessageFormat, type PaymentMessageResponse,
 } from "@/lib/api/cashClient";
-import { CreditCard, RefreshCw, Plus, ChevronDown, ChevronRight } from "lucide-react";
+import { CreditCard, RefreshCw, Plus, ChevronDown, ChevronRight, FileText, Copy, Download, X } from "lucide-react";
 
 // ── Design tokens ──────────────────────────────────────────────────────────
 const S = {
@@ -75,6 +76,125 @@ const labelStyle: React.CSSProperties = {
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
+// SWIFT MESSAGE MODAL
+// ══════════════════════════════════════════════════════════════════════════════
+const SwiftMessageModal = ({
+  message, copied, onCopy, onDownload, onSwitchFormat, onClose,
+}: {
+  message: PaymentMessageResponse;
+  copied: boolean;
+  onCopy: () => void;
+  onDownload: () => void;
+  onSwitchFormat: (fmt: PaymentMessageFormat) => void;
+  onClose: () => void;
+}) => {
+  const formatLabel = message.format === "mt103" ? "SWIFT MT103" : "ISO 20022 pain.001";
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000,
+        display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: "100%", maxWidth: 820, maxHeight: "90vh",
+          background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 6,
+          display: "flex", flexDirection: "column",
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "14px 18px",
+          borderBottom: `1px solid ${S.rim}`,
+        }}>
+          <FileText size={16} color={HEX.cyan} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontFamily: S.mono, fontWeight: 700, color: S.text1, letterSpacing: "0.06em" }}>
+              {formatLabel}
+            </div>
+            <div style={{ fontSize: 10, fontFamily: S.mono, color: S.text3, marginTop: 2 }}>
+              REF {message.message_reference} · {message.payment_type} · hash {message.message_hash.slice(0, 16)}…
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            background: "transparent", border: "none", color: S.text3, cursor: "pointer", padding: 4,
+          }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Format switcher */}
+        {message.supported_formats.length > 1 && (
+          <div style={{ display: "flex", gap: 6, padding: "10px 18px", borderBottom: `1px solid ${S.rim}` }}>
+            {message.supported_formats.map(fmt => (
+              <button
+                key={fmt}
+                onClick={() => onSwitchFormat(fmt)}
+                disabled={fmt === message.format}
+                style={{
+                  padding: "6px 12px",
+                  background: fmt === message.format ? HEX.cyan : "transparent",
+                  color: fmt === message.format ? "#fff" : S.text2,
+                  border: `1px solid ${fmt === message.format ? HEX.cyan : S.rim}`,
+                  borderRadius: 3, fontSize: 10, fontFamily: S.mono, fontWeight: 700,
+                  letterSpacing: "0.06em", cursor: fmt === message.format ? "default" : "pointer",
+                }}
+              >
+                {fmt === "mt103" ? "MT103" : "pain.001"}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Content */}
+        <pre style={{
+          flex: 1, overflow: "auto", margin: 0, padding: "14px 18px",
+          background: S.deep, color: S.text1, fontSize: 12, fontFamily: S.mono,
+          lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-all",
+        }}>
+          {message.content}
+        </pre>
+
+        {/* Actions */}
+        <div style={{
+          display: "flex", justifyContent: "flex-end", gap: 8, padding: "12px 18px",
+          borderTop: `1px solid ${S.rim}`,
+        }}>
+          <button
+            onClick={onCopy}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
+              background: "transparent", color: copied ? HEX.green : S.text2,
+              border: `1px solid ${copied ? HEX.green : S.rim}`, borderRadius: 4,
+              fontSize: 11, fontFamily: S.mono, fontWeight: 700, cursor: "pointer",
+              letterSpacing: "0.06em",
+            }}
+          >
+            <Copy size={12} />
+            {copied ? "COPIED" : "COPY"}
+          </button>
+          <button
+            onClick={onDownload}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
+              background: HEX.cyan, color: "#fff", border: "none", borderRadius: 4,
+              fontSize: 11, fontFamily: S.mono, fontWeight: 700, cursor: "pointer",
+              letterSpacing: "0.06em",
+            }}
+          >
+            <Download size={12} />
+            DOWNLOAD
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
 // INNER COMPONENT
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -98,6 +218,9 @@ function PaymentsInner() {
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [swiftModal, setSwiftModal] = useState<PaymentMessageResponse | null>(null);
+  const [swiftLoading, setSwiftLoading] = useState(false);
+  const [swiftCopied, setSwiftCopied] = useState(false);
 
   // ── Initiate form ──────────────────────────────────────────────────────────
   const [initForm, setInitForm] = useState({
@@ -194,6 +317,40 @@ function PaymentsInner() {
       setSuccess("Payment cancelled.");
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Cancel failed"); }
     finally { setActionLoading(null); }
+  };
+
+  const handleGenerateMessage = async (id: string, format: PaymentMessageFormat) => {
+    if (!token) return;
+    setSwiftLoading(true);
+    setSwiftCopied(false);
+    try {
+      const msg = await getPaymentMessage(token, id, format);
+      setSwiftModal(msg);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to generate wire message");
+    } finally { setSwiftLoading(false); }
+  };
+
+  const copySwiftMessage = async () => {
+    if (!swiftModal) return;
+    try {
+      await navigator.clipboard.writeText(swiftModal.content);
+      setSwiftCopied(true);
+      setTimeout(() => setSwiftCopied(false), 2000);
+    } catch { /* noop */ }
+  };
+
+  const downloadSwiftMessage = () => {
+    if (!swiftModal) return;
+    const ext = swiftModal.format === "mt103" ? "txt" : "xml";
+    const mime = swiftModal.format === "mt103" ? "text/plain" : "application/xml";
+    const blob = new Blob([swiftModal.content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${swiftModal.format}_${swiftModal.message_reference}.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleInitiate = async () => {
@@ -567,6 +724,45 @@ function PaymentsInner() {
                                       }}>
                                       {busy ? "..." : "TRANSMIT (PAPER)"}
                                     </button>
+                                    <button
+                                      disabled={swiftLoading}
+                                      onClick={e => {
+                                        e.stopPropagation();
+                                        const fmt: PaymentMessageFormat = (p.payment_type === "SWIFT" || p.payment_type === "CHAPS") ? "mt103" : "pain001";
+                                        handleGenerateMessage(p.id, fmt);
+                                      }}
+                                      style={{
+                                        padding: "8px 14px", background: "transparent", color: HEX.cyan,
+                                        border: `1px solid ${HEX.cyan}`, borderRadius: 4, fontSize: 11, fontFamily: S.mono,
+                                        fontWeight: 700, cursor: swiftLoading ? "not-allowed" : "pointer",
+                                        letterSpacing: "0.06em", opacity: swiftLoading ? 0.6 : 1,
+                                        display: "inline-flex", alignItems: "center", gap: 6,
+                                      }}>
+                                      <FileText size={12} />
+                                      GENERATE WIRE
+                                    </button>
+                                  </div>
+                                )}
+
+                                {p.status === "TRANSMITTED" && (
+                                  <div style={{ display: "flex", gap: 8 }}>
+                                    <button
+                                      disabled={swiftLoading}
+                                      onClick={e => {
+                                        e.stopPropagation();
+                                        const fmt: PaymentMessageFormat = (p.payment_type === "SWIFT" || p.payment_type === "CHAPS") ? "mt103" : "pain001";
+                                        handleGenerateMessage(p.id, fmt);
+                                      }}
+                                      style={{
+                                        padding: "8px 14px", background: "transparent", color: S.text2,
+                                        border: `1px solid ${S.rim}`, borderRadius: 4, fontSize: 11, fontFamily: S.mono,
+                                        fontWeight: 700, cursor: swiftLoading ? "not-allowed" : "pointer",
+                                        letterSpacing: "0.06em", opacity: swiftLoading ? 0.6 : 1,
+                                        display: "inline-flex", alignItems: "center", gap: 6,
+                                      }}>
+                                      <FileText size={12} />
+                                      VIEW WIRE MESSAGE
+                                    </button>
                                   </div>
                                 )}
 
@@ -722,6 +918,17 @@ function PaymentsInner() {
               </div>
             </div>
           </div>
+        )}
+
+        {swiftModal && (
+          <SwiftMessageModal
+            message={swiftModal}
+            copied={swiftCopied}
+            onCopy={copySwiftMessage}
+            onDownload={downloadSwiftMessage}
+            onSwitchFormat={(fmt) => handleGenerateMessage(swiftModal.payment_id, fmt)}
+            onClose={() => setSwiftModal(null)}
+          />
         )}
 
         {/* ══════════════════════════════════════════════════════════════════ */}
