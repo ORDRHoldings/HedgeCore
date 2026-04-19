@@ -361,3 +361,7 @@ router.include_router(v1_tca_router)
 # Counterparty Hub (owns /v1/counterparties)
 from app.api.routes.v1_counterparty import router as v1_counterparty_router
 router.include_router(v1_counterparty_router)
+
+# Regulatory Submissions lifecycle (owns /v1/regulatory-submissions)
+from app.api.routes.v1_regulatory_submissions import router as v1_regulatory_submissions_router
+router.include_router(v1_regulatory_submissions_router)
