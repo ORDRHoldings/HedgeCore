@@ -1,25 +1,48 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { T } from "@/lib/design/tokens";
 import { REPORT_PRESETS, REPORT_CATEGORIES } from "@/constants/reportPresets";
 import type { ReportTemplate } from "@/types/reportTypes";
-import { FileStack, Users, FileText } from "lucide-react";
+import { FileStack, Users, FileText, Star } from "lucide-react";
+import {
+  listCustomReportTemplates,
+  deleteCustomReportTemplate,
+  type CustomReportTemplate,
+} from "@/lib/api/customReportTemplatesClient";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface Props {
+  token: string;
   selectedTemplateId: string | null;
   onTemplateChange: (template: ReportTemplate | null) => void;
+  onCustomTemplateSelect: (tmpl: CustomReportTemplate) => void;
+  refreshKey?: number;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function TemplateSelector({
+  token,
   selectedTemplateId,
   onTemplateChange,
+  onCustomTemplateSelect,
+  refreshKey,
 }: Props) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [customTemplates, setCustomTemplates] = useState<CustomReportTemplate[]>([]);
+  const [loadingCustom, setLoadingCustom] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingCustom(true);
+    listCustomReportTemplates(token)
+      .then((r) => { if (!cancelled) setCustomTemplates(r.items); })
+      .catch(() => { /* silent — custom templates optional */ })
+      .finally(() => { if (!cancelled) setLoadingCustom(false); });
+    return () => { cancelled = true; };
+  }, [token, refreshKey]);
 
   const selectedTemplate = useMemo(
     () =>
@@ -27,6 +50,14 @@ export default function TemplateSelector({
         ? REPORT_PRESETS.find((p) => p.template_id === selectedTemplateId) ?? null
         : null,
     [selectedTemplateId],
+  );
+
+  const selectedCustom = useMemo(
+    () =>
+      selectedTemplateId
+        ? customTemplates.find((t) => t.id === selectedTemplateId) ?? null
+        : null,
+    [selectedTemplateId, customTemplates],
   );
 
   const grouped = useMemo(() => {
@@ -47,10 +78,37 @@ export default function TemplateSelector({
     [onTemplateChange],
   );
 
+  const handleSelectCustom = useCallback(
+    (tmpl: CustomReportTemplate) => {
+      onCustomTemplateSelect(tmpl);
+      setDropdownOpen(false);
+    },
+    [onCustomTemplateSelect],
+  );
+
   const handleCustom = useCallback(() => {
     onTemplateChange(null);
     setDropdownOpen(false);
   }, [onTemplateChange]);
+
+  const handleDeleteCustom = useCallback(
+    async (id: string, ev: React.MouseEvent) => {
+      ev.stopPropagation();
+      try {
+        await deleteCustomReportTemplate(token, id);
+        setCustomTemplates((prev) => prev.filter((t) => t.id !== id));
+      } catch {
+        // silent — keep stale UI but don't break
+      }
+    },
+    [token],
+  );
+
+  const triggerLabel = selectedCustom
+    ? selectedCustom.short_name
+    : selectedTemplate
+      ? selectedTemplate.short_name
+      : "Select template...";
 
   return (
     <div style={{ padding: "16px 20px" }}>
@@ -90,7 +148,7 @@ export default function TemplateSelector({
             borderRadius: 4,
             fontFamily: T.fontMono,
             fontSize: 12,
-            color: selectedTemplate ? T.primary : T.tertiary,
+            color: (selectedTemplate || selectedCustom) ? T.primary : T.tertiary,
             textAlign: "left",
             cursor: "pointer",
             display: "flex",
@@ -105,7 +163,7 @@ export default function TemplateSelector({
               whiteSpace: "nowrap",
             }}
           >
-            {selectedTemplate ? selectedTemplate.short_name : "Select template..."}
+            {triggerLabel}
           </span>
           <span style={{ color: T.tertiary, fontSize: 10, flexShrink: 0, marginLeft: 4 }}>
             {dropdownOpen ? "\u25B2" : "\u25BC"}
@@ -125,11 +183,83 @@ export default function TemplateSelector({
               border: `1px solid ${T.rim}`,
               borderRadius: 4,
               marginTop: 2,
-              maxHeight: 320,
+              maxHeight: 360,
               overflowY: "auto",
               boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
             }}
           >
+            {/* MY TEMPLATES group (custom) */}
+            {customTemplates.length > 0 && (
+              <div>
+                <div
+                  style={{
+                    padding: "6px 12px",
+                    fontFamily: T.fontMono,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    color: T.accent,
+                    textTransform: "uppercase",
+                    background: T.bgSub,
+                    borderBottom: `1px solid ${T.rim}`,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <Star size={11} />
+                  MY TEMPLATES
+                </div>
+                {customTemplates.map((tmpl) => {
+                  const isSelected = tmpl.id === selectedTemplateId;
+                  return (
+                    <div
+                      key={tmpl.id}
+                      style={{
+                        display: "flex",
+                        width: "100%",
+                        background: isSelected ? T.bgSub : "transparent",
+                        borderLeft: isSelected ? `2px solid ${T.accent}` : "2px solid transparent",
+                      }}
+                    >
+                      <button
+                        onClick={() => handleSelectCustom(tmpl)}
+                        style={{
+                          flex: 1,
+                          padding: "7px 12px 7px 16px",
+                          background: "transparent",
+                          border: "none",
+                          textAlign: "left",
+                          cursor: "pointer",
+                          fontFamily: T.fontUI,
+                          fontSize: 12,
+                          color: isSelected ? T.accent : T.primary,
+                        }}
+                      >
+                        {tmpl.short_name}
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteCustom(tmpl.id, e)}
+                        title="Delete template"
+                        style={{
+                          padding: "4px 10px",
+                          background: "transparent",
+                          border: "none",
+                          color: T.tertiary,
+                          cursor: "pointer",
+                          fontFamily: T.fontMono,
+                          fontSize: 11,
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* BUILT-IN groups */}
             {REPORT_CATEGORIES.map((cat) => {
               const templates = grouped.get(cat.key) ?? [];
               if (templates.length === 0) return null;
@@ -206,8 +336,8 @@ export default function TemplateSelector({
         )}
       </div>
 
-      {/* Metadata display when a template is selected */}
-      {selectedTemplate && (
+      {/* Metadata display when a built-in template is selected */}
+      {selectedTemplate && !selectedCustom && (
         <div
           style={{
             marginTop: 12,
@@ -259,6 +389,83 @@ export default function TemplateSelector({
               value={String(selectedTemplate.default_sections.length)}
             />
           </div>
+        </div>
+      )}
+
+      {/* Metadata display when a custom template is selected */}
+      {selectedCustom && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: "10px 12px",
+            background: T.bgDeep,
+            borderRadius: 4,
+            border: `1px solid ${T.accent}`,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              marginBottom: 8,
+            }}
+          >
+            <Star size={12} style={{ color: T.accent }} />
+            <span
+              style={{
+                fontFamily: T.fontUI,
+                fontSize: 12,
+                fontWeight: 600,
+                color: T.primary,
+              }}
+            >
+              {selectedCustom.name}
+            </span>
+          </div>
+
+          {selectedCustom.description && (
+            <div
+              style={{
+                fontFamily: T.fontUI,
+                fontSize: 12,
+                color: T.tertiary,
+                lineHeight: 1.5,
+                marginBottom: 10,
+              }}
+            >
+              {selectedCustom.description.slice(0, 120)}
+              {selectedCustom.description.length > 120 ? "..." : ""}
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <MetaItem
+              icon={<FileStack size={12} />}
+              label="Sections"
+              value={String(selectedCustom.sections.length)}
+            />
+            {selectedCustom.audience.length > 0 && (
+              <MetaItem
+                icon={<Users size={12} />}
+                label="Audience"
+                value={selectedCustom.audience.join(", ")}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      {loadingCustom && customTemplates.length === 0 && (
+        <div
+          style={{
+            marginTop: 8,
+            fontFamily: T.fontMono,
+            fontSize: 11,
+            color: T.tertiary,
+          }}
+        >
+          Loading custom templates…
         </div>
       )}
     </div>

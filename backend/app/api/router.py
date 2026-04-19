@@ -373,3 +373,9 @@ router.include_router(v1_natural_hedging_router)
 # Hedge Templates Library (owns /v1/hedge-templates)
 from app.api.routes.v1_hedge_templates import router as v1_hedge_templates_router
 router.include_router(v1_hedge_templates_router)
+
+# Custom Report Templates (owns /v1/custom-report-templates)
+from app.api.routes.v1_custom_report_templates import (
+    router as v1_custom_report_templates_router,
+)
+router.include_router(v1_custom_report_templates_router)
