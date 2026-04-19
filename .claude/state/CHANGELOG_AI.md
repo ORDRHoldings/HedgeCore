@@ -1,5 +1,27 @@
 # Changelog (AI-maintained)
 
+## 2026-04-19 — P2-B.1: Update + Duplicate Custom Report Templates COMPLETE
+
+### Added (frontend only)
+- `app/reports/components/studio/SaveAsTemplateModal.tsx` — now a 3-mode dialog (`create` | `update` | `duplicate`). `useEffect` prefills fields from `prefill: CustomReportTemplate` when the modal opens; update mode hits PUT and locks the short_name input (stable handle); duplicate mode seeds name with " (Copy)" suffix and clears short_name.
+- `app/reports/components/studio/TemplateSelector.tsx` — per-row Duplicate icon (`Copy` from lucide-react) added next to delete in the MY TEMPLATES group; click closes the dropdown and fires `onRequestDuplicate` upward.
+- `app/reports/components/studio/ConfigPanel.tsx` — new **UPDATE TEMPLATE** primary button appears only when a custom template is selected (`selectedCustomTemplate != null`). Companion "Save as New" button keeps a path to fork an existing template into a new one.
+- `app/reports/components/studio/StudioTab.tsx` — tracks `selectedCustomTemplate` (full object, not just id), modal `mode` + `prefill` state. Duplicate flow: loads sections into editor then opens modal in duplicate mode. Update flow: opens modal in update mode with current selection.
+
+### Architectural Decisions
+- **Discriminated-union modal** — one modal component, three modes. Shared form UI, branching only in the submit handler (POST vs PUT) and the prefill effect. Avoids two near-identical modal files.
+- **Short name is locked in update mode** — the short_name is the stable handle used across the UI; renames would require touching every selector. Keep it immutable post-create; forking via duplicate is the escape hatch.
+- **Duplicate pre-loads sections first, then opens modal** — user sees exactly what they're about to save. Alternative (modal-first) would show the form before the section editor updates, which is disorienting.
+
+### Commits
+- `c9308a7` — feat(reports): P2-B.1 — update + duplicate custom report templates
+
+### Roadmap Status
+- P2-B polish complete.
+- Remaining P2 candidate: mobile-responsive layouts.
+
+---
+
 ## 2026-04-18 — P2-B: Custom Report Templates Library COMPLETE
 
 ### Added

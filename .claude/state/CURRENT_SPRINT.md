@@ -1,5 +1,40 @@
 # Current Sprint
 
+Sprint: P2-B.1 — Update + Duplicate Custom Report Templates (polish)
+Status: COMPLETE (2026-04-19)
+Started: 2026-04-19
+Completed: 2026-04-19
+
+## Goal
+Close the obvious UX gaps in the P2-B library: save-as-new was the only
+operation. Users now have full CRUD over their custom templates via the
+Studio, matching how they expect the feature to work.
+
+## Deliverables
+| # | Item | Status |
+|---|------|--------|
+| U1 | `SaveAsTemplateModal` — 3-mode discriminated union (create/update/duplicate) with prefill effect | DONE |
+| U2 | `TemplateSelector` — per-row Duplicate icon, fires `onRequestDuplicate` upward | DONE |
+| U3 | `ConfigPanel` — UPDATE TEMPLATE button (visible only when a custom template is selected) + companion "Save as New" | DONE |
+| U4 | `StudioTab` — `selectedCustomTemplate` state, `modalMode` + `modalPrefill` wiring, handler trio | DONE |
+| U5 | TypeScript check passes (`npx tsc --noEmit` exit 0) | DONE |
+| U6 | Commit + state/changelog rollup | DONE |
+
+## Architectural Notes
+- Update mode reuses the already-shipped PUT endpoint (was unreachable
+  from the UI before). No backend changes needed.
+- Short_name is locked in update mode; it's the stable handle used in
+  the dropdown and selectors. Fork-via-duplicate is the rename path.
+- Duplicate loads sections into the editor first, then opens the modal
+  with " (Copy)" suffix — user sees the payload they're about to save.
+
+## Commits
+- `c9308a7` — feat(reports): P2-B.1 — update + duplicate custom report templates
+
+---
+
+## Prior Sprint (P2-B)
+
 Sprint: P2-B — Custom Report Templates Library
 Status: COMPLETE (2026-04-18)
 Started: 2026-04-18
