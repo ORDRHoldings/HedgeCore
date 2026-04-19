@@ -30,10 +30,10 @@ const C = {
   amber:       "var(--accent-amber)",
   amberBg:     "rgba(217,119,6,0.06)",
   amberBorder: "rgba(217,119,6,0.18)",
-  // Input fields — dark glass, light text
-  inputBg:          "rgba(255,255,255,0.06)",
-  inputText:        "#dddde4",
-  inputPlaceholder: "rgba(255,255,255,0.28)",
+  // Input fields — solid dark, light text
+  inputBg:          "#131317",
+  inputText:        "#e8e8ef",
+  inputPlaceholder: "rgba(255,255,255,0.32)",
   fontHead:    "'Manrope','Inter',sans-serif",
   fontUI:      "'IBM Plex Sans','Inter',sans-serif",
   fontMono:    "'IBM Plex Mono','JetBrains Mono',monospace",
@@ -242,7 +242,7 @@ export default function LoginPage() {
   const inputStyle = (field: "user" | "pass", hasErr: boolean): React.CSSProperties => ({
     width: "100%",
     padding: "11px 14px",
-    background: loading ? "rgba(255,255,255,0.04)" : C.inputBg,
+    background: loading ? "#0e0e12" : C.inputBg,
     border: `1.5px solid ${
       hasErr         ? C.red
       : focusField === field ? C.borderFocus
