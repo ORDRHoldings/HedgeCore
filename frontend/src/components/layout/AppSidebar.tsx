@@ -26,7 +26,7 @@ import {
   ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen,
   Target, Cpu, PenSquare, Download, Key, User, Ticket, CircleHelp, Database,
   DollarSign, RefreshCw, BarChart2, Building2, CreditCard, Link2, TrendingUp, GitMerge,
-  Layers, FileSpreadsheet, Brain, TrendingDown, Calculator, Users,
+  Layers, FileSpreadsheet, Brain, TrendingDown, Calculator, Users, FileCheck,
 } from "lucide-react";
 import { Icon } from "@/components/ui/Icon";
 import { T } from "@/lib/design/tokens";
@@ -90,7 +90,7 @@ const NAV: NavSection[] = [
   },
   {
     label: "Hedge Desk", href: "/hedge-desk", icon: Play,
-    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/policies", "/results", "/hedge-effectiveness", "/gl-postings", "/settlement", "/erp-sync", "/cash-positions", "/cash-forecast", "/intercompany-netting", "/cash-management", "/bank-statements", "/payments", "/intelligence", "/debt", "/ir-risk", "/pre-trade-tca", "/counterparties"],
+    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/policies", "/results", "/hedge-effectiveness", "/gl-postings", "/settlement", "/erp-sync", "/cash-positions", "/cash-forecast", "/intercompany-netting", "/cash-management", "/bank-statements", "/payments", "/intelligence", "/debt", "/ir-risk", "/pre-trade-tca", "/counterparties", "/regulatory-submissions"],
     header: "HEDGE DESK",
     items: [
       // ── PRIMARY OPERATING LANE
@@ -119,6 +119,8 @@ const NAV: NavSection[] = [
       { label: "Debt Portfolio", desc: "Debt facilities, drawdowns, maturity calendar",  href: "/debt",    icon: CreditCard,   group: "DEBT & IR RISK", minTier: "professional" as PlanTier },
       { label: "IR Risk",        desc: "IR swaps, DV01 ladder, IFRS 9 effectiveness",   href: "/ir-risk", icon: TrendingDown, group: "DEBT & IR RISK", minTier: "professional" as PlanTier },
       { label: "Counterparties", desc: "Counterparty hub · credit limits · PFE exposure", href: "/counterparties", icon: Users, group: "DEBT & IR RISK", minTier: "professional" as PlanTier },
+      // ── COMPLIANCE
+      { label: "Regulatory Submissions", desc: "EMIR / MiFID II / Dodd-Frank TR submission lifecycle", href: "/regulatory-submissions", icon: FileCheck, group: "COMPLIANCE", minTier: "professional" as PlanTier },
     ],
   },
   {
