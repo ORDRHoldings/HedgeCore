@@ -1,5 +1,13 @@
 # Open Risks
 
+## RISK-TEST-ISO-01: TestAssertRunAccessible isolation flake
+- **Severity**: LOW
+- **Component**: backend/tests/test_report_studio_governance.py::TestAssertRunAccessible
+- **Description**: 7 tests pass in isolation but fail when the suite runs as a unit. Symptom suggests module-level patching of `app.api.routes.v1_calculate._assert_run_accessible` leaks between tests or collides with a parallel test that mutates the same attribute.
+- **Mitigation**: Tests pass when the class runs alone — coverage is intact, but CI green requires either fixing the patch scope or running this class in its own worker.
+- **Status**: Open — deferred, not caused by this session's work (discovered during test-hardening pass).
+- **Opened**: 2026-04-19
+
 ## RISK-INF-01: Free-tier cold starts cause 503 on first request
 - **Severity**: HIGH
 - **Component**: Render backend (hedgecore + hedgecore-preview)

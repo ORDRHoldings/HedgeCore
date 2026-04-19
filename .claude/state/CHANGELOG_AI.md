@@ -1,5 +1,29 @@
 # Changelog (AI-maintained)
 
+## 2026-04-19 — Test + Type Hardening Pass
+
+### Fixed
+- **test_report_studio_governance.py** — 9 hardcoded absolute paths (`D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\...`) replaced with `os.path.join(_REPO_ROOT, ...)`. Paths were stale after the repo rename to `ORDR TreasuryFX`, leaving 26 governance tests permanently failing. Fix is repo-relocation-proof: `_REPO_ROOT = ../../` from the test file. Restores 83 tests to green.
+- **test_tca_service.py::test_attach_to_calc_run_idempotent** — local `fake_query_existing` fixture did not match the real `_find_estimate_by_run_id` signature (added `tenant_id` in a prior commit). Added the missing arg, test passes.
+- **test_mypy_engine_v1.py::test_engine_v1_mypy_strict** — 6 mypy-strict errors across 3 engine_v1 files. Fixes are type-annotation-only (zero runtime change):
+  - `debt_cashflow_engine.DebtSchedule`: `list[dict]` → `list[dict[str, Any]]` for `periods` + `covenant_results`; `cast(float, ...)` / `cast(date, ...)` on WAL aggregation generator.
+  - `swap_valuator.SwapResult.to_dict`: `dict` → `dict[str, float]`.
+  - `swaption_engine.SwaptionResult.to_dict`: `dict` → `dict[str, float | str]`.
+  None of these files are on the frozen list; determinism + kernel invariants untouched.
+
+### Tracked
+- **Cash-netting + forecast + encryption services** — 9 files (~1400 LOC) that had been running live (router already imported `v1_cash_netting_router`, tests auto-discovered) but were never `git add`-ed. Supply chain now matches deployed code. 16 tests passing.
+
+### Commits
+- `1d72092` — fix(tests): repo-relative paths + tca mock signature
+- `2d2889d` — fix(engine-v1): satisfy mypy --strict on debt/swap/swaption engines
+- `963a88a` — chore: track cash-netting/forecast/encryption services + tests
+
+### Known Residual
+- `TestAssertRunAccessible` (7 tests in test_report_studio_governance.py) pass in isolation but fail under the full suite. Pre-existing test-isolation issue; not caused by this session's edits. Filed as backlog.
+
+---
+
 ## 2026-04-19 — P2-B.1: Update + Duplicate Custom Report Templates COMPLETE
 
 ### Added (frontend only)
