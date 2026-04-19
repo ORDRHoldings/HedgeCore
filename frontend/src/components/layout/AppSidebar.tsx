@@ -90,7 +90,7 @@ const NAV: NavSection[] = [
   },
   {
     label: "Hedge Desk", href: "/hedge-desk", icon: Play,
-    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/policies", "/results", "/hedge-effectiveness", "/gl-postings", "/settlement", "/erp-sync", "/cash-positions", "/cash-forecast", "/intercompany-netting", "/cash-management", "/bank-statements", "/payments", "/intelligence", "/debt", "/ir-risk", "/pre-trade-tca", "/counterparties", "/regulatory-submissions"],
+    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/policies", "/results", "/hedge-effectiveness", "/gl-postings", "/settlement", "/erp-sync", "/cash-positions", "/cash-forecast", "/intercompany-netting", "/cash-management", "/bank-statements", "/payments", "/intelligence", "/debt", "/ir-risk", "/pre-trade-tca", "/counterparties", "/regulatory-submissions", "/natural-hedging"],
     header: "HEDGE DESK",
     items: [
       // ── PRIMARY OPERATING LANE
@@ -99,6 +99,7 @@ const NAV: NavSection[] = [
       { label: "Monitor",        desc: "Live MTM P&L, drift, roll schedule",        href: "/hedge-monitor",    icon: BarChart3, group: "OPERATE" },
       { label: "History",        desc: "Proposals, fills, slippage audit",           href: "/trade-history",    icon: Clock, group: "OPERATE" },
       { label: "Pre-Trade TCA",  desc: "Estimate execution cost",                     href: "/pre-trade-tca",    icon: Calculator, group: "OPERATE", minTier: "professional" as PlanTier },
+      { label: "Natural Hedging", desc: "Offset AR/AP per currency before hedging",    href: "/natural-hedging",  icon: GitMerge,   group: "OPERATE", minTier: "professional" as PlanTier },
       // ── COMPLIANCE
       { label: "Effectiveness",    desc: "IFRS 9 / ASC 815 hedge effectiveness",      href: "/hedge-effectiveness",            icon: Scale, group: "COMPLIANCE" },
       { label: "Assessment History", desc: "Past effectiveness test runs",             href: "/hedge-effectiveness?tab=runs",   icon: Clock, group: "COMPLIANCE" },

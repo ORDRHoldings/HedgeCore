@@ -365,3 +365,7 @@ router.include_router(v1_counterparty_router)
 # Regulatory Submissions lifecycle (owns /v1/regulatory-submissions)
 from app.api.routes.v1_regulatory_submissions import router as v1_regulatory_submissions_router
 router.include_router(v1_regulatory_submissions_router)
+
+# Natural Hedging Optimizer (owns /v1/natural-hedging)
+from app.api.routes.v1_natural_hedging import router as v1_natural_hedging_router
+router.include_router(v1_natural_hedging_router)
