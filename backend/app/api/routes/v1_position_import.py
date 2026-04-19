@@ -40,6 +40,20 @@ class ValidateRequest(BaseModel):
 class CommitRequest(BaseModel):
     batch_id: UUID
 
+class PositionInput(BaseModel):
+    record_id: str = Field(..., min_length=1, max_length=128)
+    entity: str = Field(..., min_length=1, max_length=256)
+    flow_type: str = Field(..., description="AR or AP")
+    currency: str = Field(..., min_length=3, max_length=3)
+    amount: float = Field(..., gt=0)
+    value_date: str = Field(..., description="YYYY-MM-DD")
+    status: str | None = Field(default="CONFIRMED", description="CONFIRMED or FORECAST")
+    description: str | None = None
+
+class BatchJsonRequest(BaseModel):
+    positions: list[PositionInput] = Field(..., min_length=1, max_length=5000)
+    dry_run: bool = Field(default=False, description="If true, validate only — do not create positions")
+
 class ImportBatchResponse(BaseModel):
     id: UUID
     filename: str
@@ -185,6 +199,60 @@ async def commit_csv(
     )
 
     return ImportBatchResponse.from_batch(batch)
+@router.post("/batch-json", response_model=ImportBatchResponse, status_code=201)
+async def batch_json_import(
+    data: BatchJsonRequest,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Bulk position import via JSON API (no CSV upload required).
+
+    Validates all positions atomically. If `dry_run=false` and no validation errors,
+    all positions are created in a single transaction. If any row fails validation or
+    `dry_run=true`, the batch is persisted as VALIDATED with error details but no
+    positions are created.
+
+    Max batch size: 5000 positions. Requires trades.create permission.
+    """
+    await _check_import_permission(session, current_user)
+
+    try:
+        batch = await import_svc.batch_import_json(
+            session,
+            current_user,
+            [p.model_dump() for p in data.positions],
+            dry_run=data.dry_run,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception:
+        logger.exception("JSON batch import failed")
+        raise HTTPException(status_code=500, detail="Batch import failed")
+
+    await emit_audit(
+        session=session, user=current_user,
+        event_type="IMPORT",
+        description=(
+            f"Position JSON batch import: {batch.status} "
+            f"({batch.row_count} rows, {batch.valid_count} valid, {batch.error_count} errors)"
+        ),
+        entity_type="import_batch",
+        entity_id=str(batch.id),
+        payload={
+            "source": "json_api",
+            "row_count": batch.row_count,
+            "valid_count": batch.valid_count,
+            "error_count": batch.error_count,
+            "created_count": batch.created_count,
+            "status": batch.status,
+            "dry_run": data.dry_run,
+        },
+    )
+
+    return ImportBatchResponse.from_batch(batch)
+
+
 @router.get("/template")
 async def download_template(
     session: AsyncSession = Depends(get_async_session),

@@ -24,6 +24,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import json
 import logging
 import re
 from datetime import UTC, datetime
@@ -401,6 +402,128 @@ async def get_batch(
 ) -> ImportBatch:
     """Get a single batch by ID (tenant-scoped)."""
     return await _get_batch(session, user, batch_id)
+
+
+async def batch_import_json(
+    session: AsyncSession,
+    user: User,
+    positions: list[dict[str, Any]],
+    *,
+    dry_run: bool = False,
+) -> ImportBatch:
+    """
+    Bulk import positions via JSON API (P2-A).
+
+    Input: list of position dicts keyed by canonical fields
+    (record_id, entity, flow_type, currency, amount, value_date, status, description).
+
+    Pipeline: reuses validate_rows() with an identity mapping, then commits atomically
+    if no errors and not dry_run. Batch is always persisted for audit trail regardless
+    of outcome.
+
+    Returns the ImportBatch with status UPLOADED (empty input), VALIDATED (errors or
+    dry_run), or COMMITTED (all valid + committed).
+    """
+    if not positions:
+        raise ValueError("positions list is empty")
+
+    payload_json = json.dumps(positions, sort_keys=True, default=str).encode("utf-8")
+    file_hash = hashlib.sha256(payload_json).hexdigest()
+
+    mapping: dict[str, str | None] = {f: f for f in _COLUMN_ALIASES}
+
+    rows: list[dict[str, str]] = []
+    for p in positions:
+        row: dict[str, str] = {}
+        for field in _COLUMN_ALIASES:
+            v = p.get(field)
+            row[field] = "" if v is None else str(v)
+        rows.append(row)
+
+    result = await session.execute(
+        select(Position.record_id).where(
+            Position.company_id == user.company_id,
+            Position.is_active,
+        )
+    )
+    existing_ids = {r[0] for r in result.fetchall()}
+
+    valid_rows, errors = validate_rows(rows, mapping, existing_ids)
+
+    batch = ImportBatch(
+        company_id=user.company_id,
+        created_by=user.id,
+        filename="api-batch-json",
+        file_hash=file_hash,
+        file_size_bytes=len(payload_json),
+        row_count=len(rows),
+        status="UPLOADED",
+        column_mapping=mapping,
+        raw_preview=rows,
+        valid_count=len(valid_rows),
+        error_count=len(errors),
+        duplicate_count=sum(1 for e in errors if e["code"] in ("I-007", "I-008")),
+        validation_errors=errors,
+        validated_at=datetime.now(UTC),
+    )
+    batch.status = "VALIDATED"
+    session.add(batch)
+    await session.flush()
+
+    if errors or dry_run:
+        await session.commit()
+        await session.refresh(batch)
+        log.info(
+            "JSON batch import validated: %d rows, %d valid, %d errors (dry_run=%s)",
+            len(rows), len(valid_rows), len(errors), dry_run,
+        )
+        return batch
+
+    created_ids: list[str] = []
+    commit_errors: list[dict[str, Any]] = []
+    for row_data in valid_rows:
+        try:
+            pos = Position(
+                company_id=user.company_id,
+                branch_id=user.branch_id,
+                created_by=user.id,
+                record_id=row_data["record_id"],
+                entity=row_data["entity"],
+                flow_type=row_data["flow_type"],
+                currency=row_data["currency"],
+                amount=row_data["amount"],
+                value_date=row_data["value_date"],
+                status=row_data["status"],
+                description=row_data.get("description"),
+            )
+            session.add(pos)
+            await session.flush()
+            created_ids.append(str(pos.id))
+        except Exception as e:
+            commit_errors.append({"record_id": row_data.get("record_id", "?"), "error": str(e)})
+
+    batch.created_count = len(created_ids)
+    batch.created_position_ids = created_ids
+    batch.status = "COMMITTED"
+    batch.committed_at = datetime.now(UTC)
+
+    if commit_errors:
+        existing_errors = batch.validation_errors or []
+        existing_errors.extend([
+            {"row": 0, "code": "I-010", "field": None, "message": e["error"], "value": e["record_id"]}
+            for e in commit_errors
+        ])
+        batch.validation_errors = existing_errors
+        batch.error_count = len(existing_errors)
+
+    await session.commit()
+    await session.refresh(batch)
+
+    log.info(
+        "JSON batch import committed: %d positions created, %d errors",
+        len(created_ids), len(commit_errors),
+    )
+    return batch
 
 
 def generate_template_csv() -> str:
