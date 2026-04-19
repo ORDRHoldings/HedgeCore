@@ -104,7 +104,7 @@ async def test_attach_to_calc_run_idempotent(monkeypatch):
     existing = MagicMock(id=uuid4(), estimate_type="post_calc")
     mock_db = AsyncMock()
 
-    async def fake_query_existing(db, run_id):
+    async def fake_query_existing(db, run_id, tenant_id):
         return existing
     monkeypatch.setattr(tca_service, "_find_estimate_by_run_id", fake_query_existing)
 

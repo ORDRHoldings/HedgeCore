@@ -25,6 +25,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+# Repo root = two levels up from this test file (backend/tests/→backend/→repo).
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+_BACKEND_ROOT = os.path.join(_REPO_ROOT, "backend")
+_FRONTEND_ROOT = os.path.join(_REPO_ROOT, "frontend")
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -236,10 +241,7 @@ class TestCacheTenantLeakFix:
     def _get_run_detail_cache_block(self) -> str:
         """Return the source block of the cache fast-path inside get_run_detail."""
         import re
-        path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\backend"
-            r"\app\api\routes\v1_calculate.py"
-        )
+        path = os.path.join(_BACKEND_ROOT, "app", "api", "routes", "v1_calculate.py")
         with open(path, encoding="utf-8") as f:
             source = f.read()
 
@@ -288,10 +290,7 @@ class TestReportAIAuthContract:
 
     def test_route_source_checks_authorization_header(self):
         """The route handler must inspect the Authorization header."""
-        path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\frontend"
-            r"\src\app\api\report-ai\route.ts"
-        )
+        path = os.path.join(_FRONTEND_ROOT, "src", "app", "api", "report-ai", "route.ts")
         with open(path, encoding="utf-8") as f:
             source = f.read()
 
@@ -302,10 +301,7 @@ class TestReportAIAuthContract:
 
     def test_route_returns_401_for_missing_auth(self):
         """The route must explicitly return 401 when auth is missing."""
-        path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\frontend"
-            r"\src\app\api\report-ai\route.ts"
-        )
+        path = os.path.join(_FRONTEND_ROOT, "src", "app", "api", "report-ai", "route.ts")
         with open(path, encoding="utf-8") as f:
             source = f.read()
 
@@ -315,10 +311,7 @@ class TestReportAIAuthContract:
 
     def test_route_checks_bearer_scheme(self):
         """The route must validate the Bearer scheme specifically."""
-        path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\frontend"
-            r"\src\app\api\report-ai\route.ts"
-        )
+        path = os.path.join(_FRONTEND_ROOT, "src", "app", "api", "report-ai", "route.ts")
         with open(path, encoding="utf-8") as f:
             source = f.read()
 
@@ -328,10 +321,7 @@ class TestReportAIAuthContract:
 
     def test_auth_check_precedes_body_parse(self):
         """Auth check must appear before body.goal is accessed (fail-fast)."""
-        path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\frontend"
-            r"\src\app\api\report-ai\route.ts"
-        )
+        path = os.path.join(_FRONTEND_ROOT, "src", "app", "api", "report-ai", "route.ts")
         with open(path, encoding="utf-8") as f:
             source = f.read()
 
@@ -351,10 +341,7 @@ class TestReportFingerprintingContract:
     """Prove report fingerprinting is implemented in the reports page."""
 
     def _get_page_source(self) -> str:
-        path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\frontend"
-            r"\src\app\reports\page.tsx"
-        )
+        path = os.path.join(_FRONTEND_ROOT, "src", "app", "reports", "page.tsx")
         with open(path, encoding="utf-8") as f:
             return f.read()
 
@@ -433,10 +420,7 @@ class TestPresetLibraryInvariants:
     """
 
     def _source(self) -> str:
-        path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\frontend"
-            r"\src\constants\reportPresets.ts"
-        )
+        path = os.path.join(_FRONTEND_ROOT, "src", "constants", "reportPresets.ts")
         with open(path, encoding="utf-8") as f:
             return f.read()
 
@@ -515,10 +499,7 @@ class TestLineageContract:
     """Board/Audit/Risk presets must declare run_envelope_id in required_inputs."""
 
     def _source(self) -> str:
-        path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\frontend"
-            r"\src\constants\reportPresets.ts"
-        )
+        path = os.path.join(_FRONTEND_ROOT, "src", "constants", "reportPresets.ts")
         with open(path, encoding="utf-8") as f:
             return f.read()
 
@@ -568,10 +549,7 @@ class TestReportStateMachineGating:
     """Verify NO_ENGINE_RUN banner logic is present in the reports page."""
 
     def _source(self) -> str:
-        path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\frontend"
-            r"\src\app\reports\page.tsx"
-        )
+        path = os.path.join(_FRONTEND_ROOT, "src", "app", "reports", "page.tsx")
         with open(path, encoding="utf-8") as f:
             return f.read()
 
