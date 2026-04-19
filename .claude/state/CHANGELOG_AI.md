@@ -1,5 +1,33 @@
 # Changelog (AI-maintained)
 
+## 2026-04-18 — P1-B: SWIFT MT103 + ISO 20022 pain.001 Wire Messages COMPLETE
+
+### Added
+**Backend**
+- `app/services/swift_message_service.py` — pure-function generators for MT103 (SWIFT FIN, legacy) and pain.001.001.09 (ISO 20022 CBPR+). Deterministic, no I/O.
+  - MT103 tags `:20:`, `:23B:CRED`, `:32A:YYMMDD<CCY><amount>`, `:50K:`, `:57A:`, `:59:`, `:70:`, `:71A:<SHA|OUR|BEN>`
+  - pain.001 XML with `GrpHdr` + `PmtInf` + `CdtTrfTxInf`; HTML-escaped identity fields
+  - payment_type -> format matrix: SWIFT/CHAPS emit both; SEPA/ACH/FPS pain.001 only
+- `app/api/routes/v1_payments.py` — new `GET /v1/payments/{id}/message?format=mt103|pain001`; enterprise-gated; requires status ∈ {APPROVED, TRANSMITTED}; derives ordering-party from `company.settings.ordering_party`
+- `tests/test_swift_message_service.py` — 19 passing unit tests
+
+**Frontend**
+- `lib/api/cashClient.ts` — `getPaymentMessage()` + typed `PaymentMessageResponse`
+- `app/payments/page.tsx` — new `SwiftMessageModal` with format switcher, copy-to-clipboard, download as `.txt`/`.xml` named by `message_reference`; GENERATE WIRE button on APPROVED rows, VIEW WIRE MESSAGE on TRANSMITTED
+
+### Architectural Decisions
+- Pure function, no DB side effect — calling the endpoint does NOT advance payment state. Message is reproducible from the payment's `instruction_hash`.
+- Format auto-selected client-side by payment_type with manual override via modal tabs when both formats are supported.
+
+### Commits
+- `2aa09c9` — feat(payments): P1-B — SWIFT MT103 + ISO 20022 pain.001 wire message generation
+- `b938ea8` — feat(payments-ui): P1-B — SWIFT/pain.001 wire message preview modal on /payments
+
+### Roadmap Status
+- ✅ P0-A / P0-B / P0-C / P1-A / P1-B all shipped — entire competitive-gap roadmap closed
+
+---
+
 ## 2026-04-18 — P1-A: Natural Hedging Optimizer COMPLETE
 
 ### Added
