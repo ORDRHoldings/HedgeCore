@@ -178,7 +178,7 @@ function SettingsPageInner() {
       case "EXECUTION":     return <ExecutionTab     s={settings.execution}     set={execution =>     setSettings(p => ({ ...p, execution }))}
                                      lastModifiedAt={serverMeta.last_modified_at} lastModifiedBy={serverMeta.last_modified_by} />;
       case "API_CONFIG":    return <ApiConfigTab     s={settings.api_keys}      set={api_keys =>      setSettings(p => ({ ...p, api_keys }))} />;
-      case "NOTIFICATIONS": return <NotificationsTab s={settings.notifications} set={notifications => setSettings(p => ({ ...p, notifications }))} />;
+      case "NOTIFICATIONS": return <NotificationsTab s={settings.notifications} set={notifications => setSettings(p => ({ ...p, notifications }))} token={tok} />;
       case "SECURITY":      return <SecurityTab         token={tok} />;
       case "USERS_ROLES":   return <UsersRolesTab       token={tok} />;
       case "API_KEY_MGMT":  return <ApiKeyManagementTab token={tok} />;
