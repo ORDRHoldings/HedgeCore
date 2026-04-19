@@ -1,21 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { T } from "@/lib/design/tokens";
 import { Save, X } from "lucide-react";
 import type { ReportAudience, ReportCategory } from "@/types/reportTypes";
 import type { StudioSection } from "./SectionList";
 import {
   createCustomReportTemplate,
+  updateCustomReportTemplate,
   type CustomReportTemplate,
   type CustomReportSectionSpec,
   CustomReportTemplateApiError,
 } from "@/lib/api/customReportTemplatesClient";
 
+export type SaveModalMode = "create" | "update" | "duplicate";
+
 interface Props {
   open: boolean;
   token: string;
   sections: StudioSection[];
+  mode: SaveModalMode;
+  prefill?: CustomReportTemplate | null;
   onClose: () => void;
   onSaved: (tmpl: CustomReportTemplate) => void;
 }
@@ -46,7 +51,7 @@ const AUDIENCES: { value: ReportAudience; label: string }[] = [
 ];
 
 export default function SaveAsTemplateModal({
-  open, token, sections, onClose, onSaved,
+  open, token, sections, mode, prefill, onClose, onSaved,
 }: Props) {
   const [name, setName] = useState("");
   const [shortName, setShortName] = useState("");
@@ -56,6 +61,28 @@ export default function SaveAsTemplateModal({
   const [tagsText, setTagsText] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Re-prefill whenever the modal opens in a mode that carries data.
+  useEffect(() => {
+    if (!open) return;
+    setError(null);
+    if ((mode === "update" || mode === "duplicate") && prefill) {
+      const suffix = mode === "duplicate" ? " (Copy)" : "";
+      setName(prefill.name + suffix);
+      setShortName(mode === "duplicate" ? "" : prefill.short_name);
+      setCategory(prefill.category);
+      setDescription(prefill.description ?? "");
+      setAudience(prefill.audience);
+      setTagsText(prefill.tags.join(", "));
+    } else {
+      setName("");
+      setShortName("");
+      setCategory("TREASURY_FX");
+      setDescription("");
+      setAudience([]);
+      setTagsText("");
+    }
+  }, [open, mode, prefill]);
 
   if (!open) return null;
 
@@ -71,39 +98,43 @@ export default function SaveAsTemplateModal({
     if (!shortName.trim()) { setError("Short name is required"); return; }
     if (sections.length === 0) { setError("No sections to save"); return; }
 
-    const body: {
-      name: string; short_name: string; category: ReportCategory;
-      description?: string; audience?: ReportAudience[];
-      sections: CustomReportSectionSpec[]; tags?: string[];
-    } = {
-      name: name.trim(),
-      short_name: shortName.trim(),
-      category,
-      description: description.trim() || undefined,
-      audience: audience.length > 0 ? audience : undefined,
-      sections: sections.map((s, idx) => ({
-        type: s.type,
-        title: s.title,
-        order: idx,
-        status: (s.status as "INCLUDED" | "EXCLUDED" | "DRAFT") ?? "INCLUDED",
-        page_break_before: false,
-      })),
-      tags: tagsText.trim()
-        ? tagsText.split(",").map((t) => t.trim()).filter(Boolean)
-        : undefined,
-    };
+    const serialisedSections: CustomReportSectionSpec[] = sections.map((s, idx) => ({
+      type: s.type,
+      title: s.title,
+      order: idx,
+      status: (s.status as "INCLUDED" | "EXCLUDED" | "DRAFT") ?? "INCLUDED",
+      page_break_before: false,
+    }));
+
+    const tags = tagsText.trim()
+      ? tagsText.split(",").map((t) => t.trim()).filter(Boolean)
+      : undefined;
 
     setSaving(true);
     try {
-      const tmpl = await createCustomReportTemplate(token, body);
+      let tmpl: CustomReportTemplate;
+      if (mode === "update" && prefill) {
+        tmpl = await updateCustomReportTemplate(token, prefill.id, {
+          name: name.trim(),
+          description: description.trim() || undefined,
+          category,
+          audience,
+          sections: serialisedSections,
+          tags: tags ?? [],
+        });
+      } else {
+        tmpl = await createCustomReportTemplate(token, {
+          name: name.trim(),
+          short_name: shortName.trim(),
+          category,
+          description: description.trim() || undefined,
+          audience: audience.length > 0 ? audience : undefined,
+          sections: serialisedSections,
+          tags,
+        });
+      }
       onSaved(tmpl);
       onClose();
-      // reset
-      setName("");
-      setShortName("");
-      setDescription("");
-      setAudience([]);
-      setTagsText("");
     } catch (e) {
       const msg = e instanceof CustomReportTemplateApiError
         ? e.message
@@ -113,6 +144,15 @@ export default function SaveAsTemplateModal({
       setSaving(false);
     }
   };
+
+  const title =
+    mode === "update" ? "Update Custom Template"
+      : mode === "duplicate" ? "Duplicate Custom Template"
+        : "Save as Custom Template";
+
+  const submitLabel =
+    mode === "update" ? (saving ? "Updating…" : "Update Template")
+      : (saving ? "Saving…" : "Save Template");
 
   return (
     <div
@@ -150,7 +190,7 @@ export default function SaveAsTemplateModal({
               textTransform: "uppercase", flex: 1,
             }}
           >
-            Save as Custom Template
+            {title}
           </span>
           <button
             onClick={onClose}
@@ -177,6 +217,8 @@ export default function SaveAsTemplateModal({
               onChange={(e) => setShortName(e.target.value)}
               placeholder="MO-TREAS"
               style={inputStyle}
+              disabled={mode === "update"}
+              title={mode === "update" ? "Short name cannot be changed" : undefined}
             />
           </Field>
 
@@ -243,7 +285,11 @@ export default function SaveAsTemplateModal({
               fontFamily: T.fontMono, fontSize: 11, color: T.tertiary,
             }}
           >
-            Saving {sections.length} section{sections.length === 1 ? "" : "s"} as a reusable template.
+            {mode === "update"
+              ? `Updating template with ${sections.length} section${sections.length === 1 ? "" : "s"}.`
+              : mode === "duplicate"
+                ? `Creating a copy with ${sections.length} section${sections.length === 1 ? "" : "s"}.`
+                : `Saving ${sections.length} section${sections.length === 1 ? "" : "s"} as a reusable template.`}
           </div>
 
           {error && (
@@ -269,7 +315,7 @@ export default function SaveAsTemplateModal({
         >
           <button onClick={onClose} style={btnGhost}>Cancel</button>
           <button onClick={handleSave} disabled={saving} style={btnPrimary}>
-            {saving ? "Saving…" : "Save Template"}
+            {submitLabel}
           </button>
         </div>
       </div>

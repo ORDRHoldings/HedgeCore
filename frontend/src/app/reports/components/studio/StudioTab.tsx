@@ -8,7 +8,7 @@ import type { ReportTemplate } from "@/types/reportTypes";
 import ConfigPanel from "./ConfigPanel";
 import PreviewPane from "./PreviewPane";
 import ExportBar from "./ExportBar";
-import SaveAsTemplateModal from "./SaveAsTemplateModal";
+import SaveAsTemplateModal, { type SaveModalMode } from "./SaveAsTemplateModal";
 import type { DataBindingState } from "./DataBinding";
 import type { StudioSection } from "./SectionList";
 import type { CustomReportTemplate } from "@/lib/api/customReportTemplatesClient";
@@ -61,9 +61,13 @@ export default function StudioTab({ token, userId, initialPresetId }: Props) {
   });
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [selectedCustomTemplate, setSelectedCustomTemplate] =
+    useState<CustomReportTemplate | null>(null);
   const [sections, setSections] = useState<StudioSection[]>([]);
   const [selectedSectionIndex, setSelectedSectionIndex] = useState<number | null>(null);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<SaveModalMode>("create");
+  const [modalPrefill, setModalPrefill] = useState<CustomReportTemplate | null>(null);
   const [customRefreshKey, setCustomRefreshKey] = useState(0);
 
   // ── Auto-load preset from Library ────────────────────────────────────────
@@ -74,6 +78,7 @@ export default function StudioTab({ token, userId, initialPresetId }: Props) {
       if (preset) {
         appliedPresetRef.current = initialPresetId;
         setSelectedTemplateId(preset.template_id);
+        setSelectedCustomTemplate(null);
         setSections(templateToSections(preset));
         setSelectedSectionIndex(null);
       }
@@ -84,12 +89,12 @@ export default function StudioTab({ token, userId, initialPresetId }: Props) {
 
   const handleTemplateChange = useCallback(
     (template: ReportTemplate | null) => {
+      setSelectedCustomTemplate(null);
       if (template) {
         setSelectedTemplateId(template.template_id);
         setSections(templateToSections(template));
         setSelectedSectionIndex(null);
       } else {
-        // Custom report -- clear template, keep sections
         setSelectedTemplateId(null);
       }
     },
@@ -99,6 +104,7 @@ export default function StudioTab({ token, userId, initialPresetId }: Props) {
   const handleCustomTemplateSelect = useCallback(
     (tmpl: CustomReportTemplate) => {
       setSelectedTemplateId(tmpl.id);
+      setSelectedCustomTemplate(tmpl);
       setSections(customTemplateToSections(tmpl));
       setSelectedSectionIndex(null);
     },
@@ -117,11 +123,34 @@ export default function StudioTab({ token, userId, initialPresetId }: Props) {
     setBinding(next);
   }, []);
 
-  const handleOpenSaveModal = useCallback(() => setSaveModalOpen(true), []);
+  const handleOpenSaveModal = useCallback(() => {
+    setModalMode("create");
+    setModalPrefill(null);
+    setSaveModalOpen(true);
+  }, []);
+
+  const handleOpenUpdateModal = useCallback(() => {
+    if (!selectedCustomTemplate) return;
+    setModalMode("update");
+    setModalPrefill(selectedCustomTemplate);
+    setSaveModalOpen(true);
+  }, [selectedCustomTemplate]);
+
+  const handleRequestDuplicate = useCallback((tmpl: CustomReportTemplate) => {
+    setSections(customTemplateToSections(tmpl));
+    setSelectedSectionIndex(null);
+    setSelectedTemplateId(null);
+    setSelectedCustomTemplate(null);
+    setModalMode("duplicate");
+    setModalPrefill(tmpl);
+    setSaveModalOpen(true);
+  }, []);
+
   const handleCloseSaveModal = useCallback(() => setSaveModalOpen(false), []);
 
   const handleTemplateSaved = useCallback((tmpl: CustomReportTemplate) => {
     setSelectedTemplateId(tmpl.id);
+    setSelectedCustomTemplate(tmpl);
     setCustomRefreshKey((k) => k + 1);
   }, []);
 
@@ -151,13 +180,16 @@ export default function StudioTab({ token, userId, initialPresetId }: Props) {
           binding={binding}
           onBindingChange={handleBindingChange}
           selectedTemplateId={selectedTemplateId}
+          selectedCustomTemplate={selectedCustomTemplate}
           onTemplateChange={handleTemplateChange}
           onCustomTemplateSelect={handleCustomTemplateSelect}
+          onRequestDuplicate={handleRequestDuplicate}
           sections={sections}
           onSectionsChange={handleSectionsChange}
           selectedSectionIndex={selectedSectionIndex}
           onSelectSection={handleSelectSection}
           onSaveAsTemplate={handleOpenSaveModal}
+          onUpdateTemplate={handleOpenUpdateModal}
           customRefreshKey={customRefreshKey}
         />
 
@@ -182,6 +214,8 @@ export default function StudioTab({ token, userId, initialPresetId }: Props) {
         open={saveModalOpen}
         token={token}
         sections={sections}
+        mode={modalMode}
+        prefill={modalPrefill}
         onClose={handleCloseSaveModal}
         onSaved={handleTemplateSaved}
       />

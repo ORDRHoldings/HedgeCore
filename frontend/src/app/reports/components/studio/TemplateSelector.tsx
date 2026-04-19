@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import { T } from "@/lib/design/tokens";
 import { REPORT_PRESETS, REPORT_CATEGORIES } from "@/constants/reportPresets";
 import type { ReportTemplate } from "@/types/reportTypes";
-import { FileStack, Users, FileText, Star } from "lucide-react";
+import { FileStack, Users, FileText, Star, Copy } from "lucide-react";
 import {
   listCustomReportTemplates,
   deleteCustomReportTemplate,
@@ -18,6 +18,7 @@ interface Props {
   selectedTemplateId: string | null;
   onTemplateChange: (template: ReportTemplate | null) => void;
   onCustomTemplateSelect: (tmpl: CustomReportTemplate) => void;
+  onRequestDuplicate: (tmpl: CustomReportTemplate) => void;
   refreshKey?: number;
 }
 
@@ -28,6 +29,7 @@ export default function TemplateSelector({
   selectedTemplateId,
   onTemplateChange,
   onCustomTemplateSelect,
+  onRequestDuplicate,
   refreshKey,
 }: Props) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -102,6 +104,15 @@ export default function TemplateSelector({
       }
     },
     [token],
+  );
+
+  const handleDuplicateCustom = useCallback(
+    (tmpl: CustomReportTemplate, ev: React.MouseEvent) => {
+      ev.stopPropagation();
+      setDropdownOpen(false);
+      onRequestDuplicate(tmpl);
+    },
+    [onRequestDuplicate],
   );
 
   const triggerLabel = selectedCustom
@@ -237,6 +248,21 @@ export default function TemplateSelector({
                         }}
                       >
                         {tmpl.short_name}
+                      </button>
+                      <button
+                        onClick={(e) => handleDuplicateCustom(tmpl, e)}
+                        title="Duplicate template"
+                        style={{
+                          padding: "4px 8px",
+                          background: "transparent",
+                          border: "none",
+                          color: T.tertiary,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Copy size={11} />
                       </button>
                       <button
                         onClick={(e) => handleDeleteCustom(tmpl.id, e)}
