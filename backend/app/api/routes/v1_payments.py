@@ -22,6 +22,10 @@ from app.services.payment_service import (
     initiate_payment, list_payments, get_payment,
     approve_payment, reject_payment, transmit_payment, cancel_payment,
 )
+from app.services.swift_message_service import (
+    OrderingParty, SwiftMessageError,
+    generate_message, supported_formats_for,
+)
 
 router = APIRouter(prefix="/v1/payments", tags=["payments"])
 
@@ -235,6 +239,88 @@ async def post_transmit_payment(
     )
     await db.commit()
     return _to_response(instr, "")
+
+
+@router.get("/{payment_id}/message")
+async def get_payment_message(
+    payment_id: uuid.UUID,
+    format: str = Query(default="mt103", pattern="^(mt103|pain001)$"),
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    _require_enterprise(current_user)
+    instr = await get_payment(db, payment_id=payment_id, company_id=current_user.company_id)
+    if instr.status not in ("APPROVED", "TRANSMITTED"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot generate wire message for payment in {instr.status} state",
+        )
+
+    bene_result = await db.execute(
+        select(PaymentBeneficiary).where(
+            PaymentBeneficiary.id == instr.beneficiary_id,
+            PaymentBeneficiary.company_id == current_user.company_id,
+        )
+    )
+    bene = bene_result.scalar_one_or_none()
+    if bene is None:
+        raise HTTPException(status_code=422, detail="Beneficiary not found for payment")
+
+    from app.models.organization import Company
+    company_result = await db.execute(
+        select(Company).where(Company.id == current_user.company_id)
+    )
+    company = company_result.scalar_one_or_none()
+    op_settings = (company.settings or {}).get("ordering_party", {}) if company else {}
+    ordering = OrderingParty(
+        name=op_settings.get("name") or (company.name if company else "Ordering Customer"),
+        address_line1=op_settings.get("address_line1", ""),
+        address_line2=op_settings.get("address_line2", ""),
+        country_code=op_settings.get("country_code", ""),
+        account_number=op_settings.get("account_number", ""),
+        bic=op_settings.get("bic", ""),
+    )
+
+    payment_dict = {
+        "id": str(instr.id),
+        "payment_type": instr.payment_type,
+        "amount": instr.amount,
+        "currency": instr.currency,
+        "execution_date": instr.execution_date,
+        "reference": instr.reference,
+        "memo": instr.memo,
+        "instruction_hash": instr.instruction_hash,
+    }
+    beneficiary_dict = {
+        "name": bene.name,
+        "bank_name": bene.bank_name,
+        "bank_code": bene.bank_code,
+        "account_number": bene.account_number,
+        "country_code": bene.country_code,
+        "currency": bene.currency,
+    }
+
+    try:
+        msg = generate_message(payment_dict, beneficiary_dict, ordering, fmt=format)  # type: ignore[arg-type]
+    except SwiftMessageError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": str(exc),
+                "supported_formats": supported_formats_for(instr.payment_type),
+            },
+        ) from exc
+
+    return {
+        "payment_id": str(instr.id),
+        "format": msg.format,
+        "content": msg.content,
+        "message_hash": msg.message_hash,
+        "message_reference": msg.message_reference,
+        "payment_type": instr.payment_type,
+        "supported_formats": supported_formats_for(instr.payment_type),
+        "instruction_hash": instr.instruction_hash,
+    }
 
 
 @router.post("/{payment_id}/cancel", response_model=PaymentInstructionResponse)
