@@ -1,5 +1,45 @@
 # Changelog (AI-maintained)
 
+## 2026-04-18 — P0-A: EMIR / MiFID II / Dodd-Frank Regulatory Submissions COMPLETE
+
+### Added
+**Backend**
+- `app/models/regulatory_submission.py` — `RegulatorySubmission` ORM (lifecycle-bearing; NOT WORM), FRAMEWORKS + STATUSES constants
+- `migrations/versions/0031_regulatory_submissions.py` — `regulatory_submissions` table, 6 indexes (tenant, uti, run_id, tenant+status, tenant+framework, tenant+created)
+- `migrations/versions/0032_regulatory_permissions.py` — `regulatory.read` / `regulatory.submit` / `regulatory.acknowledge` → admin/treasurer/compliance_officer (full), risk_analyst/trader/viewer (read)
+- `app/schemas_v1/regulatory.py` — 7 Pydantic v2 classes (Create, Response, MarkSubmitted, Acknowledgment, Rejection, ListFilters, Stats)
+- `app/services/regulatory_submission_service.py` — lifecycle orchestrator wrapping `regulatory_export`: UTI generation, SHA-256 hash, transition matrix, hash-chained audit emission, CalculationRun loading, stats aggregation
+- `app/api/routes/v1_regulatory_submissions.py` — 8 endpoints at `/v1/regulatory-submissions`
+- `app/api/router.py` — wired router
+
+**Frontend**
+- `lib/api/regulatorySubmissionClient.ts` — typed API wrapper + `RegulatoryApiError`, 8 functions
+- `app/regulatory-submissions/layout.tsx` — PlanGate(professional) + PageShell (FileCheck icon)
+- `app/regulatory-submissions/page.tsx` — 7-cell stats strip (counts + ack rate), framework + status filters, inline create form, 10-column table, action buttons driven by row status
+- `components/layout/AppSidebar.tsx` — FileCheck icon import, "Regulatory Submissions" nav entry under COMPLIANCE group (professional gate); `/regulatory-submissions` added to prefixes
+
+### Architectural Decisions
+- NOT a WORM table — status mutates. Evidence anchor is the immutable `document_hash` (SHA-256 of rendered XML at creation) plus hash-chained `audit_events`
+- Transition matrix enforced in `_require_transition`: ACKNOWLEDGED is terminal; REJECTED/FAILED allow re-submission/retry
+- UTI format: `UTI-<tenantShort8>-<framework>-<YYYYMMDD>-<10hex>` — deterministic prefix + secrets.token_hex randomness; caller may override
+- `from_status` captured BEFORE mutation to keep audit payload accurate
+- Source run optional — `None` for manual/position reports; when provided, run_envelope JSONB normalized into `(run_data, transactions)` for the pure export functions
+- Event types on chain: `REGULATORY_SUBMISSION_CREATED/_SUBMITTED/_ACKNOWLEDGED/_REJECTED/_FAILED`
+
+### Routes Shipped (8)
+- POST / GET / GET stats / GET {id} — create/list/stats/detail
+- POST {id}/submit / acknowledge / reject / mark-failed — lifecycle transitions
+
+### Validation
+- Frontend `tsc --noEmit` clean; `next build` 0 errors; `/regulatory-submissions` 5.03 kB bundle
+- Backend import smoke: 8 routes registered under `/api/v1/regulatory-submissions`
+
+### Commits
+- `aeedb5c` — feat(regulatory): P0-A — TR submission lifecycle on existing export layer
+- `9d9b165` — feat(regulatory-ui): P0-A — TR submission queue + stats strip
+
+---
+
 ## 2026-04-18 — P0-C: Counterparty Scoring Hub COMPLETE
 
 ### Added
