@@ -264,6 +264,11 @@ function roleColor(role: string): string {
 // SIDEBAR SECTION — single nav section row
 // ══════════════════════════════════════════════════════════════════════════════
 
+interface AppSidebarProps {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+}
+
 interface SectionRowProps {
   sec:        NavSection;
   isActive:   boolean;
@@ -271,29 +276,34 @@ interface SectionRowProps {
   expandedOpen: string | null;
   onToggleExpanded: (label: string) => void;
   pathname: string;
+  onItemClick?: () => void;
 }
 
-function SectionRow({ sec, isActive, isExpanded, expandedOpen, onToggleExpanded, pathname }: SectionRowProps) {
+function SectionRow({ sec, isActive, isExpanded, expandedOpen, onToggleExpanded, pathname, onItemClick }: SectionRowProps) {
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const isSubOpen = expandedOpen === sec.label;
+
+  const handleClick = () => {
+    if (isExpanded) {
+      // In expanded mode, toggle sub-items or navigate if only 1 item
+      if (sec.items.length <= 1) {
+        router.push(sec.href);
+        onItemClick?.();
+      } else {
+        onToggleExpanded(sec.label);
+      }
+    } else {
+      router.push(sec.href);
+      onItemClick?.();
+    }
+  };
 
   return (
     <div ref={ref}>
       {/* Section button */}
       <div
-        onClick={() => {
-          if (isExpanded) {
-            // In expanded mode, toggle sub-items or navigate if only 1 item
-            if (sec.items.length <= 1) {
-              router.push(sec.href);
-            } else {
-              onToggleExpanded(sec.label);
-            }
-          } else {
-            router.push(sec.href);
-          }
-        }}
+        onClick={handleClick}
         title={!isExpanded ? sec.label : undefined}
         style={{
           display:      "flex",
@@ -401,6 +411,7 @@ function SectionRow({ sec, isActive, isExpanded, expandedOpen, onToggleExpanded,
                 )}
                 <Link
                   href={item.href}
+                  onClick={() => onItemClick?.()}
                   aria-current={isItemActive ? "page" : undefined}
                   style={{
                     display:        "flex",
@@ -436,7 +447,7 @@ function SectionRow({ sec, isActive, isExpanded, expandedOpen, onToggleExpanded,
 // MAIN SIDEBAR COMPONENT
 // ══════════════════════════════════════════════════════════════════════════════
 
-export default function AppSidebar() {
+export default function AppSidebar({ mobileOpen, onMobileClose }: AppSidebarProps) {
   const { user, token, logout, isAuthenticated } = useAuth();
   const { hasAccess: hasPlanAccess } = usePlanGate();
   const router   = useRouter();
@@ -535,6 +546,7 @@ export default function AppSidebar() {
       <nav
         role="navigation"
         aria-label="Main navigation"
+        className={`app-sidebar ${mobileOpen ? "is-open" : ""}`}
         style={{
           width,
           minWidth:      width,
@@ -655,6 +667,7 @@ export default function AppSidebar() {
                 expandedOpen={expandedOpen}
                 onToggleExpanded={handleToggleExpanded}
                 pathname={pathname}
+                onItemClick={onMobileClose}
               />
             );
           })}

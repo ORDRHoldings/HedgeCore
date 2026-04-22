@@ -18,6 +18,7 @@ import { getActivePolicy, listPolicyTemplates, type PolicyInstance, type PolicyT
 import { calculate } from "@/api/client";
 import type { TradeRow, PolicyConfig, MarketSnapshot, CalculateResponse, BucketResult } from "@/api/types";
 
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { PageShell } from "@/components/layout/PageShell";
 import { LayoutDashboard } from "lucide-react";
 
@@ -269,6 +270,7 @@ function StepPolicy({
   onOverride: (patch: Partial<PolicyConfig>) => void;
   loading: boolean;
 }) {
+  const isMobile = useIsMobile();
   const chosen = selectedTemplateId
     ? templates.find(t => t.id === selectedTemplateId) ?? null
     : activePolicy?.template ?? null;
@@ -316,7 +318,7 @@ function StepPolicy({
           <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: S.muted, marginBottom: 8 }}>
             AVAILABLE TEMPLATES
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 8 }}>
             {templates.slice(0, 8).map(t => {
               const isSel = selectedTemplateId === t.id || (!selectedTemplateId && activePolicy?.template?.id === t.id);
               return (
@@ -350,7 +352,7 @@ function StepPolicy({
         <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: S.muted, marginBottom: 12 }}>
           CALCULATION PARAMETERS
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
           <ParamField label="Confirmed ratio" value={config.hedge_ratios.confirmed} suffix="%" scale={100}
             onChange={v => onOverride({ hedge_ratios: { ...config.hedge_ratios, confirmed: v / 100 } })} />
           <ParamField label="Forecast ratio" value={config.hedge_ratios.forecast} suffix="%" scale={100}
@@ -413,6 +415,7 @@ function StepMarket({
   loading: boolean;
   onAutoFetch: () => void;
 }) {
+  const isMobile = useIsMobile();
   const months = Object.keys(market.forward_points_by_month).sort();
 
   return (
@@ -434,7 +437,7 @@ function StepMarket({
         Spot rate and forward points for {currency || "selected currency"}. Auto-fetch pulls live data; edit manually if needed.
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 20 }}>
         <div>
           <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.tertiary, marginBottom: 4, letterSpacing: "0.06em" }}>SPOT RATE</div>
           <input
@@ -520,6 +523,7 @@ function StepReview({
   error: string | null;
   onCalculate: () => void;
 }) {
+  const isMobile = useIsMobile();
   const totalAR = positions.filter(p => p.type === "AR").reduce((s, p) => s + p.amount, 0);
   const totalAP = positions.filter(p => p.type === "AP").reduce((s, p) => s + p.amount, 0);
   const months = new Set(positions.map(p => p.value_date.slice(0, 7)));
@@ -533,7 +537,7 @@ function StepReview({
         Confirm all parameters before running the calculation engine.
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
         <ReviewCard title="POSITIONS" items={[
           `${positions.length} positions`,
           `${currency} AR: ${fmtNum(totalAR)}`,
@@ -598,6 +602,7 @@ function ReviewCard({ title, items, color }: { title: string; items: string[]; c
 
 /* ── Step 4: Results ────────────────────────────────────────────────────── */
 function StepResults({ result, currency }: { result: CalculateResponse; currency: string }) {
+  const isMobile = useIsMobile();
   const { hedge_plan, scenario_results, run_envelope, validation_report } = result;
   const buckets = hedge_plan.buckets;
   const summary = hedge_plan.summary;
@@ -626,7 +631,7 @@ function StepResults({ result, currency }: { result: CalculateResponse; currency
       </div>
 
       {/* Summary KPIs */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
         <KpiBox label="TOTAL EXPOSURE" value={`${currency} ${fmtNum(Math.abs(summary.total_commercial_exposure_mxn))}`} color={S.blue} />
         <KpiBox label="HEDGE ACTION" value={fmtUsd(summary.total_action_usd)} color={S.amber} />
         <KpiBox label="FRICTION COST" value={fmtUsd(summary.total_friction_usd)} color={S.red} />
@@ -636,6 +641,7 @@ function StepResults({ result, currency }: { result: CalculateResponse; currency
       {/* Bucket table */}
       <div style={{
         border: `1px solid ${S.rim}`, borderRadius: 4, overflow: "hidden",
+        overflowX: "auto",
       }}>
         <div style={{
           display: "grid",

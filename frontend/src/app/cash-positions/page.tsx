@@ -162,7 +162,8 @@ export default function CashPositionsPage() {
               No entity positions for today.
             </div>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.fontMono }}>
+            <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.fontMono, minWidth: 480 }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                   {["Entity", "Currency", "Ledger Balance", "Available"].map((h) => (
@@ -187,6 +188,7 @@ export default function CashPositionsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
@@ -199,7 +201,8 @@ export default function CashPositionsPage() {
               No accounts found. Add accounts in Settings → Bank Accounts.
             </div>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.fontMono }}>
+            <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.fontMono, minWidth: 640 }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                   {["Nickname", "Currency", "Ledger Balance", "Available", "Date", "Status"].map((h) => (
@@ -238,6 +241,7 @@ export default function CashPositionsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}

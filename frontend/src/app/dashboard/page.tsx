@@ -10,6 +10,7 @@ import { T } from "@/lib/design/tokens";
 import { PageShell } from "@/components/layout/PageShell";
 import { KpiStrip } from "@/components/ui/KpiStrip";
 import { Icon } from "@/components/ui/Icon";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { LayoutDashboard, Play, BarChart3, Activity, ArrowRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -511,6 +512,8 @@ export default function DashboardPage() {
     return () => clearInterval(id);
   }, [token, fetchWidgets]);
 
+  const isMobile = useIsMobile();
+
   if (!ready || isLoading) {
     return (
       <div style={{
@@ -544,7 +547,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Mission Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
         {loading ? (
           <>
             <CardSkeleton />
@@ -597,7 +600,7 @@ export default function DashboardPage() {
       <SectionHeader title="MARKET PULSE" badge={widgets.fxRates.length > 0 ? "LIVE" : undefined} />
 
       {/* TradingView chart + compact FX rates */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 300px", gap: 16 }}>
         <div style={{
           background: T.bgPanel, border: `1px solid ${T.rim}`, borderRadius: 4,
           overflow: "hidden", height: 420,
@@ -674,7 +677,7 @@ export default function DashboardPage() {
       {widgets.macro.length > 0 && (
         <div style={{
           display: "grid",
-          gridTemplateColumns: `repeat(${Math.min(widgets.macro.length, 5)}, 1fr)`,
+          gridTemplateColumns: isMobile ? (widgets.macro.length > 2 ? "1fr 1fr" : "1fr") : `repeat(${Math.min(widgets.macro.length, 5)}, 1fr)`,
           gap: 12, marginTop: 12,
         }}>
           {widgets.macro.map(m => (
@@ -692,7 +695,7 @@ export default function DashboardPage() {
       {/* ── Operations ────────────────────────────────────────────────── */}
       <SectionHeader title="OPERATIONS" />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
         {/* Recent Runs */}
         <div style={{
           background: T.bgPanel, border: `1px solid ${T.rim}`, borderRadius: 4,
@@ -720,7 +723,7 @@ export default function DashboardPage() {
             <div>
               {widgets.recentRuns.slice(0, 5).map(run => (
                 <div key={run.id} style={{
-                  display: "grid", gridTemplateColumns: "70px 80px 80px 50px 80px",
+                  display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr 1fr" : "70px 80px 80px 50px 80px",
                   gap: 8, padding: "10px 16px", alignItems: "center",
                   borderBottom: `1px solid ${T.soft}`,
                 }}>

@@ -8,6 +8,7 @@ import {
   type PaymentInstruction, type Beneficiary,
   type PaymentMessageFormat, type PaymentMessageResponse,
 } from "@/lib/api/cashClient";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { CreditCard, RefreshCw, Plus, ChevronDown, ChevronRight, FileText, Copy, Download, X } from "lucide-react";
 
 // ── Design tokens ──────────────────────────────────────────────────────────
@@ -200,6 +201,7 @@ const SwiftMessageModal = ({
 
 function PaymentsInner() {
   const { token, user } = useAuth();
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState<Tab>("PAYMENTS");
 
   // ── Payments state ─────────────────────────────────────────────────────────
@@ -456,7 +458,7 @@ function PaymentsInner() {
 
         {/* ── KPI strip ─────────────────────────────────────────────────────── */}
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
+          display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)",
           margin: "14px 28px 0", borderRadius: 6,
           border: `1px solid ${S.rim}`, overflow: "hidden",
         }}>
@@ -609,7 +611,7 @@ function PaymentsInner() {
                             <tr><td colSpan={7} style={{ padding: 0 }}>
                               <div style={{ background: S.sub, padding: 20, borderBottom: `1px solid ${S.rim}` }}>
                                 {/* Detail grid */}
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 16 }}>
+                                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 14, marginBottom: 16 }}>
                                   {[
                                     { label: "REFERENCE", value: p.reference },
                                     { label: "MEMO", value: p.memo || "\u2014" },
@@ -804,7 +806,7 @@ function PaymentsInner() {
                 NEW PAYMENT INSTRUCTION
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
                 {/* Payment type */}
                 <label style={labelStyle}>PAYMENT TYPE
                   <select
@@ -952,7 +954,7 @@ function PaymentsInner() {
                 <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 14 }}>
                   NEW BENEFICIARY
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
                   <label style={labelStyle}>BENEFICIARY NAME
                     <input value={beneForm.name} onChange={e => setBeneForm({ ...beneForm, name: e.target.value })}
                       placeholder="Acme Corp" style={{ ...inputStyle, marginTop: 4 }} />

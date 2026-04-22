@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { PageShell } from "@/components/layout/PageShell";
 import {
   BarChart3, Shield, Activity, TrendingDown, AlertTriangle,
@@ -101,6 +102,7 @@ function liquidityColor(l: string) {
 export default function PortfolioPage() {
   const { token } = useAuth();
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [data, setData] = useState<PortfolioData | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -195,7 +197,7 @@ export default function PortfolioPage() {
 
       {/* ── Summary KPI strip ────────────────────────────────────────────── */}
       <div style={{
-        display: "grid", gridTemplateColumns: "repeat(6,1fr)",
+        display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr 1fr" : "repeat(6,1fr)",
         borderBottom: `1px solid ${S.rim}`,
       }}>
         {[
@@ -222,7 +224,7 @@ export default function PortfolioPage() {
       </div>
 
       {/* ── Main layout: currency table + access cards ───────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 0 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 320px", gap: 0 }}>
 
         {/* Currency breakdown table */}
         <div style={{ borderRight: `1px solid ${S.rim}` }}>

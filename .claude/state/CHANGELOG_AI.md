@@ -2010,3 +2010,15 @@ Fixed broken layouts across all 5 governance pages (Staging Queue, Ledger, Run V
 - Admin Monitor: NOC dashboard (6 backend endpoints + /admin-monitor page)
 - Test Coverage: 2158 passing, 59% coverage (up from 55%)
 - Forensic audit cleanup: spot_rate rename, _to_usd fix, dead code removal
+
+
+## 2026-04-21 — Sprint: Mobile-Responsive Core Pages
+- **Foundation**: Added viewport meta to `layout.tsx`, responsive breakpoints (`--bp-sm/md/lg`) to `globals.css`, safe-area insets, 44px touch targets
+- **Sidebar**: Mobile hamburger header in `ClientProviders.tsx`, fixed overlay sidebar with backdrop in `AppSidebar.tsx`, auto-close on nav selection
+- **Dashboard**: Mission cards 3→1 column, chart+FX rates vertical stack, macro indicators 5→2 column, operations grids 2→1 column
+- **Calculate**: Step grids stack on mobile, bucket table wrapped in horizontal scroll container
+- **Payments**: 4-column→2-column KPIs, 3-column→1-column forms, 2-column→1-column grids
+- **Portfolio**: 6-column→3-column risk cards, chart+table vertical stack
+- **Cash Positions**: Tables wrapped in `overflowX: auto` with `minWidth` for horizontal scroll
+- **Hook**: Created `useBreakpoint.ts` with `useIsMobile` and `useIsSmallMobile`
+- **Validation**: tsc --noEmit clean, next build --no-lint pass (117 pages)
