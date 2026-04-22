@@ -14,7 +14,6 @@ Evidence types collected nightly:
 from __future__ import annotations
 
 import uuid as _uuid
-from datetime import UTC, datetime
 
 from sqlalchemy import Column, Date, DateTime, Index, String, text
 from sqlalchemy.dialects.postgresql import JSONB

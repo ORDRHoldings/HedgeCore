@@ -181,7 +181,6 @@ async def get_entity_position(db, *, company_id, as_of_date):
 
 
 async def get_account_position(db, *, company_id):
-    from decimal import Decimal
     result = await db.execute(
         select(BankAccount, CashBalance)
         .outerjoin(

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Mail, Lock, ArrowRight, CheckCircle } from "lucide-react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 type Step = 1 | 2 | 3;
 
@@ -14,6 +15,7 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const fontUI = "var(--font-terminal,'IBM Plex Sans',sans-serif)";
   const fontMono = "var(--font-terminal-mono,'IBM Plex Mono',monospace)";
@@ -76,7 +78,7 @@ export default function SignupPage() {
         justifyContent: "center",
         background: "var(--bg-deep)",
         fontFamily: fontUI,
-        padding: "24px",
+        padding: isMobile ? "12px" : "24px",
       }}
     >
       {/* Logo / title */}
@@ -109,7 +111,7 @@ export default function SignupPage() {
           background: "var(--bg-panel)",
           border: "1px solid var(--border-rim)",
           borderRadius: 8,
-          padding: "32px 36px",
+          padding: isMobile ? "20px 16px" : "32px 36px",
           width: "100%",
           maxWidth: 420,
         }}
@@ -370,7 +372,7 @@ export default function SignupPage() {
               </div>
             )}
 
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap" }}>
               <button
                 type="button"
                 onClick={() => {

@@ -1,5 +1,6 @@
 "use client";
 import React, { Suspense, useCallback, useEffect, useState } from "react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { useAuth } from "@/lib/authContext";
 import {
   getConsolidatedForecast, getLiquidityGaps, runForecastScenario,
@@ -22,6 +23,7 @@ type Tab = "FORECAST" | "GAPS" | "VARIANCE" | "ITEMS";
 
 function CashForecastInner() {
   const { token, user } = useAuth();
+  const isMobile = useIsMobile();
   const [horizon, setHorizon] = useState<"13w" | "12m">("13w");
   const [tab, setTab] = useState<Tab>("FORECAST");
   const [forecast, setForecast] = useState<ForecastResponse | null>(null);
@@ -129,9 +131,9 @@ function CashForecastInner() {
   const maxAbs = Math.max(...buckets.map(b => Math.abs(parseFloat(String(b.closing_balance)) || 0)), 1);
 
   return (
-    <div style={{ padding: 24, fontFamily: S.fontUI, color: "var(--text-primary)" }}>
+    <div style={{ padding: isMobile ? 12 : 24, fontFamily: S.fontUI, color: "var(--text-primary)" }}>
       {/* Header */}
-      <div className="widget-drag-handle" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+      <div className="widget-drag-handle" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         <TrendingUp size={18} />
         <span style={{ fontFamily: S.fontMono, fontSize: 14, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Cash Forecast</span>
         <span style={{ fontSize: 12, color: "var(--text-secondary)", marginLeft: 8 }}>
@@ -176,6 +178,7 @@ function CashForecastInner() {
       {/* FORECAST tab */}
       {tab === "FORECAST" && !loading && buckets.length > 0 && (
         <div>
+          <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.fontMono }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
@@ -211,6 +214,7 @@ function CashForecastInner() {
               })}
             </tbody>
           </table>
+          </div>
 
           {/* Scenario panel */}
           <div style={{ marginTop: 24, padding: 16, background: S.bgSub, borderRadius: 8, border: `1px solid ${S.rim}` }}>
@@ -248,6 +252,7 @@ function CashForecastInner() {
           {gaps.length === 0 ? (
             <div style={{ padding: 32, textAlign: "center", color: "var(--text-secondary)", fontSize: 13 }}>No liquidity gaps detected</div>
           ) : (
+            <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.fontMono }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
@@ -270,6 +275,7 @@ function CashForecastInner() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
@@ -280,6 +286,7 @@ function CashForecastInner() {
           {variance.length === 0 ? (
             <div style={{ padding: 32, textAlign: "center", color: "var(--text-secondary)", fontSize: 13 }}>No forecast snapshots yet \u2014 save a snapshot to enable variance tracking</div>
           ) : (
+            <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.fontMono }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
@@ -305,6 +312,7 @@ function CashForecastInner() {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
@@ -357,6 +365,7 @@ function CashForecastInner() {
           {items.length === 0 ? (
             <div style={{ padding: 32, textAlign: "center", color: "var(--text-secondary)", fontSize: 13 }}>No recurring forecast items \u2014 add one to include it in forecasts</div>
           ) : (
+            <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.fontMono }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
@@ -391,6 +400,7 @@ function CashForecastInner() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}

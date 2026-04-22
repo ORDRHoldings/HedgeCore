@@ -13,6 +13,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import type { Bar } from "@/components/chart/indicators/types";
 import { usePublicChartData } from "@/hooks/usePublicChartData";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 const ChartEngine = dynamic(() => import("@/components/chart/ChartEngine"), {
   ssr: false,
@@ -284,6 +285,7 @@ function OHLCTicker({ bars, pair }: { bars: Bar[]; pair: string }) {
 /* -- MarketPageInner ------------------------------------------------------- */
 
 function MarketPageInner() {
+  const isMobile = useIsMobile();
   const [pair, setPair]             = useState("EURUSD");
   const [interval, setInterval]     = useState("1day");
   const { bars, loading, error, source, refetch } = usePublicChartData(pair, interval, 500);
@@ -295,8 +297,8 @@ function MarketPageInner() {
     }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 8,
-        padding: "0 16px", background: BG, borderBottom: "1px solid " + BORDER,
-        minHeight: 48, flexShrink: 0, zIndex: 10 }}>
+        padding: isMobile ? "8px 16px" : "0 16px", background: BG, borderBottom: "1px solid " + BORDER,
+        minHeight: 48, flexShrink: 0, zIndex: 10, flexWrap: isMobile ? "wrap" : "nowrap" }}>
         <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 5, marginRight: 4 }}>
           <span style={{ fontFamily: FM, fontSize: 15, fontWeight: 700, color: TEXT, letterSpacing: "0.06em" }}>ORDR</span>
           <span style={{ fontFamily: FM, fontSize: 11, fontWeight: 500, color: TEXT_DIM, letterSpacing: "0.04em" }}>MARKET</span>

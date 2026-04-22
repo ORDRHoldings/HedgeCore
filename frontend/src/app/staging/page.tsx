@@ -11,6 +11,7 @@ import type { StagedArtifact } from "../../api/pipelineTypes";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { STAGING_HELP } from "@/lib/helpContent";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 import { PageShell } from "@/components/layout/PageShell";
 import { Globe } from "lucide-react";
@@ -87,7 +88,7 @@ function ExecutionProposalsPanel({ token }: { token: string }) {
       <div style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12, letterSpacing: "0.08em", color: "var(--accent-amber)", marginBottom: 8, textTransform: "uppercase" as const }}>
         ⚑ {proposals.length} EXECUTION PROPOSAL{proposals.length !== 1 ? "S" : ""} AWAITING CHECKER APPROVAL
       </div>
-      <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border-rim)" }}>
+      <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border-rim)", overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" as const }}>
           <thead>
             <tr style={{ background: "var(--bg-sub)" }}>
@@ -280,6 +281,7 @@ export default function StagingListPage() {
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [secondApproving, setSecondApproving] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const isMobile = useIsMobile();
 
   const showToast = useCallback((msg: string, ok: boolean) => {
     setToast({ msg, ok });
@@ -393,8 +395,8 @@ export default function StagingListPage() {
 
           {/* ── Simplified status bar ── */}
           <div style={{
-            display: "flex", alignItems: "center", gap: 12, height: 44,
-            padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, flexShrink: 0,
+            display: "flex", alignItems: "center", gap: 12, height: isMobile ? "auto" : 44,
+            padding: isMobile ? "8px 12px" : "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, flexShrink: 0, flexWrap: "wrap",
           }}>
             {pendingCount > 0 && (
               <span style={{
@@ -425,7 +427,7 @@ export default function StagingListPage() {
           {!stagingLoading && stagingArtifacts.length > 0 && (
             <div style={{
               display: "flex", gap: 0, background: S.bgPanel, borderBottom: `1px solid ${S.rim}`,
-              padding: "0 20px", height: 44, flexShrink: 0,
+              padding: isMobile ? "8px 12px" : "0 20px", height: isMobile ? "auto" : 44, flexShrink: 0, flexWrap: isMobile ? "wrap" : "nowrap",
             }}>
               {[
                 { label: "TOTAL STAGED",    value: String(stagingArtifacts.length), color: S.primary },
@@ -446,7 +448,7 @@ export default function StagingListPage() {
           )}
 
           {/* ── Content ── */}
-          <div style={{ flex: 1, padding: "16px 20px", maxWidth: 1440, width: "100%", margin: "0 auto" }}>
+          <div style={{ flex: 1, padding: isMobile ? "12px 16px" : "16px 20px", maxWidth: 1440, width: "100%", margin: "0 auto" }}>
 
             {/* Execution proposals panel (new hedge-desk workflow) */}
             {token && <ExecutionProposalsPanel token={token} />}
@@ -521,7 +523,7 @@ export default function StagingListPage() {
                 NO ARTIFACTS MATCH THIS FILTER
               </div>
             ) : (
-              <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}` }}>
+              <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr>
@@ -653,10 +655,10 @@ export default function StagingListPage() {
 
           {/* ── Footer ── */}
           <footer style={{
-            height: 32, display: "flex", alignItems: "center", gap: 8, padding: "0 20px",
+            height: isMobile ? "auto" : 32, display: "flex", alignItems: "center", gap: 8, padding: isMobile ? "8px 12px" : "0 20px",
             borderTop: `1px solid ${S.rim}`, background: S.bgPanel,
             fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
-            letterSpacing: "0.04em", flexShrink: 0,
+            letterSpacing: "0.04em", flexShrink: 0, flexWrap: "wrap",
           }}>
             <span>ORDR Terminal · Staging Queue</span>
             <span style={{ color: S.rim }}>·</span>

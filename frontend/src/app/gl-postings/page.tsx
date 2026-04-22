@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { CheckCircle, XCircle, Send, FileText, AlertCircle, RefreshCw as RefreshCwIcon } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { useAuth } from "@/lib/authContext";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import {
   listJournalEntries,
   approveJournalEntry,
@@ -42,6 +43,7 @@ export default function GLPostingsPage() {
   const [rejectModal, setRejectModal] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -88,9 +90,9 @@ export default function GLPostingsPage() {
         </button>
       }
     >
-      <div style={{ padding: "24px 32px", fontFamily: S.fontUI }}>
+      <div style={{ padding: isMobile ? "12px 16px" : "24px 32px", fontFamily: S.fontUI }}>
 
-        <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: `1px solid ${S.rim}` }}>
+        <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: `1px solid ${S.rim}`, flexWrap: "wrap" }}>
           {STATUS_FILTERS.map((s) => (
             <button key={s} onClick={() => setFilter(s)}
               style={{
@@ -148,7 +150,7 @@ export default function GLPostingsPage() {
                         </span>
                       </td>
                       <td style={{ padding: "10px 14px" }}>
-                        <div style={{ display: "flex", gap: 6 }}>
+                        <div style={{ display: "flex", gap: 6, flexWrap: isMobile ? "wrap" : "nowrap" }}>
                           {e.status === "PENDING_APPROVAL" && (
                             <>
                               <button onClick={() => handleApprove(e.id)} title="Approve (4-eyes: checker != creator)"

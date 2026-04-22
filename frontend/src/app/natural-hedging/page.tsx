@@ -9,6 +9,7 @@
  */
 
 import { useState } from "react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { useAuth } from "@/lib/authContext";
 import {
   analyzeFromPositions,
@@ -42,6 +43,7 @@ const fmtUsd = (n: number) =>
 const fmtPct = (n: number) => `${n.toFixed(1)}%`;
 
 export default function NaturalHedgingPage() {
+  const isMobile = useIsMobile();
   const { token } = useAuth();
   const [reporting, setReporting] = useState("USD");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "CONFIRMED" | "FORECAST">("CONFIRMED");
@@ -155,7 +157,7 @@ export default function NaturalHedgingPage() {
 
       {n && (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr 1fr" : "repeat(5, 1fr)", gap: 12, marginBottom: 16 }}>
             <KpiCard label="Gross before" value={fmtUsd(n.gross_notional_before)} />
             <KpiCard label="Gross after" value={fmtUsd(n.gross_notional_after)} />
             <KpiCard

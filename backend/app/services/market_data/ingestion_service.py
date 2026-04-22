@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import timezone
 
 from app.services import market_snapshot_service
 from app.services import forward_curve_service

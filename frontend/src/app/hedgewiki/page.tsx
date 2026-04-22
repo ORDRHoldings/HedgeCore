@@ -7,6 +7,7 @@ import { HedgeWikiPanel } from "@/components/hedgewiki/HedgeWikiPanel";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { HEDGEWIKI_HELP } from "@/lib/helpContent";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 import { PageShell } from "@/components/layout/PageShell";
 
@@ -382,6 +383,7 @@ function CitTag({ text }: { text: string }) {
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function HedgeWiki() {
+  const isMobile = useIsMobile();
   const _planAllowed = usePlanRedirect("enterprise");
   const renderTs = useRenderTs();
   const router = useRouter();
@@ -408,6 +410,7 @@ export default function HedgeWiki() {
       {/* Context bar — search + stats (title handled by PageShell) */}
       <header style={{
         display: "flex", alignItems: "center", gap: 12, height: 44,
+        flexWrap: isMobile ? "wrap" : "nowrap",
         padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, flexShrink: 0,
       }}>
         <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>
@@ -436,7 +439,7 @@ export default function HedgeWiki() {
       </header>
 
       {/* Body: three-pane layout */}
-      <div style={{ display: "grid", gridTemplateColumns: "164px 220px 1fr", flex: 1, minHeight: 0, overflow: "hidden" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "164px 220px 1fr", flex: 1, minHeight: 0, overflow: "hidden" }}>
 
         {/* PANE 1: Category rail */}
         <nav data-wiki-sidebar style={{
@@ -530,7 +533,7 @@ export default function HedgeWiki() {
             }
           `}</style>
           {/* Title row */}
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 6, flexWrap: isMobile ? "wrap" : "nowrap" }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 3 }}>
                 {entry.category}

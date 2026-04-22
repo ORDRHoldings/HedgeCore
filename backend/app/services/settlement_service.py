@@ -19,7 +19,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.journal_entry import (
-    GENESIS_HASH as JE_GENESIS,
     JournalEntry,
     JournalEntryStatus,
     _compute_entry_hash,

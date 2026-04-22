@@ -19,6 +19,7 @@ import type { ConnectorRun } from "../../api/connectorClient";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { CONNECTORS_HELP } from "@/lib/helpContent";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 import { PageShell } from "@/components/layout/PageShell";
 import { LayoutDashboard } from "lucide-react";
@@ -204,6 +205,7 @@ function makeEmptyRow(): FieldMapping {
 //  Page Component
 // ══════════════════════════════════════════════════════════════════════════
 export default function AccountingConnectionPage() {
+  const isMobile = useIsMobile();
   const _planAllowed = usePlanRedirect("professional");
   const { isAuthenticated, token, user } = useAuth();
   const router   = useRouter();
@@ -500,12 +502,13 @@ export default function AccountingConnectionPage() {
       {/* ── TopBar (44px) ──────────────────────────────────────────────────── */}
       <div style={{
         height:       44,
-        padding:      "0 24px",
+        padding:      isMobile ? "0 12px" : "0 24px",
         borderBottom: `1px solid ${S.rim}`,
         background:   S.bgPanel,
         display:      "flex",
         alignItems:   "center",
         justifyContent: "space-between",
+        flexWrap:     isMobile ? "wrap" : "nowrap",
         flexShrink:   0,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -556,7 +559,7 @@ export default function AccountingConnectionPage() {
 
       {/* ── Main content ───────────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflowY: "auto" }}>
-        <div style={{ maxWidth: 1440, margin: "0 auto", padding: "24px 24px 40px" }}>
+        <div style={{ maxWidth: 1440, margin: "0 auto", padding: isMobile ? "12px" : "24px 24px 40px" }}>
 
           {/* Section label */}
           <div style={{ marginBottom: 10 }}>
@@ -584,7 +587,7 @@ export default function AccountingConnectionPage() {
           {/* ── System selector: 2×2 grid ──────────────────────────────────── */}
           <div style={{
             display:             "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
+            gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
             gap:                 12,
             marginBottom:        28,
           }}>
@@ -648,7 +651,7 @@ export default function AccountingConnectionPage() {
                   </span>
 
                   {/* Footer row */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2, flexWrap: isMobile ? "wrap" : "nowrap" }}>
                     <Badge label={sys.authType} color={S.secondary} />
                     <button
                       onClick={e => {
@@ -736,7 +739,7 @@ export default function AccountingConnectionPage() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{
                       display:             "grid",
-                      gridTemplateColumns: "150px 1fr",
+                      gridTemplateColumns: isMobile ? "1fr" : "150px 1fr",
                       gap:                 "8px 12px",
                       alignItems:         "baseline",
                     }}>
@@ -762,7 +765,7 @@ export default function AccountingConnectionPage() {
                       </span>
                     </div>
 
-                    <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                    <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: isMobile ? "wrap" : "nowrap" }}>
                       <button
                         onClick={() => handleConnect(selectedSystem)}
                         style={{
@@ -1052,7 +1055,7 @@ export default function AccountingConnectionPage() {
                   </div>
 
                   {/* Import action */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 4, borderTop: `1px solid ${S.rim}` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 4, borderTop: `1px solid ${S.rim}`, flexWrap: isMobile ? "wrap" : "nowrap" }}>
                     <button
                       onClick={handleImportNow}
                       disabled={importing || selectedDocs.length === 0 || selectedCurrencies.length === 0}
@@ -1403,7 +1406,7 @@ export default function AccountingConnectionPage() {
       {/* ── Footer (32px) ───────────────────────────────────────────────────── */}
       <div style={{
         height:         32,
-        padding:        "0 24px",
+        padding:        isMobile ? "0 12px" : "0 24px",
         borderTop:      `1px solid ${S.rim}`,
         background:     S.bgPanel,
         display:        "flex",

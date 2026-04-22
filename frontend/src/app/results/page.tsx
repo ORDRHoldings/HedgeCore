@@ -22,6 +22,7 @@ import WorkflowGuide from "@/components/layout/WorkflowGuide";
 
 import { PageShell } from "@/components/layout/PageShell";
 import { FileText } from "lucide-react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 // ── Committee Pack: Top-level module navigation ───────────────────────────────
 const TOP_LEVEL_SECTIONS = [
@@ -56,6 +57,7 @@ function getInitialExecutionTab(): string {
 }
 
 export default function ResultsPage() {
+  const isMobile = useIsMobile();
   const _planAllowed = usePlanRedirect("professional");
   const { result, lastInputs } = useHedge();
   const [activeSection, setActiveSection] = useState(getInitialSection);
@@ -125,14 +127,14 @@ export default function ResultsPage() {
   const runId    = result.run_id;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
     <div className="space-y-0" style={{ flex: 1 }}>
       {/* Workflow breadcrumb + completion guide */}
       <WorkflowBreadcrumb active="results" />
       <WorkflowGuide active="results" complete={!!result} />
 
       {/* ── TIER 1: Run Identity Header ─────────────────────────────────────── */}
-      <div className="bg-[var(--bg-panel)] border-b border-[var(--border-rim)] px-6 py-4">
+      <div className="bg-[var(--bg-panel)] border-b border-[var(--border-rim)] py-4" style={{ paddingLeft: isMobile ? 12 : 24, paddingRight: isMobile ? 12 : 24 }}>
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
             <div>
@@ -198,7 +200,7 @@ export default function ResultsPage() {
 
       {/* ── TIER 2: Module Navigation ────────────────────────────────────────── */}
       <div className="sticky top-0 z-40 bg-[var(--bg-panel)] border-b border-[var(--border-rim)] no-print">
-        <div className="flex items-center gap-0 px-6">
+        <div className="flex items-center gap-0" style={{ paddingLeft: isMobile ? 12 : 24, paddingRight: isMobile ? 12 : 24, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
           {TOP_LEVEL_SECTIONS.map((section) => {
             const isActive = activeSection === section.key;
             const showBadge = section.key === 'notifications' && alertCount > 0;
@@ -236,7 +238,7 @@ export default function ResultsPage() {
       {/* ── Execution Desk ── */}
       {activeSection === 'execution' && (
         <div>
-          <div className="sticky top-[57px] z-30 bg-[var(--bg-deep)] border-b border-[var(--border-soft)] no-print px-6">
+          <div className="sticky top-[57px] z-30 bg-[var(--bg-deep)] border-b border-[var(--border-soft)] no-print" style={{ paddingLeft: isMobile ? 12 : 24, paddingRight: isMobile ? 12 : 24 }}>
             <TabBar
               tabs={EXECUTION_TABS}
               activeTab={activeExecutionTab}
@@ -244,7 +246,7 @@ export default function ResultsPage() {
             />
           </div>
 
-          <div className="px-6 py-6">
+          <div className="py-6" style={{ paddingLeft: isMobile ? 12 : 24, paddingRight: isMobile ? 12 : 24 }}>
             {activeExecutionTab === 'overview' && (
               <div>
                 <div className="cp-section-header mb-5">
@@ -345,7 +347,7 @@ export default function ResultsPage() {
 
       {/* ── Committee Reports ── */}
       {activeSection === 'reports' && (
-        <div className="px-6 py-6">
+        <div className="py-6" style={{ paddingLeft: isMobile ? 12 : 24, paddingRight: isMobile ? 12 : 24 }}>
           <div className="cp-section-header mb-6">
             <span className="cp-section-index">○</span>
             <h3 className="cp-section-title">Committee Reports</h3>
@@ -357,7 +359,7 @@ export default function ResultsPage() {
 
       {/* ── Controls & Alerts ── */}
       {activeSection === 'notifications' && (
-        <div className="px-6 py-6">
+        <div className="py-6" style={{ paddingLeft: isMobile ? 12 : 24, paddingRight: isMobile ? 12 : 24 }}>
           <div className="cp-section-header mb-6">
             <span className="cp-section-index">○</span>
             <h3 className="cp-section-title">Controls &amp; Alerts</h3>

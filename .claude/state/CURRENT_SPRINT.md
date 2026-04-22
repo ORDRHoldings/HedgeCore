@@ -1,6 +1,6 @@
 # Current Sprint
 
-Sprint: Mobile-Responsive Core Pages
+Sprint: Mobile-Responsive All Pages
 Status: COMPLETE (2026-04-21)
 Started: 2026-04-21
 Completed: 2026-04-21
@@ -45,6 +45,24 @@ Close the P2 competitive-parity gap on mobile usability. The product was desktop
 - `db9172a` — feat(mobile): responsive breakpoints, sidebar overlay, viewport meta
 - `db9172a` — feat(mobile): dashboard, calculate, payments, portfolio, cash-positions responsive grids
 
-## Next
-P2 backlog remaining after this sprint:
-- Mobile-responsive layouts for remaining 50+ pages (lower priority, can be done page-by-page in future sprints)
+## Completion Evidence
+- tsc --noEmit: CLEAN
+- next build --no-lint: exit 0, 121 pages
+- All app/* page.tsx files import and use useIsMobile
+
+## Next Sprint Options
+Based on OPEN_RISKS.md and uncompleted plans:
+
+1. **Security & Secrets Hardening** (HIGH priority)
+   - Run `scripts/scrub-git-secrets.sh` to remove secrets from git history (R-001)
+   - Audit all .env files and env var usage
+   - Review and rotate exposed credentials
+
+2. **k6 Load Test Baseline** (HIGH priority)
+   - Set up k6 load testing suite
+   - Run full staging run (100 VUs, 5 min)
+   - Establish performance baseline and document
+
+3. **Infrastructure Hardening** (MEDIUM priority)
+   - Implement plan from `docs/superpowers/plans/2026-03-24-infrastructure-hardening.md`
+   - Render Blueprint Sync, cold-start keepalive, container hardening

@@ -17,7 +17,6 @@ from app.services.billing_service import (
     apply_subscription_active,
     apply_subscription_cancelled,
     apply_payment_failed,
-    STRIPE_PLAN_MAP,
 )
 
 logger = logging.getLogger(__name__)

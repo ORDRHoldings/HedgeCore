@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/authContext";
 import { PageShell } from "@/components/layout/PageShell";
 import { FileText } from "lucide-react";
 import { T } from "@/lib/design/tokens";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 import { HASH_MAP, TAB_TO_PARAM } from "./types";
 import type { ReportStudioTab } from "./types";
@@ -145,6 +146,7 @@ function ReportStudioInner() {
   const { isAuthenticated, isLoading, token, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isMobile = useIsMobile();
 
   // Derive active tab from URL
   const tabParam = searchParams.get("tab") ?? "";

@@ -13,6 +13,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { PageShell } from "@/components/layout/PageShell";
 import { BarChart3 } from "lucide-react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 import { HASH_MAP, TAB_TO_PARAM, S } from "./types";
 import type { MarketTab } from "./types";
@@ -28,6 +29,7 @@ import WatchlistsTab from "./components/tabs/WatchlistsTab";
 import SignalsTab from "./components/tabs/SignalsTab";
 
 function MarketIntelligenceInner() {
+  const isMobile = useIsMobile();
   const { isAuthenticated, isLoading, user, token } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();

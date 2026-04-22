@@ -15,6 +15,7 @@ import type { BucketResult, ScenarioTotalResult } from "../../api/types";
 import HelpPanel from "../../components/layout/HelpPanel";
 import { PORTFOLIO_RISK_HELP } from "../../lib/helpContent";
 import { PageShell } from "@/components/layout/PageShell";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { BarChart3, TrendingDown, Shield, Activity, AlertTriangle, ChevronRight } from "lucide-react";
 
 const RISK_API = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api"}/v1/risk`;
@@ -499,6 +500,7 @@ function DataSourceBadge({ isLive }: { isLive: boolean }) {
    ═══════════════════════════════════════════════════════ */
 
 export default function PortfolioRisk() {
+  const isMobile = useIsMobile();
   const _planAllowed = usePlanRedirect("enterprise");
   const renderTs = useRenderTs();
   const router = useRouter();
@@ -615,7 +617,8 @@ export default function PortfolioRisk() {
 
       {/* ══════════ HEADER — Navy gradient ══════════ */}
       <header style={{
-        display: "flex", alignItems: "center", gap: 16, height: 64,
+        display: "flex", alignItems: "center", gap: 16, height: isMobile ? "auto" : 64,
+        flexWrap: isMobile ? "wrap" : "nowrap",
         padding: "0 28px", background: C.headerGradient, flexShrink: 0,
         borderBottom: "1px solid rgba(255,255,255,0.08)",
       }}>
@@ -665,7 +668,8 @@ export default function PortfolioRisk() {
       {/* ══════════ TAB BAR ══════════ */}
       <div style={{
         display: "flex", alignItems: "center", background: C.cardBg,
-        borderBottom: `1px solid ${C.border}`, padding: "0 28px", height: 46, flexShrink: 0, gap: 2,
+        borderBottom: `1px solid ${C.border}`, padding: "0 28px", height: isMobile ? "auto" : 46, flexShrink: 0, gap: 2,
+        flexWrap: isMobile ? "wrap" : "nowrap",
       }}>
         {tabDefs.map((t, i) => {
           const Icon = t.icon;
@@ -695,13 +699,13 @@ export default function PortfolioRisk() {
 
       {/* Error/Warning banners */}
       {loadErr && (
-        <div style={{ padding: "10px 28px", background: C.redSoft, borderBottom: `1px solid ${C.red}`, display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ padding: "10px 28px", background: C.redSoft, borderBottom: `1px solid ${C.red}`, display: "flex", alignItems: "center", gap: 12, flexWrap: isMobile ? "wrap" : "nowrap" }}>
           <span style={{ fontFamily: C.fontMono, fontSize: 12, color: C.red, fontWeight: 700 }}>API ERROR: {loadErr}</span>
           <button onClick={loadPositions} style={{ fontFamily: C.fontMono, fontSize: 11, color: C.red, border: `1px solid ${C.red}`, background: "transparent", padding: "3px 12px", cursor: "pointer", borderRadius: 6 }}>RETRY</button>
         </div>
       )}
       {!isLive && (
-        <div style={{ padding: "10px 28px", background: C.amberSoft, borderBottom: `1px solid ${C.amber}20`, display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+        <div style={{ padding: "10px 28px", background: C.amberSoft, borderBottom: `1px solid ${C.amber}20`, display: "flex", alignItems: "center", gap: 14, flexShrink: 0, flexWrap: isMobile ? "wrap" : "nowrap" }}>
           <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.amber }} />
           <span style={{ fontFamily: C.fontMono, fontSize: 12, color: C.amber, fontWeight: 700 }}>NO ACTIVE CALCULATION</span>
           <span style={{ fontFamily: C.fontUI, fontSize: 13, color: C.textSecondary }}>Run the hedge engine from Position Desk to populate live analytics.</span>
@@ -713,16 +717,16 @@ export default function PortfolioRisk() {
       )}
 
       {/* ══════════ CONTENT ══════════ */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div style={{ flex: 1, display: "flex", overflow: "hidden", flexWrap: isMobile ? "wrap" : "nowrap" }}>
       <div style={{ flex: 1, overflow: "auto", padding: 0 }}>
 
         {/* ══ TAB 0: R1-R8 DECOMPOSITION ══ */}
         {tab === 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", height: "100%" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 280px", height: "100%" }}>
             {/* Main panel */}
-            <div style={{ padding: "20px 24px", overflow: "auto" }}>
+            <div style={{ padding: isMobile ? "12px 16px" : "20px 24px", overflow: "auto" }}>
               {/* KPI row */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 20 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5, 1fr)", gap: 12, marginBottom: 20 }}>
                 {[
                   { label: "TOTAL VaR 99%", value: fmtM(totalVar99), color: C.red, sub: "1-day parametric", spark: sparkVaR, sparkColor: C.red },
                   { label: "TOTAL CVaR 99%", value: fmtM(totalCvar99), color: C.red, sub: "Expected shortfall" },
@@ -750,6 +754,7 @@ export default function PortfolioRisk() {
                   <span style={{ fontFamily: C.fontHead, fontSize: 14, fontWeight: 700, color: C.textPrimary }}>Risk Dimension Decomposition</span>
                   <span style={{ fontFamily: C.fontMono, fontSize: 11, color: C.textTertiary }}>8 dimensions · 99% confidence · 1-day horizon</span>
                 </div>
+                <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: C.headerGradient }}>
@@ -816,6 +821,7 @@ export default function PortfolioRisk() {
                     </tr>
                   </tbody>
                 </table>
+                </div>
               </Card>
             </div>
 
@@ -836,7 +842,7 @@ export default function PortfolioRisk() {
               </Card>
 
               {/* Rings row */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 6, marginBottom: 14 }}>
                 <ProgressRing value={hedgeCoverPct} max={100} color={C.green} label="HEDGE" size={64} />
                 <ProgressRing value={activeRisks} max={8} color={C.blueMid} label="ACTIVE" size={64} />
                 <ProgressRing value={riskScore} max={100} color={riskScore >= 70 ? C.green : C.amber} label="HEALTH" size={64} />
@@ -877,8 +883,8 @@ export default function PortfolioRisk() {
 
         {/* ══ TAB 1: POSITION LEDGER ══ */}
         {tab === 1 && (
-          <div style={{ padding: "20px 24px", overflow: "auto" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          <div style={{ padding: isMobile ? "12px 16px" : "20px 24px", overflow: "auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: isMobile ? "wrap" : "nowrap" }}>
               <BarChart3 size={18} color={C.blueMid} />
               <span style={{ fontFamily: C.fontHead, fontSize: 15, fontWeight: 700, color: C.textPrimary }}>Position Ledger</span>
               {loading
@@ -895,7 +901,7 @@ export default function PortfolioRisk() {
               : displayPositions && displayPositions.length > 0 ? (
                 <>
                   {/* Summary cards */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 16 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5, 1fr)", gap: 12, marginBottom: 16 }}>
                     {(() => {
                       const ar = displayPositions.filter(p => p.type === "AR");
                       const ap = displayPositions.filter(p => p.type === "AP");
@@ -919,6 +925,7 @@ export default function PortfolioRisk() {
 
                   {/* Position table */}
                   <Card>
+                    <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
                       <thead>
                         <tr style={{ background: C.headerGradient }}>
@@ -961,6 +968,7 @@ export default function PortfolioRisk() {
                         })}
                       </tbody>
                     </table>
+                    </div>
                   </Card>
                 </>
               ) : (
@@ -978,8 +986,8 @@ export default function PortfolioRisk() {
 
         {/* ══ TAB 2: RISK ATTRIBUTION ══ */}
         {tab === 2 && (
-          <div style={{ padding: "20px 24px", overflow: "auto" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <div style={{ padding: isMobile ? "12px 16px" : "20px 24px", overflow: "auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: isMobile ? "wrap" : "nowrap" }}>
               <TrendingDown size={18} color={C.blueMid} />
               <span style={{ fontFamily: C.fontHead, fontSize: 15, fontWeight: 700 }}>Risk Attribution</span>
               <span style={{ fontFamily: C.fontMono, fontSize: 11, color: C.textTertiary }}>P&L factor decomposition · {isLive ? "live" : "parametric"}</span>
@@ -991,13 +999,14 @@ export default function PortfolioRisk() {
                 <div style={{ fontFamily: C.fontMono, fontSize: 14, color: C.amber }}>No attribution data — run engine to compute.</div>
               </Card>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20 }}>
                 {/* Table */}
                 <div>
                   <Card style={{ marginBottom: 16 }}>
                     <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, fontFamily: C.fontMono, fontSize: 10, color: C.blueMid, fontWeight: 700, letterSpacing: "0.1em" }}>
                       FACTOR CONTRIBUTION
                     </div>
+                    <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
                       <thead>
                         <tr style={{ background: C.headerGradient }}>
@@ -1038,6 +1047,7 @@ export default function PortfolioRisk() {
                         </tr>
                       </tbody>
                     </table>
+                    </div>
                   </Card>
                 </div>
 
@@ -1077,8 +1087,8 @@ export default function PortfolioRisk() {
 
         {/* ══ TAB 3: HEDGE EFFICIENCY ══ */}
         {tab === 3 && (
-          <div style={{ padding: "20px 24px", overflow: "auto" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <div style={{ padding: isMobile ? "12px 16px" : "20px 24px", overflow: "auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: isMobile ? "wrap" : "nowrap" }}>
               <Shield size={18} color={C.blueMid} />
               <span style={{ fontFamily: C.fontHead, fontSize: 15, fontWeight: 700 }}>Hedge Effectiveness Report</span>
               <span style={{ fontFamily: C.fontMono, fontSize: 11, color: C.textTertiary }}>IFRS 9 §6.4.1 · {isLive ? `${hedgeEfficiency.length} buckets` : "no active calc"}</span>
@@ -1108,6 +1118,7 @@ export default function PortfolioRisk() {
 
                 {/* Table */}
                 <Card style={{ marginBottom: 20 }}>
+                  <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
                       <tr style={{ background: C.headerGradient }}>
@@ -1147,10 +1158,11 @@ export default function PortfolioRisk() {
                       })}
                     </tbody>
                   </table>
+                  </div>
                 </Card>
 
                 {/* Bottom: IFRS checklist + Summary */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
                   <Card style={{ padding: "16px 20px" }}>
                     <div style={{ fontFamily: C.fontMono, fontSize: 10, color: C.blueMid, fontWeight: 700, letterSpacing: "0.1em", marginBottom: 12 }}>IFRS 9 §6.4.1 QUALIFICATION</div>
                     {["Economic relationship established", "Credit risk non-dominant", "Hedge ratio reflects actual quantities", "Designation documented at inception", "Prospective effectiveness assessed", "Ineffectiveness measured & disclosed"].map((c, i) => (
@@ -1186,8 +1198,8 @@ export default function PortfolioRisk() {
 
         {/* ══ TAB 4: MARGIN & VaR ══ */}
         {tab === 4 && (
-          <div style={{ padding: "20px 24px", overflow: "auto" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <div style={{ padding: isMobile ? "12px 16px" : "20px 24px", overflow: "auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: isMobile ? "wrap" : "nowrap" }}>
               <AlertTriangle size={18} color={C.blueMid} />
               <span style={{ fontFamily: C.fontHead, fontSize: 15, fontWeight: 700 }}>Margin & Concentration Limits</span>
               <span style={{ fontFamily: C.fontMono, fontSize: 11, color: C.textTertiary }}>SIMM IM · {riskSummary ? `RUN ${riskSummary.run_id.slice(0, 8).toUpperCase()}` : "no active run"}</span>
@@ -1216,6 +1228,7 @@ export default function PortfolioRisk() {
                       <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, fontFamily: C.fontMono, fontSize: 10, color: C.blueMid, fontWeight: 700, letterSpacing: "0.1em" }}>
                         SIMM-STYLE MARGIN REQUIREMENTS
                       </div>
+                      <div style={{ overflowX: "auto" }}>
                       <table style={{ width: "100%", borderCollapse: "collapse" }}>
                         <thead>
                           <tr style={{ background: C.headerGradient }}>
@@ -1240,10 +1253,11 @@ export default function PortfolioRisk() {
                           ))}
                         </tbody>
                       </table>
+                      </div>
                     </Card>
 
                     {/* Margin KPIs */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10, marginBottom: 16 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr 1fr" : "repeat(6, 1fr)", gap: 10, marginBottom: 16 }}>
                       {[
                         { label: "TOTAL IM", value: fmtUSD(riskSummary.margin.total_initial_margin), color: C.amber },
                         { label: "MAINTENANCE", value: fmtUSD(riskSummary.margin.total_maintenance_margin), color: C.textSecondary },
@@ -1272,11 +1286,12 @@ export default function PortfolioRisk() {
                 )}
 
                 {/* Concentration + Effectiveness */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
                   <div>
                     <Card>
                       <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, fontFamily: C.fontMono, fontSize: 10, color: C.blueMid, fontWeight: 700, letterSpacing: "0.1em" }}>CONCENTRATION LIMITS</div>
                       {riskSummary.concentration && riskSummary.concentration.checks.length > 0 ? (
+                        <div style={{ overflowX: "auto" }}>
                         <table style={{ width: "100%", borderCollapse: "collapse" }}>
                           <thead><tr style={{ background: C.headerGradient }}>
                             {["INSTRUMENT", "NOTIONAL", "CONC %", "LIMIT", "STATUS"].map(h => (
@@ -1305,6 +1320,7 @@ export default function PortfolioRisk() {
                             })}
                           </tbody>
                         </table>
+                        </div>
                       ) : <div style={{ fontFamily: C.fontMono, fontSize: 12, color: C.textTertiary, padding: 20 }}>No concentration data</div>}
                     </Card>
                   </div>
@@ -1362,8 +1378,9 @@ export default function PortfolioRisk() {
                           MONTE CARLO VaR/CVaR · {riskSummary.monte_carlo.simulation_count.toLocaleString()} SIMULATIONS
                         </span>
                       </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 0 }}>
                         <div style={{ padding: "16px", borderRight: `1px solid ${C.border}` }}>
+                          <div style={{ overflowX: "auto" }}>
                           <table style={{ width: "100%", borderCollapse: "collapse" }}>
                             <thead><tr style={{ background: C.headerGradient }}>
                               {["CONF", "HEDGED VaR", "UNHEDGED VaR", "HEDGED CVaR", "UNHEDGED CVaR"].map(h => (
@@ -1382,8 +1399,9 @@ export default function PortfolioRisk() {
                               ))}
                             </tbody>
                           </table>
+                          </div>
 
-                          <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                          <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 8 }}>
                             {[
                               { label: "MEAN HEDGED", value: fmtUSD(riskSummary.monte_carlo.mean_hedged_pnl), color: C.green },
                               { label: "MEAN UNHEDGED", value: fmtUSD(riskSummary.monte_carlo.mean_unhedged_pnl), color: C.red },

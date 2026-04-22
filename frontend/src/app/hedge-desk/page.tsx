@@ -8,6 +8,7 @@ import HedgeDeskPipeline from "@/components/hedge-desk/HedgeDeskPipeline";
 import HedgeDeskOverview from "@/components/hedge-desk/HedgeDeskOverview";
 
 import { PageShell } from "@/components/layout/PageShell";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { Play } from "lucide-react";
 
 const HD = {
@@ -34,6 +35,7 @@ function HedgeDeskInner() {
   const mode = searchParams.get("mode"); // "run" = active pipeline, null = overview
   const [governanceMode, setGovernanceMode] = useState<GovernanceMode>("solo");
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const isMobile = useIsMobile();
 
   // Auth guard — wait for silent refresh to complete before redirecting
   useEffect(() => {
@@ -86,14 +88,15 @@ function HedgeDeskInner() {
     }}>
       {/* Page header */}
       <header style={{
-        height: 44,
+        height: isMobile ? "auto" : 44,
         flexShrink: 0,
         display: "flex",
         alignItems: "center",
         gap: 10,
-        padding: "0 20px",
+        padding: isMobile ? "8px 12px" : "0 20px",
         background: HD.bgPanel,
         borderBottom: `1px solid ${HD.rim}`,
+        flexWrap: isMobile ? "wrap" : "nowrap",
       }}>
         <span style={{
           fontFamily: HD.fontMono,

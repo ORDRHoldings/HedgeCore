@@ -9,6 +9,7 @@ import {
 import type {
   ConsolidatedPosition, EntityPositionResponse, AccountPositionRow,
 } from "@/lib/api/cashClient";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -22,6 +23,7 @@ const S = {
 type Tab = "CONSOLIDATED" | "BY_ENTITY" | "BY_ACCOUNT";
 
 export default function CashPositionsPage() {
+  const isMobile = useIsMobile();
   const { token } = useAuth();
   const [tab, setTab] = useState<Tab>("CONSOLIDATED");
   const [consolidated, setConsolidated] = useState<ConsolidatedPosition | null>(null);
@@ -58,9 +60,9 @@ export default function CashPositionsPage() {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <div style={{ padding: 24, fontFamily: S.fontUI }}>
+    <div style={{ padding: isMobile ? 12 : 24, fontFamily: S.fontUI }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: isMobile ? "wrap" : "nowrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <BarChart2 size={18} color="var(--accent-primary)" />
           <div>
@@ -87,7 +89,7 @@ export default function CashPositionsPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid var(--border-rim)" }}>
+      <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid var(--border-rim)", flexWrap: isMobile ? "wrap" : "nowrap" }}>
         {(["CONSOLIDATED", "BY_ENTITY", "BY_ACCOUNT"] as Tab[]).map((t) => (
           <button
             key={t}
@@ -124,7 +126,7 @@ export default function CashPositionsPage() {
 
       {/* CONSOLIDATED tab */}
       {!loading && tab === "CONSOLIDATED" && consolidated && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
           {consolidated.positions.map((p) => (
             <div
               key={p.currency}

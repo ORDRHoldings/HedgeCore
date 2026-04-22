@@ -1,5 +1,6 @@
 "use client";
 import React, { Suspense, useCallback, useEffect, useState } from "react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { useAuth } from "@/lib/authContext";
 import {
   listObligations, createObligation, cancelObligation,
@@ -33,6 +34,7 @@ const statusColor: Record<string, string> = {
 };
 
 function NettingInner() {
+  const isMobile = useIsMobile();
   const { token, user } = useAuth();
   const [tab, setTab] = useState<Tab>("OBLIGATIONS");
   const [obligations, setObligations] = useState<IntercompanyObligation[]>([]);
@@ -151,7 +153,7 @@ function NettingInner() {
 
           {showForm && (
             <div style={{ background: S.bgSub, border: `1px solid ${S.rim}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
                 <label style={{ fontSize: 12, fontFamily: S.fontMono }}>
                   DEBTOR ENTITY
                   <select value={form.debtor_entity_id} onChange={e => setForm({ ...form, debtor_entity_id: e.target.value })}
@@ -287,7 +289,7 @@ function NettingInner() {
         <div>
           {savings ? (
             <div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
                 <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 8, padding: 20 }}>
                   <div style={{ fontSize: 11, fontFamily: S.fontMono, color: "#9ca3af", fontWeight: 600, letterSpacing: 0.5, marginBottom: 8 }}>TOTAL SAVINGS</div>
                   <div style={{ fontSize: 28, fontFamily: S.fontMono, fontWeight: 700, color: "#10b981" }}>{fmtAmount(savings.total_savings)}</div>
@@ -336,6 +338,7 @@ function NettingInner() {
 }
 
 export default function IntercompanyNettingPage() {
+  const isMobile = useIsMobile();
   return (
     <Suspense fallback={<div style={{ padding: 40, color: "#6b7280" }}>Loading...</div>}>
       <NettingInner />

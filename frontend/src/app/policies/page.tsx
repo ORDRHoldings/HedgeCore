@@ -16,6 +16,7 @@ import { Shield } from "lucide-react";
 import { T } from "@/lib/design/tokens";
 
 import { PageShell } from "@/components/layout/PageShell";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 // ── Lazy-loaded tab components ──────────────────────────────────────────────
 const PolicyLibraryTab  = lazy(() => import("@/components/policy/PolicyLibraryTab"));
@@ -57,6 +58,7 @@ function TabLoading() {
 
 // ── Inner component (reads useSearchParams) ─────────────────────────────────
 function PoliciesPageInner() {
+  const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const router = useRouter();
   const rawTab = searchParams.get("tab");
@@ -87,7 +89,7 @@ function PoliciesPageInner() {
         display: "flex",
         alignItems: "center",
         gap: 12,
-        padding: "14px 24px",
+        padding: isMobile ? "14px 12px" : "14px 24px",
         borderBottom: `1px solid ${T.rim}`,
         background: T.bgPanel,
       }}>
@@ -119,10 +121,11 @@ function PoliciesPageInner() {
         display: "flex",
         alignItems: "stretch",
         gap: 0,
-        padding: "0 24px",
+        padding: isMobile ? "0 12px" : "0 24px",
         background: T.bgPanel,
         borderBottom: `1px solid ${T.rim}`,
-        height: 38,
+        height: isMobile ? "auto" : 38,
+        flexWrap: isMobile ? "wrap" : "nowrap",
       }}>
         {TABS.map(({ key, label }) => {
           const isActive = currentTab === key;

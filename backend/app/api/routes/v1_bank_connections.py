@@ -8,7 +8,7 @@ from sqlalchemy import select
 from app.core.dependencies import get_current_user, get_session
 from app.models.cash import BankConnection, BankConnectionStatus
 from app.models.user import User
-from app.schemas_v1.cash import AuthUrlRequest, AuthUrlResponse, OAuthCallbackRequest, BankConnectionResponse
+from app.schemas_v1.cash import AuthUrlResponse, OAuthCallbackRequest, BankConnectionResponse
 from app.services.bank_connection_service import get_auth_url, handle_callback, revoke_connection
 
 router = APIRouter(prefix="/v1/cash/connections", tags=["cash-connections"])

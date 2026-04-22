@@ -2,7 +2,6 @@
 """v1 cash forecast — 13w/12m rolling forecasts, scenarios, gaps, variance."""
 import uuid
 from datetime import date
-from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 

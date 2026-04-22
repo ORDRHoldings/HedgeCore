@@ -30,15 +30,15 @@ services:
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: hedgecalc
-      POSTGRES_PASSWORD: hedgecalc
-      POSTGRES_DB: hedgecalc
+      POSTGRES_USER: ${POSTGRES_USER:-hedgecalc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hedgecalc}
+      POSTGRES_DB: ${POSTGRES_DB:-hedgecalc}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U hedgecalc -d hedgecalc"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hedgecalc} -d ${POSTGRES_DB:-hedgecalc}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -53,8 +53,8 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: "postgresql+asyncpg://hedgecalc:hedgecalc@postgres:5432/hedgecalc"
-      JWT_SECRET: "dev-secret-key-at-least-32-characters-long-local-only"
+      DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-hedgecalc}:${POSTGRES_PASSWORD:-hedgecalc}@postgres:5432/${POSTGRES_DB:-hedgecalc}"
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-key-at-least-32-characters-long-local-only}
       ENV: "development"
       CORS_ALLOW_ORIGINS: '["http://localhost:3000","http://127.0.0.1:3000"]'
       ALLOW_INDICATIVE_FALLBACK: "true"

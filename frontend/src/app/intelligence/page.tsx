@@ -10,6 +10,7 @@ import {
   type IntelligenceSettingsResponse,
 } from "@/lib/api/intelligenceClient";
 import { Brain } from "lucide-react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 const S = {
   mono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -26,6 +27,7 @@ const S = {
 } as const;
 
 export default function IntelligencePage() {
+  const isMobile = useIsMobile();
   const { user, token } = useAuth();
   const [settings, setSettings] = useState<IntelligenceSettingsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +65,7 @@ export default function IntelligencePage() {
   const canToggle = user?.roles?.includes("admin") || user?.roles?.includes("cfo") || user?.is_superuser;
 
   return (
-    <div style={{ minHeight: "100vh", background: S.deep, padding: 32, fontFamily: S.ui }}>
+    <div style={{ minHeight: "100vh", background: S.deep, padding: isMobile ? 12 : 32, fontFamily: S.ui }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
         <div style={{
@@ -95,7 +97,7 @@ export default function IntelligencePage() {
       )}
 
       {settings && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, maxWidth: 800 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16, maxWidth: 800 }}>
           {/* Enable/Disable card */}
           <div style={{ gridColumn: "span 3", background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 6, padding: 20 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>

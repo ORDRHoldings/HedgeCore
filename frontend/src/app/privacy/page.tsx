@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChevronLeft, Lock } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 const ACCENT = C.accent;
 
@@ -58,11 +59,12 @@ const SECTIONS = [
 ];
 
 export default function PrivacyPage() {
+  const isMobile = useIsMobile();
   return (
     <MarketingLayout>
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
-      <section style={{ padding: "80px 48px 64px", maxWidth: 860, margin: "0 auto" }}>
+      <section style={{ padding: isMobile ? "60px 24px 40px" : "80px 48px 64px", maxWidth: 860, margin: "0 auto" }}>
         <Link
           href="/"
           style={{
@@ -85,7 +87,7 @@ export default function PrivacyPage() {
         </div>
 
         <h1 style={{
-          fontFamily: F.heading, fontSize: 48, fontWeight: 800,
+          fontFamily: F.heading, fontSize: isMobile ? 32 : 48, fontWeight: 800,
           letterSpacing: "-0.03em", lineHeight: 1.1,
           margin: "0 0 16px", color: C.text,
         }}>
@@ -113,7 +115,7 @@ export default function PrivacyPage() {
       <div style={{ borderTop: `1px solid ${C.border}`, maxWidth: 860, margin: "0 auto" }} />
 
       {/* ── Policy Sections ─────────────────────────────────────────────────── */}
-      <section style={{ padding: "64px 48px", maxWidth: 860, margin: "0 auto" }}>
+      <section style={{ padding: isMobile ? "40px 24px" : "64px 48px", maxWidth: 860, margin: "0 auto" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 52 }}>
           {SECTIONS.map((section) => (
             <div key={section.heading}>
@@ -146,7 +148,7 @@ export default function PrivacyPage() {
       <section style={{
         background: C.bgAlt,
         borderTop: `1px solid ${C.border}`,
-        padding: "48px 48px",
+        padding: isMobile ? "32px 24px" : "48px 48px",
         textAlign: "center",
       }}>
         <p style={{

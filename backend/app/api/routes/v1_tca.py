@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
-from app.core.dependencies import get_current_user
 from app.core.plan_enforcement import require_plan_tier
 from app.models.user import User
 from app.schemas_v1.tca import (

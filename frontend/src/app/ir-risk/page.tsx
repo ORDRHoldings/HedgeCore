@@ -1,6 +1,7 @@
 // frontend/src/app/ir-risk/page.tsx
 "use client";
 import { useEffect, useState } from "react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { TrendingDown, RefreshCw, CheckCircle, XCircle } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { listSwaps, getDV01Ladder, mtmAll } from "@/lib/api/debtClient";
@@ -17,6 +18,7 @@ const TENOR_BUCKETS = ["1Y", "2Y", "5Y", "10Y", "30Y"] as const;
 
 export default function IRRiskPage() {
   const { token } = useAuth();
+  const isMobile = useIsMobile();
   const [swaps, setSwaps] = useState<IRSwap[]>([]);
   const [ladder, setLadder] = useState<DV01Ladder | null>(null);
   const [mtmLoading, setMtmLoading] = useState(false);
@@ -60,7 +62,7 @@ export default function IRRiskPage() {
         </button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
         {/* Left — DV01 Ladder */}
         <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 6, padding: 16 }}>
           <div style={{ fontSize: 11, fontFamily: S.fontMono, color: "#9ca3af", letterSpacing: 1, marginBottom: 16 }}>DV01 LADDER ($ PER BP)</div>

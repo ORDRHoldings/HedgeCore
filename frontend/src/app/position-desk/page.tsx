@@ -17,6 +17,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { recommendPolicyForPosition } from "@/utils/policyRecommender";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -339,6 +340,7 @@ function PolicySelectorRow({
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function PositionDeskPage() {
+  const isMobile = useIsMobile();
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const { user, token } = useAuth();
@@ -898,7 +900,7 @@ export default function PositionDeskPage() {
 
       {/* ── Table Header (sticky) ───────────────────────────────────────────── */}
       <div style={{
-        display: "grid", gridTemplateColumns: GRID_COLS, padding: "0 20px",
+        display: "grid", gridTemplateColumns: isMobile ? "32px 80px 80px minmax(100px,1fr) 40px 80px 80px 60px 60px 1fr" : GRID_COLS, padding: "0 20px",
         background: S.bgDeep, borderBottom: `2px solid ${S.rim}`, flexShrink: 0,
         position: "sticky", top: 0, zIndex: 10,
       }}>
@@ -942,7 +944,7 @@ export default function PositionDeskPage() {
               <div
                 onClick={() => setExpandedRow(isExpanded ? null : p.id)}
                 style={{
-                  display: "grid", gridTemplateColumns: GRID_COLS, padding: "0 20px",
+                  display: "grid", gridTemplateColumns: isMobile ? "32px 80px 80px minmax(100px,1fr) 40px 80px 80px 60px 60px 1fr" : GRID_COLS, padding: "0 20px",
                   borderBottom: isExpanded ? "none" : `1px solid ${S.soft}`,
                   borderLeft: `3px solid ${cfg.borderColor}`,
                   background: isSelected

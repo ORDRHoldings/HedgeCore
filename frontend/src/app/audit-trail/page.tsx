@@ -7,6 +7,7 @@ import { dashboardFetch } from "@/lib/api/dashboardClient";
 import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { AUDIT_HELP } from "@/lib/help";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 import { PageShell } from "@/components/layout/PageShell";
 import { Globe } from "lucide-react";
@@ -476,6 +477,7 @@ function EventRow({ event, expanded, onToggle }: {
   expanded: boolean;
   onToggle: () => void;
 }) {
+  const isMobile = useIsMobile();
   const typeColor = TYPE_COLORS[event.type];
 
   return (
@@ -540,7 +542,7 @@ function EventRow({ event, expanded, onToggle }: {
         <div style={{ padding: "0 16px 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
           {/* Metadata grid */}
           <div style={{
-            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8,
+            display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 8,
             padding: "12px 14px", background: S.bgPanel, border: `1px solid ${S.rim}`,
           }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -624,6 +626,7 @@ export default function AuditTrailPage() {
   const renderTs = useRenderTs();
   const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   // Auth guard
   useEffect(() => {
@@ -808,12 +811,12 @@ export default function AuditTrailPage() {
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <div style={{
           flex: 1, overflowY: "auto",
-          padding: "20px 24px 16px",
+          padding: isMobile ? "20px 12px 16px" : "20px 24px 16px",
           display: "flex", flexDirection: "column", gap: 16,
         }}>
 
           {/* KPI Summary Row */}
-          <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ display: "flex", gap: 12, flexWrap: isMobile ? "wrap" : "nowrap" }}>
             <KpiCard
               label="Total Events"
               value={loading ? "…" : String(events.length)}
@@ -975,32 +978,34 @@ export default function AuditTrailPage() {
             </button>
           </div>
 
-          {/* Timeline header */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "140px 90px 170px 1fr 100px",
-            padding: "6px 16px", gap: 12,
-            borderBottom: `1px solid ${S.rim}`,
-          }}>
-            {["TIMESTAMP", "TYPE", "ACTOR", "DESCRIPTION", "HASH"].map((h) => (
-              <span key={h} style={{
-                fontFamily:    S.fontMono,
-                fontSize:      "0.625rem",
-                fontWeight:    700,
-                letterSpacing: "0.08em",
-                color:         S.tertiary,
-                textAlign:     h === "HASH" ? "right" : "left",
-              }}>
-                {h}
-              </span>
-            ))}
-          </div>
+          {/* Table wrapper */}
+          <div style={{ overflowX: "auto", display: "flex", flexDirection: "column", flex: 1 }}>
+            {/* Timeline header */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "140px 90px 170px 1fr 100px",
+              padding: "6px 16px", gap: 12,
+              borderBottom: `1px solid ${S.rim}`,
+            }}>
+              {["TIMESTAMP", "TYPE", "ACTOR", "DESCRIPTION", "HASH"].map((h) => (
+                <span key={h} style={{
+                  fontFamily:    S.fontMono,
+                  fontSize:      "0.625rem",
+                  fontWeight:    700,
+                  letterSpacing: "0.08em",
+                  color:         S.tertiary,
+                  textAlign:     h === "HASH" ? "right" : "left",
+                }}>
+                  {h}
+                </span>
+              ))}
+            </div>
 
-          {/* Event list */}
-          <div style={{
-            background: S.bgPanel, border: `1px solid ${S.rim}`,
-            flex: 1, overflow: "auto",
-          }}>
+            {/* Event list */}
+            <div style={{
+              background: S.bgPanel, border: `1px solid ${S.rim}`,
+              flex: 1, overflowY: "auto",
+            }}>
             {/* Loading */}
             {loading && (
               <div style={{ padding: "40px 24px", textAlign: "center" }}>
@@ -1063,8 +1068,9 @@ export default function AuditTrailPage() {
             )}
           </div>
         </div>
+      </div>
 
-        <HelpPanelV2 module={AUDIT_HELP} storageKey="audit-trail" />
+      <HelpPanelV2 module={AUDIT_HELP} storageKey="audit-trail" />
       </div>
 
       {/* Footer (32px) */}

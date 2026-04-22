@@ -10,6 +10,7 @@ import { listPositionsThunk } from "@/lib/store/slices/positionSlice";
 import type { PositionRow } from "@/api/positionClient";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { TERMINAL_HELP } from "@/lib/helpContent";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 const S = {
   bgDeep: "var(--bg-deep,#0a0c10)", bgPanel: "var(--bg-panel,#0f1117)",
@@ -83,6 +84,7 @@ export default function TerminalPage() {
   const { result } = useHedge();
   const positions = useSelector((s: RootState) => s.positions.positions);
   const loading = useSelector((s: RootState) => s.positions.loading);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (token && positions.length === 0) dispatch(listPositionsThunk({ token }));
@@ -164,9 +166,9 @@ export default function TerminalPage() {
       </div>
 
       {/* Main content */}
-      <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: isMobile ? "column" : "row", minHeight: 0, overflow: "hidden" }}>
         {/* Positions feed - 60% */}
-        <div style={{ flex: "0 0 60%", display: "flex", flexDirection: "column", borderRight: `1px solid ${S.rim}`, minHeight: 0 }}>
+        <div style={{ flex: isMobile ? "1 1 auto" : "0 0 60%", display: "flex", flexDirection: "column", borderRight: isMobile ? "none" : `1px solid ${S.rim}`, borderBottom: isMobile ? `1px solid ${S.rim}` : "none", minHeight: 0 }}>
           <div style={{ padding: "7px 16px", borderBottom: `1px solid ${S.rim}`, background: S.bgSub, display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: "0.5625rem", letterSpacing: "0.1em", color: S.tertiary }}>POSITIONS FEED</span>
             <span style={{ marginLeft: "auto", fontSize: "0.5625rem", color: S.cyan, padding: "1px 6px",
@@ -175,10 +177,12 @@ export default function TerminalPage() {
               {positions.length} POSITIONS
             </span>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: cols.map(c => c.w).join(" "), padding: "5px 16px", borderBottom: `1px solid ${S.rim}`, background: S.bgDeep }}>
-            {cols.map(c => (<span key={c.label} style={{ fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.08em" }}>{c.label}</span>))}
-          </div>
-          <div style={{ flex: 1, overflowY: "auto" }}>
+          <div style={{ overflowX: "auto", flex: 1 }}>
+            <div style={{ minWidth: 650 }}>
+              <div style={{ display: "grid", gridTemplateColumns: cols.map(c => c.w).join(" "), padding: "5px 16px", borderBottom: `1px solid ${S.rim}`, background: S.bgDeep }}>
+                {cols.map(c => (<span key={c.label} style={{ fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.08em" }}>{c.label}</span>))}
+              </div>
+              <div>
             {loading ? (
               <div style={{ padding: "24px 16px", color: S.tertiary, fontSize: "0.6875rem" }}>Loading...</div>
             ) : positions.length === 0 ? (
@@ -197,11 +201,13 @@ export default function TerminalPage() {
                   <span style={{ fontSize: "0.6875rem", color: p.status === "CONFIRMED" ? S.green : S.amber }}>{p.status}</span>
                   <span style={{ fontSize: "0.6875rem", color: execColor(p.execution_status), fontWeight: 600 }}>{p.execution_status}</span>
                 </div>))
-            }
+                }
+              </div>
+            </div>
           </div>
         </div>
         {/* Activity log - 40% */}
-        <div style={{ flex: "0 0 40%", display: "flex", flexDirection: "column", minHeight: 0 }}>
+        <div style={{ flex: isMobile ? "1 1 auto" : "0 0 40%", display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ padding: "7px 16px", borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
             <span style={{ fontSize: "0.5625rem", letterSpacing: "0.1em", color: S.tertiary }}>ACTIVITY LOG</span>
           </div>

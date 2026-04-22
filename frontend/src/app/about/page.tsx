@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 const ACCENT = C.accent;
 
@@ -46,11 +47,12 @@ const PRINCIPLES = [
 ];
 
 export default function AboutPage() {
+  const isMobile = useIsMobile();
   return (
     <MarketingLayout>
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
-      <section style={{ padding: "80px 48px 64px", maxWidth: 1100, margin: "0 auto" }}>
+      <section style={{ padding: `80px ${isMobile ? 24 : 48}px 64px`, maxWidth: 1100, margin: "0 auto" }}>
         <Link
           href="/"
           style={{
@@ -93,7 +95,7 @@ export default function AboutPage() {
         background: C.bgAlt,
         borderTop: `1px solid ${C.border}`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "80px 48px",
+        padding: `80px ${isMobile ? 24 : 48}px`,
       }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{
@@ -111,7 +113,7 @@ export default function AboutPage() {
           </h2>
 
           <div className="about-mission-grid" style={{
-            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48,
+            display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 48,
             alignItems: "start",
           }}>
             <div>
@@ -159,7 +161,7 @@ export default function AboutPage() {
       </section>
 
       {/* ── Products ───────────────────────────────────────────────────────── */}
-      <section style={{ padding: "80px 48px", maxWidth: 1100, margin: "0 auto" }}>
+      <section style={{ padding: `80px ${isMobile ? 24 : 48}px`, maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginBottom: 12 }}>
           <div style={{
             fontFamily: F.mono, fontSize: 11, fontWeight: 700,
@@ -184,7 +186,7 @@ export default function AboutPage() {
         </p>
 
         <div className="about-products-grid" style={{
-          display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 1,
+          display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 1,
           border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden",
           background: C.border,
         }}>
@@ -216,7 +218,7 @@ export default function AboutPage() {
 
       {/* ── How We Think About AI ───────────────────────────────────────────── */}
       <section style={{
-        background: C.bgDark, padding: "80px 48px",
+        background: C.bgDark, padding: `80px ${isMobile ? 24 : 48}px`,
       }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{
@@ -234,7 +236,7 @@ export default function AboutPage() {
           </h2>
 
           <div className="about-ai-grid" style={{
-            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48,
+            display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 48,
             alignItems: "start",
           }}>
             <div>
@@ -301,7 +303,7 @@ export default function AboutPage() {
       </section>
 
       {/* ── Architecture Principles ─────────────────────────────────────────── */}
-      <section style={{ padding: "80px 48px", maxWidth: 1100, margin: "0 auto" }}>
+      <section style={{ padding: `80px ${isMobile ? 24 : 48}px`, maxWidth: 1100, margin: "0 auto" }}>
         <div style={{
           fontFamily: F.mono, fontSize: 11, fontWeight: 700,
           letterSpacing: "0.15em", color: C.textMuted,
@@ -317,7 +319,7 @@ export default function AboutPage() {
         </h2>
 
         <div className="about-principles-grid" style={{
-          display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24,
+          display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 24,
         }}>
           {PRINCIPLES.map((p) => (
             <div
@@ -362,7 +364,7 @@ export default function AboutPage() {
       }}>
         <div style={{
           maxWidth: 1200, margin: "0 auto",
-          display: "grid", gridTemplateColumns: "repeat(5, 1fr)",
+          display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5, 1fr)",
         }}>
           {[
             { v: "10",    l: "Products" },
@@ -397,7 +399,7 @@ export default function AboutPage() {
 
       {/* ── Contact ────────────────────────────────────────────────────────── */}
       <section style={{
-        padding: "80px 48px", textAlign: "center",
+        padding: `80px ${isMobile ? 24 : 48}px`, textAlign: "center",
         background: C.bg,
       }}>
         <div style={{ maxWidth: 520, margin: "0 auto" }}>
@@ -442,16 +444,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <style>{`
-        @media (max-width: 900px) {
-          .about-mission-grid     { grid-template-columns: 1fr !important; }
-          .about-ai-grid          { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 768px) {
-          .about-products-grid    { grid-template-columns: 1fr !important; }
-          .about-principles-grid  { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+
     </MarketingLayout>
   );
 }

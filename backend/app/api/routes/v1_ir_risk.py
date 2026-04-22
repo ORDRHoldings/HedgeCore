@@ -14,9 +14,9 @@ from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.services.ir_swap_service import (
     create_swap, get_dv01_ladder, list_swaps, mark_to_market,
-    mark_to_market_all, terminate_swap,
+    mark_to_market_all,
 )
-from app.services.ir_hedge_service import get_evidence_bundle, run_effectiveness_test
+from app.services.ir_hedge_service import run_effectiveness_test
 
 router = APIRouter(prefix="/v1/ir-risk", tags=["ir-risk"])
 

@@ -13,7 +13,6 @@ Endpoints:
 
 All endpoints: superuser only. Non-superusers get 403.
 """
-import importlib
 import logging
 import os
 import platform
@@ -26,7 +25,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.db import async_engine, get_async_session
+from app.core.db import get_async_session
 from app.core.dependencies import require_superuser
 from app.models.user import User
 

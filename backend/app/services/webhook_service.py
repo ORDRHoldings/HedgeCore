@@ -274,7 +274,7 @@ async def _prune_delivery_log(
     Delete WebhookDeliveryLog rows for endpoint_id older than the last `keep` entries.
     Safe to call on every delivery — no-ops if row count <= keep.
     """
-    from sqlalchemy import select, delete, func
+    from sqlalchemy import select, delete
     from app.models.webhook import WebhookDeliveryLog
 
     # Find the created_at cutoff: the (keep+1)-th newest row

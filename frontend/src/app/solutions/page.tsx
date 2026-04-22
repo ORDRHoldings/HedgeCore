@@ -3,6 +3,7 @@
 import Link from "next/link";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import {
   Building2, ShieldAlert, BarChart3, Landmark, Umbrella, Flame,
   ArrowRight, Shield, Zap, Globe, BookOpen, Activity, TrendingUp,
@@ -155,12 +156,13 @@ const PLATFORM_STATS = [
 ];
 
 export default function SolutionsPage() {
+  const isMobile = useIsMobile();
   return (
     <MarketingLayout>
 
       {/* Hero */}
       <section style={{
-        padding: "100px 48px 64px",
+        padding: `100px ${isMobile ? 24 : 48}px 64px`,
         textAlign: "center",
         background: C.bg,
       }}>
@@ -195,7 +197,7 @@ export default function SolutionsPage() {
         borderTop: `1px solid ${C.border}`,
         borderBottom: `1px solid ${C.border}`,
         background: "#F9FAFB",
-        padding: "0 48px",
+        padding: `0 ${isMobile ? 24 : 48}px`,
       }}>
         <div style={{
           maxWidth: 1100, margin: "0 auto",
@@ -220,10 +222,10 @@ export default function SolutionsPage() {
       </section>
 
       {/* Solutions Grid */}
-      <section style={{ padding: "80px 48px", maxWidth: 1200, margin: "0 auto" }}>
+      <section style={{ padding: `80px ${isMobile ? 24 : 48}px`, maxWidth: 1200, margin: "0 auto" }}>
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(2, 1fr)",
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
           gap: 24,
         }}>
           {SOLUTIONS.map((s) => {
@@ -354,7 +356,7 @@ export default function SolutionsPage() {
       </section>
 
       {/* Architecture diagram */}
-      <section style={{ background: C.bgAlt, padding: "80px 48px" }}>
+      <section style={{ background: C.bgAlt, padding: `80px ${isMobile ? 24 : 48}px` }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <div style={{
@@ -453,7 +455,7 @@ export default function SolutionsPage() {
       </section>
 
       {/* Proof pillars */}
-      <section style={{ padding: "80px 48px" }}>
+      <section style={{ padding: `80px ${isMobile ? 24 : 48}px` }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <div style={{
@@ -471,7 +473,7 @@ export default function SolutionsPage() {
             </h2>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 20 }}>
             {[
               {
                 label: "CALCULATION INTEGRITY",
@@ -527,7 +529,7 @@ export default function SolutionsPage() {
 
       {/* Bottom CTA */}
       <section style={{
-        padding: "80px 48px",
+        padding: `80px ${isMobile ? 24 : 48}px`,
         textAlign: "center",
         background: C.accent,
       }}>
@@ -567,15 +569,7 @@ export default function SolutionsPage() {
         </div>
       </section>
 
-      <style>{`
-        @media(max-width:768px){
-          section{padding:60px 20px !important}
-          h1{font-size:36px !important}
-          h2{font-size:28px !important}
-          div[style*="grid-template-columns: repeat(2"]{grid-template-columns:1fr !important}
-          div[style*="grid-template-columns: repeat(3"]{grid-template-columns:1fr !important}
-        }
-      `}</style>
+
     </MarketingLayout>
   );
 }

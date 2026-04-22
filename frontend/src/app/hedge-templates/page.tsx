@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { BookCheck, Layers, Shuffle, Shield, GitBranch, Play, Trash2 } from "lucide-react";
 
 import { useAuth } from "@/lib/authContext";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import {
   HedgeTemplate,
   InstrumentLeg,
@@ -68,6 +69,7 @@ export default function HedgeTemplatesPage() {
   const [categoryFilter, setCategoryFilter] = useState<TemplateCategory | "ALL">("ALL");
   const [selected, setSelected] = useState<HedgeTemplate | null>(null);
   const [applyTarget, setApplyTarget] = useState<HedgeTemplate | null>(null);
+  const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -102,7 +104,7 @@ export default function HedgeTemplatesPage() {
   };
 
   return (
-    <div style={{ padding: 20, fontFamily: S.fontUI, color: S.textPri }}>
+    <div style={{ padding: isMobile ? 12 : 20, fontFamily: S.fontUI, color: S.textPri }}>
       {error && (
         <div style={{
           background: "rgba(229,62,62,0.1)",
@@ -115,7 +117,7 @@ export default function HedgeTemplatesPage() {
       {/* KPI strip */}
       {items && (
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))",
+          display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, minmax(0,1fr))",
           gap: 12, marginBottom: 20,
         }}>
           <KpiCell label="Templates available" value={String(items.length)} />
@@ -161,7 +163,7 @@ export default function HedgeTemplatesPage() {
       ) : (
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(320px, 1fr))",
           gap: 16,
         }}>
           {filtered.map((t) => (
@@ -319,6 +321,7 @@ function DetailModal({
       <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.textSec, marginBottom: 12 }}>
         {template.description}
       </div>
+      <div style={{ overflowX: "auto" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: 11 }}>
         <thead>
           <tr style={{ textAlign: "left", color: S.textSec }}>
@@ -343,6 +346,7 @@ function DetailModal({
           ))}
         </tbody>
       </table>
+      </div>
     </ModalShell>
   );
 }
@@ -428,6 +432,7 @@ function ApplyModal({
                 {fmtNum(result.total)} {result.ccy}
               </strong> · {result.legs.length} leg{result.legs.length !== 1 ? "s" : ""}
             </div>
+            <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: 11 }}>
               <thead>
                 <tr style={{ textAlign: "left", color: S.textSec }}>
@@ -452,6 +457,7 @@ function ApplyModal({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

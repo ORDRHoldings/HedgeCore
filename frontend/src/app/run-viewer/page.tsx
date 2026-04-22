@@ -26,6 +26,7 @@ import { RUN_VIEWER_HELP } from "../../lib/helpContent";
 
 import { PageShell } from "@/components/layout/PageShell";
 import { Globe } from "lucide-react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const S = {
@@ -270,6 +271,7 @@ function RunViewerContent() {
   const params     = useSearchParams();
   const router     = useRouter();
   const { isAuthenticated, token, isLoading: authLoading } = useAuth();
+  const isMobile = useIsMobile();
 
   const runId = params.get("id") ?? "";
 
@@ -337,7 +339,7 @@ function RunViewerContent() {
       {/* ── Context bar — run-specific dynamic state ── */}
       <div style={{
         height:        44,
-        padding:       "0 24px",
+        padding:       isMobile ? "0 12px" : "0 24px",
         borderBottom:  `1px solid ${S.rim}`,
         background:    S.bgPanel,
         display:       "flex",
@@ -374,7 +376,7 @@ function RunViewerContent() {
 
       {/* ── No run ID: show recent runs ── */}
       {!runId && (
-        <div style={{ maxWidth: 780, margin: "48px auto", padding: "0 24px" }}>
+        <div style={{ maxWidth: 780, margin: "48px auto", padding: isMobile ? "0 12px" : "0 24px" }}>
           {/* Instruction banner */}
           <div style={{
             background: S.bgPanel, border: `1px solid ${S.rim}`,
@@ -403,6 +405,7 @@ function RunViewerContent() {
               <span style={{ color: S.soft }}>·</span>
               <span style={{ color: S.secondary }}>{runsLoading ? "LOADING…" : `${recentRuns.length} RUNS`}</span>
             </div>
+            <div style={{ overflowX: "auto" }}>
 
             {runsLoading && (
               <div style={{ padding: "32px 16px", textAlign: "center", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
@@ -422,7 +425,7 @@ function RunViewerContent() {
                 href={`/run-viewer?id=${encodeURIComponent(r.run_id)}`}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 80px 80px 180px",
+                  gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 80px 80px 180px",
                   alignItems: "center",
                   gap: 12,
                   padding: "10px 16px",
@@ -451,13 +454,14 @@ function RunViewerContent() {
                 </span>
               </Link>
             ))}
+            </div>
           </div>
         </div>
       )}
 
       {/* ── Loading ── */}
       {runId && loading && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 24px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? "80px 12px" : "80px 24px" }}>
           <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em" }}>
             LOADING RUN {runId8}…
           </span>
@@ -466,7 +470,7 @@ function RunViewerContent() {
 
       {/* ── Error ── */}
       {runId && !loading && error && (
-        <div style={{ maxWidth: 700, margin: "40px auto", padding: "0 24px" }}>
+        <div style={{ maxWidth: 700, margin: "40px auto", padding: isMobile ? "0 12px" : "0 24px" }}>
           <div style={{
             background: S.bgPanel,
             border:     `1px solid ${S.rim}`,
@@ -502,7 +506,7 @@ function RunViewerContent() {
 
       {/* ── Run data ── */}
       {runId && !loading && !error && run && (
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "24px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: isMobile ? "12px" : "24px", display: "flex", flexDirection: "column", gap: 20 }}>
 
           {/* ── Run metadata KPIs ── */}
           <div style={{
@@ -540,7 +544,7 @@ function RunViewerContent() {
           </div>
 
           {/* ── Two-column layout: TraceLite + Hash Chain ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 20, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 380px", gap: 20, alignItems: "start" }}>
 
             {/* ── LEFT: TraceLite narrative ── */}
             <div>
@@ -864,6 +868,7 @@ function RunViewerContent() {
 }
 
 export default function RunViewerPage() {
+  const isMobile = useIsMobile();
   const _planAllowed = usePlanRedirect("enterprise");
   if (!_planAllowed) return null;
   return (
@@ -874,7 +879,7 @@ export default function RunViewerPage() {
         <Suspense
           fallback={
             <div style={{
-              padding:    "60px 24px",
+              padding:    isMobile ? "60px 12px" : "60px 24px",
               textAlign:  "center",
               fontFamily: "'IBM Plex Mono', monospace",
               fontSize:   "0.625rem",

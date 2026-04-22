@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
@@ -128,6 +129,7 @@ function localPart(email: string | null): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function TradeHistoryPage() {
+  const isMobile = useIsMobile();
   const _planAllowed = usePlanRedirect("professional");
   const router = useRouter();
   const { user, token } = useAuth();
@@ -460,7 +462,7 @@ export default function TradeHistoryPage() {
       {/* ── 2.5. AGGREGATE ANALYTICS + INTEGRITY ─────────────────────── */}
       <div style={{ padding: "12px 20px", background: S.bgDeep, borderBottom: `1px solid ${S.rim}`, display: "flex", flexDirection: "column", gap: 10 }}>
         {/* Stats bar */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 10 }}>
           {[
             { label: "TOTAL EXECUTED",   value: String(proposals.filter(p => p.status === "EXECUTED").length),      color: S.cyan },
             { label: "AVG SLIPPAGE",     value: avgSlippage === 0 ? "—" : `${avgSlippage.toFixed(1)} bps`,          color: Math.abs(avgSlippage) < 3 ? S.green : S.amber },

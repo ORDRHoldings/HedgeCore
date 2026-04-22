@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { ERP_INTEGRATION_HELP } from "@/lib/helpContent";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 import { PageShell } from "@/components/layout/PageShell";
 import { LayoutDashboard } from "lucide-react";
@@ -212,6 +213,7 @@ const smallSelectStyle: React.CSSProperties = {
 // PAGE
 // =================================================================================
 export default function ERPIntegrationPage() {
+  const isMobile = useIsMobile();
   const _planAllowed = usePlanRedirect("professional");
   const renderTs = useRenderTs();
   const { isAuthenticated, token } = useAuth();
@@ -461,6 +463,7 @@ export default function ERPIntegrationPage() {
         alignItems:    "center",
         gap:           12,
         height:        44,
+        flexWrap:      isMobile ? "wrap" : "nowrap",
         padding:       "0 20px",
         background:    S.bgPanel,
         borderBottom:  `1px solid ${S.rim}`,
@@ -512,7 +515,7 @@ export default function ERPIntegrationPage() {
         <div style={{ flex: 1 }} />
 
         {/* KPI chips */}
-        <div style={{ display: "flex", gap: 0, alignItems: "stretch", border: `1px solid ${S.rim}` }}>
+        <div style={{ display: "flex", gap: 0, alignItems: "stretch", border: `1px solid ${S.rim}`, flexWrap: isMobile ? "wrap" : "nowrap" }}>
           {([
             { label: "SYSTEMS",    value: "4",                    color: S.primary  },
             { label: "CONFIGURED", value: String(configuredCount), color: S.cyan    },
@@ -597,7 +600,7 @@ export default function ERPIntegrationPage() {
         <div style={{
           maxWidth:      1440,
           margin:        "0 auto",
-          padding:       "20px 24px",
+          padding:       isMobile ? "12px" : "20px 24px",
           display:       "flex",
           flexDirection: "column",
           gap:           20,
@@ -625,7 +628,7 @@ export default function ERPIntegrationPage() {
             <div style={{
               padding:             "16px 16px 20px",
               display:             "grid",
-              gridTemplateColumns: "1fr 1fr",
+              gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
               gap:                 "14px 20px",
             }}>
               {/* System Name */}
@@ -681,7 +684,7 @@ export default function ERPIntegrationPage() {
               {/* Credentials row (full-width) */}
               <div style={{ gridColumn: "1 / -1" }}>
                 <div style={labelStyle}>CREDENTIALS</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: isMobile ? "wrap" : "nowrap" }}>
                   <input
                     type="password"
                     placeholder={

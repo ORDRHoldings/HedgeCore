@@ -7,6 +7,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { Shield } from "lucide-react";
 import AdminTabBar, { type AdminTab } from "./components/AdminTabBar";
 import dynamic from "next/dynamic";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 // Lazy load each tab — keeps initial bundle small
 const OperationsTab = dynamic(() => import("./components/tabs/OperationsTab"), { ssr: false });
@@ -29,9 +30,9 @@ const S = {
   cyan:      "var(--accent-cyan)",
 } as const;
 
-function DeniedCard() {
+function DeniedCard({ isMobile }: { isMobile?: boolean }) {
   return (
-    <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", padding: 48 }}>
+    <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", padding: isMobile ? 24 : 48 }}>
       <div style={{
         background: S.bgPanel, border: `1px solid ${S.red}`,
         borderLeft: `4px solid ${S.red}`, padding: "28px 36px",
@@ -59,6 +60,7 @@ function TabLoader() {
 }
 
 function AdminContent() {
+  const isMobile = useIsMobile();
   const { token, user, isAuthenticated } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -69,8 +71,8 @@ function AdminContent() {
     router.replace(`/admin?tab=${tab}`, { scroll: false });
   };
 
-  if (!isAuthenticated || !token || !user) return <DeniedCard />;
-  if (!user.is_superuser) return <DeniedCard />;
+  if (!isAuthenticated || !token || !user) return <DeniedCard isMobile={isMobile} />;
+  if (!user.is_superuser) return <DeniedCard isMobile={isMobile} />;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden" }}>

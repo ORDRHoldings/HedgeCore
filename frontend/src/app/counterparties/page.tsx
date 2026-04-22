@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import Link from "next/link";
 import { useAuth } from "@/lib/authContext";
 import {
@@ -55,6 +56,7 @@ const riskColor = (level: RiskLevel | null): string => {
 
 export default function CounterpartiesHubPage() {
   const { token } = useAuth();
+  const isMobile = useIsMobile();
   const [rows, setRows] = useState<Counterparty[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -191,7 +193,7 @@ export default function CounterpartiesHubPage() {
             border: `1px solid ${S.rim}`,
           }}
         >
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
             <div>
               {input("Name *", "name", "Goldman Sachs International")}
               {input("Internal Code", "internal_code", "GS-INTL")}

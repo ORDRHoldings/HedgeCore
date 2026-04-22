@@ -3,6 +3,7 @@
 import { useState } from "react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import {
   Mail, MapPin, Clock, Shield, CheckCircle2, ArrowRight,
   Building2, BarChart3, Zap, Globe, ChevronDown,
@@ -75,6 +76,7 @@ const CHANNELS = [
 ];
 
 export default function ContactPage() {
+  const isMobile = useIsMobile();
   const [inquiryType, setInquiryType] = useState("demo");
   const [products, setProducts] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
@@ -92,8 +94,8 @@ export default function ContactPage() {
         background: C.accent,
         paddingTop: 100,
         paddingBottom: 56,
-        paddingLeft: 48,
-        paddingRight: 48,
+        paddingLeft: isMobile ? 24 : 48,
+        paddingRight: isMobile ? 24 : 48,
       }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <div style={{
@@ -139,7 +141,7 @@ export default function ContactPage() {
       {/* Compliance strip */}
       <div style={{
         background: "#0F1E30",
-        padding: "10px 48px",
+        padding: `10px ${isMobile ? 24 : 48}px`,
         display: "flex", gap: 32, flexWrap: "wrap",
         justifyContent: "center",
       }}>
@@ -153,10 +155,10 @@ export default function ContactPage() {
       </div>
 
       {/* Main content */}
-      <section style={{ background: "#F7F8FA", padding: "64px 48px" }}>
+      <section style={{ background: "#F7F8FA", padding: `64px ${isMobile ? 24 : 48}px` }}>
         <div style={{
           maxWidth: 1200, margin: "0 auto",
-          display: "grid", gridTemplateColumns: "1fr 380px", gap: 32,
+          display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 380px", gap: 32,
         }}>
 
           {/* LEFT: Form */}
@@ -214,7 +216,7 @@ export default function ContactPage() {
                   }}>
                     INQUIRY TYPE
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 8 }}>
                     {INQUIRY_TYPES.map((t) => (
                       <button
                         key={t.id}
@@ -248,7 +250,7 @@ export default function ContactPage() {
                   onSubmit={(e) => { e.preventDefault(); setSubmitted(true); }}
                 >
                   {/* Name row */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
                     {[["First Name", "text", true], ["Last Name", "text", false]].map(([label, type, req]) => (
                       <div key={label as string}>
                         <label style={{
@@ -294,7 +296,7 @@ export default function ContactPage() {
                   </div>
 
                   {/* Company + Role */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
                     <div>
                       <label style={{ display: "block", fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
                         COMPANY *
@@ -346,7 +348,7 @@ export default function ContactPage() {
                   </div>
 
                   {/* Company size + FX exposure */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
                     <div>
                       <label style={{ display: "block", fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
                         COMPANY SIZE
@@ -639,7 +641,7 @@ export default function ContactPage() {
       </section>
 
       {/* ICP profiles */}
-      <section style={{ background: "#fff", padding: "72px 48px", borderTop: `1px solid ${C.border}` }}>
+      <section style={{ background: "#fff", padding: `72px ${isMobile ? 24 : 48}px`, borderTop: `1px solid ${C.border}` }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <div style={{
@@ -656,7 +658,7 @@ export default function ContactPage() {
               Built for institutional operators
             </h2>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 16 }}>
             {ICP_PROFILES.map((p) => (
               <div key={p.role} style={{
                 border: `1px solid ${C.border}`, borderRadius: 8,
@@ -685,7 +687,7 @@ export default function ContactPage() {
       </section>
 
       {/* FAQ */}
-      <section style={{ background: "#F7F8FA", padding: "72px 48px", borderTop: `1px solid ${C.border}` }}>
+      <section style={{ background: "#F7F8FA", padding: `72px ${isMobile ? 24 : 48}px`, borderTop: `1px solid ${C.border}` }}>
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <div style={{
@@ -731,19 +733,7 @@ export default function ContactPage() {
         </div>
       </section>
 
-      <style>{`
-        @media(max-width:1024px){
-          .contact-grid{grid-template-columns:1fr !important}
-        }
-        @media(max-width:768px){
-          section{padding:48px 20px !important}
-          h1{font-size:34px !important}
-          h2{font-size:26px !important}
-          div[style*="grid-template-columns: repeat(4"]{grid-template-columns:repeat(2,1fr) !important}
-          div[style*="grid-template-columns: repeat(3"]{grid-template-columns:1fr !important}
-          div[style*="grid-template-columns: 1fr 380px"]{grid-template-columns:1fr !important}
-        }
-      `}</style>
+
     </MarketingLayout>
   );
 }

@@ -60,6 +60,7 @@ import { getDemoRequest } from "../../constants/demoFixtures";
 import { getPairMeta } from "../../constants/pairRegistry";
 
 import { PageShell } from "@/components/layout/PageShell";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { Zap } from "lucide-react";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -215,6 +216,7 @@ function InlineAuditSummary({ sandboxResult, liveDataFetched }: {
   sandboxResult: NonNullable<ReturnType<typeof useSelector<RootState, RootState["pipeline"]["sandboxResult"]>>>;
   liveDataFetched: boolean;
 }) {
+  const isMobile = useIsMobile();
   const waterfall = sandboxResult.waterfall_result;
   const envelope = sandboxResult.run_envelope as Record<string, unknown> | undefined;
   const isRealEngine = !!envelope?.inputs_hash;
@@ -245,7 +247,7 @@ function InlineAuditSummary({ sandboxResult, liveDataFetched }: {
 
   return (
     <div style={{ background: S.sub, border: `1px solid ${S.rim}`, borderRadius: 4, overflow: "hidden" }}>
-      <div style={{ padding: "8px 14px", borderBottom: `1px solid ${S.rim}`, background: S.panel, display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ padding: "8px 14px", borderBottom: `1px solid ${S.rim}`, background: S.panel, display: "flex", alignItems: "center", gap: 10, flexWrap: isMobile ? "wrap" : "nowrap" }}>
         <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary }}>
           GOVERNANCE CHAIN
         </span>
@@ -317,6 +319,7 @@ function InlineAuditSummary({ sandboxResult, liveDataFetched }: {
 
 // ─── Widget embed mode ─────────────────────────────────────────────────────────
 function WidgetMode({ currency, notional, tab }: { currency: string; notional: number; tab: SandboxTab }) {
+  const isMobile = useIsMobile();
   const dispatch = useDispatch<AppDispatch>();
   const { token } = useAuth();
   const { sandboxResult, sandboxLoading } = useSelector((s: RootState) => s.pipeline);
@@ -331,11 +334,11 @@ function WidgetMode({ currency, notional, tab }: { currency: string; notional: n
       minHeight: 400, overflow: "hidden",
     }}>
       <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
+        display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: isMobile ? "wrap" : "nowrap",
         padding: "10px 16px", borderBottom: `1px solid ${S.rim}`,
         background: S.sub,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: isMobile ? "wrap" : "nowrap" }}>
           <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: S.cyan }}>
             HEDGECORE
           </span>
@@ -503,6 +506,8 @@ function SandboxPageInner() {
     }
   }, [sandboxResult, sandboxLoading, token, selectedPair, dispatch]);
 
+  const isMobile = useIsMobile();
+
   // Widget mode
   if (isWidget) {
     return <WidgetMode currency={widgetCurrency} notional={widgetNotional} tab={widgetTab} />;
@@ -511,7 +516,7 @@ function SandboxPageInner() {
   // Decision Packet Mode
   if (decisionPacketMode && sandboxResult) {
     return (
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: 28 }}>
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? 12 : 28 }}>
         <h1 style={{ fontFamily: S.fontUI, fontSize: 22, fontWeight: 700, color: S.primary, marginBottom: 6 }}>
           Decision Packet — Executive Summary
         </h1>
@@ -532,7 +537,7 @@ function SandboxPageInner() {
             Integrity: <span style={{ fontWeight: 700, color: S.primary, fontSize: 16 }}>{waterfall?.integrity_score ?? "—"}/100</span>
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 14, marginBottom: 14 }}>
           <KpiTile label="Coverage" value={`${(coverageRatio * 100).toFixed(1)}%`} />
           <KpiTile label="Worst-Case Loss" value={v2?.worst_case ? `-$${Math.abs((v2.worst_case as Record<string, unknown>).worst_case_loss as number ?? 0).toLocaleString()}` : "—"} />
           <KpiTile label="Margin Used" value={v2?.margin_summary ? `$${((v2.margin_summary as Record<string, unknown>).total_margin as number ?? 0).toLocaleString()}` : "—"} />
@@ -552,8 +557,8 @@ function SandboxPageInner() {
         borderBottom: `1px solid ${S.rim}`,
         background: S.panel,
         padding: "0 16px",
-        display: "flex", alignItems: "center", gap: 12, height: 48,
-        flexShrink: 0,
+        display: "flex", alignItems: "center", gap: 12, height: isMobile ? "auto" : 48,
+        flexShrink: 0, flexWrap: isMobile ? "wrap" : "nowrap",
       }}>
         <button onClick={() => router.push("/position-desk")} style={{
           fontFamily: S.fontUI, fontSize: 12, fontWeight: 500,
@@ -635,7 +640,7 @@ function SandboxPageInner() {
         if (!meta) return null;
         return (
           <div style={{
-            display: "flex", alignItems: "center", gap: 10,
+            display: "flex", alignItems: "center", gap: 10, flexWrap: isMobile ? "wrap" : "nowrap",
             padding: "4px 16px",
             borderBottom: `1px solid ${S.soft}`,
             background: `color-mix(in srgb, ${S.sub} 60%, ${S.panel})`,
@@ -793,7 +798,7 @@ function SandboxPageInner() {
           </div>
 
           {/* Content area */}
-          <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+          <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 12 : 16 }}>
 
             {error && <ErrorBanner code={error.code} message={error.message} />}
 
@@ -815,7 +820,7 @@ function SandboxPageInner() {
 
                 {/* KPI strip — larger, institutional */}
                 {sandboxResult && waterfall && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5, 1fr)", gap: 12 }}>
                     <BigKpi
                       label="Integrity Score"
                       value={`${waterfall.integrity_score}/100`}
@@ -881,7 +886,7 @@ function SandboxPageInner() {
                     <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.amber, marginBottom: 8, letterSpacing: "0.08em" }}>
                       ACTIVE CRISIS SCENARIO: {selectedCrisis.name.toUpperCase()}
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 10 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5, 1fr)", gap: 10, marginBottom: 10 }}>
                       {[
                         ["FX Shock", `${selectedCrisis.stressParams.spotShock.toFixed(0)}%`],
                         ["Vol Spike", `+${selectedCrisis.stressParams.volShock.toFixed(0)}pp`],
@@ -1047,7 +1052,7 @@ function SandboxPageInner() {
                   background: `color-mix(in srgb, ${S.cyan} 4%, transparent)`,
                   border: `1px solid color-mix(in srgb, ${S.cyan} 18%, transparent)`,
                   borderRadius: 4, padding: "16px 20px",
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: isMobile ? "wrap" : "nowrap",
                 }}>
                   <div>
                     <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.cyan, marginBottom: 6 }}>
@@ -1084,7 +1089,7 @@ function SandboxPageInner() {
                 {sandboxResult && (
                   <>
                     {/* Certification level */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 12 }}>
                       <BigKpi
                         label="Integrity Score"
                         value={`${waterfall?.integrity_score ?? "—"}/100`}

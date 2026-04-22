@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { PageShell } from "@/components/layout/PageShell";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
@@ -350,6 +351,7 @@ export default function ScenarioStudioPage() {
   ];
 
   const mc = result?.monte_carlo;
+  const isMobile = useIsMobile();
 
   return (
     <PageShell icon={FlaskConical} title="ORDR Labs" breadcrumb={["Dashboard", "ORDR Labs"]} noPadding>
@@ -366,13 +368,13 @@ export default function ScenarioStudioPage() {
 
         {/* ── Hero Header ─────────────────────────────────────────── */}
         <div style={{
-          background: C.headerGrad, padding: "28px 40px 24px",
+          background: C.headerGrad, padding: isMobile ? "28px 20px 24px" : "28px 40px 24px",
           borderBottom: `1px solid ${C.border}`,
         }}>
           <div>
             {/* Workflow steps */}
             <div style={{
-              display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12,
+              display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 12,
             }}>
               {[
                 { step: "01", icon: Target, title: "Select Run", desc: "Choose a completed hedge calculation to analyze" },
@@ -412,7 +414,7 @@ export default function ScenarioStudioPage() {
         </div>
 
         {/* ── Config Strip ────────────────────────────────────────── */}
-        <div style={{ padding: "16px 40px 0" }}>
+        <div style={{ padding: isMobile ? "16px 20px 0" : "16px 40px 0" }}>
           <Card style={{ padding: "14px 20px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
               {/* Run selector */}
@@ -542,8 +544,8 @@ export default function ScenarioStudioPage() {
 
         {/* ── KPI Strip (when results) ────────────────────────────── */}
         {mc && (
-          <div style={{ padding: "12px 40px 0" }} className="lab-fade">
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
+          <div style={{ padding: isMobile ? "12px 20px 0" : "12px 40px 0" }} className="lab-fade">
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5, 1fr)", gap: 12 }}>
               {[
                 { label: "VaR 99%", value: fmtUsd(mc.var_results.find(v => v.confidence === 0.99)?.hedged_var ?? 0), color: C.red, icon: TrendingDown },
                 { label: "CVaR 99%", value: fmtUsd(mc.var_results.find(v => v.confidence === 0.99)?.hedged_cvar ?? 0), color: C.red, icon: AlertTriangle },
@@ -568,7 +570,7 @@ export default function ScenarioStudioPage() {
         )}
 
         {/* ── Tab Bar ─────────────────────────────────────────────── */}
-        <div style={{ padding: "16px 40px 0" }}>
+        <div style={{ padding: isMobile ? "16px 20px 0" : "16px 40px 0" }}>
           <div style={{ display: "flex", gap: 4, background: C.white, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, boxShadow: C.cardShadow }}>
             {TABS.map((t, i) => (
               <button
@@ -594,7 +596,7 @@ export default function ScenarioStudioPage() {
         </div>
 
         {/* ── Content ─────────────────────────────────────────────── */}
-        <div style={{ padding: "16px 40px 40px" }} className="lab-fade">
+        <div style={{ padding: isMobile ? "16px 20px 20px" : "16px 40px 40px" }} className="lab-fade">
           {error && (
             <Card style={{
               padding: "12px 18px", marginBottom: 16,
@@ -622,7 +624,7 @@ export default function ScenarioStudioPage() {
 
         {/* ── Footer ──────────────────────────────────────────────── */}
         <div style={{
-          background: C.headerGrad, borderTop: `1px solid ${C.border}`, padding: "14px 40px",
+          background: C.headerGrad, borderTop: `1px solid ${C.border}`, padding: isMobile ? "14px 20px" : "14px 40px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -646,6 +648,7 @@ export default function ScenarioStudioPage() {
 
 // ── Lab Empty State ───────────────────────────────────────────────────
 function LabEmptyState() {
+  const isMobile = useIsMobile();
   return (
     <Card style={{ padding: "60px 40px", textAlign: "center" }}>
       <div style={{
@@ -664,7 +667,7 @@ function LabEmptyState() {
         Monte Carlo simulation with Cholesky-correlated FX shocks, institutional stress scenarios,
         and factor covariance risk decomposition.
       </p>
-      <div style={{ display: "flex", justifyContent: "center", gap: 24 }}>
+      <div style={{ display: "flex", justifyContent: "center", gap: 24, flexWrap: isMobile ? "wrap" : "nowrap" }}>
         {[
           { icon: Activity, label: "Monte Carlo VaR", desc: "10K+ path simulation" },
           { icon: AlertTriangle, label: "Stress Scenarios", desc: "5 institutional shocks" },
@@ -695,6 +698,7 @@ function LabEmptyState() {
 // ═══════════════════════════════════════════════════════════════════════
 
 function SimulationTab({ mc }: { mc: MonteCarloResult | null }) {
+  const isMobile = useIsMobile();
   if (!mc) return <NoData label="Monte Carlo simulation not available" />;
 
   const pctKeys = [1, 5, 10, 25, 50, 75, 90, 95, 99];
@@ -723,7 +727,7 @@ function SimulationTab({ mc }: { mc: MonteCarloResult | null }) {
       </Card>
 
       {/* Stats row */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
         {/* Hedged */}
         <Card style={{ padding: 24 }}>
           <SectionHeader icon={Shield} title="HEDGED PORTFOLIO" />
@@ -838,6 +842,7 @@ function PercentileChart({ hedged, unhedged, labels }: { hedged: number[]; unhed
 // ═══════════════════════════════════════════════════════════════════════
 
 function StressTab({ stress }: { stress: StressResult | null }) {
+  const isMobile = useIsMobile();
   if (!stress || stress.scenarios.length === 0) return <NoData label="Stress scenario results not available" />;
 
   const scenarios = stress.scenarios;
@@ -871,7 +876,7 @@ function StressTab({ stress }: { stress: StressResult | null }) {
       </Card>
 
       {/* Scenario cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
         {scenarios.map((sc) => {
           const isWorst = sc.scenario_name === stress.worst_case_scenario;
           const isCompound = sc.details.family === "compound";
@@ -898,7 +903,7 @@ function StressTab({ stress }: { stress: StressResult | null }) {
               </div>
 
               {/* Impact grid */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }}>
                 {[
                   { label: "PRE-HEDGE LOSS", value: fmtUsd(sc.pre_hedge_loss_usd), color: C.red },
                   { label: "POST-HEDGE LOSS", value: fmtUsd(sc.post_hedge_loss_usd), color: C.red },
@@ -1012,6 +1017,7 @@ function StressWaterfallChart({ scenarios }: { scenarios: StressScenarioImpact[]
 // ═══════════════════════════════════════════════════════════════════════
 
 function VaRTab({ mc }: { mc: MonteCarloResult | null }) {
+  const isMobile = useIsMobile();
   if (!mc) return <NoData label="VaR/CVaR data not available" />;
 
   const pctKeys = [1, 5, 10, 25, 50, 75, 90, 95, 99];
@@ -1027,79 +1033,83 @@ function VaRTab({ mc }: { mc: MonteCarloResult | null }) {
       {/* VaR table */}
       <Card style={{ padding: 24, marginBottom: 16 }}>
         <SectionHeader icon={Target} title="CONFIDENCE LEVEL DETAIL" />
-        <div style={{
-          display: "grid", gridTemplateColumns: "100px 1fr 1fr 1fr 1fr",
-          gap: 8, padding: "10px 16px", background: C.headerGrad, borderRadius: 8, marginBottom: 4,
-        }}>
-          {["CONFIDENCE", "HEDGED VaR", "UNHEDGED VaR", "HEDGED CVaR", "UNHEDGED CVaR"].map((h) => (
-            <span key={h} style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: C.text1, letterSpacing: "0.1em" }}>
-              {h}
-            </span>
+        <div style={{ overflowX: "auto" }}>
+          <div style={{
+            display: "grid", gridTemplateColumns: "100px 1fr 1fr 1fr 1fr",
+            gap: 8, padding: "10px 16px", background: C.headerGrad, borderRadius: 8, marginBottom: 4,
+          }}>
+            {["CONFIDENCE", "HEDGED VaR", "UNHEDGED VaR", "HEDGED CVaR", "UNHEDGED CVaR"].map((h) => (
+              <span key={h} style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: C.text1, letterSpacing: "0.1em" }}>
+                {h}
+              </span>
+            ))}
+          </div>
+          {mc.var_results.map((v, i) => (
+            <div key={v.confidence} style={{
+              display: "grid", gridTemplateColumns: "100px 1fr 1fr 1fr 1fr",
+              gap: 8, padding: "10px 16px",
+              background: i % 2 === 0 ? C.bgSub : C.white,
+              borderRadius: 4,
+            }}>
+              <span style={{ fontFamily: C.mono, fontSize: 13, fontWeight: 700, color: C.text1 }}>
+                {(v.confidence * 100).toFixed(1)}%
+              </span>
+              <span style={{ fontFamily: C.mono, fontSize: 13, fontWeight: 600, color: C.cyan }}>
+                {fmtUsd(v.hedged_var)}
+              </span>
+              <span style={{ fontFamily: C.mono, fontSize: 13, color: C.text3 }}>
+                {fmtUsd(v.unhedged_var)}
+              </span>
+              <span style={{ fontFamily: C.mono, fontSize: 13, fontWeight: 600, color: C.red }}>
+                {fmtUsd(v.hedged_cvar)}
+              </span>
+              <span style={{ fontFamily: C.mono, fontSize: 13, color: C.text3 }}>
+                {fmtUsd(v.unhedged_cvar)}
+              </span>
+            </div>
           ))}
         </div>
-        {mc.var_results.map((v, i) => (
-          <div key={v.confidence} style={{
-            display: "grid", gridTemplateColumns: "100px 1fr 1fr 1fr 1fr",
-            gap: 8, padding: "10px 16px",
-            background: i % 2 === 0 ? C.bgSub : C.white,
-            borderRadius: 4,
-          }}>
-            <span style={{ fontFamily: C.mono, fontSize: 13, fontWeight: 700, color: C.text1 }}>
-              {(v.confidence * 100).toFixed(1)}%
-            </span>
-            <span style={{ fontFamily: C.mono, fontSize: 13, fontWeight: 600, color: C.cyan }}>
-              {fmtUsd(v.hedged_var)}
-            </span>
-            <span style={{ fontFamily: C.mono, fontSize: 13, color: C.text3 }}>
-              {fmtUsd(v.unhedged_var)}
-            </span>
-            <span style={{ fontFamily: C.mono, fontSize: 13, fontWeight: 600, color: C.red }}>
-              {fmtUsd(v.hedged_cvar)}
-            </span>
-            <span style={{ fontFamily: C.mono, fontSize: 13, color: C.text3 }}>
-              {fmtUsd(v.unhedged_cvar)}
-            </span>
-          </div>
-        ))}
       </Card>
 
       {/* Percentile table */}
       <Card style={{ padding: 24 }}>
         <SectionHeader icon={Activity} title="P&L PERCENTILE DISTRIBUTION" />
-        <div style={{
-          display: "grid", gridTemplateColumns: "80px 1fr 1fr",
-          gap: 8, padding: "10px 16px", background: C.headerGrad, borderRadius: 8, marginBottom: 4,
-        }}>
-          {["PERCENTILE", "HEDGED P&L", "UNHEDGED P&L"].map((h) => (
-            <span key={h} style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: C.text1, letterSpacing: "0.1em" }}>
-              {h}
-            </span>
-          ))}
+        <div style={{ overflowX: "auto" }}>
+          <div style={{
+            display: "grid", gridTemplateColumns: "80px 1fr 1fr",
+            gap: 8, padding: "10px 16px", background: C.headerGrad, borderRadius: 8, marginBottom: 4,
+          }}>
+            {["PERCENTILE", "HEDGED P&L", "UNHEDGED P&L"].map((h) => (
+              <span key={h} style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: C.text1, letterSpacing: "0.1em" }}>
+                {h}
+              </span>
+            ))}
+          </div>
+          {pctKeys.map((p, i) => {
+            const hKey = `hedged_p${String(p).padStart(2, "0")}`;
+            const uKey = `unhedged_p${String(p).padStart(2, "0")}`;
+            const hVal = mc.percentiles[hKey] ?? 0;
+            const uVal = mc.percentiles[uKey] ?? 0;
+            return (
+              <div key={p} style={{
+                display: "grid", gridTemplateColumns: "80px 1fr 1fr",
+                gap: 8, padding: "8px 16px",
+                background: i % 2 === 0 ? C.bgSub : C.white,
+                borderRadius: 4,
+              }}>
+                <span style={{ fontFamily: C.mono, fontSize: 13, fontWeight: 700, color: p <= 5 ? C.red : p >= 95 ? C.green : C.text2 }}>
+                  P{p}
+                </span>
+                <span style={{ fontFamily: C.mono, fontSize: 13, fontWeight: 600, color: hVal < 0 ? C.red : C.green }}>
+                  {fmtUsd(hVal)}
+                </span>
+                <span style={{ fontFamily: C.mono, fontSize: 13, color: uVal < 0 ? C.red : C.green }}>
+                  {fmtUsd(uVal)}
+                </span>
+              </div>
+            );
+          })}
         </div>
-        {pctKeys.map((p, i) => {
-          const hKey = `hedged_p${String(p).padStart(2, "0")}`;
-          const uKey = `unhedged_p${String(p).padStart(2, "0")}`;
-          const hVal = mc.percentiles[hKey] ?? 0;
-          const uVal = mc.percentiles[uKey] ?? 0;
-          return (
-            <div key={p} style={{
-              display: "grid", gridTemplateColumns: "80px 1fr 1fr",
-              gap: 8, padding: "8px 16px",
-              background: i % 2 === 0 ? C.bgSub : C.white,
-              borderRadius: 4,
-            }}>
-              <span style={{ fontFamily: C.mono, fontSize: 13, fontWeight: 700, color: p <= 5 ? C.red : p >= 95 ? C.green : C.text2 }}>
-                P{p}
-              </span>
-              <span style={{ fontFamily: C.mono, fontSize: 13, fontWeight: 600, color: hVal < 0 ? C.red : C.green }}>
-                {fmtUsd(hVal)}
-              </span>
-              <span style={{ fontFamily: C.mono, fontSize: 13, color: uVal < 0 ? C.red : C.green }}>
-                {fmtUsd(uVal)}
-              </span>
-            </div>
-          );
-        })}
       </Card>
     </div>
   );
@@ -1172,12 +1182,13 @@ function VaRConfidenceChart({ varResults }: { varResults: VaRResult[] }) {
 // ═══════════════════════════════════════════════════════════════════════
 
 function RiskTab({ fcov, mc }: { fcov: FactorCovResult | null; mc: MonteCarloResult | null }) {
+  const isMobile = useIsMobile();
   return (
     <div style={{ maxWidth: 1300 }}>
       {fcov ? (
         <>
           {/* Summary KPIs with gauges */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 16, marginBottom: 16 }}>
             {[
               { label: "PRE-HEDGE VOL", value: `${(Math.sqrt(fcov.pre_hedge_variance) * 100).toFixed(2)}%`, numVal: Math.sqrt(fcov.pre_hedge_variance) * 100, color: C.red },
               { label: "POST-HEDGE VOL", value: `${(Math.sqrt(fcov.post_hedge_variance) * 100).toFixed(2)}%`, numVal: Math.sqrt(fcov.post_hedge_variance) * 100, color: C.green },
@@ -1207,23 +1218,24 @@ function RiskTab({ fcov, mc }: { fcov: FactorCovResult | null; mc: MonteCarloRes
           {/* Contributions table */}
           <Card style={{ padding: 24 }}>
             <SectionHeader icon={Layers} title="FACTOR RISK DECOMPOSITION" />
-            <div style={{
-              display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr",
-              gap: 8, padding: "10px 16px", background: C.headerGrad, borderRadius: 8, marginBottom: 4,
-            }}>
-              {["FACTOR", "WEIGHT", "MCTR", "% VARIANCE"].map((h) => (
-                <span key={h} style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: C.text1, letterSpacing: "0.1em" }}>
-                  {h}
-                </span>
-              ))}
-            </div>
-            {fcov.risk_contributions.map((rc, i) => (
-              <div key={rc.factor} style={{
-                display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr",
-                gap: 8, padding: "10px 16px",
-                background: i % 2 === 0 ? C.bgSub : C.white,
-                borderRadius: 4,
+            <div style={{ overflowX: "auto" }}>
+              <div style={{
+                display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr",
+                gap: 8, padding: "10px 16px", background: C.headerGrad, borderRadius: 8, marginBottom: 4,
               }}>
+                {["FACTOR", "WEIGHT", "MCTR", "% VARIANCE"].map((h) => (
+                  <span key={h} style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: C.text1, letterSpacing: "0.1em" }}>
+                    {h}
+                  </span>
+                ))}
+              </div>
+              {fcov.risk_contributions.map((rc, i) => (
+                <div key={rc.factor} style={{
+                  display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr",
+                  gap: 8, padding: "10px 16px",
+                  background: i % 2 === 0 ? C.bgSub : C.white,
+                  borderRadius: 4,
+                }}>
                 <span style={{ fontFamily: C.mono, fontSize: 13, fontWeight: 700, color: C.cyan }}>
                   {rc.factor}
                 </span>
@@ -1248,6 +1260,7 @@ function RiskTab({ fcov, mc }: { fcov: FactorCovResult | null; mc: MonteCarloRes
                 </div>
               </div>
             ))}
+            </div>
           </Card>
         </>
       ) : (

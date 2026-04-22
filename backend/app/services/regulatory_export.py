@@ -253,18 +253,18 @@ def export_emir_xml(
         f"    <reportingTimestamp>{generated_at}</reportingTimestamp>",
         f"    <reportingEntityLEI>{_x(lei_reporting)}</reportingEntityLEI>",
         f"    <counterpartyLEI>{_x(lei_counterparty)}</counterpartyLEI>",
-        f"    <reportType>TRADE</reportType>",
-        f"    <actionType>NEW</actionType>",
-        f"    <regulatoryFramework>EMIR Refit (EU 2024/2987)</regulatoryFramework>",
+        "    <reportType>TRADE</reportType>",
+        "    <actionType>NEW</actionType>",
+        "    <regulatoryFramework>EMIR Refit (EU 2024/2987)</regulatoryFramework>",
         "  </reportHeader>",
         "  <tradeData>",
         f"    <uniqueTradeIdentifier>UTI-{_x(run_id)}</uniqueTradeIdentifier>",
         f"    <tradeDate>{_x(run_data.get('trade_date', generated_at[:10]))}</tradeDate>",
         f"    <valueDate>{_x(run_data.get('value_date', ''))}</valueDate>",
-        f"    <assetClass>FOREIGN_EXCHANGE</assetClass>",
-        f"    <productClassification>FX_DERIVATIVE</productClassification>",
-        f"    <hedgeFlag>true</hedgeFlag>",
-        f"    <hedgeAccountingStandard>IFRS_9</hedgeAccountingStandard>",
+        "    <assetClass>FOREIGN_EXCHANGE</assetClass>",
+        "    <productClassification>FX_DERIVATIVE</productClassification>",
+        "    <hedgeFlag>true</hedgeFlag>",
+        "    <hedgeAccountingStandard>IFRS_9</hedgeAccountingStandard>",
         "  </tradeData>",
         "  <hedgeActions>",
     ]
@@ -355,7 +355,7 @@ def export_mifid_xml(
         f"    <executingEntityLEI>{_x(lei_executing)}</executingEntityLEI>",
         f"    <venue>{_x(run_data.get('venue', 'XOFF'))}</venue>",
         f"    <decisionMaker>{_x(run_data.get('decision_maker', ''))}</decisionMaker>",
-        f"    <regulatoryFramework>MiFID II (EU 2014/65) Article 26</regulatoryFramework>",
+        "    <regulatoryFramework>MiFID II (EU 2014/65) Article 26</regulatoryFramework>",
         "  </reportHeader>",
         "  <transactions>",
     ]
@@ -370,10 +370,10 @@ def export_mifid_xml(
         lines.append(f"      <quantity>{abs(notional)}</quantity>")
         lines.append(f"      <quantityCurrency>{_x(ccy)}</quantityCurrency>")
         lines.append(f"      <price>{_x(str(action.get('hedge_rate', '')))}</price>")
-        lines.append(f"      <priceCurrency>USD</priceCurrency>")
+        lines.append("      <priceCurrency>USD</priceCurrency>")
         lines.append(f"      <tradeDate>{_x(run_data.get('trade_date', generated_at[:10]))}</tradeDate>")
         lines.append(f"      <settlementDate>{_x(action.get('value_date', ''))}</settlementDate>")
-        lines.append(f"      <waiver>HEDGING_EXEMPTION</waiver>")
+        lines.append("      <waiver>HEDGING_EXEMPTION</waiver>")
         lines.append("    </transaction>")
 
     lines.append("  </transactions>")

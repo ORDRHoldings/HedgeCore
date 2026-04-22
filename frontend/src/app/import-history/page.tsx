@@ -18,6 +18,7 @@ import {
 import HelpPanel from "@/components/layout/HelpPanel";
 import { IMPORT_HISTORY_HELP } from "@/lib/helpContent";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 import { PageShell } from "@/components/layout/PageShell";
 import { LayoutDashboard } from "lucide-react";
@@ -474,6 +475,7 @@ function DetailPanel({
   detail: ConnectorRunDetail | null;
   loading: boolean;
 }) {
+  const isMobile = useIsMobile();
   if (loading) {
     return (
       <div
@@ -518,7 +520,7 @@ function DetailPanel({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(2, 1fr)",
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
           gap: "16px 32px",
           marginBottom: 20,
         }}
@@ -567,6 +569,7 @@ function DetailPanel({
               overflowY: "auto",
             }}
           >
+            <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
@@ -648,6 +651,7 @@ function DetailPanel({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
@@ -907,6 +911,7 @@ export default function ImportHistoryPage() {
 
   // Pagination
   const [page, setPage] = useState(1);
+  const isMobile = useIsMobile();
   const PAGE_SIZE = 25;
 
   // Auto-refresh
@@ -1112,7 +1117,7 @@ export default function ImportHistoryPage() {
         <TopBar totalRuns={totalRuns} loading={loading} onBack={() => router.push("/position-desk")} onRefresh={fetchRuns} />
 
         {/* KPI Summary Row */}
-        <div style={{ display: "flex", gap: 10, padding: "8px 20px", borderBottom: `1px solid ${S.soft}`, background: S.bgPanel, flexShrink: 0 }}>
+        <div style={{ display: "flex", gap: 10, padding: isMobile ? "8px 12px" : "8px 20px", borderBottom: `1px solid ${S.soft}`, background: S.bgPanel, flexShrink: 0, flexWrap: isMobile ? "wrap" : "nowrap" }}>
           <KpiCard label="Total Runs" value={totalRuns.toString()} color={S.cyan} />
           <KpiCard
             label="Rows Imported"
@@ -1140,7 +1145,7 @@ export default function ImportHistoryPage() {
           onExport={exportCsv}
         />
         {/* Table column header — matches position-desk header row pattern */}
-        <div style={{ display: "grid", gridTemplateColumns: "32px 90px 1fr 100px 80px 52px 52px 52px 80px 90px 70px", padding: "5px 20px", background: S.bgSub, borderBottom: `1px solid ${S.soft}`, flexShrink: 0 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "32px 90px 1fr 100px 80px 52px 52px 52px 80px 90px 70px", padding: "5px 20px", background: S.bgSub, borderBottom: `1px solid ${S.soft}`, flexShrink: 0, overflowX: "auto" }}>
           {["", "RUN ID", "FILE / SOURCE", "TYPE", "STATUS", "ROWS", "OK", "ERR", "RATE", "STARTED", "DURATION"].map((col) => (
             <span key={col} style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em", fontWeight: 700 }}>{col}</span>
           ))}
@@ -1178,6 +1183,7 @@ export default function ImportHistoryPage() {
           ) : error || filteredRuns.length === 0 ? (
             <EmptyStateView onUploadClick={() => router.push("/position-desk")} />
           ) : (
+            <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", background: S.bgPanel }}>
               <tbody>
                 {paginatedRuns.map((run) => (
@@ -1192,12 +1198,13 @@ export default function ImportHistoryPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 
         {/* Pagination Footer */}
         {!loading && filteredRuns.length > 0 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 20px", background: S.bgPanel, borderTop: `1px solid ${S.soft}`, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "5px 12px" : "5px 20px", background: S.bgPanel, borderTop: `1px solid ${S.soft}`, flexShrink: 0, flexWrap: isMobile ? "wrap" : "nowrap" }}>
             <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
               {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filteredRuns.length)} of {filteredRuns.length.toLocaleString()}
             </span>

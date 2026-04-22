@@ -34,7 +34,6 @@ from synex_kernel.audit.chain import (
 from synex_kernel.audit.models import Base as KernelBase
 from synex_kernel.audit.triggers import install_worm_triggers
 from synex_kernel.db.session import get_engine, get_session_factory
-from synex_kernel.exceptions import KillSwitchActivatedError
 from synex_kernel.health.budget import BudgetTracker
 from synex_kernel.health.heartbeat import HeartbeatEmitter
 from synex_kernel.health.kill_switch import KillSwitchReceiver

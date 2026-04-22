@@ -1,5 +1,6 @@
 "use client";
 import React, { Suspense, useCallback, useEffect, useState } from "react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { useAuth } from "@/lib/authContext";
 import {
   listCashPools, getPoolBalance, calculateSweeps, executeSweeps, listSweeps,
@@ -62,6 +63,7 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
 ];
 
 function CashManagementInner() {
+  const isMobile = useIsMobile();
   const { token } = useAuth();
   const [tab, setTab] = useState<Tab>("POOLS");
   const [pools, setPools] = useState<CashPool[]>([]);
@@ -206,7 +208,7 @@ function CashManagementInner() {
 
         {/* KPI strip */}
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
+          display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)",
           margin: "14px 28px 0", borderRadius: 6,
           border: `1px solid ${S.rim}`, overflow: "hidden",
         }}>
@@ -291,7 +293,7 @@ function CashManagementInner() {
             {showPoolForm && (
               <div style={{ background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 6, padding: 20, marginBottom: 16 }}>
                 <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 14 }}>NEW CASH POOL</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
                   {([
                     { label: "NAME", type: "text", value: poolForm.name, onChange: (v: string) => setPoolForm({ ...poolForm, name: v }) },
                   ] as const).map(f => (
@@ -467,7 +469,7 @@ function CashManagementInner() {
             {showEntityForm && (
               <div style={{ background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 6, padding: 20, marginBottom: 16 }}>
                 <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 14 }}>NEW TREASURY ENTITY</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
                   <label style={{ fontSize: 10, fontFamily: S.mono, fontWeight: 600, color: S.text3, letterSpacing: "0.1em" }}>NAME
                     <input value={entityForm.name} onChange={e => setEntityForm({ ...entityForm, name: e.target.value })}
                       style={{ width: "100%", padding: "8px 10px", marginTop: 4, background: S.deep, color: S.text1, border: `1px solid ${S.rim}`, borderRadius: 4, fontSize: 13, fontFamily: S.mono, boxSizing: "border-box" }} />
@@ -576,6 +578,7 @@ function CashManagementInner() {
 }
 
 export default function CashManagementPage() {
+  const isMobile = useIsMobile();
   return (
     <Suspense fallback={
       <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-deep)" }}>

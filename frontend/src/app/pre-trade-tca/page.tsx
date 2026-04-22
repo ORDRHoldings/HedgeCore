@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { useAuth } from "@/lib/authContext";
 import {
   estimatePreTrade,
@@ -37,6 +38,7 @@ const fmtBps = (n: number) => `${n.toFixed(2)} bps`;
 
 export default function PreTradeTcaPage() {
   const { token } = useAuth();
+  const isMobile = useIsMobile();
   const [req, setReq] = useState<PreTradeEstimateRequest>({
     pair: "EURUSD",
     notional_usd: 5_000_000,
@@ -109,7 +111,7 @@ export default function PreTradeTcaPage() {
   };
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 24 }}>
       {/* ───────── Inputs ───────── */}
       <section style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: 20 }}>
         <h3

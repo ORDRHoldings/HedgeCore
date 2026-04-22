@@ -9,6 +9,7 @@ import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
 import { PageShell } from "@/components/layout/PageShell";
 import { LayoutDashboard } from "lucide-react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type DbDriver = "PostgreSQL" | "MySQL" | "Microsoft SQL Server" | "Oracle" | "SAP HANA" | "Snowflake" | "Redshift";
@@ -150,6 +151,7 @@ export default function DatabaseConnectionPage() {
   const _planAllowed = usePlanRedirect("professional");
   const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<TabView>("connection");
 
   // LEVEL 1: Connection state
@@ -492,7 +494,7 @@ export default function DatabaseConnectionPage() {
         />
 
         {/* Main Content */}
-        <div style={{ flex: 1, padding: "32px", maxWidth: "1800px", margin: "0 auto", width: "100%" }}>
+        <div style={{ flex: 1, padding: isMobile ? 12 : 32, maxWidth: "1800px", margin: "0 auto", width: "100%" }}>
           {/* LEVEL 1: Connection Tab */}
           {activeTab === "connection" && (
             <ConnectionTab
@@ -703,6 +705,7 @@ function TabNav({
   mappingsComplete: boolean;
   validationComplete: boolean;
 }) {
+  const isMobile = useIsMobile();
   const tabs: { key: TabView; label: string; level: string; disabled: boolean }[] = [
     { key: "connection", label: "Connection & Discovery", level: "L1", disabled: false },
     { key: "mapping", label: "Mapping & Transformation", level: "L2", disabled: connectionStatus !== "connected" },
@@ -721,6 +724,7 @@ function TabNav({
         margin: "0 auto",
         display: "flex",
         gap: 0,
+        flexWrap: isMobile ? "wrap" : "nowrap",
       }}>
         {tabs.map(tab => (
           <button
@@ -795,6 +799,7 @@ interface ConnectionTabProps {
 }
 
 function ConnectionTab(props: ConnectionTabProps) {
+  const isMobile = useIsMobile();
   const inputStyle: React.CSSProperties = {
     fontFamily: S.fontMono, fontSize: "13px", color: S.primary,
     background: S.bgDeep, border: `1px solid ${S.rim}`,
@@ -815,7 +820,7 @@ function ConnectionTab(props: ConnectionTabProps) {
 
       {/* Database Adapters */}
       <Panel title="Database Adapter" step="1.1">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 12 }}>
           {(Object.keys(DB_ADAPTERS) as DbDriver[]).map(db => {
             const adapter = DB_ADAPTERS[db];
             const isSelected = props.driver === db;
@@ -880,7 +885,7 @@ function ConnectionTab(props: ConnectionTabProps) {
 
       {/* Connection Parameters */}
       <Panel title="Connection Parameters" step="1.2">
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr", gap: 16, marginBottom: 16 }}>
           <div>
             <label style={labelStyle}>Hostname / IP Address</label>
             <input
@@ -902,7 +907,7 @@ function ConnectionTab(props: ConnectionTabProps) {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
           <div>
             <label style={labelStyle}>Database Name</label>
             <input
@@ -925,7 +930,7 @@ function ConnectionTab(props: ConnectionTabProps) {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
           <div>
             <label style={labelStyle}>Username</label>
             <input
@@ -948,7 +953,7 @@ function ConnectionTab(props: ConnectionTabProps) {
           </div>
         </div>
 
-        <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10, flexWrap: isMobile ? "wrap" : "nowrap" }}>
           <input
             type="checkbox"
             checked={props.useSSL}
@@ -1141,6 +1146,7 @@ interface MappingTabProps {
 }
 
 function MappingTab(props: MappingTabProps) {
+  const isMobile = useIsMobile();
   const mappedCount = props.mappings.filter(m => m.status === "mapped").length;
   const requiredFields = ORDR_FIELDS.filter(f => f.required).length;
 
@@ -1160,6 +1166,7 @@ function MappingTab(props: MappingTabProps) {
           justifyContent: "space-between",
           alignItems: "center",
           marginBottom: 8,
+          flexWrap: isMobile ? "wrap" : "nowrap",
         }}>
           <span style={{
             fontFamily: S.fontMono,
@@ -1236,7 +1243,7 @@ function MappingTab(props: MappingTabProps) {
         </div>
 
         {props.showTemplateSave && (
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap" }}>
             <input
               type="text"
               value={props.templateName}
@@ -1784,6 +1791,7 @@ interface ValidationTabProps {
 }
 
 function ValidationTab(props: ValidationTabProps) {
+  const isMobile = useIsMobile();
   if (props.previewLoading) {
     return (
       <div style={{
@@ -1813,7 +1821,7 @@ function ValidationTab(props: ValidationTabProps) {
       {/* Data Quality Metrics */}
       {props.qualityMetrics && (
         <Panel title="Data Quality Assessment" step="3.1">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 16, marginBottom: 20 }}>
             <MetricCard
               label="Total Rows"
               value={props.qualityMetrics.totalRows}
@@ -1847,6 +1855,7 @@ function ValidationTab(props: ValidationTabProps) {
               justifyContent: "space-between",
               alignItems: "center",
               marginBottom: 12,
+              flexWrap: isMobile ? "wrap" : "nowrap",
             }}>
               <span style={{
                 fontFamily: S.fontMono,
@@ -1885,7 +1894,7 @@ function ValidationTab(props: ValidationTabProps) {
 
       {/* Validation Rules */}
       <Panel title="Validation Rules" step="3.2">
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ overflowX: "auto", marginBottom: 16 }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: `2px solid ${S.rim}` }}>
@@ -2191,13 +2200,14 @@ interface ExecutionTabProps {
 }
 
 function ExecutionTab(props: ExecutionTabProps) {
+  const isMobile = useIsMobile();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <LevelBanner level={4} title="Execution & Governance" desc="Execute imports with audit trail and automated scheduling" />
 
       {/* Import Configuration */}
       <Panel title="Import Configuration" step="4.1">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
           <div>
             <label style={{
               fontFamily: S.fontUI,
@@ -2298,7 +2308,7 @@ function ExecutionTab(props: ExecutionTabProps) {
           </div>
         </div>
 
-        <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10, flexWrap: isMobile ? "wrap" : "nowrap" }}>
           <input
             type="checkbox"
             checked={props.importConfig.dryRun}
@@ -2329,6 +2339,7 @@ function ExecutionTab(props: ExecutionTabProps) {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            flexWrap: isMobile ? "wrap" : "nowrap",
           }}>
             <div>
               <div style={{
@@ -2367,6 +2378,7 @@ function ExecutionTab(props: ExecutionTabProps) {
               justifyContent: "space-between",
               alignItems: "center",
               marginBottom: 8,
+              flexWrap: isMobile ? "wrap" : "nowrap",
             }}>
               <span style={{
                 fontFamily: S.fontMono,
@@ -2459,7 +2471,7 @@ function ExecutionTab(props: ExecutionTabProps) {
 
         {props.scheduleEnabled && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
               <div>
                 <label style={{
                   fontFamily: S.fontUI,

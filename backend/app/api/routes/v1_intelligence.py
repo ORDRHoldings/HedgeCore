@@ -2,14 +2,13 @@
 """v1 Intelligence Tier — NL query, report commentary, settings."""
 from __future__ import annotations
 
-import uuid
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user, get_session
+from app.core.dependencies import get_session
 from app.core.plan_enforcement import require_plan_tier
 from app.models.user import User
 from app.services.intelligence_service import (

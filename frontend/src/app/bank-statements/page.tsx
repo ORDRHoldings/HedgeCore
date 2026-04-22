@@ -1,5 +1,6 @@
 "use client";
 import React, { Suspense, useCallback, useEffect, useState } from "react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { useAuth } from "@/lib/authContext";
 import {
   listStatements, listBankTransactions, uploadStatement, listAccounts,
@@ -59,6 +60,7 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
 ];
 
 function BankStatementsInner() {
+  const isMobile = useIsMobile();
   const { token } = useAuth();
   const [tab, setTab] = useState<Tab>("STATEMENTS");
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
@@ -220,7 +222,7 @@ function BankStatementsInner() {
 
         {/* KPI strip */}
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(5, 1fr)",
+          display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr 1fr" : "repeat(5, 1fr)",
           margin: "14px 28px 0", borderRadius: 6,
           border: `1px solid ${S.rim}`, overflow: "hidden",
         }}>
@@ -328,7 +330,7 @@ function BankStatementsInner() {
             {showUpload && (
               <div style={{ background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 6, padding: 20, marginBottom: 16 }}>
                 <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 14 }}>IMPORT BANK STATEMENT</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 14 }}>
                   <label style={{ fontSize: 10, fontFamily: S.mono, fontWeight: 600, color: S.text3, letterSpacing: "0.1em" }}>ACCOUNT
                     <select value={uploadAccountId} onChange={e => setUploadAccountId(e.target.value)}
                       style={{ width: "100%", padding: "8px 10px", marginTop: 4, background: S.deep, color: S.text1, border: `1px solid ${S.rim}`, borderRadius: 4, fontSize: 13, fontFamily: S.mono }}>
@@ -478,7 +480,7 @@ function BankStatementsInner() {
 
             {/* Recon KPI tiles */}
             {reconSummary && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 20 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 14, marginBottom: 20 }}>
                 {([
                   { label: "TOTAL TRANSACTIONS", value: reconSummary.total_transactions.toString(), color: HEX.cyan },
                   { label: "MATCHED", value: reconSummary.matched.toString(), sub: `${reconSummary.match_rate.toFixed(1)}% rate`, color: HEX.green },
@@ -514,7 +516,7 @@ function BankStatementsInner() {
             {reconAccountId && (
               <div style={{ background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 6, padding: 20, marginBottom: 16 }}>
                 <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 14 }}>MANUAL MATCH</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 14 }}>
                   <label style={{ fontSize: 10, fontFamily: S.mono, fontWeight: 600, color: S.text3, letterSpacing: "0.1em" }}>TRANSACTION ID
                     <input value={matchTxId} onChange={e => setMatchTxId(e.target.value)} placeholder="UUID"
                       style={{ width: "100%", padding: "8px 10px", marginTop: 4, background: S.deep, color: S.text1, border: `1px solid ${S.rim}`, borderRadius: 4, fontSize: 12, fontFamily: S.mono, boxSizing: "border-box" }} />
@@ -548,6 +550,7 @@ function BankStatementsInner() {
 }
 
 export default function BankStatementsPage() {
+  const isMobile = useIsMobile();
   return (
     <Suspense fallback={
       <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-deep)" }}>

@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import Link from "next/link";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
@@ -70,6 +71,7 @@ function SectionHeader({ label }: { label: string }) {
 }
 
 export default function AuditLabPage() {
+  const isMobile = useIsMobile();
   const { token } = useAuth();
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [runs, setRuns] = useState<DecisionRun[]>([]);
@@ -141,7 +143,7 @@ export default function AuditLabPage() {
       ) : error ? (
         <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.red }}>{error}</div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 24 }}>
 
           {/* Datasets panel */}
           <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: "20px 24px" }}>

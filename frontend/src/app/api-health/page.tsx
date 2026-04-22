@@ -2,8 +2,10 @@
 
 import React, { useState } from "react";
 import api from "../../lib/api";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 export default function ApiHealthPage() {
+  const isMobile = useIsMobile();
   const [status, setStatus] = useState<string>("unknown");
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -21,7 +23,7 @@ export default function ApiHealthPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 text-gray-800">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 text-gray-800 px-4">
       <h1 className="text-3xl font-bold mb-6">API Health Check</h1>
       <button
         onClick={checkHealth}
@@ -30,7 +32,7 @@ export default function ApiHealthPage() {
       >
         {loading ? "Checking..." : "Check API Health"}
       </button>
-      <pre className="mt-8 bg-white p-4 rounded shadow-md max-w-xl text-sm overflow-auto w-[400px]">
+      <pre className="mt-8 bg-white p-4 rounded shadow-md text-sm overflow-auto w-full" style={{ maxWidth: 400 }}>
         {status}
       </pre>
     </div>

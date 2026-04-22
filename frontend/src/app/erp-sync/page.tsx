@@ -5,6 +5,7 @@ import { RefreshCw, Zap, AlertCircle, CheckCircle2 } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { useAuth } from "@/lib/authContext";
 import { triggerERPPull } from "@/lib/api/glClient";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -26,6 +27,7 @@ interface PullResult {
 }
 
 export default function ERPSyncPage() {
+  const isMobile = useIsMobile();
   const { token } = useAuth();
   const [pulling, setPulling] = useState(false);
   const [results, setResults] = useState<PullResult[]>([]);
@@ -50,7 +52,7 @@ export default function ERPSyncPage() {
 
   return (
     <PageShell icon={RefreshCw} title="ERP Sync" breadcrumb={["Hedge Desk", "ERP Sync"]} noPadding>
-      <div style={{ padding: "24px 32px", fontFamily: S.fontUI }}>
+      <div style={{ padding: isMobile ? "12px 16px" : "24px 32px", fontFamily: S.fontUI }}>
 
         <p style={{ fontSize: 13, color: S.textSub, marginBottom: 24, lineHeight: 1.6 }}>
           Pull open foreign-currency invoices from connected ERP systems.
@@ -63,7 +65,7 @@ export default function ERPSyncPage() {
           <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.textSub, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 16 }}>
             Manual Pull
           </div>
-          <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: isMobile ? "wrap" : "nowrap" }}>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: 11, color: S.textSub, display: "block", marginBottom: 6 }}>CONNECTOR ID</label>
               <input value={connectorId} onChange={(e) => setConnectorId(e.target.value)}
@@ -90,7 +92,7 @@ export default function ERPSyncPage() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {results.map((r, i) => (
-                <div key={i} style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 4, padding: "12px 16px", display: "flex", alignItems: "center", gap: 16 }}>
+                <div key={i} style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 4, padding: "12px 16px", display: "flex", alignItems: "center", gap: 16, flexWrap: isMobile ? "wrap" : "nowrap" }}>
                   <CheckCircle2 size={16} color="#7ed321" />
                   <div style={{ flex: 1 }}>
                     <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.accent }}>{r.source_system}</span>

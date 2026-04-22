@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import APIRouter, Body, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from backend.app.engine.recommend import recommend as recommend_engine
+from app.engine.recommend import recommend as recommend_engine
 
 router = APIRouter(prefix="/engine", tags=["engine"])
 # -----------------------------

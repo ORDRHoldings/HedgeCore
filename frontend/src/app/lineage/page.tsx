@@ -26,6 +26,7 @@ import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { LINEAGE_HELP } from "@/lib/help/lineage";
 
 import { PageShell } from "@/components/layout/PageShell";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { Globe } from "lucide-react";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
@@ -326,6 +327,7 @@ function DetailPanel({ node }: { node: LineageNode }) {
 
 // ── Main content ───────────────────────────────────────────────────────────────
 function LineageContent() {
+  const isMobile = useIsMobile();
   const params = useSearchParams();
   const router = useRouter();
   const { isAuthenticated, token, isLoading: authLoading } = useAuth();
@@ -454,7 +456,7 @@ function LineageContent() {
     <div style={{ fontFamily: S.fontUI, color: S.primary, display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
 
       {/* ── Context bar — position-specific dynamic state ── */}
-      <div style={{ height: 44, padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+      <div style={{ height: isMobile ? "auto" : 44, padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, display: "flex", alignItems: "center", gap: 12, flexWrap: isMobile ? "wrap" : "nowrap", flexShrink: 0 }}>
         <Link href="/position-desk" style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textDecoration: "none", border: `1px solid ${S.rim}`, padding: "2px 8px", borderRadius: 2, letterSpacing: "0.04em" }}>
           ← POSITION DESK
         </Link>
@@ -489,7 +491,7 @@ function LineageContent() {
 
       {/* ── KPI strip ── */}
       {lineage && (
-        <div style={{ height: 44, background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, display: "flex", gap: 0, padding: "0 20px", flexShrink: 0 }}>
+        <div style={{ height: isMobile ? "auto" : 44, background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, display: "flex", gap: 0, padding: "0 20px", flexWrap: isMobile ? "wrap" : "nowrap", flexShrink: 0 }}>
           {[
             { label: "NODES", value: String(lineage.summary.node_count), color: S.primary },
             { label: "EDGES", value: String(lineage.summary.edge_count), color: S.primary },
@@ -719,6 +721,7 @@ function LineageContent() {
                       LINEAGE EDGES — {lineage.edges.length} RELATIONS
                     </span>
                   </div>
+                  <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
                       <tr style={{ borderBottom: `1px solid ${S.soft}`, background: S.bgSub }}>
@@ -749,6 +752,7 @@ function LineageContent() {
                       })}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               )}
             </>

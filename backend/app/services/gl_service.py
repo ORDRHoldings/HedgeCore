@@ -307,7 +307,6 @@ async def upsert_gl_mapping(
     data: "GLAccountMappingCreate",
     user: User,
 ) -> GLAccountMapping:
-    from app.schemas_v1.gl import GLAccountMappingCreate  # noqa: PLC0415
 
     result = await session.execute(
         select(GLAccountMapping).where(

@@ -3,7 +3,6 @@ Pydantic response models for Audit Lab API endpoints.
 """
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field

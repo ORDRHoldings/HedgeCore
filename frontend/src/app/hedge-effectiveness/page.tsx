@@ -11,6 +11,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
@@ -90,6 +91,7 @@ interface PeriodRow {
 }
 
 export default function HedgeEffectivenessPage() {
+  const isMobile = useIsMobile();
   return (
     <Suspense fallback={
       <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: S.deep }}>
@@ -111,6 +113,7 @@ export default function HedgeEffectivenessPage() {
 }
 
 function HedgeEffectivenessInner() {
+  const isMobile = useIsMobile();
   const { token, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -394,7 +397,7 @@ function HedgeEffectivenessInner() {
 
         {/* KPI strip */}
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(5, 1fr)",
+          display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr 1fr" : "repeat(5, 1fr)",
           margin: "14px 28px 0", borderRadius: 6,
           border: `1px solid ${S.rim}`, overflow: "hidden",
         }}>
@@ -546,6 +549,7 @@ function OverviewTab({
   onNavigateRun: (id: string) => void;
   onSwitchTab: (t: Tab) => void;
 }) {
+  const isMobile = useIsMobile();
   const lastRun = runs[0];
   // ── 28.3 Rolling pass-rate window selector ──
   const [passWindow, setPassWindow] = useState<5 | 10 | 0>(0);
@@ -559,12 +563,12 @@ function OverviewTab({
   const avgDo = doRatios.length > 0 ? doRatios.reduce((s, v) => s + v, 0) / doRatios.length : null;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, maxWidth: 1100 }}>
+    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20, maxWidth: 1100 }}>
       {/* KPI tiles */}
       {totalRuns > 0 && (
         <div style={{
           gridColumn: "1 / -1",
-          display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12,
+          display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 12,
         }}>
           {([
             { label: "TOTAL ASSESSMENTS", value: totalRuns.toString(), sub: `${effectiveRuns} effective`, color: HEX.cyan },
@@ -837,7 +841,7 @@ function OverviewTab({
             <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: S.text3, textTransform: "uppercase", marginBottom: 12 }}>
               D.O. Ratio Distribution Statistics
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr 1fr" : "repeat(6, 1fr)", gap: 8 }}>
               {stats.map(({ label, value, color }) => (
                 <div key={label} style={{ textAlign: "center", padding: "8px 4px", borderRadius: 3, background: S.sub, border: `1px solid ${S.rim}` }}>
                   <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: S.text3, marginBottom: 4 }}>{label}</div>
@@ -995,7 +999,7 @@ function OverviewTab({
                 <div style={{ fontFamily: S.mono, fontSize: 22, fontWeight: 800, color: gradeColor, lineHeight: 1.1 }}>{total}<span style={{ fontSize: 12, color: S.text3, fontWeight: 500 }}>/100</span></div>
               </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 8 }}>
               {breakdown.map((b) => (
                 <div key={b.label}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
@@ -1690,7 +1694,7 @@ function OverviewTab({
             <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
               COVERAGE GAP BY STANDARD
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 12 }}>
               {STDS.map(({ key, label }) => {
                 const tested = datasets.filter((ds) => runs.some((r) => r.dataset_id === ds.id && r.standard === key)).length;
                 const untested = datasets.length - tested;
@@ -1745,7 +1749,7 @@ function OverviewTab({
             <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 10 }}>
               YEAR-TO-DATE {thisYear}
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${KPIS.length}, 1fr)`, gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : `repeat(${KPIS.length}, 1fr)`, gap: 12 }}>
               {KPIS.map((kpi) => {
                 const ytdVal = kpi.ytd;
                 const priorVal = kpi.prior;
@@ -1878,7 +1882,7 @@ function OverviewTab({
             <div style={{ padding: "10px 20px", borderBottom: `1px solid ${S.rim}` }}>
               <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>COMPLIANCE SCORECARD</span>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr" }}>
               {STANDARDS.map((std, i) => {
                 const stdRuns = runs.filter((r) => r.standard === std.key);
                 const lastRun = [...stdRuns].sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))[0] ?? null;
@@ -3389,6 +3393,7 @@ function DatasetsTab({
   onCloneDataset: (id: string) => Promise<void>;
   token: string;
 }) {
+  const isMobile = useIsMobile();
   const [dsSearch, setDsSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandAll, setExpandAll] = useState(false);
@@ -4578,6 +4583,7 @@ function UploadTab({
   csvPair: string; setCsvPair: (v: string) => void;
   handleCsvUpload: () => void;
 }) {
+  const isMobile = useIsMobile();
   const [mode, setMode] = useState<"manual" | "csv">("manual");
 
   const inputStyle: React.CSSProperties = {
@@ -4941,6 +4947,7 @@ type SortKey = "dataset" | "do_ratio" | "r2" | "verdict" | "date" | null;
 const STARRED_KEY = "hec_starred_runs";
 
 function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; onNavigateRun: (id: string) => void; onDeleteRuns: (ids: string[]) => Promise<void>; token: string }) {
+  const isMobile = useIsMobile();
   const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [stdFilter, setStdFilter] = useState("ALL");

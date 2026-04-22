@@ -13,6 +13,7 @@ import HelpPanel from "@/components/layout/HelpPanel";
 import { LEDGER_HELP } from "@/lib/helpContent";
 import { PageShell } from "@/components/layout/PageShell";
 import { Globe, Link2 } from "lucide-react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 const S = {
   fontUI:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -33,11 +34,12 @@ const S = {
 
 // ── Hash Chain Block Visualization ────────────────────────────────────────────
 function HashChainView({ entries, onSelect }: { entries: LedgerEntry[]; onSelect: (id: string) => void }) {
+  const isMobile = useIsMobile();
   // Show chain newest-first (top → genesis at bottom)
   const GENESIS_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
 
   return (
-    <div style={{ padding: "20px 24px" }}>
+    <div style={{ padding: isMobile ? "12px" : "20px 24px" }}>
       <div style={{
         fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
         color: S.tertiary, marginBottom: 20, textTransform: "uppercase",
@@ -144,7 +146,7 @@ function HashChainView({ entries, onSelect }: { entries: LedgerEntry[]; onSelect
                 </div>
 
                 {/* Hash fields grid */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 24px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "8px 24px" }}>
                   {/* Current hash */}
                   <div>
                     <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 3 }}>
@@ -237,6 +239,7 @@ function HashChainView({ entries, onSelect }: { entries: LedgerEntry[]; onSelect
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function LedgerListPage() {
+  const isMobile = useIsMobile();
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { token } = useAuth();
@@ -258,6 +261,7 @@ export default function LedgerListPage() {
             <div style={{
               display: "flex", borderBottom: `1px solid ${S.rim}`,
               background: S.bgSub, flexShrink: 0,
+              flexWrap: isMobile ? "wrap" : "nowrap",
             }}>
               {(["TABLE", "CHAIN"] as const).map(v => (
                 <button key={v} onClick={() => setView(v)} style={{
@@ -274,7 +278,7 @@ export default function LedgerListPage() {
             </div>
           )}
 
-          <div style={{ padding: view === "CHAIN" ? 0 : "20px 24px" }}>
+          <div style={{ padding: view === "CHAIN" ? 0 : (isMobile ? "12px" : "20px 24px") }}>
             {error && <ErrorBanner code={error.code} message={error.message} />}
             {ledgerLoading ? (
               <div style={{ padding: 20 }}>
@@ -292,14 +296,14 @@ export default function LedgerListPage() {
               <HashChainView entries={ledgerEntries} onSelect={id => router.push(`/ledger/${id}`)} />
             ) : (
               <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}` }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderBottom: `1px solid ${S.rim}`, background: S.bgSub, flexWrap: isMobile ? "wrap" : "nowrap" }}>
                   <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
                     IMMUTABLE LEDGER
                   </span>
                   <span style={{ color: S.rim }}>·</span>
                   <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>{ledgerEntries.length} ENTRIES</span>
                 </div>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: S.bgSub }}>
                       {["LEDGER ID", "ORDER", "REPLAY", "ROOT HASH", "AUTHORIZED BY", "AUTHORIZED AT"].map(h => (
@@ -337,7 +341,7 @@ export default function LedgerListPage() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table></div>
               </div>
             )}
           </div>
@@ -346,10 +350,11 @@ export default function LedgerListPage() {
       </div>
       {/* ── Footer ── */}
       <footer style={{
-        height: 32, display: "flex", alignItems: "center", gap: 8, padding: "0 24px",
+        height: 32, display: "flex", alignItems: "center", gap: 8, padding: isMobile ? "0 12px" : "0 24px",
         borderTop: `1px solid ${S.rim}`, background: S.bgPanel,
         fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
         letterSpacing: "0.04em", flexShrink: 0,
+        flexWrap: isMobile ? "wrap" : "nowrap",
       }}>
         <span>ORDR Terminal · Immutable Ledger</span>
         <span style={{ color: S.rim }}>·</span>

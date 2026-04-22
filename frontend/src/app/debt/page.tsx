@@ -1,6 +1,7 @@
 // frontend/src/app/debt/page.tsx
 "use client";
 import { useEffect, useState } from "react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { CreditCard } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { getMaturityCalendar, getExposure } from "@/lib/api/debtClient";
@@ -23,6 +24,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default function DebtPage() {
+  const isMobile = useIsMobile();
   const { token } = useAuth();
   const [facilities, setFacilities] = useState<DebtFacility[]>([]);
   const [exposure, setExposure] = useState<{ currency: string; committed: number; drawn: number }[]>([]);
@@ -53,7 +55,7 @@ export default function DebtPage() {
       </div>
 
       {/* Summary Bar */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
         {[
           { label: "TOTAL COMMITTED", value: `$${(totalCommitted / 1e6).toFixed(1)}M` },
           { label: "TOTAL DRAWN", value: `$${(totalDrawn / 1e6).toFixed(1)}M` },

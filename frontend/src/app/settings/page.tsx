@@ -16,6 +16,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { useAuth } from "../../lib/authContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import HelpPanelV2 from "@/components/help/HelpPanelV2";
@@ -103,6 +104,7 @@ function SettingsPageInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const renderTs     = useRenderTs();
+  const isMobile     = useIsMobile();
 
   const [toasts,     setToasts]     = useState<Toast[]>([]);
   const [changeLog,  setChangeLog]  = useState<ChangeEntry[]>([]);
@@ -190,7 +192,7 @@ function SettingsPageInner() {
   };
 
   return (
-    <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI, display: "flex" }}>
+    <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI, display: "flex", flexDirection: isMobile ? "column" : "row" }}>
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
 
         <DiffPreviewModal
@@ -215,11 +217,11 @@ function SettingsPageInner() {
         <SettingsTabBar activeTab={activeTab} onTabChange={handleTabChange} />
 
         {/* Content */}
-        <div style={{ maxWidth: activeTab === "APPEARANCE" ? 1200 : 900, margin: "0 auto", padding: "24px 24px 60px", width: "100%", transition: "max-width 200ms" }}>
+        <div style={{ maxWidth: activeTab === "APPEARANCE" ? 1200 : 900, margin: "0 auto", padding: isMobile ? "12px 12px 40px" : "24px 24px 60px", width: "100%", transition: "max-width 200ms" }}>
           {showLog && (
             <ChangeLogDrawer entries={changeLog} onClose={() => setShowLog(false)} />
           )}
-          <div style={{ background: activeTab === "APPEARANCE" ? "transparent" : S.bgPanel, border: activeTab === "APPEARANCE" ? "none" : `1px solid ${S.rim}`, borderRadius: 3, padding: activeTab === "APPEARANCE" ? 0 : "24px 28px" }}>
+          <div style={{ background: activeTab === "APPEARANCE" ? "transparent" : S.bgPanel, border: activeTab === "APPEARANCE" ? "none" : `1px solid ${S.rim}`, borderRadius: 3, padding: activeTab === "APPEARANCE" ? 0 : (isMobile ? "16px" : "24px 28px") }}>
             {renderTab()}
           </div>
         </div>

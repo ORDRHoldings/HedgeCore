@@ -12,6 +12,7 @@ import ChartEngine from "@/components/chart/ChartEngine";
 import TradingPanel from "@/components/chart/TradingPanel";
 import StrategyPanel, { StrategyPanelToggle } from "@/components/chart/StrategyPanel";
 import { RefreshCw, Layers } from "lucide-react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -183,6 +184,7 @@ const TIMEFRAMES: { label: string; value: string }[] = [
 
 function ChartPageInner() {
   const { token } = useAuth();
+  const isMobile = useIsMobile();
   const [pair, setPair] = useState("EURUSD");
   const [interval, setInterval] = useState("1day");
   const { bars, loading, error, source, refetch } = useChartData(pair, interval, token || "", 1000);
@@ -214,6 +216,7 @@ function ChartPageInner() {
         background: S.bgPanel,
         height: 40,
         minHeight: 40,
+        flexWrap: isMobile ? "wrap" : "nowrap",
       }}>
         {/* Pair Selector */}
         <select

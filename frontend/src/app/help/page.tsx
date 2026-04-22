@@ -7,6 +7,7 @@ import type { GuideDoc, GuideLevel, GuideSection, GuideBlock, GuideCallout, Guid
 import { GUIDE_LEVEL_META, computeVerifiedStats } from "@/lib/help/guides/types";
 
 import { PageShell } from "@/components/layout/PageShell";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { HelpCircle } from "lucide-react";
 
 // ── Guide data import (graceful fallback) ──────────────────────────────────────
@@ -501,6 +502,7 @@ function SectionCard({
 
 // ── Main page content (inside Suspense) ───────────────────────────────────────
 function HelpPageContent() {
+  const isMobile = useIsMobile();
   const renderTs = useRenderTs();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -652,6 +654,7 @@ function HelpPageContent() {
           alignItems: "center",
           gap: 12,
           height: 44,
+          flexWrap: isMobile ? "wrap" : "nowrap",
           padding: "0 20px",
           background: S.bgPanel,
           borderBottom: `1px solid ${S.rim}`,
@@ -693,7 +696,7 @@ function HelpPageContent() {
         <div style={{
           flex: 1,
           display: "grid",
-          gridTemplateColumns: "240px 1fr 280px",
+          gridTemplateColumns: isMobile ? "1fr" : "240px 1fr 280px",
           overflow: "hidden",
           minHeight: 0,
         }}>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 const ACCENT = C.accent;
 
@@ -88,11 +89,12 @@ const SECTIONS = [
 ];
 
 export default function SecurityPage() {
+  const isMobile = useIsMobile();
   return (
     <MarketingLayout>
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
-      <section style={{ padding: "80px 48px 64px", maxWidth: 1100, margin: "0 auto" }}>
+      <section style={{ padding: `80px ${isMobile ? 24 : 48}px 64px`, maxWidth: 1100, margin: "0 auto" }}>
         <Link
           href="/"
           style={{
@@ -149,7 +151,7 @@ export default function SecurityPage() {
       }}>
         <div style={{
           maxWidth: 1200, margin: "0 auto",
-          display: "grid", gridTemplateColumns: "repeat(5, 1fr)",
+          display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5, 1fr)",
         }}>
           {[
             { v: "TLS 1.3", l: "In Transit" },
@@ -183,7 +185,7 @@ export default function SecurityPage() {
       </section>
 
       {/* ── Security Sections Grid ──────────────────────────────────────────── */}
-      <section style={{ padding: "80px 48px", maxWidth: 1100, margin: "0 auto" }}>
+      <section style={{ padding: `80px ${isMobile ? 24 : 48}px`, maxWidth: 1100, margin: "0 auto" }}>
         <div style={{
           fontFamily: F.mono, fontSize: 11, fontWeight: 700,
           letterSpacing: "0.15em", color: C.textMuted,
@@ -199,7 +201,7 @@ export default function SecurityPage() {
         </h2>
 
         <div className="sec-grid" style={{
-          display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 24,
+          display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 24,
         }}>
           {SECTIONS.map((section) => (
             <div
@@ -246,7 +248,7 @@ export default function SecurityPage() {
 
       {/* ── WORM Detail Section ─────────────────────────────────────────────── */}
       <section style={{
-        background: C.bgDark, padding: "80px 48px",
+        background: C.bgDark, padding: `80px ${isMobile ? 24 : 48}px`,
       }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{
@@ -273,7 +275,7 @@ export default function SecurityPage() {
           </p>
 
           <div className="sec-worm-grid" style={{
-            display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20,
+            display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 20,
           }}>
             {[
               {
@@ -341,7 +343,7 @@ export default function SecurityPage() {
         background: C.bgAlt,
         borderTop: `1px solid ${C.border}`,
         borderBottom: `1px solid ${C.border}`,
-        padding: "64px 48px",
+        padding: `64px ${isMobile ? 24 : 48}px`,
         textAlign: "center",
       }}>
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
@@ -376,12 +378,7 @@ export default function SecurityPage() {
         </div>
       </section>
 
-      <style>{`
-        @media (max-width: 768px) {
-          .sec-grid       { grid-template-columns: 1fr !important; }
-          .sec-worm-grid  { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+
     </MarketingLayout>
   );
 }

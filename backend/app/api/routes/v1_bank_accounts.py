@@ -12,7 +12,7 @@ from app.models.user import User
 from app.schemas_v1.cash import BankAccountCreate, BankAccountResponse, BankAccountUpdate
 from app.services.bank_account_service import (
     create_account, verify_account, freeze_account, unfreeze_account, close_account,
-    decrypt_account_details, _get_account, AccountNotFoundError, SoDViolationError, InvalidStateTransitionError,
+    decrypt_account_details, _get_account, AccountNotFoundError,
 )
 
 router = APIRouter(prefix="/v1/cash/accounts", tags=["cash-accounts"])

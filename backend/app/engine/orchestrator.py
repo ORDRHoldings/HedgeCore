@@ -7,7 +7,7 @@ import time
 from collections.abc import Mapping
 from typing import Any
 
-from backend.app.engine.recommend import recommend
+from app.engine.recommend import recommend
 
 ENGINE_NAME = "orchestrator"
 ENGINE_VERSION = "1.0.0"

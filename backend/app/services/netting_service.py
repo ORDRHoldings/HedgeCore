@@ -5,15 +5,15 @@ Netting service — orchestrates intercompany obligation management and netting.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.cash import CashAuditEventType, LegalEntity
+from app.models.cash import CashAuditEventType
 from app.models.cash_forecast import CashForecastItem
 from app.models.cash_netting import IntercompanyObligation, NettingProposal
 from app.services.cash_audit_service import append_event

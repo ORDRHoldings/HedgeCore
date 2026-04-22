@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { CheckSquare, DollarSign, AlertCircle } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { useAuth } from "@/lib/authContext";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { listPendingSettlements, confirmSettlement } from "@/lib/api/glClient";
 
 const S = {
@@ -32,6 +33,7 @@ export default function SettlementPage() {
   const [confirmModal, setConfirmModal] = useState<ConfirmState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -71,7 +73,7 @@ export default function SettlementPage() {
 
   return (
     <PageShell icon={DollarSign} title="Settlement Tracking" breadcrumb={["Hedge Desk", "Settlement"]} noPadding>
-      <div style={{ padding: "24px 32px", fontFamily: S.fontUI }}>
+      <div style={{ padding: isMobile ? "12px 16px" : "24px 32px", fontFamily: S.fontUI }}>
 
         {success && (
           <div style={{ background: "rgba(126,211,33,0.1)", border: "1px solid rgba(126,211,33,0.3)", borderRadius: 4, padding: "10px 16px", color: "#7ed321", fontSize: 13, marginBottom: 16 }}>

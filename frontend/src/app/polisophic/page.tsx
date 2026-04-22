@@ -8,6 +8,7 @@ import { POLISOPHIC_HELP } from "@/lib/helpContent";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import { PageShell } from "@/components/layout/PageShell";
 import { Shield, Activity, AlertTriangle, Globe, TrendingUp, ChevronRight, Zap, Radio } from "lucide-react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 function useRenderTs(): string {
   const [renderTs, setRenderTs] = useState("");
@@ -171,6 +172,7 @@ export default function Polisophic() {
   const router = useRouter();
   const { user } = useAuth();
   const [tab, setTab] = useState(0);
+  const isMobile = useIsMobile();
 
   if (!_planAllowed) return null;
 
@@ -232,6 +234,7 @@ export default function Polisophic() {
         <div style={{ flex: 1 }} />
 
         {/* Header KPIs */}
+        <div style={{ display: "flex", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap" }}>
         {[
           { label: "COMPOSITE", value: `${compositeScore}`, color: compositeScore >= 70 ? "#fca5a5" : "#fcd34d" },
           { label: "HIGH DIMS", value: `${highCount}`, color: "#fca5a5" },
@@ -248,6 +251,7 @@ export default function Polisophic() {
           </div>
         ))}
         <span style={{ fontFamily: C.fontMono, fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{renderTs}</span>
+        </div>
       </header>
 
       {/* ══════════ TAB BAR ══════════ */}
@@ -288,8 +292,8 @@ export default function Polisophic() {
 
         {/* ══ TAB 0: EVENT FEED ══ */}
         {tab === 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", height: "100%" }}>
-            <div style={{ padding: "20px 24px", overflow: "auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 280px", height: "100%" }}>
+            <div style={{ padding: isMobile ? "12px 16px" : "20px 24px", overflow: "auto" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
                 <Radio size={16} color={C.blueMid} />
                 <span style={{ fontFamily: C.fontHead, fontSize: 14, fontWeight: 700 }}>Structured Event Feed</span>
@@ -383,8 +387,8 @@ export default function Polisophic() {
 
         {/* ══ TAB 1: RISK SCORES ══ */}
         {tab === 1 && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", height: "100%" }}>
-            <div style={{ padding: "20px 24px", overflow: "auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 280px", height: "100%" }}>
+            <div style={{ padding: isMobile ? "12px 16px" : "20px 24px", overflow: "auto" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
                 <Activity size={16} color={C.blueMid} />
                 <span style={{ fontFamily: C.fontHead, fontSize: 14, fontWeight: 700 }}>Risk Score Matrix</span>
@@ -392,7 +396,7 @@ export default function Polisophic() {
               </div>
 
               {/* Composite KPIs */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
                 {[
                   { label: "COMPOSITE SCORE", value: `${compositeScore}`, sub: "/ 100", color: compositeScore >= 70 ? C.red : C.amber },
                   { label: "HIGH REGIME", value: `${highCount}`, sub: "dimensions", color: C.red },
@@ -411,7 +415,8 @@ export default function Polisophic() {
 
               {/* Score table */}
               <Card>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: C.headerGradient }}>
                       {["RISK DIMENSION", "SCORE", "", "7D DELTA", "REGIME", "PRIMARY DRIVER"].map(h => (
@@ -438,6 +443,7 @@ export default function Polisophic() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </Card>
             </div>
 
@@ -463,7 +469,7 @@ export default function Polisophic() {
 
         {/* ══ TAB 2: MACRO SCENARIOS ══ */}
         {tab === 2 && (
-          <div style={{ padding: "20px 24px", overflow: "auto" }}>
+          <div style={{ padding: isMobile ? "12px 16px" : "20px 24px", overflow: "auto" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
               <TrendingUp size={16} color={C.blueMid} />
               <span style={{ fontFamily: C.fontHead, fontSize: 14, fontWeight: 700 }}>Macro Scenario Tree</span>
@@ -501,7 +507,7 @@ export default function Polisophic() {
             </Card>
 
             {/* Scenario cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
               {MACRO_SCENARIOS.map(sc => {
                 const barColor = sc.riskScore >= 80 ? C.red : sc.riskScore >= 60 ? C.amber : C.green;
                 return (
@@ -518,7 +524,7 @@ export default function Polisophic() {
                         </div>
                       </div>
 
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 8, marginBottom: 10 }}>
                         <div style={{ padding: "8px 10px", background: C.cardBgAlt, borderRadius: 8, border: `1px solid ${C.borderLight}` }}>
                           <div style={{ fontFamily: C.fontMono, fontSize: 10, color: C.textTertiary }}>USD/MXN PATH</div>
                           <div style={{ fontFamily: C.fontMono, fontSize: 14, fontWeight: 700, color: C.textPrimary }}>{sc.usdmxnPath}</div>
@@ -543,7 +549,7 @@ export default function Polisophic() {
 
         {/* ══ TAB 3: ALERT RULES ══ */}
         {tab === 3 && (
-          <div style={{ padding: "20px 24px", overflow: "auto" }}>
+          <div style={{ padding: isMobile ? "12px 16px" : "20px 24px", overflow: "auto" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
               <Zap size={16} color={C.blueMid} />
               <span style={{ fontFamily: C.fontHead, fontSize: 14, fontWeight: 700 }}>Alert Rule Registry</span>
@@ -551,6 +557,7 @@ export default function Polisophic() {
             </div>
 
             <Card style={{ marginBottom: 16 }}>
+              <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: C.headerGradient }}>
@@ -578,6 +585,7 @@ export default function Polisophic() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </Card>
 
             {/* Integration flow */}
@@ -585,7 +593,7 @@ export default function Polisophic() {
               <div style={{ fontFamily: C.fontMono, fontSize: 10, color: C.blueMid, fontWeight: 700, letterSpacing: "0.1em", marginBottom: 14 }}>
                 POLISOPHIC → HEDGECORE INTEGRATION PIPELINE
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
                 {[
                   { step: "01", title: "Event Ingested", desc: "Polisophic parses source (CB statement, press release, data feed) and classifies signal with confidence score.", icon: Radio },
                   { step: "02", title: "Score Updated", desc: "Risk dimensions recalculated using structured signal weight x confidence x recency decay function.", icon: Activity },
@@ -614,7 +622,7 @@ export default function Polisophic() {
 
         {/* ══ TAB 4: RISK HEATMAP ══ */}
         {tab === 4 && (
-          <div style={{ padding: "20px 24px", overflow: "auto" }}>
+          <div style={{ padding: isMobile ? "12px 16px" : "20px 24px", overflow: "auto" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
               <Globe size={16} color={C.blueMid} />
               <span style={{ fontFamily: C.fontHead, fontSize: 14, fontWeight: 700 }}>Regional Risk Heatmap</span>
@@ -622,7 +630,7 @@ export default function Polisophic() {
             </div>
 
             {/* Grid of region cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
               {HEATMAP_REGIONS.map(region => {
                 const scoreColor = region.score >= 75 ? C.red : region.score >= 55 ? C.amber : C.green;
                 const bgGrad = region.score >= 75
@@ -712,7 +720,7 @@ export default function Polisophic() {
 
         {/* ══ TAB 5: MY EXPOSURE ══ */}
         {tab === 5 && (
-          <div style={{ padding: "20px 24px", overflow: "auto" }}>
+          <div style={{ padding: isMobile ? "12px 16px" : "20px 24px", overflow: "auto" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
               <Shield size={16} color={C.blueMid} />
               <span style={{ fontFamily: C.fontHead, fontSize: 14, fontWeight: 700 }}>My Exposure Risk</span>

@@ -37,6 +37,7 @@ import HelpPanel from "../../components/layout/HelpPanel";
 import { COMMITTEE_PACK_HELP } from "../../lib/helpContent";
 
 import { PageShell } from "@/components/layout/PageShell";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { FileText } from "lucide-react";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
@@ -123,6 +124,7 @@ function SectionDivider({ label }: { label: string }) {
 function HashRow({
   label, value, highlight,
 }: { label: string; value: string | null; highlight?: boolean }) {
+  const isMobile = useIsMobile();
   const [copied, setCopied] = useState(false);
   const copy = () => {
     if (!value) return;
@@ -135,7 +137,7 @@ function HashRow({
       role="row"
       aria-label={`${label}: ${value ?? "not available"}`}
       style={{
-        display: "grid", gridTemplateColumns: "140px 1fr 24px",
+        display: "grid", gridTemplateColumns: isMobile ? "1fr" : "140px 1fr 24px",
         alignItems: "center", gap: 8, padding: "5px 0",
         borderBottom: `1px solid ${S.rim}`,
       }}
@@ -245,6 +247,7 @@ function CommitteePackInner() {
   const [pack,    setPack]    = useState<CommitteePackResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [err,     setErr]     = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!runId) return;
@@ -339,7 +342,7 @@ function CommitteePackInner() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "20px 24px 60px" }}>
+    <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "12px 16px 40px" : "20px 24px 60px" }}>
 
       {/* ── Print / Action bar (hidden in @media print) ── */}
       <div
@@ -349,6 +352,7 @@ function CommitteePackInner() {
           marginBottom: 20, padding: "8px 12px",
           background: S.bgPanel,
           border: `1px solid ${S.rim}`, borderRadius: 3,
+          flexWrap: isMobile ? "wrap" : "nowrap",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -396,7 +400,7 @@ function CommitteePackInner() {
       ───────────────────────────────────────────────────────────────────── */}
       <div data-print-section="cover" style={{
         border: `1px solid ${S.rim}`, borderRadius: 3,
-        background: S.bgPanel, padding: "28px 32px", marginBottom: 24,
+        background: S.bgPanel, padding: isMobile ? "16px 20px" : "28px 32px", marginBottom: 24,
       }}>
         {/* Header rule */}
         <div style={{
@@ -431,7 +435,7 @@ function CommitteePackInner() {
         {/* KPI strip */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill,minmax(130px,1fr))",
+          gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fill,minmax(130px,1fr))",
           gap: 1,
           background: S.rim, borderRadius: 2, overflow: "hidden", marginBottom: 20,
         }}>
@@ -674,6 +678,7 @@ function CommitteePackInner() {
             </div>
 
             {/* Canonical policy config table */}
+            <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <caption style={{
                 fontFamily: S.fontMono, fontSize: 12, color: S.secondary,
@@ -699,6 +704,7 @@ function CommitteePackInner() {
                 }
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>
@@ -860,6 +866,7 @@ function CommitteePackInner() {
         border: `1px solid ${S.rim}`, borderRadius: 3,
         background: S.bgPanel, padding: "18px 20px",
       }}>
+        <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <caption style={{
             fontFamily: S.fontMono, fontSize: 12, color: S.secondary,
@@ -875,6 +882,7 @@ function CommitteePackInner() {
             <PolicyRow label="Dodd-Frank"   value={regulatory.dodd_frank}   />
           </tbody>
         </table>
+        </div>
         <div style={{
           marginTop: 14,
           background: `color-mix(in srgb, ${S.pass} 5%, ${S.bgSub})`,
@@ -947,6 +955,7 @@ function CommitteePackInner() {
 // ── Page wrapper with Suspense (required by useSearchParams) ───────────────────
 export default function CommitteePackPage() {
   const _planAllowed = usePlanRedirect("professional");
+  const isMobile = useIsMobile();
   if (!_planAllowed) return null;
   return (
 

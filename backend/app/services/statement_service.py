@@ -6,7 +6,6 @@ from __future__ import annotations
 import hashlib
 import uuid
 from datetime import date
-from decimal import Decimal
 from typing import Any
 
 from fastapi import HTTPException
@@ -19,7 +18,6 @@ from app.services.cash_audit_service import append_event
 from app.services.parsers.mt940_parser import parse_mt940
 from app.services.parsers.camt053_parser import parse_camt053
 from app.services.parsers.bai2_parser import parse_bai2
-from app.services.parsers.statement_types import ParsedStatement
 
 
 def detect_format(content: str) -> str:

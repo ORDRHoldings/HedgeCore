@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/authContext";
@@ -152,6 +153,7 @@ function Section({ title, badge, badgeColor, children }: {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function HedgeMonitorPage() {
+  const isMobile = useIsMobile();
   const _planAllowed = usePlanRedirect("professional");
   const router = useRouter();
   const { user, token } = useAuth();
@@ -352,7 +354,7 @@ export default function HedgeMonitorPage() {
           <>
             {/* ── Section 1: Portfolio Status ───────────────────────────── */}
             <div style={{
-              display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12,
+              display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 12,
               background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 4, padding: 16,
             }}>
               {[
@@ -457,7 +459,7 @@ export default function HedgeMonitorPage() {
                       <PageShell icon={Play} title="Hedge Monitor" breadcrumb={["Dashboard","Hedge Monitor"]}>
 
                       <div key={h.id} style={{
-                        display: "grid", gridTemplateColumns: "1fr auto auto auto",
+                        display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr 1fr" : "1fr auto auto auto",
                         alignItems: "center", gap: 16, padding: "10px 12px",
                         background: S.bgSub, border: `1px solid ${S.soft}`,
                         borderRadius: 4, marginBottom: 8,
@@ -494,7 +496,7 @@ export default function HedgeMonitorPage() {
             <Section title="Hedge Effectiveness by Position" badge="IFRS 9" badgeColor={S.cyan}>
               <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
                 {activeHedges.map(h => (
-                  <div key={h.id} style={{ display: "grid", gridTemplateColumns: "1fr 120px 80px", alignItems: "center", gap: 12 }}>
+                  <div key={h.id} style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr 1fr" : "1fr 120px 80px", alignItems: "center", gap: 12 }}>
                     <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.primary }}>{h.entity} ({h.currency})</span>
                     {/* Effectiveness bar */}
                     <div style={{ height: 6, background: S.bgSub, borderRadius: 3, overflow: "hidden", border: `1px solid ${S.soft}` }}>

@@ -30,6 +30,7 @@ import { CONNECTORS_HELP } from "@/lib/helpContent";
 
 import { PageShell } from "@/components/layout/PageShell";
 import { LayoutDashboard } from "lucide-react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 // ── Hydration-safe timestamp ───────────────────────────────────────────────────
 function useRenderTs(): string {
@@ -188,6 +189,7 @@ export default function ConnectorsPage() {
   const _planAllowed = usePlanRedirect("professional");
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
+  const isMobile = useIsMobile();
   const renderTs = useRenderTs();
 
   const [connectors, setConnectors] = useState<ConnectorState[]>([]);
@@ -265,9 +267,10 @@ export default function ConnectorsPage() {
 
       {/* ── Top bar ── */}
       <div style={{
-        height: 44, padding: "0 24px",
+        minHeight: 44, padding: "0 24px",
         background: S.bgPanel, borderBottom: `1px solid ${S.rim}`,
         display: "flex", alignItems: "center", justifyContent: "space-between",
+        flexWrap: isMobile ? "wrap" : "nowrap",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.primary }}>
@@ -303,10 +306,10 @@ export default function ConnectorsPage() {
       </div>
 
       {/* ── Content ── */}
-      <div style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px 48px" }}>
+      <div style={{ maxWidth: 1440, margin: "0 auto", padding: isMobile ? "12px 12px 24px" : "20px 24px 48px" }}>
 
         {/* KPI Strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5, 1fr)", gap: 10, marginBottom: 20 }}>
           <KpiCard label="TOTAL CONNECTORS"   value={`${totalConnectors}`}  color={S.cyan} />
           <KpiCard label="CONNECTED"          value={`${connectedCount}`}   color={S.pass}  sub={`${configuredCount} configured`} />
           <KpiCard label="ERRORS"             value={`${errorCount}`}       color={errorCount > 0 ? S.fail : S.tertiary} />
@@ -319,7 +322,7 @@ export default function ConnectorsPage() {
           <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.09em", color: S.tertiary, marginBottom: 12 }}>
             CONNECTOR STATUS
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 12 }}>
             {connectors.map(conn => {
               const statusColor = STATUS_COLORS[conn.status];
               const isExpanded  = expandedCard === conn.type;
@@ -370,6 +373,7 @@ export default function ConnectorsPage() {
                     <div style={{
                       display: "flex", gap: 16, marginTop: 10,
                       paddingTop: 10, borderTop: `1px solid ${S.soft}`,
+                      flexWrap: isMobile ? "wrap" : "nowrap",
                     }}>
                       <div>
                         <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 2, letterSpacing: "0.07em" }}>LAST SYNC</div>
@@ -439,7 +443,7 @@ export default function ConnectorsPage() {
                         </div>
                       )}
                       {/* Action buttons */}
-                      <div style={{ display: "flex", gap: 8 }}>
+                      <div style={{ display: "flex", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap" }}>
                         <a
                           href={conn.href}
                           style={{
@@ -479,7 +483,7 @@ export default function ConnectorsPage() {
             </span>
           </div>
           <div style={{ padding: "14px 16px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 16 }}>
               {connectors.map(conn => {
                 const color = conn.fieldCoverage >= 90 ? S.pass : conn.fieldCoverage >= 70 ? S.amber : S.fail;
                 return (
@@ -553,6 +557,7 @@ export default function ConnectorsPage() {
               </div>
             </div>
           ) : (
+            <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
@@ -618,6 +623,7 @@ export default function ConnectorsPage() {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 

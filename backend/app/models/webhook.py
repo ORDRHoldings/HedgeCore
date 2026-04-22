@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import uuid as _uuid
 from datetime import UTC, datetime
-from typing import Optional
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB

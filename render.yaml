@@ -46,7 +46,7 @@ services:
       - key: JWT_SECRET
         fromGroup: hedgecore-secrets
       # PRIVATE NETWORKING: use the internal database URL from the Render dashboard
-      # (format: postgresql://user:pass@dpg-XXXX-a/db) — removes DB from public internet
+      # (format: postgresql://user:PASSWORD@dpg-XXXX-a/db) — removes DB from public internet
       - key: DATABASE_URL
         fromGroup: hedgecore-secrets
       - key: ASYNC_DATABASE_URL
@@ -96,7 +96,7 @@ services:
       - key: JWT_SECRET
         fromGroup: hedgecore-preview-secrets
       # PRIVATE NETWORKING: use the internal database URL from the Render dashboard
-      # (format: postgresql://user:pass@dpg-XXXX-a/db) — removes DB from public internet
+      # (format: postgresql://user:PASSWORD@dpg-XXXX-a/db) — removes DB from public internet
       - key: DATABASE_URL
         fromGroup: hedgecore-preview-secrets
       - key: ASYNC_DATABASE_URL

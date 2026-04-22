@@ -6,6 +6,7 @@ import { dashboardFetch } from "@/lib/api/dashboardClient";
 import { PAIR_REGISTRY, GROUP_LABELS, getPairsByGroup, type PairGroup } from "../../constants/pairRegistry";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import { PageShell } from "@/components/layout/PageShell";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { BarChart3, AlertTriangle, TrendingDown, Layers, RefreshCw } from "lucide-react";
 
 const S = {
@@ -94,6 +95,7 @@ const FALLBACK_EXPOSURE: Record<string, number> = {
 
 // ── GroupCard ──────────────────────────────────────────────────────────────────
 function GroupCard({ group }: { group: PairGroup }) {
+  const isMobile = useIsMobile();
   const pairs = getPairsByGroup(group);
   const ndfCount = pairs.filter(p => p.isNdf).length;
   return (
@@ -116,6 +118,7 @@ function GroupCard({ group }: { group: PairGroup }) {
           }}>{ndfCount} NDF</span>
         )}
       </div>
+      <div style={{ overflowX: "auto" }}>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ background: S.sub }}>
@@ -150,6 +153,7 @@ function GroupCard({ group }: { group: PairGroup }) {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -470,6 +474,7 @@ const PRIO_COLOR = { HIGH: "var(--accent-red,#f87171)", MEDIUM: "var(--accent-am
 const TYPE_COLOR = { FWD: "var(--accent-cyan)", COLLAR: "var(--accent-green,#22c55e)", NDF: "var(--accent-amber)", SPOT: "var(--text-secondary)" };
 
 function RecommendationsPanel() {
+  const isMobile = useIsMobile();
   const totalNotional = HEDGE_RECS.reduce((a, r) => a + r.notional, 0);
 
   return (
@@ -501,6 +506,7 @@ function RecommendationsPanel() {
             {/* Header row */}
             <div style={{
               display: "flex", alignItems: "center", gap: 10,
+              flexWrap: isMobile ? "wrap" : "nowrap",
               padding: "10px 16px", borderBottom: `1px solid ${S.soft}`,
               background: S.sub,
             }}>
@@ -534,7 +540,7 @@ function RecommendationsPanel() {
             </div>
 
             {/* Action + rationale */}
-            <div style={{ padding: "12px 16px", display: "flex", alignItems: "flex-start", gap: 16 }}>
+            <div style={{ padding: "12px 16px", display: "flex", alignItems: "flex-start", gap: 16, flexWrap: isMobile ? "wrap" : "nowrap" }}>
               {/* Action badge */}
               <div style={{
                 flexShrink: 0, padding: "8px 14px",
@@ -571,6 +577,7 @@ function RecommendationsPanel() {
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function PortfolioMultiPage() {
+  const isMobile = useIsMobile();
   const _planAllowed = usePlanRedirect("professional");
   const { user, token } = useAuth();
   const [view, setView] = useState<ViewMode>("PAIRS");
@@ -656,7 +663,7 @@ export default function PortfolioMultiPage() {
         </div>
 
         {/* KPI strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", borderBottom: `1px solid ${S.rim}`, flexShrink: 0 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5, 1fr)", borderBottom: `1px solid ${S.rim}`, flexShrink: 0 }}>
           {[
             { label: "Total Pairs", value: String(PAIR_REGISTRY.length), sub: "26 currencies" },
             { label: "G10 Pairs",   value: "10",                          sub: "Deliverable FWD" },
@@ -711,7 +718,7 @@ export default function PortfolioMultiPage() {
         {/* Content area */}
         <div style={{ flex: 1, overflowY: "auto" }}>
           {view === "PAIRS" && (
-            <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ padding: isMobile ? 12 : 16, display: "flex", flexDirection: "column", gap: 16 }}>
               {(activeGroup === "ALL" ? GROUPS : [activeGroup as PairGroup]).map(group => (
                 <GroupCard key={group} group={group} />
               ))}

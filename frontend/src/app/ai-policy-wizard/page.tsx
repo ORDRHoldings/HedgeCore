@@ -42,6 +42,7 @@ import {
 } from "../../utils/policyMapper";
 
 import { PageShell } from "@/components/layout/PageShell";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { Shield } from "lucide-react";
 
 // ── Hydration-safe timestamp hook ──────────────────────────────────────────
@@ -513,6 +514,7 @@ function StepHeader({ stepIdx }: { stepIdx: number }) {
 
 // A1 — Policy Intent
 function StepA1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => void }) {
+  const isMobile = useIsMobile();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 900 }}>
       <p style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", color: S.secondary, margin: 0, lineHeight: 1.65 }}>
@@ -529,7 +531,7 @@ function StepA1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
         hint="all applicable accounting & regulatory frameworks"
         options={REGULATORY_REGIMES} selected={s.regulatoryRegimes} onChange={(v) => set({ regulatoryRegimes: v })} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 14 }}>
         <div>
           <FL label="EFFECTIVE FROM" citation="IFRS 9.6.4.1(d)" hint="hedge designation date" />
           <input type="date" value={s.effectiveFrom} onChange={(e) => set({ effectiveFrom: e.target.value })} style={inputBase} />
@@ -544,7 +546,7 @@ function StepA1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 2fr", gap: 14 }}>
         <div>
           <FL label="BOARD RESOLUTION REF" hint="e.g. FX-2025-003" citation="IFRS 9.B6.4.1" />
           <input type="text" value={s.boardResolutionRef} onChange={(e) => set({ boardResolutionRef: e.target.value })}
@@ -558,7 +560,7 @@ function StepA1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
         <Toggle label="IFRS 9 / ASC 815 Hedge Accounting"
           hint="Confirmed ratio ≥ 80% required for effectiveness testing (IAS 39 legacy: 80–125%)"
           checked={s.ifrsCompliance} onChange={(v) => set({ ifrsCompliance: v, regulatoryRegimes: v ? [...new Set([...s.regulatoryRegimes, "IFRS9", "ASC815"])] : s.regulatoryRegimes })} />
@@ -572,6 +574,7 @@ function StepA1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
 
 // A2 — Portfolio Scope
 function StepA2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => void }) {
+  const isMobile = useIsMobile();
   const [customPair, setCustomPair] = useState('');
   const togglePair = (p: string) => set({ fxCorridors: s.fxCorridors.includes(p) ? s.fxCorridors.filter(x => x !== p) : [...s.fxCorridors, p] });
   const addCustom = () => {
@@ -590,7 +593,7 @@ function StepA2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
       </p>
       <CitationNote text="BIS FX Survey 2022 §3.2; ISDA 2002 Master Agreement §14 (definition of Affected Party)" />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 14 }}>
         <div>
           <FL label="COMPANY TYPE" />
           <select value={s.companyType} onChange={(e) => set({ companyType: e.target.value })} style={selectBase}>
@@ -614,7 +617,7 @@ function StepA2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 14 }}>
         <div>
           <FL label="FUNCTIONAL CURRENCY" hint="reporting / home currency" />
           <select value={s.primaryCurrency} onChange={(e) => set({ primaryCurrency: e.target.value })} style={selectBase}>
@@ -698,6 +701,7 @@ function StepA2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
 
 // A3 — Time Horizon
 function StepA3({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => void }) {
+  const isMobile = useIsMobile();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 900 }}>
       <p style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", color: S.secondary, margin: 0, lineHeight: 1.65 }}>
@@ -711,7 +715,7 @@ function StepA3({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
         value={s.timeHorizonMonths} onChange={(v) => set({ timeHorizonMonths: v })}
         min={1} max={36} step={1} format={(v) => `${v} months`} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
         <div>
           <FL label="AVERAGE TRANSACTION TENOR" hint="typical forward maturity per trade" />
           <select value={s.averageTenor} onChange={(e) => set({ averageTenor: e.target.value })} style={selectBase}>
@@ -750,6 +754,7 @@ function StepA3({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
 // ─────────────────────────────────────────────────────────────────────────────
 
 function StepB1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => void }) {
+  const isMobile = useIsMobile();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 900 }}>
       <p style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", color: S.secondary, margin: 0, lineHeight: 1.65 }}>
@@ -758,7 +763,7 @@ function StepB1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
       </p>
       <CitationNote text="IFRS 9.6.4.1(b) — highly probable forecast transaction; BCBS 2019 FRTB §MAR12.1 bucket classification" />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
         <div>
           <FL label="CASH FLOW VISIBILITY HORIZON" hint="how far forward can you project FX flows reliably?" />
           <select value={s.cashFlowVisibility} onChange={(e) => set({ cashFlowVisibility: e.target.value })} style={selectBase}>
@@ -786,7 +791,7 @@ function StepB1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
         min={0} max={100} step={1} format={(v) => `${v}% Recv / ${100 - v}% Pay`} />
 
       {/* Derived display */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, padding: "10px 14px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 10, padding: "10px 14px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
         {[
           { label: "CONFIRMED HEDGE BOUND", value: `${Math.round(s.cashFlowCertainty)}%` },
           { label: "FORECAST BUCKET", value: `${100 - Math.round(s.cashFlowCertainty)}%` },
@@ -799,7 +804,7 @@ function StepB1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 14 }}>
         <div>
           <FL label="PAYMENT FREQUENCY" citation="affects tenor ladder in Phase C" />
           <select value={s.paymentFrequency} onChange={(e) => set({ paymentFrequency: e.target.value })} style={selectBase}>
@@ -822,6 +827,7 @@ function StepB1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
 }
 
 function StepB2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => void }) {
+  const isMobile = useIsMobile();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 900 }}>
       <p style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", color: S.secondary, margin: 0, lineHeight: 1.65 }}>
@@ -852,7 +858,7 @@ function StepB2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
       <SectionDivider label="MATERIALITY THRESHOLDS" />
       <CitationNote text="BIS CPMI 2020 §4.5 — de minimis hedge sizing; MiFID2 Art.29 — transaction reporting thresholds" />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 14 }}>
         <div>
           <FL label="MATERIALITY THRESHOLD (USD)" hint="flows below this are excluded from hedging (de minimis)" />
           <input type="number" value={s.materialityThresholdUsd} onChange={(e) => set({ materialityThresholdUsd: +e.target.value })}
@@ -888,6 +894,7 @@ function StepB2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
 // ─────────────────────────────────────────────────────────────────────────────
 
 function StepC1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => void }) {
+  const isMobile = useIsMobile();
   const isEM = s.fxCorridors.some(p => /MXN|BRL|TRY|ZAR|INR|IDR|PHP|THB|KRW|COP|CLP|ARS/.test(p));
 
   const updateInstr = (id: string, field: keyof WizardState, val: boolean | number) => {
@@ -970,6 +977,7 @@ function StepC1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
 }
 
 function StepC2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => void }) {
+  const isMobile = useIsMobile();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 900 }}>
       <p style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", color: S.secondary, margin: 0, lineHeight: 1.65 }}>
@@ -978,7 +986,7 @@ function StepC2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
       </p>
       <CitationNote text="BIS FX Survey 2022 Table E.2 — median bid-ask by currency pair; BCBS FRTB §MAR22.29 — tenor bucket definitions" />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: 14 }}>
         <div>
           <FL label="MIN TENOR (DAYS)" hint="shortest permissible trade" />
           <input type="number" value={s.tenorMinDays} onChange={(e) => set({ tenorMinDays: +e.target.value })}
@@ -1027,6 +1035,7 @@ function StepC2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
 // ─────────────────────────────────────────────────────────────────────────────
 
 function StepD1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => void }) {
+  const isMobile = useIsMobile();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 900 }}>
       <p style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", color: S.secondary, margin: 0, lineHeight: 1.65 }}>
@@ -1040,7 +1049,7 @@ function StepD1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
         value={s.premiumBudget} onChange={(v) => set({ premiumBudget: v })}
         min={0} max={3} step={0.1} format={(v) => `${v.toFixed(1)}%`} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
         <div>
           <FL label="MAX CARRY COST (BPS/YEAR)" hint="forward point carry budget — set to 0 for cost-neutral programmes" citation="BIS FX Survey" />
           <input type="number" value={s.maxCarryCostBpsAnnual} onChange={(e) => set({ maxCarryCostBpsAnnual: +e.target.value })}
@@ -1059,7 +1068,7 @@ function StepD1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
         min={0} max={100} step={1}
         format={(v) => v <= 20 ? "Pure Cost Savings" : v <= 40 ? "Cost-Leaning" : v <= 60 ? "Balanced" : v <= 80 ? "Protection-Leaning" : "Maximum Protection"} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
         <div>
           <FL label="MAXIMUM ACCEPTABLE LOSS" hint="absolute loss tolerance as % of notional (tail scenario)" />
           <select value={s.maxAcceptableLoss} onChange={(e) => set({ maxAcceptableLoss: e.target.value })} style={selectBase}>
@@ -1078,6 +1087,7 @@ function StepD1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
 }
 
 function StepD2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => void }) {
+  const isMobile = useIsMobile();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 900 }}>
       <p style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", color: S.secondary, margin: 0, lineHeight: 1.65 }}>
@@ -1086,7 +1096,7 @@ function StepD2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
       </p>
       <CitationNote text="BCBS FRTB 2019 §MAR12 — concentration limits for non-modellable risk factors; Basel III LCR §20(j)" />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
         {[
           { key: "maxInstrumentConcentrationPct" as const, label: "MAX INSTRUMENT CONCENTRATION (%)", hint: "% of total portfolio in any single instrument type (e.g. all forwards ≤ 80%)" },
           { key: "maxCounterpartyConcentrationPct" as const, label: "MAX COUNTERPARTY CONCENTRATION (%)", hint: "% of total notional with any single bank/dealer counterparty" },
@@ -1108,7 +1118,7 @@ function StepD2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
       {/* Concentration dashboard */}
       <div style={{ padding: "10px 14px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
         <div style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary, letterSpacing: "0.1em", marginBottom: 8 }}>CONCENTRATION LIMITS SUMMARY</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 10 }}>
           {[
             { label: "INSTRUMENT", value: s.maxInstrumentConcentrationPct },
             { label: "COUNTERPARTY", value: s.maxCounterpartyConcentrationPct },
@@ -1131,6 +1141,7 @@ function StepD2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
 // ─────────────────────────────────────────────────────────────────────────────
 
 function StepE1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => void }) {
+  const isMobile = useIsMobile();
   const STRESS_LABELS: Record<string, string> = {
     MILD_STRESS:     "±5% spot shock (normal quarter, VIX 15–20)",
     MODERATE_STRESS: "±15% spot shock (2018 EM crisis, VIX 25–35)",
@@ -1158,7 +1169,7 @@ function StepE1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
         {" — "}{STRESS_LABELS[s.standardStressPack] || STRESS_LABELS.MODERATE_STRESS}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 14 }}>
         <div>
           <FL label="VAR CONFIDENCE LEVEL" citation="BCBS §MAR10.3" hint="probability level for VaR computation" />
           <select value={s.varConfidence} onChange={(e) => set({ varConfidence: e.target.value })} style={selectBase}>
@@ -1194,6 +1205,7 @@ function StepE1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
 }
 
 function StepE2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => void }) {
+  const isMobile = useIsMobile();
   const addScenario = () => {
     if (s.customScenarios.length >= 5) return;
     set({ customScenarios: [...s.customScenarios, { name: `Scenario ${s.customScenarios.length + 1}`, spotShockPct: -15, volShockPct: 10, sourceEvent: "" }] });
@@ -1231,7 +1243,7 @@ function StepE2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
             <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.08em", color: S.secondary }}>SCENARIO {i + 1}</span>
             <button type="button" onClick={() => removeScenario(i)} style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.fail, background: "transparent", border: "none", cursor: "pointer" }}>✕ Remove</button>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 2fr", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr 1fr 2fr", gap: 10 }}>
             <div>
               <FL label="SCENARIO NAME" />
               <input type="text" value={sc.name} onChange={(e) => updateScenario(i, "name", e.target.value)} style={inputBase} />
@@ -1260,6 +1272,7 @@ function StepE2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
 // ─────────────────────────────────────────────────────────────────────────────
 
 function StepF1({ s }: { s: WizardState }) {
+  const isMobile = useIsMobile();
   const checks = [
     { label: "Primary objective defined",        pass: !!s.primaryObjective },
     { label: "Currency universe specified (≥1 pair)", pass: s.fxCorridors.length > 0 },
@@ -1318,7 +1331,7 @@ function StepF1({ s }: { s: WizardState }) {
 
       {/* Policy Summary */}
       <SectionDivider label="POLICY PARAMETER SUMMARY" />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 10 }}>
         {[
           { label: "OBJECTIVE",      value: s.primaryObjective || "—" },
           { label: "PAIRS",          value: s.fxCorridors.length > 0 ? `${s.fxCorridors.length} pairs` : "—" },
@@ -1348,6 +1361,7 @@ function RecommendationCard({ rec, selected, onSelect, expanded, onToggleExpand 
   rec: AIPolicyRecommendation; selected: boolean; onSelect: () => void;
   expanded: boolean; onToggleExpand: () => void;
 }) {
+  const isMobile = useIsMobile();
   const p = rec.preset;
   const riskColor = p.riskPosture === "CONSERVATIVE" ? S.pass : p.riskPosture === "AGGRESSIVE" ? S.fail : S.amber;
   return (
@@ -1364,7 +1378,7 @@ function RecommendationCard({ rec, selected, onSelect, expanded, onToggleExpand 
         <div style={{ marginTop: 6, fontFamily: S.fontUI, fontSize: "0.875rem", fontWeight: 600, color: S.primary }}>&ldquo;{p.shortName}&rdquo; Policy</div>
         <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, marginTop: 2 }}>{p.name}</div>
       </div>
-      <div style={{ padding: "12px 16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+      <div style={{ padding: "12px 16px", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }}>
         {[
           { label: "CONF HEDGE", value: `${Math.round(p.policy.hedge_ratios.confirmed * 100)}%` },
           { label: "FCST HEDGE", value: `${Math.round(p.policy.hedge_ratios.forecast  * 100)}%` },
@@ -1418,6 +1432,7 @@ function StepG1({
   onStartOver: () => void;
   policyStatus: string; setPolicyStatus: (v: string) => void;
 }) {
+  const isMobile = useIsMobile();
   // Auto-populate policy name when a recommendation is selected and name is empty
   useEffect(() => {
     if (selectedRecId && !policyName.trim() && aiResult?.recommendations) {
@@ -1517,7 +1532,7 @@ function StepG1({
               </div>
             )}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
             <div>
               <FL label="TAG" hint="short identifier ≤20 chars" />
               <input type="text" value={policyTag} onChange={e => setPolicyTag(e.target.value)}
@@ -1636,6 +1651,7 @@ const WIZARD_STORAGE_KEY = 'ai_wizard_state_v1';
 export default function AIPolicyWizardPage() {
   const _planAllowed = usePlanRedirect("professional");
   const { isAuthenticated, token, user } = useAuth();
+  const isMobile = useIsMobile();
   const router = useRouter();
 
   const [stepIdx, setStepIdx] = useState(0);
@@ -1924,7 +1940,7 @@ export default function AIPolicyWizardPage() {
       )}
 
       {/* Main scroll area */}
-      <div style={{ flex: 1, overflow: "auto", padding: "24px 32px", display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, overflow: "auto", padding: isMobile ? "12px 16px" : "24px 32px", display: "flex", flexDirection: "column" }}>
         <StepHeader stepIdx={stepIdx} />
         {renderStep()}
       </div>
@@ -1946,7 +1962,7 @@ export default function AIPolicyWizardPage() {
       {/* Bottom Action Bar */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "10px 32px", background: S.bgPanel, borderTop: `1px solid ${S.rim}`, flexShrink: 0,
+        padding: isMobile ? "10px 16px" : "10px 32px", background: S.bgPanel, borderTop: `1px solid ${S.rim}`, flexShrink: 0,
       }}>
         <button type="button" onClick={() => router.push('/policies')} style={{
           fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, background: "transparent", border: "none", cursor: "pointer",

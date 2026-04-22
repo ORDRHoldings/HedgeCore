@@ -2,8 +2,10 @@
 
 import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 function CallbackContent() {
+  const isMobile = useIsMobile();
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -29,7 +31,7 @@ function CallbackContent() {
         background:   "#111827",
         border:       "1px solid #1e293b",
         borderTop:    "2px solid #22d3ee",
-        padding:      "36px 32px",
+        padding:      isMobile ? "24px 16px" : "36px 32px",
         maxWidth:     440,
         width:        "100%",
         textAlign:    "center",

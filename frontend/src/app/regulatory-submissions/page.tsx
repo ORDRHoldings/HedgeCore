@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { useAuth } from "@/lib/authContext";
 import {
   acknowledge,
@@ -80,6 +81,7 @@ const fmtDate = (iso: string | null): string => {
 const truncateHash = (h: string): string => (h.length > 16 ? `${h.slice(0, 16)}…` : h);
 
 export default function RegulatorySubmissionsPage() {
+  const isMobile = useIsMobile();
   const { token } = useAuth();
   const [rows, setRows] = useState<RegulatorySubmission[]>([]);
   const [stats, setStats] = useState<SubmissionStats | null>(null);
@@ -196,7 +198,7 @@ export default function RegulatorySubmissionsPage() {
       ["Ack Rate", `${stats.ack_rate_pct.toFixed(1)}%`, statusColor("ACKNOWLEDGED")],
     ];
     return (
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 12, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr 1fr" : "repeat(7, 1fr)", gap: 12, marginBottom: 16 }}>
         {cards.map(([label, val, color]) => (
           <div
             key={label}

@@ -15,14 +15,13 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.cash import BankConnection, BankConnectionProvider, BankConnectionStatus, CashAuditEventType
 from app.services.cash_audit_service import append_event
-from app.services.cash_encryption import encrypt_field, decrypt_field
+from app.services.cash_encryption import encrypt_field
 
 CIRCUIT_BREAKER_THRESHOLD = 3
 OAUTH_STATE_TTL_MINUTES = 5

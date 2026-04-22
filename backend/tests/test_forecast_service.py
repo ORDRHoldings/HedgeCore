@@ -87,7 +87,9 @@ async def test_run_scenario():
                new_callable=AsyncMock, return_value=[]), \
          patch("app.services.forecast_service._get_gap_threshold",
                new_callable=AsyncMock, return_value=Decimal("0")), \
-         patch("app.services.forecast_service.append_event", new_callable=AsyncMock):
+         patch("app.services.forecast_service.append_event", new_callable=AsyncMock), \
+         patch("app.services.forecast_service.date") as mock_date:
+        mock_date.today.return_value = date(2026, 4, 14)
         result = await run_scenario(
             mock_session,
             company_id=company_id,
@@ -118,7 +120,9 @@ async def test_get_liquidity_gaps():
          patch("app.services.forecast_service._get_settlement_flows",
                new_callable=AsyncMock, return_value=[]), \
          patch("app.services.forecast_service._get_gap_threshold",
-               new_callable=AsyncMock, return_value=Decimal("5000")):
+               new_callable=AsyncMock, return_value=Decimal("5000")), \
+         patch("app.services.forecast_service.date") as mock_date:
+        mock_date.today.return_value = date(2026, 4, 14)
         gaps = await get_liquidity_gaps(
             mock_session,
             company_id=company_id,

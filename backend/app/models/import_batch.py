@@ -15,9 +15,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     Integer,
-    Numeric,
     String,
-    Text,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSON as PGJSON

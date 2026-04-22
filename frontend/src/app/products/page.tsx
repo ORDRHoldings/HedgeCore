@@ -6,6 +6,7 @@ import {
   ArrowRight, BrainCircuit, NotebookPen, Coins, Network,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
+import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 const products = [
   { id: "treasury", name: "ORDR Treasury", desc: "Deterministic FX hedge calculation with 60 policy presets, 41 engine modules, 4-eyes governance, and WORM audit trail.", ai: "AI serves as communication layer -- chat, phone, voice. AI does not evaluate calculations.", icon: Shield },
@@ -22,10 +23,11 @@ const products = [
 ];
 
 export default function ProductsPage() {
+  const isMobile = useIsMobile();
   return (
     <MarketingLayout>
-      <div className="bg-[#F4F5F7] pt-[84px] pb-24 min-h-screen">
-        <div className="max-w-7xl mx-auto px-6 md:px-12 text-center mb-16">
+      <div className="bg-[#F4F5F7] pt-[84px] pb-12 md:pb-24 min-h-screen">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 text-center mb-8 md:mb-16">
           <span className="section-label justify-center text-center mb-4">ORDR TERMINAL PLATFORM</span>
           <h1 className="text-[44px] md:text-[64px] font-extrabold mb-6 tracking-[-0.04em]" style={{ fontFamily: "'Manrope', sans-serif" }}>Eleven Products. One Ecosystem.</h1>
           <p className="text-xl md:text-[22px] text-[#4B5563] max-w-3xl mx-auto leading-relaxed">
@@ -33,7 +35,7 @@ export default function ProductsPage() {
           </p>
         </div>
 
-        <div className="max-w-7xl mx-auto px-6 md:px-12 mb-24">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 mb-12 md:mb-24">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {products.map((p) => {
               const Icon = p.icon;
@@ -65,7 +67,7 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        <div className="bg-[#111111] py-20 px-6 text-center text-white mx-6 md:mx-12 rounded-sm border border-[#374151] max-w-7xl xl:mx-auto">
+        <div className="bg-[#111111] py-12 md:py-20 px-6 text-center text-white mx-6 md:mx-12 rounded-sm border border-[#374151] max-w-7xl xl:mx-auto">
           <h2 className="text-[32px] md:text-[40px] font-extrabold mb-8" style={{ fontFamily: "'Manrope', sans-serif" }}>See the ecosystem in action</h2>
           <Link href="/contact" className="inline-flex items-center justify-center px-6 py-3 text-[13px] font-bold bg-white text-[#111111] hover:bg-[#E5E7EB] border border-white rounded-sm tracking-wide no-underline transition-all uppercase">
             REQUEST DEMO →
