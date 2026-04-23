@@ -89,9 +89,9 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Hedge Desk", href: "/hedge-desk", icon: Play,
+    label: "Treasury Suite", href: "/hedge-desk", icon: Play,
     prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/policies", "/results", "/hedge-effectiveness", "/gl-postings", "/settlement", "/erp-sync", "/cash-positions", "/cash-forecast", "/intercompany-netting", "/cash-management", "/bank-statements", "/payments", "/intelligence", "/debt", "/ir-risk", "/pre-trade-tca", "/counterparties", "/regulatory-submissions", "/natural-hedging", "/hedge-templates"],
-    header: "HEDGE DESK",
+    header: "TREASURY SUITE",
     items: [
       // ── PRIMARY OPERATING LANE
       { label: "Overview",       desc: "Start, resume, or review hedge runs",       href: "/hedge-desk",       icon: LayoutDashboard, group: "OPERATE" },

@@ -238,7 +238,7 @@ export default function LoginPage() {
     color: C.text3,
   };
 
-  // ─── Input style — white bg, black text ───────────────────────────────────
+  // ─── Input style — dark bg, light text, autofill-safe ─────────────────────
   const inputStyle = (field: "user" | "pass", hasErr: boolean): React.CSSProperties => ({
     width: "100%",
     padding: "11px 14px",
@@ -639,15 +639,33 @@ export default function LoginPage() {
           color: ${C.inputPlaceholder};
           opacity: 1;
         }
+        /* Autofill — WebKit + standard + Firefox */
         #login-user:-webkit-autofill,
         #login-user:-webkit-autofill:hover,
         #login-user:-webkit-autofill:focus,
         #login-pass:-webkit-autofill,
         #login-pass:-webkit-autofill:hover,
         #login-pass:-webkit-autofill:focus {
-          -webkit-box-shadow: 0 0 0 1000px #0d0d11 inset;
-          -webkit-text-fill-color: ${C.inputText};
+          -webkit-box-shadow: 0 0 0 1000px #131317 inset !important;
+          -webkit-text-fill-color: #e8e8ef !important;
           caret-color: #888888;
+        }
+        #login-user:autofill,
+        #login-user:autofill:hover,
+        #login-user:autofill:focus,
+        #login-pass:autofill,
+        #login-pass:autofill:hover,
+        #login-pass:autofill:focus {
+          box-shadow: 0 0 0 1000px #131317 inset !important;
+          -webkit-text-fill-color: #e8e8ef !important;
+          caret-color: #888888;
+        }
+        /* Firefox password manager fallback */
+        @-moz-document url-prefix() {
+          #login-user, #login-pass {
+            background: #131317 !important;
+            color: #e8e8ef !important;
+          }
         }
       `}</style>
     </div>
