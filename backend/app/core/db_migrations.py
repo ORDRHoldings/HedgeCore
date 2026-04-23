@@ -23,9 +23,14 @@ def run_alembic_upgrade() -> None:
     Safe to call on every boot -- Alembic is idempotent.
     Skipped if DATABASE_URL contains 'sqlite' (ALLOW_SQLITE_DEMO mode).
     """
+    # Use the same resolution logic as the app (db.py) so we don't fall back
+    # to the Postgres default in settings.db_url when ALLOW_SQLITE_DEMO is on.
+    from app.core.db import DATABASE_URL as _resolved_url
+
     db_url = (
         os.environ.get("ASYNC_DATABASE_URL", "")
         or os.environ.get("DATABASE_URL", "")
+        or _resolved_url
     )
 
     if "sqlite" in db_url.lower():

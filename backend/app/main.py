@@ -372,7 +372,21 @@ async def _ensure_tables():
 
             importlib.import_module(f"app.models.{f.stem}")
 
-
+    # ── SQLite fast path ────────────────────────────────────────────────────
+    # Raw DDL below is PostgreSQL-specific (TIMESTAMPTZ, JSONB, UUID,
+    # gen_random_uuid(), NOW(), DO $$ blocks). SQLite cannot execute it.
+    # For ALLOW_SQLITE_DEMO mode, fall back to SQLAlchemy create_all()
+    # which abstracts dialect differences.
+    _is_sqlite = "sqlite" in str(async_engine.url).lower()
+    if _is_sqlite:
+        from app.core.db import Base
+        try:
+            async with async_engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("SQLite tables created via Base.metadata.create_all()")
+        except Exception as e:
+            logger.warning(f"SQLite create_all failed: {e}")
+        return
 
     # Step 1: Drop orphan indexes that may block create_all
 

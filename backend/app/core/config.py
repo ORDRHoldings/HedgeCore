@@ -156,6 +156,8 @@ class Settings(BaseSettings):
 
     # ------------------------------------------------------------------
 
+    ALLOW_SQLITE_DEMO: bool = False
+
     DB_HOST: str = os.getenv("DB_HOST", "hedgecalc_db")
 
     DB_PORT: int = 5432

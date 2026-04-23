@@ -5,14 +5,26 @@ import os
 from collections.abc import AsyncGenerator
 
 from sqlalchemy import text
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.pool import NullPool
+
+# Teach SQLite how to render PostgreSQL-specific types so
+# Base.metadata.create_all() works in ALLOW_SQLITE_DEMO mode.
+@compiles(JSONB, "sqlite")
+def _compile_jsonb_sqlite(type_, compiler, **kw):
+    return "JSON"
+
+@compiles(ARRAY, "sqlite")
+def _compile_array_sqlite(type_, compiler, **kw):
+    return "JSON"
 
 logger = logging.getLogger("hedgecalc.db")
 
@@ -25,7 +37,7 @@ def resolve_database_url() -> str:
     Determine database URL with strict priority:
 
     1) DATABASE_URL env var (Render / production)
-    2) SQLite demo fallback (if explicitly allowed)
+    2) SQLite demo fallback (if explicitly allowed via env or .env file)
     3) Fail hard (never silently connect to localhost)
     """
 
@@ -41,9 +53,21 @@ def resolve_database_url() -> str:
 
         return url
 
-    # Optional demo fallback
-    demo = os.getenv("ALLOW_SQLITE_DEMO", "false").lower() == "true"
-    if demo:
+    # Optional demo fallback — check both os.environ and pydantic-settings
+    # so that .env file changes are respected.
+    allow_demo = os.getenv("ALLOW_SQLITE_DEMO", "false").lower() == "true"
+    if not allow_demo:
+        try:
+            from app.core.config import settings
+            _demo_val = getattr(settings, "ALLOW_SQLITE_DEMO", False)
+            if isinstance(_demo_val, bool):
+                allow_demo = _demo_val
+            else:
+                allow_demo = str(_demo_val).lower() == "true"
+        except Exception:
+            pass
+
+    if allow_demo:
         logger.warning("? Using SQLite demo fallback database")
         return "sqlite+aiosqlite:///./demo.db"
 
