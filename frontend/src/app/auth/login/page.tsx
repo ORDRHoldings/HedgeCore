@@ -11,17 +11,17 @@ const C = {
   bg:          "var(--bg-sidebar)",
   bgDeep:      "var(--bg-deep)",
   panel:       "var(--bg-panel)",
-  panelAlpha:  "rgba(10,10,14,0.97)",
+  panelAlpha:  "var(--bg-panel)",
   border:      "var(--border-rim)",
   borderSoft:  "var(--border-soft)",
-  borderFocus: "rgba(255,255,255,0.28)",
+  borderFocus: "var(--text-tertiary)",
   text1:       "var(--text-primary)",
   text2:       "var(--text-secondary)",
   text3:       "var(--text-tertiary)",
-  accent:      "#888888",
-  accentHover: "#999999",
-  accentGlow:  "rgba(255,255,255,0.06)",
-  accentDim:   "rgba(255,255,255,0.04)",
+  accent:      "var(--text-tertiary)",
+  accentHover: "var(--text-secondary)",
+  accentGlow:  "rgba(128,128,128,0.06)",
+  accentDim:   "rgba(128,128,128,0.04)",
   green:       "var(--accent-green)",
   greenGlow:   "rgba(5,150,105,0.20)",
   red:         "var(--accent-red)",
@@ -30,10 +30,10 @@ const C = {
   amber:       "var(--accent-amber)",
   amberBg:     "rgba(217,119,6,0.06)",
   amberBorder: "rgba(217,119,6,0.18)",
-  // Input fields — solid dark, light text
-  inputBg:          "#131317",
-  inputText:        "#e8e8ef",
-  inputPlaceholder: "rgba(255,255,255,0.32)",
+  // Input fields — theme-aware via CSS vars
+  inputBg:          "var(--bg-panel)",
+  inputText:        "var(--text-primary)",
+  inputPlaceholder: "var(--text-tertiary)",
   fontHead:    "'Manrope','Inter',sans-serif",
   fontUI:      "'IBM Plex Sans','Inter',sans-serif",
   fontMono:    "'IBM Plex Mono','JetBrains Mono',monospace",
@@ -646,9 +646,9 @@ export default function LoginPage() {
         #login-pass:-webkit-autofill,
         #login-pass:-webkit-autofill:hover,
         #login-pass:-webkit-autofill:focus {
-          -webkit-box-shadow: 0 0 0 1000px #131317 inset !important;
-          -webkit-text-fill-color: #e8e8ef !important;
-          caret-color: #888888;
+          -webkit-box-shadow: 0 0 0 1000px var(--bg-panel) inset !important;
+          -webkit-text-fill-color: var(--text-primary) !important;
+          caret-color: var(--text-tertiary);
         }
         #login-user:autofill,
         #login-user:autofill:hover,
@@ -656,15 +656,15 @@ export default function LoginPage() {
         #login-pass:autofill,
         #login-pass:autofill:hover,
         #login-pass:autofill:focus {
-          box-shadow: 0 0 0 1000px #131317 inset !important;
-          -webkit-text-fill-color: #e8e8ef !important;
-          caret-color: #888888;
+          box-shadow: 0 0 0 1000px var(--bg-panel) inset !important;
+          -webkit-text-fill-color: var(--text-primary) !important;
+          caret-color: var(--text-tertiary);
         }
         /* Firefox password manager fallback */
         @-moz-document url-prefix() {
           #login-user, #login-pass {
-            background: #131317 !important;
-            color: #e8e8ef !important;
+            background: var(--bg-panel) !important;
+            color: var(--text-primary) !important;
           }
         }
       `}</style>
