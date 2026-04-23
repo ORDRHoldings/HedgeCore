@@ -16,8 +16,10 @@
 #   See docs/ops/render-cli.md and scripts/render/ for scripted workflows.
 
 services:
-  # Both services upgraded to starter tier — eliminates cold starts and enables
-  # private networking between web services and databases.
+  # ⚠️  INFRASTRUCTURE RISK: Services are on starter tier (was free).
+  # Starter tier eliminates cold starts ($7/mo each). If downgraded to free,
+  # cold-start after ~15 min inactivity may cause 503 on first request.
+  # Mitigation: keep starter plan, or use hedgecore-keepalive cron (below).
 
   # ── Production Backend (master branch) ──────────────────────────────────────
   - type: web
@@ -102,8 +104,9 @@ services:
       - key: ASYNC_DATABASE_URL
         fromGroup: hedgecore-preview-secrets
       - key: CORS_ALLOW_ORIGINS
-        value: '["http://localhost:3000","http://127.0.0.1:3000","https://hedgecore-git-dev-synexiun-projects.vercel.app"]'
-        # TODO: move to fromGroup: hedgecore-preview-secrets once the key is set in Render dashboard
+        fromGroup: hedgecore-preview-secrets
+        # Default: ["http://localhost:3000","http://127.0.0.1:3000","https://hedgecore-git-dev-synexiun-projects.vercel.app"]
+        # Set in hedgecore-preview-secrets env group to override without IaC commit.
       - key: ALLOW_INDICATIVE_FALLBACK
         value: "true"
       - key: SYNEX_CORE_URL
