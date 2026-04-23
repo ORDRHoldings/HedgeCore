@@ -1,36 +1,39 @@
 # Current Sprint
 
-Sprint: Infrastructure Hardening
-Status: IN PROGRESS
+Sprint: Multi-Sprint Catch-Up (Post-Restart)
+Status: COMPLETE
 Started: 2026-04-22
+Completed: 2026-04-22
 
-## Goal
-Implement the 11-issue remediation plan from `docs/superpowers/plans/2026-03-24-infrastructure-hardening.md`.
+## Sprints Completed
 
-## Items
-| # | Item | Status |
-|---|------|--------|
-| I1 | CORS localhost in IaC → env group | OPEN |
-| I2 | Redis fallback logging | OPEN |
-| I3 | SQLite demo mode warning | OPEN |
-| I4 | Seed user rehash check-before-hash | OPEN |
-| I5 | OpenAI soft dependency | OPEN |
-| I6 | Tenant isolation test suite | OPEN |
-| I7 | Free-tier infra comment in render.yaml | OPEN |
-| I8 | Alembic baseline + forward migration wiring | OPEN |
-| I9 | Alembic runbook docs | OPEN |
+### 1. Mobile-Responsive All Pages ✅
+- 104 files committed: 63 frontend pages + backend lint cleanup
+- `tsc --noEmit` clean, `next build --no-lint` exit 0 (121 pages)
+- Commit: `3c23007`
 
-## Pre-flight Status
-| Issue | Status |
-|-------|--------|
-| #3 deprecated `on_event` | ✅ Already removed |
-| #4 Frontend monorepo | 🔲 Out of scope |
-| #7 Free-tier infra | 🔲 Documented |
-| #1 DDL-as-code | ❌ Fix needed |
-| #2 Seed rehash on boot | ❌ Fix needed |
-| #5 SQLite demo backdoor | ❌ Fix needed |
-| #6 CORS localhost in IaC | ❌ Fix needed |
-| #8 OpenAI hard dependency | ❌ Fix needed |
-| #9 Redis no-warning fallback | ❌ Fix needed |
-| #10 No tenant isolation tests | ❌ Fix needed |
-| #11 execution_proposals drift | ✅ Fixed by Alembic strategy |
+### 2. Security & Secrets Hardening ✅ (audit phase)
+- Gitleaks full-history scan: 37 findings categorized
+- SECURITY_AUDIT_2026-04-22.md written with remediation plan
+- 2 real secrets identified in git history (JWT_SECRET, TWELVEDATA_API_KEY)
+- **Deferred to human action**: secret rotation + git-filter-repo scrub
+
+### 3. Infrastructure Hardening ✅
+- render.yaml: preview CORS moved to hedgecore-preview-secrets fromGroup
+- render.yaml: free-tier infrastructure risk comment added
+- backend/app/main.py: Alembic upgrade wired into lifespan before _ensure_tables()
+- Pre-existing already implemented: SQLite warning, seed rehash check, Redis fallback logging, OpenAI soft dependency, tenant isolation tests, Alembic baseline + runbook
+- Validation: 20 passed, 11 skipped; tsc clean
+- Commit: `f17d343`
+
+### 4. k6 Load Test Baseline ✅
+- Updated all k6 scripts for current API structure (/api prefix, X-API-Key header)
+- Added API_KEY env var support; authenticated endpoints skip when absent
+- Updated README with config docs and baseline results table
+- Commit: `59a3764`
+
+## Next Actions
+1. **Rotate secrets** (JWT_SECRET, TWELVEDATA_API_KEY) on Render + Vercel dashboards
+2. **Run `scripts/scrub-git-secrets.sh`** after rotation to purge history
+3. **Run k6 against staging** with valid API_KEY to fill baseline results table
+4. **Push to origin** — master is ~56 commits ahead
