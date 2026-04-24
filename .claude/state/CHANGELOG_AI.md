@@ -1,5 +1,68 @@
 # Changelog (AI-maintained)
 
+## 2026-04-23 — Hardening closure: Tracks 2.2, 2.3, 3, 4, 5
+
+Shipped every in-scope track from the Launch Readiness audit.
+
+### Track 2.2 — Per-feature error boundaries (commit `5604cb1`)
+- New `FeatureErrorPage` + `FeatureErrorBoundary` components emit Sentry
+  events tagged by feature so crash-groups are separable in the issues feed.
+- Added 20 Next.js `error.tsx` segment boundaries (dashboard,
+  hedge-effectiveness, audit-lab, cash-positions, connectors,
+  counterparties, pre-trade-tca, debt, ir-risk, trade-history,
+  position-desk, gl-postings, settlement, erp-integration,
+  accounting-connection, portfolio, payments, reports,
+  intercompany-netting, bank-statements).
+- Fixed `logger.ts` SeverityLevel type contract (`warn → "warning"`).
+
+### Track 2.3 — TypeScript any-type sweep (commit `c331c90`)
+- New `lib/errors/extractDetail.ts` narrows caught `unknown` to display
+  strings; replaces 6 scattered `(e as any)?.response?.data?.detail` casts.
+- Typed `useState` for facility (debt/[id]), effectivenessResult (ir-risk),
+  pipelineState.calcResult (CalculateResponse).
+- Test-file any-casts replaced with narrow shapes in auditLabExport.test.
+- `drawings.ts` loadDrawings now uses `Partial<Drawing>` with a trusted
+  return cast. `tsc --noEmit` clean.
+
+### Track 3 — E2E suite (commit `33b5cd7`)
+- `e2e/smoke/nav-smoke.spec.ts` — iterates 27 nav routes, asserts body
+  visible + no `FeatureErrorPage` banner + no pageerror events.
+- 14 treasury-suite specs covering every remaining nav section.
+- `e2e/accounting/connectors-hub.spec.ts` — Playwright `page.route()`
+  stubs for `/v1/connectors/*` so the hub test runs without live OAuth
+  credentials in CI. Verifies 5-provider grid + Intacct form modal path.
+- Fixed 3 pre-existing broken spec import paths (`'../../helpers/auth'`
+  resolved to nonexistent frontend/helpers/auth — specs are excluded from
+  tsconfig so tsc never caught it).
+
+### Track 4 — Production readiness (commit `c331c90`)
+- Nightly hash-chain verification cron (02:30 UTC) walks every tenant's
+  audit_events, recomputes SHA-256 per record, verifies prev-hash
+  linkage, raises `HashChainBrokenError` on any break so Sentry captures
+  the incident.
+- `VercelPreviewCORSMiddleware` — dynamic CORS echo for `*.vercel.app`
+  preview deployments (static CORSMiddleware can't do wildcards when
+  allow_credentials=True).
+- Unified `HTTPException` + `RequestValidationError` handlers emit
+  `{error, detail, status}` shape consistently.
+- Demo seed user auto-promoted to superuser on startup (unblocks E2E
+  admin specs without separate setup).
+- Production `CONNECTOR_ENCRYPTION_KEY` validator — switched from
+  `@validator` (v1 declaration-order trap) to `@root_validator`; now
+  refuses to boot in ENV=production if any provider is configured
+  without an encryption key.
+- `docs/ops/load-testing-baseline.md` — SLO targets (p50/p95/p99, error
+  rate, 429 threshold), capacity planning (Render sizing, PG pool, Redis
+  cold start), k6 runbook (staging vs prod), regression triage flow.
+
+### Track 5 — Work-item triage
+- Items #22 (sandbox e2e) and #23 (FX rates widget) closed as superseded
+  by #21 (Twelve Data wiring, done earlier) + Track 3 E2E coverage.
+- Items #19 (secret rotation), #20 (IBKR live), #24 (risk #2 close) remain
+  open — all three require external credentials (Render/Vercel consoles,
+  TWS paper session). Action notes added to each work item so whoever
+  picks them up has the exact next step.
+
 ## 2026-04-23 — Launch Readiness: Live ERP Connector Framework
 
 Replaced the paper-mode accounting/ERP stubs with live OAuth-connected

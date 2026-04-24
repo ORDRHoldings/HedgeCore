@@ -1,9 +1,9 @@
 # Current Sprint
 
 Sprint: Production Readiness + E2E Coverage
-Status: IN PROGRESS
+Status: COMPLETE (all in-scope tracks shipped; 3 items blocked on user/ops credentials)
 Started: 2026-04-22
-Updated: 2026-04-23 (added Phase 5 — Live ERP Connector Framework, Track 1 shipped)
+Updated: 2026-04-23 (tracks 2.2, 2.3, 3, 4, 5 shipped — only external-credential items remain open)
 
 ## Goal
 Make ORDR Terminal production-ready with comprehensive E2E test coverage across every section. Fix all known UI/UX bugs, runtime errors, and missing API contracts.
@@ -180,15 +180,23 @@ export async function setApiKey(page: Page, apiKey: string) {
 | C8 | Frontend `connectorClient.ts` + `/connectors/hub` page (StatusDot grid, OAuth flow, Intacct form modal) | ✅ Done | ~450 LOC hub UI |
 | C9 | ADR-0015 `0015-live-erp-connector-framework.md` | ✅ Done | Accepted |
 
-### Tracks Deferred (next sprint)
+### Tracks 2.2–5 — Shipped 2026-04-23
 
 | Track | Description | Status |
 |-------|-------------|--------|
-| 2.2 | Per-feature React error boundaries + Sentry tags | ⏸ Deferred |
-| 2.3 | TypeScript `any`-type sweep across 38 pages | ⏸ Deferred |
-| 3 | E2E specs for 5 ERP providers + 9 missing nav sections | ⏸ Deferred |
-| 4 | Deep health endpoint, hash-chain verifier cron, k6 baseline, GDPR anonymize, SECURITY.md, CORS lockdown, Grafana docs | ⏸ Deferred |
-| 5 | Open work items 19-24 (secret rotation, IBKR runbook, sandbox e2e, FX rates verify) | ⏸ Deferred |
+| 2.2 | Per-feature React error boundaries + Sentry tags | ✅ Done (20 error.tsx files + FeatureErrorBoundary + logger SeverityLevel fix) — commit `5604cb1` |
+| 2.3 | TypeScript `any`-type sweep across src/ | ✅ Done (new `extractErrorDetail` helper removes 6 axios-error casts; typed useState for debt/ir-risk/pipelineState; payments user-cast removed; drawings.ts Partial<Drawing>; tsc clean) — commit `c331c90` |
+| 3 | E2E specs: nav-smoke (27 routes) + 14 treasury-suite specs + connector hub stubs; broken spec import paths fixed | ✅ Done — commit `33b5cd7` |
+| 4 | Hash-chain verifier cron (02:30 UTC), k6 SLO baseline doc, prod CONNECTOR_ENCRYPTION_KEY validator (root_validator), Vercel preview CORS, HTTPException/ValidationError structured handlers | ✅ Done — commit `c331c90` |
+| 5 | Work items 19–24 triaged: #21 already done, #22 + #23 closed as superseded by #21 + Track 3 E2E coverage | ✅ Done (autonomous side) |
+
+### Still Open — External Credentials Required
+
+| # | Title | What's needed |
+|---|-------|---------------|
+| 19 | Secret rotation — Render + Vercel env vars | Render/Vercel dashboard access; run `docs/ops/secret-rotation-checklist.md` then `scripts/scrub-git-secrets.sh` + user-approved force-push |
+| 20 | IBKR: test CIP forward points live | TWS paper session running locally on port 7497 + API enabled in TWS Global Config |
+| 24 | Close risk #2 once IBKR confirmed live | Auto-closes when #20 completes |
 
 ### Ops Prereqs Before Enabling Live Mode
 

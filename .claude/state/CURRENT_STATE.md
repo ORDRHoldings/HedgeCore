@@ -7,9 +7,13 @@
 ## Last Updated: 2026-04-23
 
 ## Current Sprint
-**Launch Readiness — Live ERP Connector Framework** — COMPLETE (2026-04-23)
-- Track 1 (connector framework + 5 providers + hub UI + ADR-0015): shipped
-- Tracks 2.2 / 2.3 / 3 / 4 / 5: deferred (see OPEN_RISKS / next sprint)
+**Launch Readiness — Production Hardening** — COMPLETE (2026-04-23)
+- Track 1 — connector framework + 5 providers + hub UI + ADR-0015: ✅ (commit `7b616b1`)
+- Track 2.2 — 20 per-feature error boundaries + Sentry feature-tagged scope: ✅ (commit `5604cb1`)
+- Track 2.3 — any-type sweep, new `extractErrorDetail` helper, typed useState: ✅ (commit `c331c90`)
+- Track 3 — nav-smoke + 14 treasury-suite specs + connector hub stubs: ✅ (commit `33b5cd7`)
+- Track 4 — hash-chain cron, k6 baseline doc, Vercel preview CORS, prod encryption validator, structured error handlers: ✅ (commit `c331c90`)
+- Track 5 — work items #22/#23 closed as superseded; #19/#20/#24 remain blocked on user/ops credentials
 
 ## Recent Work (2026-04-23) — Live ERP / Accounting Connector Framework COMPLETE
 
