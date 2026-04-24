@@ -25,7 +25,7 @@ Centralized environment configuration using pydantic-settings.
 import logging
 import os
 
-from pydantic import validator
+from pydantic import root_validator, validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -579,6 +579,35 @@ class Settings(BaseSettings):
             raise ValueError("Token expiration must be positive.")
 
         return v
+
+    @root_validator(skip_on_failure=True)
+    def validate_connector_encryption_key(cls, values: dict) -> dict:
+        """Refuse to boot in production if any provider creds are populated
+        without a Fernet encryption key. ADR-0015 contract requires encrypted
+        token storage for live ERP connectors.
+
+        Implemented as root_validator because it must read provider fields
+        declared after CONNECTOR_ENCRYPTION_KEY in the model.
+        """
+        env = os.getenv("ENV", "development").lower()
+        if env != "production":
+            return values
+        key = values.get("CONNECTOR_ENCRYPTION_KEY", "")
+        any_provider_configured = any(
+            bool(values.get(k))
+            for k in (
+                "QBO_CLIENT_ID", "XERO_CLIENT_ID", "NETSUITE_CLIENT_ID",
+                "SAGE_INTACCT_SENDER_ID", "DYNAMICS365_CLIENT_ID",
+            )
+        )
+        if any_provider_configured and not key:
+            raise ValueError(
+                "CONNECTOR_ENCRYPTION_KEY is required in production when any "
+                "ERP/Accounting provider is configured. Generate with: "
+                "python -c \"from cryptography.fernet import Fernet; "
+                "print(Fernet.generate_key().decode())\""
+            )
+        return values
 
 
 
