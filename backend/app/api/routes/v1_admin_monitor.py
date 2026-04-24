@@ -494,3 +494,22 @@ async def restart_service(
             logger.exception("Admin scheduler restart failed")
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Hash-chain integrity
+# ---------------------------------------------------------------------------
+
+@router.get("/hash-chain/verify")
+async def verify_hash_chain(
+    _: User = Depends(require_superuser),
+    db: AsyncSession = Depends(get_async_session),
+) -> dict:
+    """Walk every tenant's audit_events chain and report integrity breaks.
+
+    Read-only. Never modifies the WORM table. Safe to run from a nightly cron.
+    Returns {healthy, tenants_checked, events_checked, break_count, breaks[]}.
+    """
+    from app.services.hash_chain_verifier import verify_all_chains
+    report = await verify_all_chains(db)
+    return report.to_dict()

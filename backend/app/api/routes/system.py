@@ -43,6 +43,79 @@ async def system_health():
     }
 
 
+@router.get("/health/deep", include_in_schema=True)
+async def deep_health():
+    """Deep health probe with dependency checks.
+
+    Verifies:
+      - Database connectivity (SELECT 1)
+      - Redis availability (ping) — non-fatal (cache is fail-open by design)
+      - Schema readiness (WORM tables, critical indexes)
+
+    Returns 200 with `status: "degraded"` when non-critical deps are down,
+    500 only when the database itself is unreachable.
+    """
+    from sqlalchemy import text as sql_text
+    from datetime import UTC, datetime
+
+    checks: dict[str, dict] = {}
+    degraded = False
+
+    # Database
+    try:
+        async with async_engine.connect() as conn:
+            await conn.execute(sql_text("SELECT 1"))
+        checks["database"] = {"ok": True}
+    except Exception as exc:
+        checks["database"] = {"ok": False, "error": str(exc)[:200]}
+        raise HTTPException(
+            status_code=503,
+            detail={"status": "fail", "checks": checks},
+        )
+
+    # Redis (non-fatal — cache is fail-open by design)
+    try:
+        from app.core.redis_client import get_redis_client
+        client = get_redis_client()
+        if client is None:
+            checks["redis"] = {"ok": False, "reason": "not_configured"}
+            degraded = True
+        else:
+            try:
+                # redis-py may expose async or sync depending on wiring
+                ping_fn = getattr(client, "ping", None)
+                if ping_fn:
+                    maybe = ping_fn()
+                    if hasattr(maybe, "__await__"):
+                        await maybe
+                checks["redis"] = {"ok": True}
+            except Exception as exc:
+                checks["redis"] = {"ok": False, "error": str(exc)[:200]}
+                degraded = True
+    except Exception as exc:
+        checks["redis"] = {"ok": False, "error": str(exc)[:200]}
+        degraded = True
+
+    # Schema
+    try:
+        schema = await run_readiness_checks_cached(async_engine)
+        checks["schema"] = {
+            "ok": bool(schema.get("schema_ready")),
+            "worm_ready": bool(schema.get("worm_ready")),
+        }
+        if not checks["schema"]["ok"]:
+            degraded = True
+    except Exception as exc:
+        checks["schema"] = {"ok": False, "error": str(exc)[:200]}
+        degraded = True
+
+    return {
+        "status": "degraded" if degraded else "ok",
+        "checked_at": datetime.now(UTC).isoformat(),
+        "checks": checks,
+    }
+
+
 @router.get("/whoami/api-key", include_in_schema=True)
 async def whoami_api_key(api_key=Depends(require_api_key)):
     """

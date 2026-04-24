@@ -37,6 +37,11 @@ def make_cache_key(provider: str, pair: str, timeframe: str) -> str:
     return f"market_data:{provider}:{pair}:{timeframe}"
 
 
+def get_redis_client():
+    """Return the module-level async Redis client (None if not configured or init failed)."""
+    return _redis_client
+
+
 def init_redis(redis_url: str | None) -> None:
     """Initialise the module-level Redis client from a URL.
 
