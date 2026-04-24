@@ -245,6 +245,10 @@ class Settings(BaseSettings):
         "X-RateLimit-Remaining",
     ]
 
+    # Allow any *.vercel.app origin for preview deployments.
+    # Set via env CORS_ALLOW_VERCEL_PREVIEWS=true on staging/preview services.
+    CORS_ALLOW_VERCEL_PREVIEWS: bool = False
+
 
 
     @validator("CORS_ALLOW_ORIGINS", pre=True, always=True)
@@ -407,6 +411,42 @@ class Settings(BaseSettings):
     MARKET_DATA_EQUITY_INTERVAL_SEC: int = 300
     MARKET_DATA_VOL_INTERVAL_SEC: int = 3600
     MARKET_DATA_OPTIONS_INTERVAL_SEC: int = 3600
+
+    # ------------------------------------------------------------------
+    # ERP / Accounting Connectors (Track 1 — Launch Readiness)
+    # Fernet-encrypted token vault for OAuth refresh tokens stored in
+    # company.settings JSONB. Rotated independently from JWT_SECRET.
+    # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    # ------------------------------------------------------------------
+    CONNECTOR_ENCRYPTION_KEY: str = ""
+
+    # Per-provider OAuth credentials. Leave empty to disable that provider gracefully.
+    QBO_CLIENT_ID: str = ""
+    QBO_CLIENT_SECRET: str = ""
+    QBO_ENVIRONMENT: str = "sandbox"  # sandbox | production
+    QBO_REDIRECT_URI: str = ""
+
+    XERO_CLIENT_ID: str = ""
+    XERO_CLIENT_SECRET: str = ""
+    XERO_REDIRECT_URI: str = ""
+
+    NETSUITE_CLIENT_ID: str = ""
+    NETSUITE_CLIENT_SECRET: str = ""
+    NETSUITE_REDIRECT_URI: str = ""
+
+    SAGE_INTACCT_SENDER_ID: str = ""
+    SAGE_INTACCT_SENDER_PASSWORD: str = ""
+    SAGE_INTACCT_REDIRECT_URI: str = ""
+
+    DYNAMICS365_CLIENT_ID: str = ""
+    DYNAMICS365_CLIENT_SECRET: str = ""
+    DYNAMICS365_TENANT_ID: str = ""  # Azure AD tenant
+    DYNAMICS365_REDIRECT_URI: str = ""
+
+    # Connector behavior
+    CONNECTOR_CIRCUIT_BREAKER_THRESHOLD: int = 5
+    CONNECTOR_CIRCUIT_BREAKER_COOLDOWN_SEC: int = 600  # 10 min
+    CONNECTOR_WEBHOOK_SKEW_SEC: int = 300  # max 5 min clock skew
 
     # ------------------------------------------------------------------
     # HedgeWiki Integration

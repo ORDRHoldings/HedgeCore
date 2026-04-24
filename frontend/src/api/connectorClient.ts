@@ -99,3 +99,129 @@ export async function importExcelAudited(
   });
   return data as ConnectorRun;
 }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Live ERP / Accounting providers — /v1/connectors/{provider}/*
+// ═════════════════════════════════════════════════════════════════════════════
+
+export interface ProviderMeta {
+  provider_id: string;
+  display_name: string;
+  auth_style: string;
+}
+
+export interface ConnectorStatus {
+  provider_id: string;
+  connected: boolean;
+  realm_id: string | null;
+  last_connected_at: string | null;
+  last_sync_at: string | null;
+  last_error: string | null;
+  circuit_open: boolean;
+  paper_mode: boolean;
+}
+
+export interface ConnectorHealth {
+  provider_id: string;
+  healthy: boolean;
+  latency_ms: number;
+  detail: string;
+}
+
+export interface AuthorizeResponse {
+  authorize_url: string | null;
+  state: string;
+  requires_form: boolean;
+  form_fields: string[];
+}
+
+export interface COAAccount {
+  external_id: string;
+  code: string;
+  name: string;
+  type: string;
+  subtype: string | null;
+  currency: string | null;
+  active: boolean;
+  parent_external_id: string | null;
+}
+
+export interface COAResponse {
+  provider_id: string;
+  accounts: COAAccount[];
+  fetched_at: string;
+}
+
+export async function listProviders(token?: string): Promise<ProviderMeta[]> {
+  const { data } = await axios.get(`${BASE}/v1/connectors/providers`, {
+    headers: authHeaders(token),
+  });
+  return (data?.providers as ProviderMeta[]) ?? [];
+}
+
+export async function getConnectorStatus(
+  provider: string,
+  token?: string,
+): Promise<ConnectorStatus> {
+  const { data } = await axios.get(`${BASE}/v1/connectors/${provider}/status`, {
+    headers: authHeaders(token),
+  });
+  return data as ConnectorStatus;
+}
+
+export async function probeConnectorHealth(
+  provider: string,
+  token?: string,
+): Promise<ConnectorHealth> {
+  const { data } = await axios.get(`${BASE}/v1/connectors/${provider}/health`, {
+    headers: authHeaders(token),
+  });
+  return data as ConnectorHealth;
+}
+
+export async function authorizeConnector(
+  provider: string,
+  extra: Record<string, string> = {},
+  token?: string,
+): Promise<AuthorizeResponse> {
+  const { data } = await axios.post(
+    `${BASE}/v1/connectors/${provider}/authorize`,
+    { extra },
+    { headers: authHeaders(token) },
+  );
+  return data as AuthorizeResponse;
+}
+
+export async function connectForm(
+  provider: string,
+  body: { state: string; fields: Record<string, string> },
+  token?: string,
+): Promise<ConnectorStatus> {
+  const { data } = await axios.post(
+    `${BASE}/v1/connectors/${provider}/connect-form`,
+    body,
+    { headers: authHeaders(token) },
+  );
+  return data as ConnectorStatus;
+}
+
+export async function disconnectConnector(
+  provider: string,
+  token?: string,
+): Promise<void> {
+  await axios.post(
+    `${BASE}/v1/connectors/${provider}/disconnect`,
+    {},
+    { headers: authHeaders(token) },
+  );
+}
+
+export async function pullCOA(
+  provider: string,
+  token?: string,
+): Promise<COAResponse> {
+  const { data } = await axios.get(`${BASE}/v1/connectors/${provider}/coa`, {
+    headers: authHeaders(token),
+  });
+  return data as COAResponse;
+}

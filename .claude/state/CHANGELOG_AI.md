@@ -1,5 +1,109 @@
 # Changelog (AI-maintained)
 
+## 2026-04-23 — Launch Readiness: Live ERP Connector Framework
+
+Replaced the paper-mode accounting/ERP stubs with live OAuth-connected
+integrations for QuickBooks Online, Xero, NetSuite, Sage Intacct, and
+Microsoft Dynamics 365 Finance.
+
+### Backend — Connector Framework (`backend/app/connectors/`)
+- **Foundation (7 modules, ~1100 LOC):** `base.py` (ConnectorProtocol +
+  normalized dataclasses), `errors.py` (7-subclass error hierarchy with
+  canonical HTTP status), `token_vault.py` (Fernet MultiFernet encryption
+  in `company.settings` JSONB, zero-downtime key rotation), `oauth_state.py`
+  (signed JWT CSRF token + Redis replay guard), `rate_limiter.py`
+  (per-tenant+provider token bucket, Redis Lua via `register_script` +
+  in-memory fallback), `retry.py` (exponential backoff + per-tenant+provider
+  circuit breaker with Sentry emission on trip), `registry.py`
+  (provider dispatch).
+- **Five provider packages (~1800 LOC):** `quickbooks/`, `xero/`,
+  `netsuite/`, `sage_intacct/`, `dynamics365/`. Each implements
+  `ConnectorProtocol` end-to-end: `authorize_url`, `exchange_code`, `refresh`,
+  `revoke`, `health_check`, `pull_coa`, `pull_trial_balance`, `post_journal`
+  (with `dry_run` support), `verify_webhook`.
+- **Unified routes** (`api/routes/v1_connectors.py`): added
+  `GET /providers`, `GET /{provider}/status`, `GET /{provider}/health`,
+  `POST /{provider}/authorize`, `POST /{provider}/connect-form`
+  (Intacct form-auth path), `POST /{provider}/disconnect`,
+  `GET /{provider}/coa`, `POST /{provider}/journal`, unified OAuth callback
+  at `GET /oauth/callback`, inbound webhook at `POST /{provider}/webhook`.
+- **Schemas** (`schemas_v1/connectors.py`): Added `ProviderMeta`,
+  `ConnectorStatusResponse`, `ConnectorHealthResponse`,
+  `ConnectorAuthorizeRequest/Response`, `COAAccountResponse`,
+  `COAResponse`, `JournalLineRequest`, `JournalPostRequest/Response`,
+  `ConnectorConnectFormRequest`.
+- **Config** (`core/config.py`): Added `CONNECTOR_ENCRYPTION_KEY` (Fernet
+  key, comma-separated for rotation), per-provider OAuth creds
+  (`QBO_*`, `XERO_*`, `NETSUITE_*`, `SAGE_INTACCT_*`, `DYNAMICS365_*`),
+  circuit breaker thresholds, webhook skew window.
+
+### Frontend — Connector Hub UI (`/connectors/hub`)
+- New page `frontend/src/app/connectors/hub/page.tsx`: card grid for the
+  five providers; each card shows connection status, last-connected
+  timestamp, circuit-breaker indicator, and actions (Connect, Disconnect,
+  Probe, View CoA). Form modal for Intacct's non-OAuth auth path.
+- Extended `frontend/src/api/connectorClient.ts` with the live-ERP client
+  (`listProviders`, `getConnectorStatus`, `probeConnectorHealth`,
+  `authorizeConnector`, `connectForm`, `disconnectConnector`, `pullCOA`).
+
+### Governance
+- **ADR-0015** (`docs/architecture/adr/0015-live-erp-connector-framework.md`):
+  Records the decision, security boundaries (fail-open vs fail-closed
+  semantics per subsystem), and consequences (new configuration surface,
+  NetSuite/D365/Intacct lack HTTPS webhooks → polling required).
+
+### Ops: Logger facade (already landed earlier in this session)
+- `frontend/src/lib/logger.ts` — universal logger (silent in test/prod
+  non-debug; `console.*` in dev; error/warn piped to Sentry in prod).
+  Replaced 22 `console.*` occurrences across 12 frontend files.
+
+### Known follow-ups (not shipped this session)
+- Track 2.2 — per-feature React error boundaries + Sentry tags
+- Track 2.3 — TypeScript `any` sweep across 38 pages
+- Track 3 — E2E specs for the 5 ERP providers + remaining nav sections
+- Track 4 — Production readiness checklist (deep health, hash-chain cron,
+  k6 baseline, GDPR anonymize, SECURITY.md, CORS lockdown, Grafana doc)
+- Track 5 — Close open work items 19–24 (secret rotation, IBKR runbook,
+  sandbox e2e, FX rates verify)
+
+## 2026-04-23 — Production Readiness Sprint: UI/UX + API + E2E Coverage
+
+### Frontend — UI/UX Hardening (Phase 1)
+- **Login page theme-aware inputs** (`auth/login/page.tsx`) — Replaced hardcoded dark colors (`#0e0e12`, `#1a1a1e`, `#2a2a2e`, `#fff`) with CSS custom properties (`var(--bg-sidebar)`, `var(--bg-panel)`, `var(--bg-sub)`, `var(--text-primary)`). Added `useTheme` hook for conditional logo filter (`resolvedMode === "dark" ? "brightness(0) invert(1)" : "brightness(0)"`). Fixed signup page hardcoded `#fff` → `var(--text-primary)`.
+- **Accounting OAuth error handling** (`accounting-connection/page.tsx`, `accounting-oauth-callback/page.tsx`) — Callback now checks `error`/`error_description` query params, renders user-friendly error UI with red styling, stores `error:<msg>` in localStorage, and auto-closes popup after delay. Parent page reads error-prefixed localStorage values, displays styled error banner, and sets connection status to `"error"`. Added 5-minute safety timeout to prevent stuck "connecting" state.
+- **ERP probe/sync error states** (`erp-integration/page.tsx`, `erp-oauth-callback/page.tsx`) — Same OAuth error pattern applied to ERP callback. Probe endpoint now handles non-JSON 404 responses gracefully (shows "paper mode" message). Sync endpoint captures JSON error detail and displays it inline. Added `connErrors` + `syncError` state with themed error banners.
+- **Mobile responsive audit** — Spot-checked 12 pages. Fixed 6 tables missing `overflowX: "auto"` (bank-statements×2, portfolio, debt, pre-trade-tca, counterparties). Fixed 4 flex rows missing `flexWrap: "wrap"` (trade-history tabs, position-desk KPI strip, portfolio header, hedge-effectiveness tabs). Fixed 2 modals with fixed widths >350px (position-desk `minWidth: 400` → responsive, gl-postings `width: 420` → responsive). Increased 8 touch targets <32px across trade-history, position-desk, bank-statements, hedge-effectiveness, counterparties.
+- **Dark/light theme verification** — Login/signup now use CSS vars throughout. No hardcoded app-page colors found; marketing pages use intentional brand palettes by design.
+- **Consistent empty states** — Audited 10 data-table pages. Only `debt/page.tsx` had a missing empty state (table rendered headers-only when `facilities.length === 0`). Added empty-state row with `colSpan={8}` and themed text. Also replaced hardcoded `#e5e7eb`/`#9ca3af` table cell colors with `var(--text-primary)` / `var(--text-secondary)`.
+- **Loading skeletons** — Created new reusable `frontend/src/components/ui/Skeleton.tsx` with `Skeleton`, `SkeletonBlock`, `SkeletonTable` components and CSS pulse animation (`@keyframes skeletonPulse`). Applied to 6 key pages replacing plain "Loading..." text: cash-positions, debt, settlement, gl-postings, counterparties, audit-lab.
+
+### Backend — API Contract Hardening (Phase 2)
+- **Stub routes → typed implementations** (`v1_connectors.py`) — Added `AccountingImportRequest`, `ERPSyncRequest`, and `PaperModeResponse` Pydantic v2 schemas. `/accounting/import` and `/erp/sync` now accept validated request bodies and return `PaperModeResponse` instead of raw dicts.
+- **API response standardization** — Audited all 88 route files in `backend/app/api/routes/`. Confirmed zero route handlers return plain strings; all return structured JSON (dicts or Pydantic models). HTTPException details are strings, which FastAPI correctly wraps as `{"detail": "..."}`.
+- **Error handling middleware** (`main.py`) — Added `http_exception_handler` (HTTPException → `{"error": "HTTP_ERROR", "detail": ..., "status": N}`) and `validation_exception_handler` (RequestValidationError → `{"error": "VALIDATION_ERROR", "detail": ..., "status": 422}`). Updated `unhandled_exception_handler` to return `{"error": "INTERNAL_ERROR", "detail": "Internal Server Error", "status": 500}`. All shapes now consistent.
+- **OpenAPI schema drift** — Fixed `v1_watchlists.py`: removed `from typing import Optional`, changed `Optional[str] = None` → `str | None = None` and `Optional[list[str]] = None` → `list[str] | None = None`. Audited `schemas_v1/*.py` — no `Optional[` or `Union[` usage found.
+- **Rate limiting / auth verification** — Verified 8 representative v1 routes all use `get_current_user` or plan-tier gates. Discovered and fixed two unprotected v1 route files: `v1_hedgewiki.py` (7 endpoints) and `v1_upload.py` (2 endpoints) — both now require `Depends(get_current_user)`.
+- **CORS preview domains** — Added `VercelPreviewCORSMiddleware` (`backend/app/middleware/cors_preview.py`) that dynamically injects `Access-Control-Allow-Origin` for `*.vercel.app` origins when `CORS_ALLOW_VERCEL_PREVIEWS=true`. Added `CORS_ALLOW_VERCEL_PREVIEWS: bool = False` to `backend/app/core/config.py`. Wired middleware in `main.py` inside (after) the standard `CORSMiddleware`.
+
+### E2E Test Suite (Phase 3)
+- Created 11 new Playwright spec files under `frontend/e2e/` organized by nav section:
+  - `auth/login.spec.ts` — login render, successful redirect, invalid credentials error, autofill visibility
+  - `dashboard/dashboard.spec.ts` — KPI cards, FX rates, sidebar nav
+  - `treasury-suite/cash-positions.spec.ts` — tab nav, table/empty state
+  - `treasury-suite/debt.spec.ts` — maturity calendar, facility table/empty state
+  - `treasury-suite/counterparties.spec.ts` — hub table, create toggle
+  - `market/market.spec.ts` — heatmap/calendar, companies tab
+  - `governance/governance-suite.spec.ts` — audit-trail, ledger, staging pages
+  - `smoke/full-journey.spec.ts` — login → hedge-desk → reports → logout
+  - `accounting/accounting-connection.spec.ts` — platform list, config panel
+  - `accounting/erp-integration.spec.ts` — tabs, test/sync buttons, graceful 404
+  - `settings/settings-page.spec.ts` — settings tabs, appearance theme presets
+
+### Commits
+- Session batch: UI/UX hardening (U1-U7) + API contract hardening (A1-A6) + E2E coverage (~50 files)
+
+---
+
 ## 2026-04-19 — Test + Type Hardening Pass
 
 ### Fixed
