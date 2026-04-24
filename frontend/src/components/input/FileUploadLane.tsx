@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { importCsvAudited, importExcelAudited } from "@/api/connectorClient";
 import type { ConnectorRun } from "@/api/connectorClient";
+import { extractErrorDetail } from "@/lib/errors/extractDetail";
 
 const S = {
   bgDeep:    "var(--bg-deep)",
@@ -61,9 +62,7 @@ export default function FileUploadLane({ token, onImportComplete }: Props) {
       setResult(run);
       if (run.created_ok > 0) onImportComplete?.();
     } catch (e: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const msg = (e as any)?.response?.data?.detail ?? String(e);
-      setError(typeof msg === "string" ? msg : JSON.stringify(msg));
+      setError(extractErrorDetail(e));
     } finally {
       setUploading(false);
     }

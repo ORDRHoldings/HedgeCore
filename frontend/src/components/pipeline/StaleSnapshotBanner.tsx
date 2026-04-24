@@ -12,7 +12,8 @@ export default function StaleSnapshotBanner() {
   const [ageMinutes, setAgeMinutes] = useState(0);
 
   useEffect(() => {
-    const asOf = (sandboxResult?.frozen_inputs?.market as any)?.as_of as string | undefined;
+    const market = sandboxResult?.frozen_inputs?.market as { as_of?: string } | undefined;
+    const asOf = market?.as_of;
     if (!asOf) {
       setIsStale(false);
       return;

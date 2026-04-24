@@ -22,8 +22,7 @@ export default function IRRiskPage() {
   const [swaps, setSwaps] = useState<IRSwap[]>([]);
   const [ladder, setLadder] = useState<DV01Ladder | null>(null);
   const [mtmLoading, setMtmLoading] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [effectivenessResult, setEffectivenessResult] = useState<any>(null);
+  const [effectivenessResult, setEffectivenessResult] = useState<{ passed: boolean; ratio: number } | null>(null);
 
   useEffect(() => {
     if (!token) return;

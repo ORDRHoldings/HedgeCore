@@ -9,6 +9,7 @@ import type { PositionRow } from "@/api/positionClient";
 import { FUTURES_CURRENCY_LIST } from "@/api/types";
 import type { FuturesCurrency, TradeRow } from "@/api/types";
 import { translateCaughtError, HEDGE_EMPTY_STATES, type TranslatedError } from "@/lib/errors/hedgeErrors";
+import { extractErrorDetail } from "@/lib/errors/extractDetail";
 import DisclosurePanel from "./DisclosurePanel";
 import HedgeErrorBanner from "./ErrorBanner";
 import {
@@ -498,9 +499,7 @@ function ManualEntryTab({ token, onCreated }: {
       setSuccessFlash(true);
       setTimeout(() => setSuccessFlash(false), 2000);
     } catch (e: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const detail = (e as any)?.response?.data?.detail;
-      setApiError(typeof detail === "string" ? detail : String(e));
+      setApiError(extractErrorDetail(e));
     } finally {
       setSaving(false);
     }
@@ -776,9 +775,7 @@ function UploadTab({ token, onImported }: {
         }
       }
     } catch (e: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const msg = (e as any)?.response?.data?.detail ?? String(e);
-      setError(typeof msg === "string" ? msg : JSON.stringify(msg));
+      setError(extractErrorDetail(e));
     } finally {
       setUploading(false);
     }

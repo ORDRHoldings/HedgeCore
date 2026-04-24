@@ -1651,9 +1651,8 @@ export function loadDrawings(pair: string): Drawing[] {
   try {
     const raw = localStorage.getItem(`ordr_drawings_${pair}`);
     if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return parsed.map((d: any) => ({
+    const parsed = JSON.parse(raw) as Partial<Drawing>[];
+    return parsed.map((d: Partial<Drawing>) => ({
       // New defaults for migrating old drawings
       lineWidth: 1.5,
       lineStyle: "solid",
@@ -1693,6 +1692,6 @@ export function loadDrawings(pair: string): Drawing[] {
       ...d,
       // Ensure stats is fully populated even if partially saved
       stats: { ...DEFAULT_STATS, ...(d.stats || {}) },
-    }));
+    })) as Drawing[];
   } catch { return []; }
 }

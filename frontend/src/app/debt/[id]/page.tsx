@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { CreditCard } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { getFacility, getDebtSchedule, getCovenants } from "@/lib/api/debtClient";
-import type { DebtSchedulePeriod, DebtCovenant } from "@/lib/api/debtClient";
+import type { DebtSchedulePeriod, DebtCovenant, DebtFacility } from "@/lib/api/debtClient";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -22,8 +22,7 @@ export default function FacilityDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { token } = useAuth();
   const [tab, setTab] = useState<Tab>("schedule");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [facility, setFacility] = useState<any>(null);
+  const [facility, setFacility] = useState<DebtFacility | null>(null);
   const [schedule, setSchedule] = useState<DebtSchedulePeriod[]>([]);
   const [covenants, setCovenants] = useState<DebtCovenant[]>([]);
 

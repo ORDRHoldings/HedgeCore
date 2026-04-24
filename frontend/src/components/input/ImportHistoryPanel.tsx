@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { listConnectorRuns, getConnectorRunDetail } from "@/api/connectorClient";
 import type { ConnectorRun, ConnectorRunDetail } from "@/api/connectorClient";
 import EmptyState from "@/components/ui/EmptyState";
+import { extractErrorDetail } from "@/lib/errors/extractDetail";
 
 const S = {
   bgDeep:    "var(--bg-deep)",
@@ -57,8 +58,7 @@ export default function ImportHistoryPanel({ token }: Props) {
       const res = await listConnectorRuns(token, 50);
       setRuns(res.items);
     } catch (e: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setError((e as any)?.response?.data?.detail ?? String(e));
+      setError(extractErrorDetail(e));
     } finally {
       setLoading(false);
     }

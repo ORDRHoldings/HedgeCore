@@ -20,7 +20,8 @@ from typing import Any
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
@@ -35,6 +36,7 @@ from app.middleware.api_key_auth import APIKeyAuthMiddleware
 from app.middleware.audit_headers import AuditHeadersMiddleware
 from app.middleware.csrf import CSRFMiddleware  # SEC-06: now enabled
 from app.middleware.ip_allowlist_middleware import IPAllowlistMiddleware
+from app.middleware.cors_preview import VercelPreviewCORSMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.tasks.audit_cleanup import cleanup_audit_tables
 
@@ -340,6 +342,17 @@ async def _sync_seed_users():
             except Exception as e:
                 logger.warning(f"_sync_seed_users update {email} failed: {e}")
                 continue
+        # Step 3: ensure demo user has superuser privileges (E2E tests require admin access)
+        try:
+            r = await session.execute(select(User).where(User.email == "demo"))
+            demo_user = r.scalars().first()
+            if demo_user and not demo_user.is_superuser:
+                demo_user.is_superuser = True
+                await session.flush()
+                logger.info("_sync_seed_users: demo user promoted to superuser")
+        except Exception as e:
+            logger.warning(f"_sync_seed_users demo superuser upgrade failed (non-fatal): {e}")
+
         try:
             await session.commit()
             logger.info(f"_sync_seed_users: {updated_count} seed user(s) password-updated (skipped {len(EMPLOYEES) - updated_count} unchanged)")
@@ -1854,11 +1867,19 @@ async def lifespan(app: FastAPI):
         id="webhook_cleanup",
         replace_existing=True,
     )
+    from app.tasks.hash_chain_verify import run_hash_chain_verify_job
+    _audit_scheduler.add_job(
+        run_hash_chain_verify_job,
+        CronTrigger(hour=2, minute=30),
+        id="hash_chain_verify",
+        replace_existing=True,
+    )
     _audit_scheduler.start()
     app.state.scheduler = _audit_scheduler
     logger.info("Scheduler started — audit_cleanup at 03:30 UTC daily")
     logger.info("Scheduler registered — compliance_evidence_export at 02:00 UTC daily")
     logger.info("Scheduler registered — gdpr_anonymise at 01:00 UTC daily")
+    logger.info("Scheduler registered — hash_chain_verify at 02:30 UTC daily")
 
     try:
 
@@ -1980,15 +2001,31 @@ def root_redirect():
 
 # -------------------------------------------------------------------
 
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": "HTTP_ERROR", "detail": exc.detail, "status": exc.status_code},
+        headers=getattr(exc, "headers", None) or {},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={"error": "VALIDATION_ERROR", "detail": exc.errors(), "status": 422},
+    )
+
+
 @app.exception_handler(Exception)
-
 async def unhandled_exception_handler(request: Request, exc: Exception):
-
     logger.error("? Unhandled exception %s %s: %s", request.method, request.url.path, exc)
-
     traceback.print_exc()
-
-    return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
+    return JSONResponse(
+        status_code=500,
+        content={"error": "INTERNAL_ERROR", "detail": "Internal Server Error", "status": 500},
+    )
 
 
 
@@ -2046,6 +2083,12 @@ app.add_middleware(
 
     expose_headers=settings.CORS_EXPOSE_HEADERS,
 
+)
+
+# Vercel preview domain support — injected inside CORS so it can override headers
+app.add_middleware(
+    VercelPreviewCORSMiddleware,
+    allow_vercel_previews=settings.CORS_ALLOW_VERCEL_PREVIEWS,
 )
 
 

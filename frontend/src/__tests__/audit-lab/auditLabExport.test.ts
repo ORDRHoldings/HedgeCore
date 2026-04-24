@@ -629,7 +629,7 @@ describe("Board summary recommendation deduplication", () => {
     ];
     const uniqueRecs: string[] = [];
     const seenRecs = new Set<string>();
-    findings.forEach((f: any) => {
+    findings.forEach((f: { recommendation?: string; severity?: string }) => {
       if (f.recommendation && !seenRecs.has(f.recommendation)) {
         seenRecs.add(f.recommendation);
         uniqueRecs.push(f.recommendation);
@@ -686,7 +686,7 @@ describe("Critical finding count", () => {
       { severity: undefined },
       {},
     ];
-    const critCount = findings.filter((f: any) =>
+    const critCount = findings.filter((f: { severity?: string | null }) =>
       ["CRITICAL", "HIGH"].includes((f.severity ?? "").toUpperCase()),
     ).length;
     expect(critCount).toBe(0);

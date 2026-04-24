@@ -6,6 +6,7 @@
  */
 
 import type { PositionRow } from "@/api/positionClient";
+import type { CalculateResponse } from "@/api/types";
 import type { ComplianceCheck, MonteCarloResult, PortfolioRisk, PortfolioStressResult } from "@/utils/executionAnalytics";
 import type { FuturesTicket } from "./contractSizing";
 
@@ -18,8 +19,7 @@ export interface PipelineState {
   selectedPositions: PositionRow[];
 
   // Step 2 output
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  calcResult: any | null;     // CalculateResponse from backend
+  calcResult: CalculateResponse | null;
   runId: string | null;
 
   // Step 3 output

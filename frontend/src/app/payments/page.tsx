@@ -574,7 +574,7 @@ function PaymentsInner() {
                     )}
                     {payments.map(p => {
                       const isExpanded = expandedId === p.id;
-                      const isCreator = p.created_by === (user as any)?.id;
+                      const isCreator = p.created_by === user?.id;
                       const isRejecting = rejectingId === p.id;
                       const busy = actionLoading === p.id;
 

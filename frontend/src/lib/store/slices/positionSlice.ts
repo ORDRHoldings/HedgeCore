@@ -16,6 +16,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import * as positionClient from "../../../api/positionClient";
 import type { PositionRow, ExposureAggregation } from "../../../api/positionClient";
 import type { TradeRow } from "../../../api/types";
+import { extractErrorDetail } from "../../../lib/errors/extractDetail";
 
 // ---------------------------------------------------------------------------
 // State shape
@@ -66,12 +67,7 @@ export const createPositionThunk = createAsyncThunk(
     try {
       return await positionClient.createPosition(trade, token);
     } catch (e: unknown) {
-      const msg =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (e as any)?.response?.data?.detail ??
-        (e as Error).message ??
-        "Failed to create position";
-      return rejectWithValue(msg as string);
+      return rejectWithValue(extractErrorDetail(e) || "Failed to create position");
     }
   },
 );
@@ -85,12 +81,7 @@ export const updatePositionThunk = createAsyncThunk(
     try {
       return await positionClient.updatePosition(id, trade, token);
     } catch (e: unknown) {
-      const msg =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (e as any)?.response?.data?.detail ??
-        (e as Error).message ??
-        "Failed to update position";
-      return rejectWithValue(msg as string);
+      return rejectWithValue(extractErrorDetail(e) || "Failed to update position");
     }
   },
 );
@@ -123,11 +114,16 @@ export const fetchExposureThunk = createAsyncThunk(
 // ---------------------------------------------------------------------------
 
 function lifecycleErrorMsg(e: unknown, fallback: string): string {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const detail = (e as any)?.response?.data?.detail;
-  if (detail && typeof detail === "object" && detail.detail) return detail.detail as string;
-  if (detail && typeof detail === "string") return detail;
-  return (e as Error)?.message ?? fallback;
+  // Try nested { detail: { detail: "..." } } shape first (some endpoints
+  // wrap twice); fall back to the standard extractor.
+  if (typeof e === "object" && e !== null && "response" in e) {
+    const r = (e as { response?: { data?: { detail?: unknown } } }).response;
+    const d = r?.data?.detail;
+    if (d && typeof d === "object" && "detail" in d && typeof (d as { detail: unknown }).detail === "string") {
+      return (d as { detail: string }).detail;
+    }
+  }
+  return extractErrorDetail(e) || fallback;
 }
 
 export const assignPolicyThunk = createAsyncThunk(
