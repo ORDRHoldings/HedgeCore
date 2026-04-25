@@ -156,9 +156,19 @@ class TestRouterStructure:
         from app.api.routes.v1_admin_monitor import router
         assert router.prefix == "/v1/admin/monitor"
 
-    def test_router_has_6_routes(self):
+    def test_router_exposes_expected_paths(self):
         from app.api.routes.v1_admin_monitor import router
-        assert len(router.routes) == 6
+        paths = {r.path for r in router.routes}
+        expected = {
+            "/v1/admin/monitor/health",
+            "/v1/admin/monitor/services",
+            "/v1/admin/monitor/tables",
+            "/v1/admin/monitor/engine",
+            "/v1/admin/monitor/errors",
+            "/v1/admin/monitor/restart/{service}",
+            "/v1/admin/monitor/hash-chain/verify",
+        }
+        assert expected.issubset(paths), f"missing routes: {expected - paths}"
 
     def test_router_tags(self):
         from app.api.routes.v1_admin_monitor import router
