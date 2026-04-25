@@ -155,6 +155,50 @@ async def test_voice_transcript_rejects_invalid_role(authed_client):
 
 
 @pytest.mark.asyncio
+async def test_voice_transcript_session_start_includes_manifest(authed_client):
+    """Provenance manifest fields land in VOICE_SESSION_START payload.manifest."""
+    body = {
+        "session_id": "sess-manifest-001",
+        "transport": "openai-realtime",
+        "model": "gpt-realtime",
+        "session_start": _now_iso(),
+        "model_id": "gpt-realtime-2024-12-17",
+        "instructions_sha256": "deadbeefcafef00d",
+        "tools_sha256": "1234567890abcdef",
+    }
+    with patch("app.api.routes.v1_voice_transcript.emit_audit", new_callable=AsyncMock) as mock_emit:
+        async with authed_client as client:
+            resp = await client.post("/api/v1/voice/transcript", headers=_BEARER, json=body)
+
+    assert resp.status_code == 200
+    assert mock_emit.await_count == 1
+    payload = mock_emit.await_args_list[0].kwargs["payload"]
+    assert payload["manifest"] == {
+        "model_id": "gpt-realtime-2024-12-17",
+        "instructions_sha256": "deadbeefcafef00d",
+        "tools_sha256": "1234567890abcdef",
+    }
+
+
+@pytest.mark.asyncio
+async def test_voice_transcript_session_start_omits_manifest_when_absent(authed_client):
+    """No manifest fields → no manifest key in payload."""
+    body = {
+        "session_id": "sess-nomanif-001",
+        "transport": "openai-realtime",
+        "model": "gpt-realtime",
+        "session_start": _now_iso(),
+    }
+    with patch("app.api.routes.v1_voice_transcript.emit_audit", new_callable=AsyncMock) as mock_emit:
+        async with authed_client as client:
+            resp = await client.post("/api/v1/voice/transcript", headers=_BEARER, json=body)
+
+    assert resp.status_code == 200
+    payload = mock_emit.await_args_list[0].kwargs["payload"]
+    assert "manifest" not in payload
+
+
+@pytest.mark.asyncio
 async def test_voice_transcript_disclosure_ack_emits_event(authed_client):
     """disclosure_ack=True emits a VOICE_AI_DISCLOSURE_ACK audit event."""
     body = {

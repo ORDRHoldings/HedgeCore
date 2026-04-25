@@ -68,6 +68,12 @@ class VoiceTranscriptBatch(BaseModel):
     # acknowledgement so the WORM chain has a tamper-evident record of consent.
     disclosure_ack: bool = False
     disclosure_text: str | None = Field(default=None, max_length=2048)
+    # Provenance manifest — model + prompt + tools hashes from /voice/token.
+    # When present, written into the VOICE_SESSION_START payload so auditors
+    # can prove what code was running for any given session.
+    model_id: str | None = Field(default=None, max_length=64)
+    instructions_sha256: str | None = Field(default=None, max_length=64)
+    tools_sha256: str | None = Field(default=None, max_length=64)
 
 
 class VoiceTranscriptAck(BaseModel):
@@ -102,6 +108,14 @@ async def log_voice_transcript(
     events_logged = 0
 
     if batch.session_start is not None:
+        manifest: dict[str, str] = {}
+        if batch.model_id:
+            manifest["model_id"] = batch.model_id
+        if batch.instructions_sha256:
+            manifest["instructions_sha256"] = batch.instructions_sha256
+        if batch.tools_sha256:
+            manifest["tools_sha256"] = batch.tools_sha256
+
         await emit_audit(
             session=session,
             user=current_user,
@@ -109,7 +123,11 @@ async def log_voice_transcript(
             description=f"Voice session started ({batch.transport}, {batch.model})",
             entity_type="voice_session",
             entity_id=batch.session_id,
-            payload={**session_scope, "at": batch.session_start.isoformat()},
+            payload={
+                **session_scope,
+                "at": batch.session_start.isoformat(),
+                **({"manifest": manifest} if manifest else {}),
+            },
         )
         events_logged += 1
 

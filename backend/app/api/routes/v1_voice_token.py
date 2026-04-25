@@ -8,6 +8,8 @@ Auth: JWT (get_current_user)
 Env:  OPENAI_API_KEY_V (server-side only)
 """
 
+import hashlib
+import json
 import logging
 import os
 
@@ -138,6 +140,16 @@ REALTIME_TOOLS: list[dict] = [
     },
 ]
 
+# ── Provenance manifest (computed at boot — proves what code was running) ────
+
+def _sha256_short(payload: str) -> str:
+    """16-hex-char prefix of SHA-256 — collision-resistant for audit purposes."""
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+
+
+INSTRUCTIONS_SHA256 = _sha256_short(ORDR_INSTRUCTIONS)
+TOOLS_SHA256 = _sha256_short(json.dumps(REALTIME_TOOLS, sort_keys=True))
+
 # ── Response schema ──────────────────────────────────────────────────────────
 
 class VoiceTokenResponse(BaseModel):
@@ -145,6 +157,11 @@ class VoiceTokenResponse(BaseModel):
     expires_at: str
     instructions: str
     tools: list[dict]
+    # Provenance manifest — frontend echoes these into the audit chain so
+    # auditors can replay the exact model + prompt + tools active for the session.
+    model_id: str
+    instructions_sha256: str
+    tools_sha256: str
 
 # ── Endpoint ─────────────────────────────────────────────────────────────────
 
@@ -195,12 +212,18 @@ async def create_voice_token(
             logger.error("OpenAI session response missing client_secret.value: %s", data)
             raise HTTPException(status_code=502, detail="Invalid voice session response")
 
-        logger.info("Voice token minted for user=%s model=%s", current_user.id, model)
+        logger.info(
+            "Voice token minted for user=%s model=%s instr=%s tools=%s",
+            current_user.id, model, INSTRUCTIONS_SHA256, TOOLS_SHA256,
+        )
         return VoiceTokenResponse(
             token=token_value,
             expires_at=str(expires_at),
             instructions=ORDR_INSTRUCTIONS,
             tools=REALTIME_TOOLS,
+            model_id=model,
+            instructions_sha256=INSTRUCTIONS_SHA256,
+            tools_sha256=TOOLS_SHA256,
         )
 
     except httpx.HTTPError as exc:

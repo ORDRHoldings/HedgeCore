@@ -72,6 +72,12 @@ interface AuditBuffer {
   tool_calls: AuditToolCall[];
   disclosure_ack: boolean;
   disclosure_text: string | null;
+  // Provenance manifest from POST /v1/voice/token — sent only on the
+  // first flush (the one carrying session_start) so auditors can replay
+  // exactly which model + prompt + tools were active.
+  model_id: string | null;
+  instructions_sha256: string | null;
+  tools_sha256: string | null;
 }
 
 const _FLUSH_TURN_THRESHOLD = 10;
@@ -90,6 +96,9 @@ function _makeBuffer(model: string): AuditBuffer {
     tool_calls: [],
     disclosure_ack: false,
     disclosure_text: null,
+    model_id: null,
+    instructions_sha256: null,
+    tools_sha256: null,
   };
 }
 
@@ -160,7 +169,13 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
         turns: buf.turns,
         tool_calls: buf.tool_calls,
       };
-      if (buf.session_start) payload.session_start = buf.session_start;
+      if (buf.session_start) {
+        payload.session_start = buf.session_start;
+        // Manifest fields ride with VOICE_SESSION_START — only sent once.
+        if (buf.model_id) payload.model_id = buf.model_id;
+        if (buf.instructions_sha256) payload.instructions_sha256 = buf.instructions_sha256;
+        if (buf.tools_sha256) payload.tools_sha256 = buf.tools_sha256;
+      }
       if (closeSession) payload.session_end = new Date().toISOString();
       if (buf.disclosure_ack) {
         payload.disclosure_ack = true;
@@ -173,6 +188,9 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
       buf.tool_calls = [];
       buf.disclosure_ack = false;
       buf.disclosure_text = null;
+      buf.model_id = null;
+      buf.instructions_sha256 = null;
+      buf.tools_sha256 = null;
 
       try {
         await dashboardFetch("/v1/voice/transcript", token, {
@@ -426,6 +444,17 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
         instructions: tokenData.instructions ?? "",
         tools: tokenData.tools ?? [],
       };
+
+      // Stamp the audit buffer with the provenance manifest so the very
+      // first flush (carrying session_start) takes it to the WORM chain.
+      if (auditBufRef.current) {
+        auditBufRef.current.model_id = tokenData.model_id ?? null;
+        auditBufRef.current.instructions_sha256 = tokenData.instructions_sha256 ?? null;
+        auditBufRef.current.tools_sha256 = tokenData.tools_sha256 ?? null;
+        if (tokenData.model_id) {
+          auditBufRef.current.model = tokenData.model_id;
+        }
+      }
 
       // 2. Create RTCPeerConnection
       const pc = new RTCPeerConnection();
