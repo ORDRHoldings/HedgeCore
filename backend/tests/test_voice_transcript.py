@@ -155,6 +155,45 @@ async def test_voice_transcript_rejects_invalid_role(authed_client):
 
 
 @pytest.mark.asyncio
+async def test_voice_transcript_disclosure_ack_emits_event(authed_client):
+    """disclosure_ack=True emits a VOICE_AI_DISCLOSURE_ACK audit event."""
+    body = {
+        "session_id": "sess-disclose-001",
+        "transport": "openai-realtime",
+        "model": "gpt-realtime",
+        "disclosure_ack": True,
+        "disclosure_text": "ORDR Voice is an AI assistant. Sessions are recorded.",
+    }
+
+    with patch("app.api.routes.v1_voice_transcript.emit_audit", new_callable=AsyncMock) as mock_emit:
+        async with authed_client as client:
+            resp = await client.post("/api/v1/voice/transcript", headers=_BEARER, json=body)
+
+    assert resp.status_code == 200
+    assert resp.json()["events_logged"] == 1
+    assert mock_emit.await_count == 1
+    kwargs = mock_emit.await_args_list[0].kwargs
+    assert kwargs["event_type"] == "VOICE_AI_DISCLOSURE_ACK"
+    assert kwargs["payload"]["disclosure_text"].startswith("ORDR Voice is an AI")
+
+
+@pytest.mark.asyncio
+async def test_voice_transcript_disclosure_ack_false_no_event(authed_client):
+    body = {
+        "session_id": "sess-no-disclose-1",
+        "transport": "openai-realtime",
+        "model": "gpt-realtime",
+        "disclosure_ack": False,
+    }
+    with patch("app.api.routes.v1_voice_transcript.emit_audit", new_callable=AsyncMock) as mock_emit:
+        async with authed_client as client:
+            resp = await client.post("/api/v1/voice/transcript", headers=_BEARER, json=body)
+    assert resp.status_code == 200
+    assert resp.json()["events_logged"] == 0
+    assert mock_emit.await_count == 0
+
+
+@pytest.mark.asyncio
 async def test_voice_transcript_truncates_oversized_tool_arguments(authed_client):
     """Tool arguments larger than _MAX_TOOL_ARG_BYTES should land in payload as truncated."""
     huge_blob = "A" * 4096  # 4KB

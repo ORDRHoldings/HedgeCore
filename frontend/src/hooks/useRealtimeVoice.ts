@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
-import { executeToolCall } from "@/hooks/useRealtimeTools";
+import { executeToolCall, isMutatingTool } from "@/hooks/useRealtimeTools";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -37,6 +37,14 @@ export interface TranscriptEntry {
 export interface FunctionCallEvent {
   name: string;
   status: "calling" | "done";
+}
+
+export interface PendingConfirmation {
+  callId: string;
+  name: string;
+  arguments: Record<string, unknown>;
+  approve: () => void;
+  deny: () => void;
 }
 
 // ── WORM transcript batching ────────────────────────────────────────────────
@@ -62,6 +70,8 @@ interface AuditBuffer {
   session_start: string | null;
   turns: AuditTurn[];
   tool_calls: AuditToolCall[];
+  disclosure_ack: boolean;
+  disclosure_text: string | null;
 }
 
 const _FLUSH_TURN_THRESHOLD = 10;
@@ -78,6 +88,8 @@ function _makeBuffer(model: string): AuditBuffer {
     session_start: null,
     turns: [],
     tool_calls: [],
+    disclosure_ack: false,
+    disclosure_text: null,
   };
 }
 
@@ -85,6 +97,7 @@ interface UseRealtimeVoiceOptions {
   token: string;
   onTranscript?: (entry: TranscriptEntry) => void;
   onFunctionCall?: (evt: FunctionCallEvent) => void;
+  onConfirmRequired?: (pending: PendingConfirmation) => void;
   onError?: (message: string) => void;
 }
 
@@ -95,6 +108,11 @@ interface UseRealtimeVoiceReturn {
   toggleMic: () => void;
   isMicOn: boolean;
   status: VoiceStatus;
+  /**
+   * Mark the AI disclosure (EU AI Act Art. 52) as acknowledged by the user.
+   * Emits a VOICE_AI_DISCLOSURE_ACK audit event on the next flush.
+   */
+  acknowledgeDisclosure: (text: string) => void;
 }
 
 let _entryId = 0;
@@ -102,7 +120,7 @@ let _entryId = 0;
 // ── Hook ────────────────────────────────────────────────────────────────────
 
 export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeVoiceReturn {
-  const { token, onTranscript, onFunctionCall, onError } = options;
+  const { token, onTranscript, onFunctionCall, onConfirmRequired, onError } = options;
 
   const [status, setStatus] = useState<VoiceStatus>("disconnected");
   const [isMicOn, setIsMicOn] = useState(false);
@@ -130,7 +148,8 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
       const hasContent =
         buf.session_start !== null ||
         buf.turns.length > 0 ||
-        buf.tool_calls.length > 0;
+        buf.tool_calls.length > 0 ||
+        buf.disclosure_ack;
       // Skip mid-session no-op flushes; on close, always emit session_end.
       if (!closeSession && !hasContent) return;
 
@@ -143,11 +162,17 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
       };
       if (buf.session_start) payload.session_start = buf.session_start;
       if (closeSession) payload.session_end = new Date().toISOString();
+      if (buf.disclosure_ack) {
+        payload.disclosure_ack = true;
+        if (buf.disclosure_text) payload.disclosure_text = buf.disclosure_text;
+      }
 
       // Drain so we don't double-log on retries
       buf.session_start = null;
       buf.turns = [];
       buf.tool_calls = [];
+      buf.disclosure_ack = false;
+      buf.disclosure_text = null;
 
       try {
         await dashboardFetch("/v1/voice/transcript", token, {
@@ -266,6 +291,65 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
           const fnName = event.name as string;
           const fnArgs = JSON.parse((event.arguments as string) ?? "{}");
 
+          const completeCall = async (
+            result: string,
+            recordedStatus: "ok" | "error" | "confirmation_required",
+          ) => {
+            recordToolCall(fnName, fnArgs, result, recordedStatus);
+            onFunctionCall?.({ name: fnName, status: "done" });
+            sendEvent({
+              type: "conversation.item.create",
+              item: {
+                type: "function_call_output",
+                call_id: callId,
+                output: result,
+              },
+            });
+            sendEvent({ type: "response.create" });
+          };
+
+          // Mutating tools require explicit user click before execution.
+          if (isMutatingTool(fnName)) {
+            // Audit the request for confirmation immediately so the WORM
+            // chain reflects the intent even if the user never decides.
+            recordToolCall(
+              fnName,
+              fnArgs,
+              JSON.stringify({ pending: true }),
+              "confirmation_required",
+            );
+            updateStatus("ready");
+            onFunctionCall?.({ name: fnName, status: "done" });
+            onConfirmRequired?.({
+              callId,
+              name: fnName,
+              arguments: fnArgs,
+              approve: async () => {
+                onFunctionCall?.({ name: fnName, status: "calling" });
+                updateStatus("processing");
+                const result = await executeToolCall(fnName, fnArgs, token);
+                const status: "ok" | "error" = (() => {
+                  try {
+                    const parsed = JSON.parse(result);
+                    return parsed && typeof parsed === "object" && "error" in parsed
+                      ? "error"
+                      : "ok";
+                  } catch {
+                    return "ok";
+                  }
+                })();
+                await completeCall(result, status);
+              },
+              deny: async () => {
+                const denied = JSON.stringify({
+                  error: "User denied execution",
+                });
+                await completeCall(denied, "error");
+              },
+            });
+            break;
+          }
+
           onFunctionCall?.({ name: fnName, status: "calling" });
           updateStatus("processing");
 
@@ -280,20 +364,7 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
               return "ok";
             }
           })();
-          recordToolCall(fnName, fnArgs, result, toolStatus);
-
-          onFunctionCall?.({ name: fnName, status: "done" });
-
-          // Send function result back
-          sendEvent({
-            type: "conversation.item.create",
-            item: {
-              type: "function_call_output",
-              call_id: callId,
-              output: result,
-            },
-          });
-          sendEvent({ type: "response.create" });
+          await completeCall(result, toolStatus);
           break;
         }
 
@@ -327,7 +398,7 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
           break;
       }
     },
-    [token, updateStatus, emitTranscript, sendEvent, onFunctionCall, onError, recordTurn, recordToolCall],
+    [token, updateStatus, emitTranscript, sendEvent, onFunctionCall, onConfirmRequired, onError, recordTurn, recordToolCall],
   );
 
   // ── Connect ─────────────────────────────────────────────────────────────
@@ -516,6 +587,19 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
     [emitTranscript, updateStatus, sendEvent, recordTurn],
   );
 
+  // ── AI disclosure (EU AI Act Art. 52) ───────────────────────────────────
+
+  const acknowledgeDisclosure = useCallback((text: string) => {
+    const buf = auditBufRef.current;
+    if (!buf) return;
+    if (buf.disclosure_ack) return; // already recorded for this session
+    buf.disclosure_ack = true;
+    buf.disclosure_text = text;
+    // Flush soon so the ack reaches the WORM chain even if the user
+    // immediately closes the panel.
+    void flushAudit(false);
+  }, [flushAudit]);
+
   // ── Toggle mic ──────────────────────────────────────────────────────────
 
   const toggleMic = useCallback(() => {
@@ -529,5 +613,5 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
     setIsMicOn(track.enabled);
   }, []);
 
-  return { connect, disconnect, sendText, toggleMic, isMicOn, status };
+  return { connect, disconnect, sendText, toggleMic, isMicOn, status, acknowledgeDisclosure };
 }

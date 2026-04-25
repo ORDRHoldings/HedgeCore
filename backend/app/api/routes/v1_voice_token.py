@@ -40,6 +40,10 @@ When asked to calculate a hedge:
 2. Call calculate_hedge with those parameters.
 3. Report: contracts, cost, coverage %, margin, run ID.
 
+Mutating tools (pin_pair) modify the user's saved data. The terminal will \
+show a confirm/deny card before any mutation runs — explain to the user that \
+they need to click Confirm. Never assume confirmation; never retry on denial.
+
 Keep responses concise — 2-4 sentences unless detail is requested.\
 """
 
@@ -111,6 +115,26 @@ REALTIME_TOOLS: list[dict] = [
         "name": "get_pending_approvals",
         "description": "List execution proposals awaiting 4-eyes approval.",
         "parameters": {"type": "object", "properties": {}},
+    },
+    {
+        "type": "function",
+        "name": "pin_pair",
+        "description": (
+            "Add a currency pair (e.g. EURUSD, USDMXN) to the user's primary "
+            "watchlist. MUTATING — the terminal will show a confirm/deny card "
+            "to the user before this executes. Tell the user you've requested "
+            "the pin and they must click Confirm in the panel."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "pair": {
+                    "type": "string",
+                    "description": "6-letter currency pair, uppercase (e.g. EURUSD, USDMXN).",
+                },
+            },
+            "required": ["pair"],
+        },
     },
 ]
 

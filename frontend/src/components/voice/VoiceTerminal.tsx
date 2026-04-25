@@ -23,11 +23,20 @@ import {
   AlertCircleIcon,
   LoaderIcon,
   VolumeXIcon,
+  ShieldAlertIcon,
+  InfoIcon,
 } from "lucide-react";
+
+const DISCLOSURE_STORAGE_KEY = "ordr_voice_ai_disclosure_ack_v1";
+const AI_DISCLOSURE_TEXT =
+  "ORDR Voice is an AI assistant powered by OpenAI. Conversations are " +
+  "recorded to a tamper-evident audit chain for compliance with MiFID II " +
+  "Article 16(7) and the EU AI Act Article 52. Click Acknowledge to continue.";
 import {
   useRealtimeVoice,
   type TranscriptEntry,
   type FunctionCallEvent,
+  type PendingConfirmation,
   type VoiceStatus,
 } from "@/hooks/useRealtimeVoice";
 
@@ -61,6 +70,15 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const [textInput, setTextInput] = useState("");
   const [voiceOn, setVoiceOn] = useState(true);
+  const [pending, setPending] = useState<PendingConfirmation | null>(null);
+  const [disclosureAcked, setDisclosureAcked] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem(DISCLOSURE_STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
 
   const transcriptEnd = useRef<HTMLDivElement | null>(null);
 
@@ -96,13 +114,28 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
     setErrMsg(message);
   }, []);
 
-  const { connect, disconnect, sendText, toggleMic, isMicOn, status } =
+  const handleConfirmRequired = useCallback((p: PendingConfirmation) => {
+    setPending(p);
+  }, []);
+
+  const { connect, disconnect, sendText, toggleMic, isMicOn, status, acknowledgeDisclosure } =
     useRealtimeVoice({
       token,
       onTranscript: handleTranscript,
       onFunctionCall: handleFunctionCall,
+      onConfirmRequired: handleConfirmRequired,
       onError: handleError,
     });
+
+  const handleAcknowledgeDisclosure = useCallback(() => {
+    acknowledgeDisclosure(AI_DISCLOSURE_TEXT);
+    try {
+      window.localStorage.setItem(DISCLOSURE_STORAGE_KEY, "1");
+    } catch {
+      // localStorage may be disabled — still treat as acked for this session
+    }
+    setDisclosureAcked(true);
+  }, [acknowledgeDisclosure]);
 
   // ── Scroll to bottom on new transcript ──────────────────────────────────
   useEffect(() => {
@@ -129,7 +162,23 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
     setTranscript([]);
     setErrMsg(null);
     setFn(null);
-  }, [disconnect]);
+    if (pending) {
+      pending.deny();
+      setPending(null);
+    }
+  }, [disconnect, pending]);
+
+  const handleApprove = useCallback(() => {
+    if (!pending) return;
+    pending.approve();
+    setPending(null);
+  }, [pending]);
+
+  const handleDeny = useCallback(() => {
+    if (!pending) return;
+    pending.deny();
+    setPending(null);
+  }, [pending]);
 
   // ── Send text message ───────────────────────────────────────────────────
   const handleSendText = useCallback(() => {
@@ -304,6 +353,56 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
               gap: 8,
             }}
           >
+            {!disclosureAcked && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                  padding: "10px 12px",
+                  background: T.blueDim,
+                  border: `1px solid ${T.blueBdr}`,
+                  borderRadius: 4,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                  <InfoIcon
+                    size={13}
+                    color={T.blue}
+                    style={{ flexShrink: 0, marginTop: 1 }}
+                  />
+                  <div
+                    style={{
+                      fontFamily: T.ui,
+                      fontSize: 12,
+                      lineHeight: 1.45,
+                      color: T.primary,
+                    }}
+                  >
+                    {AI_DISCLOSURE_TEXT}
+                  </div>
+                </div>
+                <button
+                  onClick={handleAcknowledgeDisclosure}
+                  style={{
+                    alignSelf: "flex-end",
+                    fontFamily: T.mono,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    background: T.blue,
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 3,
+                    padding: "5px 12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  ACKNOWLEDGE
+                </button>
+              </div>
+            )}
+
             {transcript.length === 0 && status === "connecting" && (
               <div
                 style={{
@@ -415,6 +514,107 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
                       : `${fn.name} done`
                     : "ORDR is thinking…"}
                 </span>
+              </div>
+            )}
+
+            {/* Mutating-tool confirmation gate */}
+            {pending && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                  padding: "10px 12px",
+                  background: "rgba(245,158,11,0.06)",
+                  border: "1px solid rgba(245,158,11,0.30)",
+                  borderRadius: 4,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                  <ShieldAlertIcon
+                    size={13}
+                    color={T.amber}
+                    style={{ flexShrink: 0, marginTop: 1 }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        letterSpacing: "0.1em",
+                        color: T.amber,
+                        marginBottom: 4,
+                      }}
+                    >
+                      CONFIRM ACTION
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: T.ui,
+                        fontSize: 12,
+                        color: T.primary,
+                        lineHeight: 1.4,
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      ORDR wants to call <strong>{pending.name}</strong>
+                      {Object.keys(pending.arguments).length > 0 && (
+                        <>
+                          {" "}with{" "}
+                          <code
+                            style={{
+                              fontFamily: T.mono,
+                              fontSize: 11,
+                              background: T.sub,
+                              padding: "1px 4px",
+                              borderRadius: 2,
+                              color: T.primary,
+                            }}
+                          >
+                            {JSON.stringify(pending.arguments)}
+                          </code>
+                        </>
+                      )}
+                      .
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                  <button
+                    onClick={handleDeny}
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: 12,
+                      letterSpacing: "0.08em",
+                      background: "transparent",
+                      color: T.muted,
+                      border: `1px solid ${T.rim}`,
+                      borderRadius: 3,
+                      padding: "5px 12px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    DENY
+                  </button>
+                  <button
+                    onClick={handleApprove}
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      letterSpacing: "0.08em",
+                      background: T.amber,
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 3,
+                      padding: "5px 12px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    CONFIRM
+                  </button>
+                </div>
               </div>
             )}
 

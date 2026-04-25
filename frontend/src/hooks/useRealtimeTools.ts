@@ -8,6 +8,16 @@
 
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 
+// Tools that require explicit user confirmation in the UI before executing.
+// The hook (useRealtimeVoice) gates execution on a click-to-confirm card; on
+// denial, the tool resolves with {error: "User denied execution"} and the
+// model is informed so it doesn't retry.
+export const MUTATING_TOOLS: ReadonlySet<string> = new Set(["pin_pair"]);
+
+export function isMutatingTool(name: string): boolean {
+  return MUTATING_TOOLS.has(name);
+}
+
 export async function executeToolCall(
   name: string,
   args: Record<string, unknown>,
@@ -27,6 +37,8 @@ export async function executeToolCall(
         return await callListPolicies(token);
       case "get_pending_approvals":
         return await callGetPendingApprovals(token);
+      case "pin_pair":
+        return await callPinPair(args, token);
       default:
         return JSON.stringify({ error: `Unknown function: ${name}` });
     }
@@ -166,5 +178,64 @@ async function callGetPendingApprovals(token: string): Promise<string> {
       ref: p.execution_ref ?? "—",
       status: p.status ?? "—",
     })),
+  });
+}
+
+// MUTATING: pin a currency pair to the user's primary watchlist.
+// Find-or-create flow: GET /v1/watchlists, fall back to POST if none exist,
+// then PUT to add the symbol if not already present.
+async function callPinPair(
+  args: Record<string, unknown>,
+  token: string,
+): Promise<string> {
+  const pair = String(args.pair ?? "").trim().toUpperCase();
+  if (!/^[A-Z]{6}$/.test(pair)) {
+    return JSON.stringify({ error: `Invalid pair: ${pair || "(empty)"}` });
+  }
+
+  const listResp = await dashboardFetch("/v1/watchlists", token);
+  if (!listResp.ok) return JSON.stringify({ error: `HTTP ${listResp.status}` });
+  const lists = (await listResp.json()) as Array<{
+    id: string;
+    name: string;
+    symbols: string[];
+  }>;
+
+  let target = lists[0];
+  if (!target) {
+    const createResp = await dashboardFetch("/v1/watchlists", token, {
+      method: "POST",
+      body: JSON.stringify({ name: "Voice Watchlist", symbols: [pair] }),
+    });
+    if (!createResp.ok) return JSON.stringify({ error: `HTTP ${createResp.status}` });
+    const created = (await createResp.json()) as { id: string; symbols: string[] };
+    return JSON.stringify({
+      pinned: pair,
+      watchlist_id: created.id.slice(0, 8),
+      total_symbols: created.symbols.length,
+      created: true,
+    });
+  }
+
+  if (target.symbols.includes(pair)) {
+    return JSON.stringify({
+      pinned: pair,
+      watchlist_id: target.id.slice(0, 8),
+      total_symbols: target.symbols.length,
+      already_present: true,
+    });
+  }
+
+  const nextSymbols = [...target.symbols, pair];
+  const putResp = await dashboardFetch(`/v1/watchlists/${target.id}`, token, {
+    method: "PUT",
+    body: JSON.stringify({ symbols: nextSymbols }),
+  });
+  if (!putResp.ok) return JSON.stringify({ error: `HTTP ${putResp.status}` });
+
+  return JSON.stringify({
+    pinned: pair,
+    watchlist_id: target.id.slice(0, 8),
+    total_symbols: nextSymbols.length,
   });
 }

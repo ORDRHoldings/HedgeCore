@@ -64,6 +64,10 @@ class VoiceTranscriptBatch(BaseModel):
     session_end: datetime | None = None
     turns: list[VoiceTurn] = Field(default_factory=list)
     tool_calls: list[VoiceToolCall] = Field(default_factory=list)
+    # EU AI Act Art. 52 transparency: client signals one-time AI disclosure
+    # acknowledgement so the WORM chain has a tamper-evident record of consent.
+    disclosure_ack: bool = False
+    disclosure_text: str | None = Field(default=None, max_length=2048)
 
 
 class VoiceTranscriptAck(BaseModel):
@@ -106,6 +110,21 @@ async def log_voice_transcript(
             entity_type="voice_session",
             entity_id=batch.session_id,
             payload={**session_scope, "at": batch.session_start.isoformat()},
+        )
+        events_logged += 1
+
+    if batch.disclosure_ack:
+        await emit_audit(
+            session=session,
+            user=current_user,
+            event_type="VOICE_AI_DISCLOSURE_ACK",
+            description="User acknowledged AI disclosure (EU AI Act Art. 52)",
+            entity_type="voice_session",
+            entity_id=batch.session_id,
+            payload={
+                **session_scope,
+                "disclosure_text": batch.disclosure_text,
+            },
         )
         events_logged += 1
 
