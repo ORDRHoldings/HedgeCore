@@ -1,5 +1,33 @@
 # Changelog (AI-maintained)
 
+## 2026-04-25 — Voice agent governance: Tier-5 contract (ADR-0016)
+
+Codified the nine-control voice governance contract that landed across the
+prior week into a single architectural-of-record document.
+
+### ADR-0016 — Voice Agent Governance (commit `041f677`)
+- New `docs/architecture/adr/0016-voice-agent-governance.md`. Status:
+  accepted. Amends ADR-0014 to permit a *bounded* deviation: two mutating
+  watchlist tools (`pin_pair`, `unpin_pair`) gated by a click-to-confirm
+  UI card. The model can only *request* a state change; the human action
+  is the mutation event.
+- Maps each of the nine controls (WORM transcript, AI disclosure ack,
+  mutating-tool gate, human handoff affordance, provenance manifest,
+  ICE auto-reconnect, audit-trail UI bucket, multi-language i18n,
+  tenant-scoped multi-turn memory) to its file artifact and to the
+  regulatory regime it serves: MiFID II Art. 16(7), EU AI Act
+  Arts. 14 + 52, Fed SR 11-7.
+- Implementation commits referenced: `a8733b3` (audit-trail VOICE
+  bucket), `9345b86` (BCP-47 i18n + provenance hash per request),
+  `fc261cd` (`recall_recent_sessions` tool + memory endpoint).
+
+### RISK-TEST-ISO-01 closed (commit `ab8b805`)
+- `test_exact_threshold` was wall-clock-sensitive: two `datetime.now(UTC)`
+  reads (one in the test, one inside `check_snapshot_staleness`) drifted
+  past the strict-inequality boundary under suite load. Patched
+  `app.services.pipeline_service._now` to a fixed instant in the test so
+  both timestamps are bit-identical. Full suite: 5247 passed.
+
 ## 2026-04-23 — Hardening closure: Tracks 2.2, 2.3, 3, 4, 5
 
 Shipped every in-scope track from the Launch Readiness audit.
