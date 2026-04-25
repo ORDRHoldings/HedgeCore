@@ -11,6 +11,7 @@ import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 import { PageShell } from "@/components/layout/PageShell";
 import { Globe } from "lucide-react";
+import { inferEventType, type EventType } from "./eventClassifier";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -40,7 +41,7 @@ const S = {
 } as const;
 
 // ── UI Types ──────────────────────────────────────────────────────────────────
-type EventType = "PROPOSAL" | "APPROVAL" | "EXECUTION" | "POLICY" | "IMPORT" | "VOICE" | "SYSTEM";
+// EventType comes from ./eventClassifier — see that module for ordering rules.
 type TabKey    = "all" | "proposals" | "approvals" | "executions" | "policy" | "imports" | "voice" | "grouped";
 
 interface AuditEvent {
@@ -89,21 +90,6 @@ interface ChainIntegrityReport {
   broken_at:      string | null;
   is_intact:      boolean;
   verified_at:    string;
-}
-
-// ── Map backend event_type → UI EventType ─────────────────────────────────────
-function inferEventType(event_type: string): EventType {
-  const t = event_type.toLowerCase();
-  // Voice agent (MiFID II Art. 16(7), EU AI Act Arts. 14+52, SR 11-7) —
-  // every voice event starts with "VOICE_" — see v1_voice_transcript.py.
-  if (t.startsWith("voice_"))                                              return "VOICE";
-  if (t.includes("approved") || t.includes("approval"))                    return "APPROVAL";
-  if (t.includes("executed") || t.includes("hedged") || t.includes("execution")) return "EXECUTION";
-  if (t.startsWith("proposal.") || t.startsWith("position.") ||
-      t.startsWith("calculation.") || t.startsWith("run."))                return "PROPOSAL";
-  if (t.startsWith("policy."))                                             return "POLICY";
-  if (t.startsWith("import.") || t.startsWith("connector."))              return "IMPORT";
-  return "SYSTEM";
 }
 
 // ── Build related-ID display map from a backend event ────────────────────────
