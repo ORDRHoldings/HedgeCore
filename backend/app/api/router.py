@@ -178,6 +178,11 @@ from app.api.routes.v1_voice_transcript import router as v1_voice_transcript_rou
 
 router.include_router(v1_voice_transcript_router)
 
+# Voice Memory — recall recent sessions for in-conversation context (owns /v1/voice/memory/*)
+from app.api.routes.v1_voice_memory import router as v1_voice_memory_router
+
+router.include_router(v1_voice_memory_router)
+
 # Audit Lab — FX transaction audit (owns /v1/audit-lab)
 from app.api.routes.v1_audit_lab import router as v1_audit_lab_router
 

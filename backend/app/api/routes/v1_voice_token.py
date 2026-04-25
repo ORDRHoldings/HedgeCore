@@ -207,6 +207,30 @@ REALTIME_TOOLS: list[dict] = [
             },
         },
     },
+    {
+        "type": "function",
+        "name": "recall_recent_sessions",
+        "description": (
+            "Recall the user's recent voice sessions to provide continuity across "
+            "conversations. Returns a compact summary per session (last user turn, "
+            "last assistant turn, tool/turn counts, timestamps). Use when the user "
+            "references a prior conversation ('what did we discuss yesterday?', "
+            "'continue from where we left off') or before suggesting a topic so you "
+            "don't repeat what was just covered. Tenant-scoped — only the caller's "
+            "own sessions are returned."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "description": "How many recent sessions to return (default 3, max 5).",
+                },
+            },
+        },
+    },
 ]
 
 # ── Provenance manifest (computed at boot — proves what code was running) ────

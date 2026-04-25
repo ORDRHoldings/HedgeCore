@@ -46,6 +46,8 @@ export async function executeToolCall(
         return await callUnpinPair(args, token);
       case "get_recent_runs":
         return await callGetRecentRuns(args, token);
+      case "recall_recent_sessions":
+        return await callRecallRecentSessions(args, token);
       default:
         return JSON.stringify({ error: `Unknown function: ${name}` });
     }
@@ -291,6 +293,34 @@ async function callUnpinPair(
     unpinned: pair,
     watchlist_id: target.id.slice(0, 8),
     total_symbols: nextSymbols.length,
+  });
+}
+
+// READ-ONLY: fetch the N most recent voice sessions for the caller's tenant.
+// Backend filters by company_id from the JWT — no cross-tenant exposure.
+async function callRecallRecentSessions(
+  args: Record<string, unknown>,
+  token: string,
+): Promise<string> {
+  const rawLimit = Number(args.limit ?? 3);
+  const limit = Math.max(1, Math.min(5, Number.isFinite(rawLimit) ? rawLimit : 3));
+
+  const resp = await dashboardFetch(`/v1/voice/memory/recent?limit=${limit}`, token);
+  if (!resp.ok) return JSON.stringify({ error: `HTTP ${resp.status}` });
+
+  const data = await resp.json();
+  const items = Array.isArray(data?.sessions) ? data.sessions : [];
+  return JSON.stringify({
+    count: items.length,
+    sessions: items.map((s: Record<string, unknown>) => ({
+      session_id: String(s.session_id ?? "").slice(0, 8),
+      started_at: s.started_at ?? null,
+      ended_at: s.ended_at ?? null,
+      last_user_turn: s.last_user_turn ?? null,
+      last_assistant_turn: s.last_assistant_turn ?? null,
+      tool_calls: s.tool_calls_count ?? 0,
+      turns: s.turn_count ?? 0,
+    })),
   });
 }
 
