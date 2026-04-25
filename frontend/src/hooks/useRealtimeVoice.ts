@@ -12,7 +12,7 @@
 
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import { executeToolCall } from "@/hooks/useRealtimeTools";
 
@@ -37,6 +37,48 @@ export interface TranscriptEntry {
 export interface FunctionCallEvent {
   name: string;
   status: "calling" | "done";
+}
+
+// ── WORM transcript batching ────────────────────────────────────────────────
+
+interface AuditTurn {
+  role: "user" | "assistant";
+  text: string;
+  at: string;
+}
+
+interface AuditToolCall {
+  name: string;
+  arguments: Record<string, unknown>;
+  result_summary: string;
+  status: "ok" | "error" | "confirmation_required";
+  at: string;
+}
+
+interface AuditBuffer {
+  session_id: string;
+  transport: "openai-realtime";
+  model: string;
+  session_start: string | null;
+  turns: AuditTurn[];
+  tool_calls: AuditToolCall[];
+}
+
+const _FLUSH_TURN_THRESHOLD = 10;
+const _MAX_RESULT_SUMMARY_LEN = 240;
+
+function _makeBuffer(model: string): AuditBuffer {
+  return {
+    session_id:
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `sess-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+    transport: "openai-realtime",
+    model,
+    session_start: null,
+    turns: [],
+    tool_calls: [],
+  };
 }
 
 interface UseRealtimeVoiceOptions {
@@ -76,6 +118,83 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
   // Partial transcript accumulator
   const assistantTextRef = useRef("");
   const assistantEntryIdRef = useRef(0);
+
+  // WORM audit buffer — accumulates turns + tool calls, flushed on
+  // (a) every _FLUSH_TURN_THRESHOLD finalized turns, (b) disconnect, (c) page hide.
+  const auditBufRef = useRef<AuditBuffer | null>(null);
+
+  const flushAudit = useCallback(
+    async (closeSession: boolean): Promise<void> => {
+      const buf = auditBufRef.current;
+      if (!buf) return;
+      const hasContent =
+        buf.session_start !== null ||
+        buf.turns.length > 0 ||
+        buf.tool_calls.length > 0;
+      // Skip mid-session no-op flushes; on close, always emit session_end.
+      if (!closeSession && !hasContent) return;
+
+      const payload: Record<string, unknown> = {
+        session_id: buf.session_id,
+        transport: buf.transport,
+        model: buf.model,
+        turns: buf.turns,
+        tool_calls: buf.tool_calls,
+      };
+      if (buf.session_start) payload.session_start = buf.session_start;
+      if (closeSession) payload.session_end = new Date().toISOString();
+
+      // Drain so we don't double-log on retries
+      buf.session_start = null;
+      buf.turns = [];
+      buf.tool_calls = [];
+
+      try {
+        await dashboardFetch("/v1/voice/transcript", token, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+      } catch (err) {
+        console.warn("[ORDR Voice] audit flush failed (non-fatal):", err);
+      }
+    },
+    [token],
+  );
+
+  const recordTurn = useCallback(
+    (role: "user" | "assistant", text: string) => {
+      const buf = auditBufRef.current;
+      if (!buf || !text) return;
+      buf.turns.push({ role, text, at: new Date().toISOString() });
+      if (buf.turns.length >= _FLUSH_TURN_THRESHOLD) {
+        void flushAudit(false);
+      }
+    },
+    [flushAudit],
+  );
+
+  const recordToolCall = useCallback(
+    (
+      name: string,
+      args: Record<string, unknown>,
+      result: string,
+      status: "ok" | "error" | "confirmation_required",
+    ) => {
+      const buf = auditBufRef.current;
+      if (!buf) return;
+      const summary = result.length > _MAX_RESULT_SUMMARY_LEN
+        ? `${result.slice(0, _MAX_RESULT_SUMMARY_LEN)}…`
+        : result;
+      buf.tool_calls.push({
+        name,
+        arguments: args,
+        result_summary: summary,
+        status,
+        at: new Date().toISOString(),
+      });
+    },
+    [],
+  );
 
   const updateStatus = useCallback((s: VoiceStatus) => {
     statusRef.current = s;
@@ -127,6 +246,7 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
         case "response.text.done": {
           const finalText = (event.transcript as string) ?? (event.text as string) ?? assistantTextRef.current;
           emitTranscript("assistant", finalText, true, assistantEntryIdRef.current);
+          recordTurn("assistant", finalText);
           assistantTextRef.current = "";
           assistantEntryIdRef.current = ++_entryId;
           break;
@@ -134,7 +254,10 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
 
         case "conversation.item.input_audio_transcription.completed": {
           const userText = (event.transcript as string)?.trim();
-          if (userText) emitTranscript("user", userText, true);
+          if (userText) {
+            emitTranscript("user", userText, true);
+            recordTurn("user", userText);
+          }
           break;
         }
 
@@ -147,6 +270,17 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
           updateStatus("processing");
 
           const result = await executeToolCall(fnName, fnArgs, token);
+          const toolStatus: "ok" | "error" = (() => {
+            try {
+              const parsed = JSON.parse(result);
+              return parsed && typeof parsed === "object" && "error" in parsed
+                ? "error"
+                : "ok";
+            } catch {
+              return "ok";
+            }
+          })();
+          recordToolCall(fnName, fnArgs, result, toolStatus);
 
           onFunctionCall?.({ name: fnName, status: "done" });
 
@@ -193,7 +327,7 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
           break;
       }
     },
-    [token, updateStatus, emitTranscript, sendEvent, onFunctionCall, onError],
+    [token, updateStatus, emitTranscript, sendEvent, onFunctionCall, onError, recordTurn, recordToolCall],
   );
 
   // ── Connect ─────────────────────────────────────────────────────────────
@@ -202,6 +336,10 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
     if (pcRef.current) return;
     updateStatus("connecting");
     emitTranscript("system", "Connecting to ORDR Voice…", true);
+
+    // Open a fresh audit buffer for this session
+    auditBufRef.current = _makeBuffer("gpt-realtime");
+    auditBufRef.current.session_start = new Date().toISOString();
 
     try {
       // 1. Get ephemeral token from backend
@@ -312,6 +450,10 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
   // ── Disconnect ──────────────────────────────────────────────────────────
 
   const disconnect = useCallback(() => {
+    // Final WORM flush with session_end before tearing down WebRTC
+    void flushAudit(true);
+    auditBufRef.current = null;
+
     // Close data channel
     dcRef.current?.close();
     dcRef.current = null;
@@ -335,7 +477,21 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
     }
 
     updateStatus("disconnected");
-  }, [updateStatus]);
+  }, [updateStatus, flushAudit]);
+
+  // Flush audit on tab hide / page unload — survives browser crashes mid-session
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onHide = () => {
+      if (document.visibilityState === "hidden") void flushAudit(false);
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", onHide);
+    };
+  }, [flushAudit]);
 
   // ── Send text ───────────────────────────────────────────────────────────
 
@@ -344,6 +500,7 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
       if (!text.trim()) return;
 
       emitTranscript("user", text.trim(), true);
+      recordTurn("user", text.trim());
       updateStatus("processing");
 
       sendEvent({
@@ -356,7 +513,7 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
       });
       sendEvent({ type: "response.create" });
     },
-    [emitTranscript, updateStatus, sendEvent],
+    [emitTranscript, updateStatus, sendEvent, recordTurn],
   );
 
   // ── Toggle mic ──────────────────────────────────────────────────────────
