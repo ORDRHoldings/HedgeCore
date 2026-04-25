@@ -1,28 +1,32 @@
 "use client";
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useHedge } from '../../lib/hedgeContext';
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import { deriveCurrencyContext } from '../../utils/currencyContext';
 import ExportBar from '../../components/export/ExportBar';
 import TabBar from '../../components/tabs/TabBar';
-import OverviewTab from '../../components/tabs/OverviewTab';
-import ExposureTab from '../../components/tabs/ExposureTab';
-import RiskAnalysisTab from '../../components/tabs/RiskAnalysisTab';
-import HedgeEffectivenessTab from '../../components/tabs/HedgeEffectivenessTab';
-import ExecutionTab from '../../components/tabs/ExecutionTab';
-import AuditTab from '../../components/tabs/AuditTab';
-import ReportsContainer from '../../components/reports/ReportsContainer';
-import NotificationsContainer from '../../components/notifications/NotificationsContainer';
 import HelpPanel from "@/components/layout/HelpPanel";
 import { RESULTS_HELP } from "@/lib/helpContent";
 import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
 import WorkflowGuide from "@/components/layout/WorkflowGuide";
-
-import { PageShell } from "@/components/layout/PageShell";
-import { FileText } from "lucide-react";
+import { SkeletonBlock } from "@/components/ui/Skeleton";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
+
+// Tabs are code-split: only the active tab's chunk is fetched.
+// Each tab pulls in charts, export libs, and derived-metric helpers,
+// so static imports inflated `/results` first-load JS to ~573 kB.
+const TAB_FALLBACK = () => <SkeletonBlock rows={8} rowHeight={28} gap={10} />;
+const OverviewTab          = dynamic(() => import('../../components/tabs/OverviewTab'),          { loading: TAB_FALLBACK, ssr: false });
+const ExposureTab          = dynamic(() => import('../../components/tabs/ExposureTab'),          { loading: TAB_FALLBACK, ssr: false });
+const RiskAnalysisTab      = dynamic(() => import('../../components/tabs/RiskAnalysisTab'),      { loading: TAB_FALLBACK, ssr: false });
+const HedgeEffectivenessTab = dynamic(() => import('../../components/tabs/HedgeEffectivenessTab'), { loading: TAB_FALLBACK, ssr: false });
+const ExecutionTab         = dynamic(() => import('../../components/tabs/ExecutionTab'),         { loading: TAB_FALLBACK, ssr: false });
+const AuditTab             = dynamic(() => import('../../components/tabs/AuditTab'),             { loading: TAB_FALLBACK, ssr: false });
+const ReportsContainer     = dynamic(() => import('../../components/reports/ReportsContainer'),  { loading: TAB_FALLBACK, ssr: false });
+const NotificationsContainer = dynamic(() => import('../../components/notifications/NotificationsContainer'), { loading: TAB_FALLBACK, ssr: false });
 
 // ── Committee Pack: Top-level module navigation ───────────────────────────────
 const TOP_LEVEL_SECTIONS = [
@@ -205,8 +209,6 @@ export default function ResultsPage() {
             const isActive = activeSection === section.key;
             const showBadge = section.key === 'notifications' && alertCount > 0;
             return (
-              <PageShell icon={FileText} title="Results" breadcrumb={["Dashboard", "Results"]} noPadding>
-
               <button
                 key={section.key}
                 onClick={() => handleSectionChange(section.key)}
@@ -226,8 +228,6 @@ export default function ResultsPage() {
                   </span>
                 )}
               </button>
-            
-              </PageShell>
             );
           })}
         </div>
