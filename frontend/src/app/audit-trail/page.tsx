@@ -40,8 +40,8 @@ const S = {
 } as const;
 
 // ── UI Types ──────────────────────────────────────────────────────────────────
-type EventType = "PROPOSAL" | "APPROVAL" | "EXECUTION" | "POLICY" | "IMPORT" | "SYSTEM";
-type TabKey    = "all" | "proposals" | "approvals" | "executions" | "policy" | "imports" | "grouped";
+type EventType = "PROPOSAL" | "APPROVAL" | "EXECUTION" | "POLICY" | "IMPORT" | "VOICE" | "SYSTEM";
+type TabKey    = "all" | "proposals" | "approvals" | "executions" | "policy" | "imports" | "voice" | "grouped";
 
 interface AuditEvent {
   id:         string;
@@ -94,6 +94,9 @@ interface ChainIntegrityReport {
 // ── Map backend event_type → UI EventType ─────────────────────────────────────
 function inferEventType(event_type: string): EventType {
   const t = event_type.toLowerCase();
+  // Voice agent (MiFID II Art. 16(7), EU AI Act Arts. 14+52, SR 11-7) —
+  // every voice event starts with "VOICE_" — see v1_voice_transcript.py.
+  if (t.startsWith("voice_"))                                              return "VOICE";
   if (t.includes("approved") || t.includes("approval"))                    return "APPROVAL";
   if (t.includes("executed") || t.includes("hedged") || t.includes("execution")) return "EXECUTION";
   if (t.startsWith("proposal.") || t.startsWith("position.") ||
@@ -141,6 +144,7 @@ const TYPE_COLORS: Record<EventType, string> = {
   EXECUTION: S.amber,
   POLICY:    "var(--accent-indigo)",
   IMPORT:    S.tertiary,
+  VOICE:     "#1C62F2", // matches VoiceTerminal blue
   SYSTEM:    S.tertiary,
 };
 
@@ -152,6 +156,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "executions", label: "Executions"    },
   { key: "policy",     label: "Policy Changes"},
   { key: "imports",    label: "Data Imports"  },
+  { key: "voice",      label: "Voice Sessions"},
   { key: "grouped",    label: "Grouped View"  },
 ];
 
@@ -162,6 +167,7 @@ const TAB_TYPE_MAP: Record<TabKey, EventType | null> = {
   executions: "EXECUTION",
   policy:     "POLICY",
   imports:    "IMPORT",
+  voice:      "VOICE",
   grouped:    null,
 };
 
