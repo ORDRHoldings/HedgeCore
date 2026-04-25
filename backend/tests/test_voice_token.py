@@ -151,6 +151,125 @@ async def test_voice_token_response_shape(authed_client):
 
 
 @pytest.mark.asyncio
+async def test_voice_token_language_default_english(authed_client):
+    """No language in body → English directive, language='en' in response."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "id": "sess_lang_default",
+        "client_secret": {"value": "ek_default", "expires_at": 1},
+    }
+
+    with patch.dict(os.environ, {"OPENAI_API_KEY_V": "sk-test"}, clear=False):
+        with patch("app.api.routes.v1_voice_token.httpx.AsyncClient") as mc:
+            client_mock = AsyncMock()
+            client_mock.__aenter__ = AsyncMock(return_value=client_mock)
+            client_mock.__aexit__ = AsyncMock(return_value=False)
+            client_mock.post = AsyncMock(return_value=mock_resp)
+            mc.return_value = client_mock
+            async with authed_client as client:
+                resp = await client.post("/api/v1/voice/token", headers=_BEARER)
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["language"] == "en"
+    assert "Respond in English." in data["instructions"]
+
+
+@pytest.mark.asyncio
+async def test_voice_token_language_normalizes_bcp47(authed_client):
+    """'es-MX' should reduce to 'es' and inject the Spanish directive."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "id": "sess_lang_es",
+        "client_secret": {"value": "ek_es", "expires_at": 1},
+    }
+
+    with patch.dict(os.environ, {"OPENAI_API_KEY_V": "sk-test"}, clear=False):
+        with patch("app.api.routes.v1_voice_token.httpx.AsyncClient") as mc:
+            client_mock = AsyncMock()
+            client_mock.__aenter__ = AsyncMock(return_value=client_mock)
+            client_mock.__aexit__ = AsyncMock(return_value=False)
+            client_mock.post = AsyncMock(return_value=mock_resp)
+            mc.return_value = client_mock
+            async with authed_client as client:
+                resp = await client.post(
+                    "/api/v1/voice/token",
+                    headers=_BEARER,
+                    json={"language": "es-MX"},
+                )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["language"] == "es"
+    assert "Responde en español" in data["instructions"]
+
+
+@pytest.mark.asyncio
+async def test_voice_token_unknown_language_falls_back_to_english(authed_client):
+    """Unknown language code (e.g. 'xx-YY') should fall back to English."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "id": "sess_lang_xx",
+        "client_secret": {"value": "ek_xx", "expires_at": 1},
+    }
+
+    with patch.dict(os.environ, {"OPENAI_API_KEY_V": "sk-test"}, clear=False):
+        with patch("app.api.routes.v1_voice_token.httpx.AsyncClient") as mc:
+            client_mock = AsyncMock()
+            client_mock.__aenter__ = AsyncMock(return_value=client_mock)
+            client_mock.__aexit__ = AsyncMock(return_value=False)
+            client_mock.post = AsyncMock(return_value=mock_resp)
+            mc.return_value = client_mock
+            async with authed_client as client:
+                resp = await client.post(
+                    "/api/v1/voice/token",
+                    headers=_BEARER,
+                    json={"language": "xx-YY"},
+                )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["language"] == "en"
+    assert "Respond in English." in data["instructions"]
+
+
+@pytest.mark.asyncio
+async def test_voice_token_language_changes_provenance_hash(authed_client):
+    """Different languages must produce different instructions_sha256 hashes."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "id": "sess_lang_hash",
+        "client_secret": {"value": "ek_hash", "expires_at": 1},
+    }
+
+    with patch.dict(os.environ, {"OPENAI_API_KEY_V": "sk-test"}, clear=False):
+        with patch("app.api.routes.v1_voice_token.httpx.AsyncClient") as mc:
+            client_mock = AsyncMock()
+            client_mock.__aenter__ = AsyncMock(return_value=client_mock)
+            client_mock.__aexit__ = AsyncMock(return_value=False)
+            client_mock.post = AsyncMock(return_value=mock_resp)
+            mc.return_value = client_mock
+            async with authed_client as client:
+                en_resp = await client.post(
+                    "/api/v1/voice/token", headers=_BEARER, json={"language": "en"}
+                )
+                ja_resp = await client.post(
+                    "/api/v1/voice/token", headers=_BEARER, json={"language": "ja"}
+                )
+
+    en = en_resp.json()
+    ja = ja_resp.json()
+    assert en["language"] == "en"
+    assert ja["language"] == "ja"
+    # Provenance must differ — auditors need to see which language ran.
+    assert en["instructions_sha256"] != ja["instructions_sha256"]
+
+
+@pytest.mark.asyncio
 async def test_voice_token_missing_client_secret(authed_client):
     """When OpenAI response lacks client_secret.value, return 502."""
     mock_openai_response = MagicMock()

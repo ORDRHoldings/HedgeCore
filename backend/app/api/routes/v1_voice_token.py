@@ -15,7 +15,7 @@ import os
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.core.dependencies import get_current_user
 from app.models.user import User
@@ -49,6 +49,34 @@ retry on denial.
 
 Keep responses concise — 2-4 sentences unless detail is requested.\
 """
+
+# ── i18n ─────────────────────────────────────────────────────────────────────
+# Allowlisted languages for institutional FX desks. Anything else falls back to
+# English. The model's audio output is generally locale-aware, but the prompt
+# directive removes the ambiguity for code-switched or accented inputs.
+# Keys are BCP-47 short codes (lowercased, primary subtag only).
+_LANGUAGE_DIRECTIVES: dict[str, str] = {
+    "en": "Respond in English.",
+    "es": "Responde en español. Mantén la terminología técnica de FX en inglés cuando sea idiomática (e.g. 'spot', 'forward', 'NDF').",
+    "fr": "Réponds en français. Conserve la terminologie technique FX en anglais quand elle est idiomatique (e.g. 'spot', 'forward', 'NDF').",
+    "de": "Antworte auf Deutsch. Behalte FX-Fachterminologie auf Englisch bei, wenn sie idiomatisch ist (z. B. 'spot', 'forward', 'NDF').",
+    "ja": "日本語で応答してください。FXの専門用語（spot, forward, NDFなど）は英語のままで構いません。",
+    "zh": "请用中文回答。FX专业术语（如 spot、forward、NDF）保留英文即可。",
+}
+SUPPORTED_LANGUAGES = frozenset(_LANGUAGE_DIRECTIVES.keys())
+
+
+def _normalize_language(raw: str | None) -> str:
+    """Reduce a BCP-47 tag (e.g. 'en-US', 'ZH-Hant') to an allowlisted short code, defaulting to 'en'."""
+    if not raw:
+        return "en"
+    primary = raw.strip().lower().split("-", 1)[0]
+    return primary if primary in SUPPORTED_LANGUAGES else "en"
+
+
+def _instructions_for(language: str) -> str:
+    directive = _LANGUAGE_DIRECTIVES.get(language, _LANGUAGE_DIRECTIVES["en"])
+    return f"{ORDR_INSTRUCTIONS}\n\nLanguage: {directive}"
 
 # ── Tool definitions (OpenAI function calling format) ────────────────────────
 
@@ -191,7 +219,12 @@ def _sha256_short(payload: str) -> str:
 INSTRUCTIONS_SHA256 = _sha256_short(ORDR_INSTRUCTIONS)
 TOOLS_SHA256 = _sha256_short(json.dumps(REALTIME_TOOLS, sort_keys=True))
 
-# ── Response schema ──────────────────────────────────────────────────────────
+# ── Request / Response schemas ───────────────────────────────────────────────
+
+class VoiceTokenRequest(BaseModel):
+    # BCP-47 tag like "en", "en-US", "es-MX". Empty / unknown → English.
+    language: str | None = Field(default=None, max_length=16)
+
 
 class VoiceTokenResponse(BaseModel):
     token: str
@@ -203,11 +236,13 @@ class VoiceTokenResponse(BaseModel):
     model_id: str
     instructions_sha256: str
     tools_sha256: str
+    language: str
 
 # ── Endpoint ─────────────────────────────────────────────────────────────────
 
 @router.post("/token", response_model=VoiceTokenResponse, summary="Mint ephemeral OpenAI Realtime token")
 async def create_voice_token(
+    body: VoiceTokenRequest | None = None,
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -219,6 +254,9 @@ async def create_voice_token(
         raise HTTPException(status_code=503, detail="Voice assistant unavailable — OPENAI_API_KEY_V not configured")
 
     model = os.environ.get("VOICE_OPENAI_MODEL", "gpt-realtime")
+    language = _normalize_language(body.language if body else None)
+    instructions = _instructions_for(language)
+    instructions_hash = _sha256_short(instructions)
 
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(15.0)) as client:
@@ -254,17 +292,18 @@ async def create_voice_token(
             raise HTTPException(status_code=502, detail="Invalid voice session response")
 
         logger.info(
-            "Voice token minted for user=%s model=%s instr=%s tools=%s",
-            current_user.id, model, INSTRUCTIONS_SHA256, TOOLS_SHA256,
+            "Voice token minted for user=%s model=%s lang=%s instr=%s tools=%s",
+            current_user.id, model, language, instructions_hash, TOOLS_SHA256,
         )
         return VoiceTokenResponse(
             token=token_value,
             expires_at=str(expires_at),
-            instructions=ORDR_INSTRUCTIONS,
+            instructions=instructions,
             tools=REALTIME_TOOLS,
             model_id=model,
-            instructions_sha256=INSTRUCTIONS_SHA256,
+            instructions_sha256=instructions_hash,
             tools_sha256=TOOLS_SHA256,
+            language=language,
         )
 
     except httpx.HTTPError as exc:

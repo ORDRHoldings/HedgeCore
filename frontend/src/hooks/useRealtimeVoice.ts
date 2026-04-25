@@ -522,8 +522,17 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
     auditBufRef.current.session_start = new Date().toISOString();
 
     try {
-      // 1. Get ephemeral token from backend
-      const resp = await dashboardFetch("/v1/voice/token", token, { method: "POST" });
+      // 1. Get ephemeral token from backend.
+      // Pass the browser's language so the model's system prompt is localized.
+      // Backend allowlists primary subtag (en/es/fr/de/ja/zh) and falls back to en.
+      const browserLang =
+        typeof navigator !== "undefined" && navigator.language
+          ? navigator.language
+          : "en";
+      const resp = await dashboardFetch("/v1/voice/token", token, {
+        method: "POST",
+        body: JSON.stringify({ language: browserLang }),
+      });
       if (!resp.ok) {
         const detail = await resp.text();
         throw new Error(`Token request failed: ${resp.status} ${detail.slice(0, 200)}`);
