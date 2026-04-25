@@ -16,25 +16,84 @@ function CallbackContent() {
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
 
-  useEffect(() => {
-    const systemId = (searchParams.get("system") ?? "accounting").toLowerCase();
-    const key      = `ordr_accounting_oauth_${systemId}`;
-    try {
-      localStorage.setItem(key, "authorized");
-    } catch {
-      // localStorage unavailable (private browsing with strict settings)
-    }
-
-    // If opened as popup, close it automatically
-    if (window.opener) {
-      window.close();
-    }
-  }, [searchParams]);
-
   const systemId    = (searchParams.get("system") ?? "").toLowerCase();
   const meta        = SYSTEM_META[systemId] ?? { displayName: systemId || "Accounting", color: "#22d3ee" };
   const displayName = meta.displayName;
   const color       = meta.color;
+
+  const error       = searchParams.get("error");
+  const errorDesc   = searchParams.get("error_description") ?? searchParams.get("error_message");
+
+  useEffect(() => {
+    const key = `ordr_accounting_oauth_${systemId}`;
+    try {
+      if (error) {
+        localStorage.setItem(key, `error:${error}`);
+      } else {
+        localStorage.setItem(key, "authorized");
+      }
+    } catch {
+      // localStorage unavailable (private browsing with strict settings)
+    }
+
+    // If opened as popup, close it automatically after a short delay so user can read error
+    if (window.opener) {
+      setTimeout(() => window.close(), error ? 3500 : 800);
+    }
+  }, [searchParams, systemId, error]);
+
+  if (error) {
+    return (
+      <div
+        style={{
+          background:   "#111827",
+          border:       "1px solid #1e293b",
+          borderTop:    `2px solid #DC2626`,
+          padding:      isMobile ? "24px 16px" : "36px 32px",
+          maxWidth:     440,
+          width:        "100%",
+          textAlign:    "center",
+        }}
+      >
+        <div style={{ fontSize: 12, letterSpacing: "0.1em", color: "#64748b", marginBottom: 14 }}>
+          ORDR TERMINAL · ACCOUNTING CONNECTION
+        </div>
+
+        <div style={{ fontSize: 32, marginBottom: 12, color: "#DC2626", lineHeight: 1 }}>✕</div>
+
+        <div style={{ fontSize: 15, fontWeight: 700, color: "#e2e8f0", marginBottom: 10 }}>
+          Connection Failed
+        </div>
+
+        <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 8, lineHeight: 1.6 }}>
+          <span style={{ color: "#DC2626" }}>{displayName}</span> could not be connected.
+        </div>
+
+        <div style={{ fontSize: 12, color: "#e2e8f0", marginBottom: 24, lineHeight: 1.6 }}>
+          {errorDesc ?? error}
+        </div>
+
+        {!window.opener && (
+          <button
+            onClick={() => { window.location.href = "/accounting-connection"; }}
+            style={{
+              fontSize: 12,
+              letterSpacing: "0.08em",
+              fontWeight: 700,
+              color: "#e2e8f0",
+              background: "#1e293b",
+              border: "1px solid #334155",
+              padding: "6px 16px",
+              borderRadius: 2,
+              cursor: "pointer",
+            }}
+          >
+            RETURN TO ORDR
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div

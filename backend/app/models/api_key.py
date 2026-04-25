@@ -120,14 +120,21 @@ class ApiKey(Base):
         """Check if the API key is active and not expired."""
         if str(self.status).lower() != "active":
             return False
-        if self.expires_at and datetime.now(UTC) >= self.expires_at:
-            return False
+        if self.expires_at:
+            _now = datetime.now(UTC)
+            _expires = self.expires_at.replace(tzinfo=UTC) if self.expires_at.tzinfo is None else self.expires_at
+            if _now >= _expires:
+                return False
         return True
 
     @property
     def is_expired(self) -> bool:
         """Check if the API key has expired."""
-        return bool(self.expires_at and datetime.now(UTC) >= self.expires_at)
+        if not self.expires_at:
+            return False
+        _now = datetime.now(UTC)
+        _expires = self.expires_at.replace(tzinfo=UTC) if self.expires_at.tzinfo is None else self.expires_at
+        return _now >= _expires
 
     # -----------------------------------------------------------------
     # Helper Methods

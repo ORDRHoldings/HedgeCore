@@ -1650,7 +1650,7 @@ const WIZARD_STORAGE_KEY = 'ai_wizard_state_v1';
 
 export default function AIPolicyWizardPage() {
   const _planAllowed = usePlanRedirect("professional");
-  const { isAuthenticated, token, user } = useAuth();
+  const { isAuthenticated, isLoading, token, user } = useAuth();
   const isMobile = useIsMobile();
   const router = useRouter();
 
@@ -1723,7 +1723,7 @@ export default function AIPolicyWizardPage() {
     setStepError(null); // clear step error on any field change
   }, []);
 
-  useEffect(() => { if (!isAuthenticated) router.push('/auth/login'); }, [isAuthenticated, router]);
+  useEffect(() => { if (!isLoading && !isAuthenticated) router.push('/auth/login'); }, [isLoading, isAuthenticated, router]);
 
   // Clear step error when navigating between steps
   useEffect(() => { setStepError(null); }, [stepIdx]);

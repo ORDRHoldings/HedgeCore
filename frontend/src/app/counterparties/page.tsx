@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import Link from "next/link";
+import { Skeleton, SkeletonTable } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/authContext";
 import {
   listCounterparties,
@@ -169,7 +170,7 @@ export default function CounterpartiesHubPage() {
           type="button"
           onClick={() => setShowCreate((v) => !v)}
           style={{
-            padding: "6px 14px",
+            padding: "8px 16px",
             background: showCreate ? S.bgSub : "var(--accent-cyan, #3b82f6)",
             color: showCreate ? S.textPri : "#fff",
             border: "none",
@@ -251,7 +252,8 @@ export default function CounterpartiesHubPage() {
           border: `1px solid ${S.rim}`,
         }}
       >
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: S.bgSub }}>
               {[
@@ -289,7 +291,10 @@ export default function CounterpartiesHubPage() {
                   colSpan={8}
                   style={{ padding: 24, textAlign: "center", color: S.textSec, fontFamily: S.fontUI }}
                 >
-                  Loading…
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+                    <Skeleton width={120} height={14} />
+                    <SkeletonTable columns={8} rows={4} />
+                  </div>
                 </td>
               </tr>
             )}
@@ -353,6 +358,7 @@ export default function CounterpartiesHubPage() {
               ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

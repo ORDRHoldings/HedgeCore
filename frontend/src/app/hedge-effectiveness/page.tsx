@@ -431,7 +431,7 @@ function HedgeEffectivenessInner() {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: 0, padding: "14px 28px 0" }}>
+        <div style={{ display: "flex", gap: 0, padding: "14px 28px 0", flexWrap: "wrap" }}>
           {TABS.map((t) => (
             <button
               key={t.key}
@@ -439,7 +439,7 @@ function HedgeEffectivenessInner() {
               style={{
                 fontFamily: S.mono, fontSize: 12, fontWeight: tab === t.key ? 700 : 500,
                 letterSpacing: "0.1em", color: tab === t.key ? HEX.cyan : S.text3,
-                padding: "8px 16px", background: "transparent", border: "none",
+                padding: "10px 16px", background: "transparent", border: "none", minHeight: 36,
                 borderBottom: tab === t.key ? `2px solid ${HEX.cyan}` : "2px solid transparent",
                 cursor: "pointer", transition: "all 0.15s",
                 display: "flex", alignItems: "center", gap: 6,

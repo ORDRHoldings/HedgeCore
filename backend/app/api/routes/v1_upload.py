@@ -3,7 +3,9 @@
 import io
 
 import pandas as pd
-from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from app.core.security import get_current_user
+from app.models.user import User
 
 router = APIRouter(prefix="/v1", tags=["v1-upload"])
 
@@ -19,7 +21,10 @@ HEDGE_REQUIRED_COLUMNS = {
 
 
 @router.post("/upload/trades")
-async def upload_trades(file: UploadFile):
+async def upload_trades(
+    file: UploadFile,
+    current_user: User = Depends(get_current_user),
+):
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="File must be a .csv")
 
@@ -56,7 +61,10 @@ async def upload_trades(file: UploadFile):
 
 
 @router.post("/upload/hedges")
-async def upload_hedges(file: UploadFile):
+async def upload_hedges(
+    file: UploadFile,
+    current_user: User = Depends(get_current_user),
+):
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="File must be a .csv")
 

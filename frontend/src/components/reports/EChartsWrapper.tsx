@@ -22,6 +22,7 @@
 import React from "react";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
+import { logger } from "@/lib/logger";
 
 // ── RPT-09: Chart Error Boundary ──────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ class ChartErrorBoundary extends React.Component<
     return { hasError: true, error: error.message };
   }
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error(`[Chart Error] ${this.props.chartName ?? "unknown"}:`, error, info);
+    logger.error(`[Chart Error] ${this.props.chartName ?? "unknown"}:`, error, info);
   }
   render() {
     if (this.state.hasError) {

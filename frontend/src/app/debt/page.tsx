@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { CreditCard } from "lucide-react";
+import { Skeleton, SkeletonTable } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/authContext";
 import { getMaturityCalendar, getExposure } from "@/lib/api/debtClient";
 import type { DebtFacility } from "@/lib/api/debtClient";
@@ -42,7 +43,12 @@ export default function DebtPage() {
   const totalCommitted = facilities.reduce((s, f) => s + (f.committed_amount || 0), 0);
   const headroom = totalCommitted - totalDrawn;
 
-  if (loading) return <div style={{ padding: 32, fontFamily: S.fontUI, color: "#9ca3af" }}>Loading…</div>;
+  if (loading) return (
+    <div style={{ padding: 32 }}>
+      <Skeleton width={180} height={20} style={{ marginBottom: 16 }} />
+      <SkeletonTable columns={8} rows={4} />
+    </div>
+  );
 
   return (
     <div style={{ padding: 24, fontFamily: S.fontUI, background: S.bgDeep, minHeight: "100vh" }}>
@@ -100,7 +106,8 @@ export default function DebtPage() {
 
       {/* Facility Table */}
       <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 6, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.fontMono }}>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.fontMono }}>
           <thead>
             <tr style={{ background: S.bgSub }}>
               {["Counterparty", "Type", "Currency", "Committed", "Drawn", "Available", "Maturity", "Status"].map(h => (
@@ -109,15 +116,22 @@ export default function DebtPage() {
             </tr>
           </thead>
           <tbody>
+            {facilities.length === 0 && (
+              <tr>
+                <td colSpan={8} style={{ padding: "32px 12px", textAlign: "center", fontFamily: S.fontMono, fontSize: 12, color: "var(--text-tertiary)" }}>
+                  No debt facilities found.
+                </td>
+              </tr>
+            )}
             {facilities.map((f, i) => (
               <tr key={f.id} style={{ borderTop: `1px solid ${S.rim}`, background: i % 2 === 0 ? "transparent" : S.bgSub }}>
-                <td style={{ padding: "8px 12px", color: "#e5e7eb" }}>{f.counterparty}</td>
-                <td style={{ padding: "8px 12px", color: "#9ca3af" }}>{f.facility_type.replace("_", " ")}</td>
-                <td style={{ padding: "8px 12px", color: "#9ca3af" }}>{f.currency}</td>
-                <td style={{ padding: "8px 12px", color: "#e5e7eb" }}>${(f.committed_amount / 1e6).toFixed(2)}M</td>
-                <td style={{ padding: "8px 12px", color: "#e5e7eb" }}>${((f.drawn_amount || 0) / 1e6).toFixed(2)}M</td>
-                <td style={{ padding: "8px 12px", color: "#22c55e" }}>${((f.committed_amount - (f.drawn_amount || 0)) / 1e6).toFixed(2)}M</td>
-                <td style={{ padding: "8px 12px", color: "#9ca3af" }}>{f.maturity_date?.slice(0, 10)}</td>
+                <td style={{ padding: "8px 12px", color: "var(--text-primary)" }}>{f.counterparty}</td>
+                <td style={{ padding: "8px 12px", color: "var(--text-secondary)" }}>{f.facility_type.replace("_", " ")}</td>
+                <td style={{ padding: "8px 12px", color: "var(--text-secondary)" }}>{f.currency}</td>
+                <td style={{ padding: "8px 12px", color: "var(--text-primary)" }}>${(f.committed_amount / 1e6).toFixed(2)}M</td>
+                <td style={{ padding: "8px 12px", color: "var(--text-primary)" }}>${((f.drawn_amount || 0) / 1e6).toFixed(2)}M</td>
+                <td style={{ padding: "8px 12px", color: "var(--accent-green)" }}>${((f.committed_amount - (f.drawn_amount || 0)) / 1e6).toFixed(2)}M</td>
+                <td style={{ padding: "8px 12px", color: "var(--text-secondary)" }}>{f.maturity_date?.slice(0, 10)}</td>
                 <td style={{ padding: "8px 12px" }}>
                   <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 3, background: (STATUS_COLOR[f.status] || "#6366f1") + "22", color: STATUS_COLOR[f.status] || "#6366f1" }}>
                     {f.status}
@@ -127,6 +141,7 @@ export default function DebtPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

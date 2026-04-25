@@ -6,6 +6,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { useAuth } from "@/lib/authContext";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { listPendingSettlements, confirmSettlement } from "@/lib/api/glClient";
+import { Skeleton, SkeletonTable } from "@/components/ui/Skeleton";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -87,7 +88,10 @@ export default function SettlementPage() {
         )}
 
         {loading ? (
-          <div style={{ color: S.textSub, fontSize: 13 }}>Loading...</div>
+          <div style={{ padding: 24 }}>
+            <Skeleton width={160} height={16} style={{ marginBottom: 12 }} />
+            <SkeletonTable columns={5} rows={4} />
+          </div>
         ) : pending.length === 0 ? (
           <div style={{ color: S.textSub, fontSize: 13, padding: 40, textAlign: "center", border: `1px solid ${S.rim}`, borderRadius: 4 }}>
             No pending settlements — all hedges are settled up to date.

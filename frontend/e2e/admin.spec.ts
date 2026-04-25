@@ -62,7 +62,7 @@ test.describe("Admin Hub — Users Tab", () => {
   });
 
   test("renders table or empty state", async ({ page }) => {
-    await page.waitForSelector("table, text=No users", { timeout: 15_000 });
+    await page.locator("table").or(page.locator("text=No users")).first().waitFor({ timeout: 15_000 });
     const hasTable = (await page.locator("table").count()) > 0;
     const hasEmpty = (await page.locator("text=No users").count()) > 0;
     expect(hasTable || hasEmpty).toBe(true);
@@ -86,7 +86,7 @@ test.describe("Admin Hub — Tenants Tab", () => {
   });
 
   test("renders tenant list or empty state", async ({ page }) => {
-    await page.waitForSelector("table, text=No tenants", { timeout: 15_000 });
+    await page.locator("table").or(page.locator("text=No tenants")).first().waitFor({ timeout: 15_000 });
   });
 
   test("CREATE TENANT button opens modal", async ({ page }) => {
@@ -97,7 +97,7 @@ test.describe("Admin Hub — Tenants Tab", () => {
     await createBtn.waitFor({ timeout: 10_000 });
     await createBtn.click();
     await expect(
-      page.locator("text=NEW TENANT, text=Create Tenant").first()
+      page.locator("text=NEW TENANT").or(page.locator("text=Create Tenant")).first()
     ).toBeVisible({ timeout: 5_000 });
     await page.keyboard.press("Escape");
   });
@@ -114,7 +114,7 @@ test.describe("Admin Hub — Config Tab", () => {
   });
 
   test("MAINTENANCE MODE section renders", async ({ page }) => {
-    await expect(page.locator("text=MAINTENANCE MODE")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("text=MAINTENANCE MODE").first()).toBeVisible({ timeout: 15_000 });
   });
 
   test("IN-MEMORY badge visible", async ({ page }) => {
@@ -146,7 +146,7 @@ test.describe("Admin Hub — DevOps Tab", () => {
   });
 
   test("SPRINT section renders", async ({ page }) => {
-    await expect(page.locator("text=SPRINT")).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("text=SPRINT").first()).toBeVisible({ timeout: 20_000 });
   });
 });
 

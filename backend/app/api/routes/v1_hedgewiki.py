@@ -7,7 +7,9 @@ adding caching and fallback behavior.
 
 import logging
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
+from app.core.security import get_current_user
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/hedgewiki", tags=["hedgewiki"])
@@ -22,7 +24,7 @@ def _get_client(request: Request):
 
 
 @router.get("/context/{slug}")
-async def get_knowledge_context(slug: str, request: Request):
+async def get_knowledge_context(slug: str, request: Request, current_user: User = Depends(get_current_user)):
     """Proxy to HedgeWiki knowledge context API."""
     client = _get_client(request)
     result = await client.get_knowledge_context(slug)
@@ -32,7 +34,7 @@ async def get_knowledge_context(slug: str, request: Request):
 
 
 @router.get("/formulas")
-async def get_formulas(request: Request):
+async def get_formulas(request: Request, current_user: User = Depends(get_current_user)):
     """Proxy to HedgeWiki formulas API."""
     client = _get_client(request)
     formulas = await client.get_formulas()
@@ -40,7 +42,7 @@ async def get_formulas(request: Request):
 
 
 @router.get("/formulas/{slug}")
-async def get_formula(slug: str, request: Request):
+async def get_formula(slug: str, request: Request, current_user: User = Depends(get_current_user)):
     """Proxy to HedgeWiki single formula API."""
     client = _get_client(request)
     result = await client.get_formula(slug)
@@ -50,7 +52,7 @@ async def get_formula(slug: str, request: Request):
 
 
 @router.get("/policy-presets")
-async def get_policy_presets(request: Request):
+async def get_policy_presets(request: Request, current_user: User = Depends(get_current_user)):
     """Proxy to HedgeWiki policy presets API."""
     client = _get_client(request)
     presets = await client.get_policy_presets()
@@ -58,7 +60,7 @@ async def get_policy_presets(request: Request):
 
 
 @router.get("/policy-presets/{slug}")
-async def get_policy_preset(slug: str, request: Request):
+async def get_policy_preset(slug: str, request: Request, current_user: User = Depends(get_current_user)):
     """Proxy to HedgeWiki single policy preset API."""
     client = _get_client(request)
     result = await client.get_policy_preset(slug)
@@ -68,7 +70,7 @@ async def get_policy_preset(slug: str, request: Request):
 
 
 @router.post("/compute/effectiveness")
-async def compute_effectiveness(request: Request):
+async def compute_effectiveness(request: Request, current_user: User = Depends(get_current_user)):
     """Proxy to HedgeWiki effectiveness computation."""
     client = _get_client(request)
     body = await request.json()
@@ -82,7 +84,7 @@ async def compute_effectiveness(request: Request):
 
 
 @router.post("/compute/dv01-analysis")
-async def compute_dv01(request: Request):
+async def compute_dv01(request: Request, current_user: User = Depends(get_current_user)):
     """Proxy to HedgeWiki DV01 analysis."""
     client = _get_client(request)
     body = await request.json()

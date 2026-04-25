@@ -10,7 +10,7 @@ DELETE /v1/watchlists/{id}     — delete (owner only)
 from __future__ import annotations
 
 import uuid
-from typing import Optional
+
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -32,8 +32,8 @@ class WatchlistCreate(BaseModel):
 
 
 class WatchlistUpdate(BaseModel):
-    name: Optional[str] = None
-    symbols: Optional[list[str]] = None
+    name: str | None = None
+    symbols: list[str] | None = None
 
 
 class WatchlistResponse(BaseModel):

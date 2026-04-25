@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { logger } from "@/lib/logger";
 import type { CalculateResponse, BucketResult, PolicyConfig } from "../../api/types";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
@@ -87,7 +88,7 @@ function ReportSection({
     if (!onExportPdf || pdfBusy) return;
     setPdfBusy(true);
     try { await onExportPdf(); setPdfDone(true); setTimeout(() => setPdfDone(false), 2200); }
-    catch (e) { console.error(e); }
+    catch (e) { logger.error(e); }
     finally { setPdfBusy(false); }
   };
   const handleCsv = () => {
@@ -818,7 +819,7 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
                 </div>
                 <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                   <button
-                    onClick={async () => { try { await exportExecutiveBriefPdf(result, baseCcy); } catch (e) { console.error(e); } }}
+                    onClick={async () => { try { await exportExecutiveBriefPdf(result, baseCcy); } catch (e) { logger.error(e); } }}
                     style={{
                       display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", fontSize: 14,
                       fontFamily: T.fontMono, border: `1px solid ${T.rim}`, background: "none",

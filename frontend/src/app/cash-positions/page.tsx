@@ -10,6 +10,7 @@ import type {
   ConsolidatedPosition, EntityPositionResponse, AccountPositionRow,
 } from "@/lib/api/cashClient";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
+import { Skeleton, SkeletonTable } from "@/components/ui/Skeleton";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -120,7 +121,10 @@ export default function CashPositionsPage() {
       {/* Loading */}
       {loading && (
         <div style={{ textAlign: "center", padding: 40, color: "var(--text-muted)", fontSize: 13 }}>
-          Loading...
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: 24 }}>
+            <Skeleton width={120} height={16} />
+            <SkeletonTable columns={6} rows={5} />
+          </div>
         </div>
       )}
 

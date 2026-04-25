@@ -6,6 +6,7 @@ import type { PositionRow } from "@/api/positionClient";
 import { computeAllTickets, type FuturesTicket } from "@/lib/execution/contractSizing";
 import type { CalculateResponse, ScenarioTotalResult } from "@/api/types";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
+import { logger } from "@/lib/logger";
 
 /* ── Design tokens ─────────────────────────────────────────────────────── */
 const S = {
@@ -355,7 +356,7 @@ export default function StepExecute({
         }),
       };
 
-      console.info("[StepExecute] POST /v1/proposals/batch", { runId: effectiveRunId, positionCount: positions.length });
+      logger.debug("[StepExecute] POST /v1/proposals/batch", { runId: effectiveRunId, positionCount: positions.length });
       const start = Date.now();
 
       const res = await dashboardFetch("/v1/proposals/batch", token, {
@@ -363,7 +364,7 @@ export default function StepExecute({
         body: JSON.stringify(batchPayload),
       });
 
-      console.info("[StepExecute] POST /v1/proposals/batch completed", { durationMs: Date.now() - start, status: res.status });
+      logger.debug("[StepExecute] POST /v1/proposals/batch completed", { durationMs: Date.now() - start, status: res.status });
 
       if (!res.ok) {
         const text = await res.text().catch(() => "");
@@ -382,7 +383,7 @@ export default function StepExecute({
       setSubmitMessage("Done");
       setSubmitPhase("submitted");
     } catch (err: unknown) {
-      console.error("[StepExecute] Batch submission failed", { error: err });
+      logger.error("[StepExecute] Batch submission failed", { error: err });
       setSubmitError(err instanceof Error ? err.message : "Submission failed");
       setSubmitPhase("error");
     }

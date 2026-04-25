@@ -135,7 +135,7 @@ export default function PortfolioPage() {
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
+        display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap",
         padding: "16px 24px", borderBottom: `1px solid ${S.rim}`,
         background: S.deep,
       }}>
@@ -230,7 +230,7 @@ export default function PortfolioPage() {
         <div style={{ borderRight: `1px solid ${S.rim}` }}>
           <div style={{
             padding: "10px 20px", borderBottom: `1px solid ${S.rim}`,
-            background: S.sub, display: "flex", alignItems: "center", justifyContent: "space-between",
+            background: S.sub, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap",
           }}>
             <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em" }}>
               CURRENCY EXPOSURE BREAKDOWN
@@ -248,7 +248,8 @@ export default function PortfolioPage() {
           )}
 
           {data && (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: S.sub }}>
                   {["CCY", "GROSS", "HEDGED", "UNHEDGED", "RATIO", "VaR 99%", "VOL", "LIQ", "POSITIONS"].map(h => (
@@ -295,6 +296,7 @@ export default function PortfolioPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
 
           {!loading && !data && !err && (

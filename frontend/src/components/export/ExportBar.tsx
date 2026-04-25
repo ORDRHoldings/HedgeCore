@@ -11,6 +11,7 @@
  */
 
 import { useState } from 'react';
+import { logger } from "@/lib/logger";
 import type { CalculateResponse } from '../../api/types';
 import {
   exportCommitteePackPdf,
@@ -100,7 +101,7 @@ function ExportBtn({ icon, label, title, onClick }: ExportBtnProps) {
       setDone(true);
       setTimeout(() => setDone(false), 2200);
     } catch (e) {
-      console.error('Export failed:', e);
+      logger.error('Export failed:', e);
       setError(true);
       setTimeout(() => setError(false), 3000);
     } finally {

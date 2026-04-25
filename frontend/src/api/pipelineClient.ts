@@ -162,8 +162,11 @@ export async function authorizeStaged(
 // ---------------------------------------------------------------------------
 
 export async function listLedger(token?: string): Promise<LedgerEntry[]> {
-  const { data } = await api.get<LedgerEntry[]>("/ledger", authHeaders(token));
-  return data;
+  const { data } = await api.get<{ entries: LedgerEntry[]; total: number }>(
+    "/ledger",
+    authHeaders(token),
+  );
+  return data.entries ?? [];
 }
 
 export async function getLedger(

@@ -377,7 +377,7 @@ export default function TradeHistoryPage() {
             color: S.secondary,
             background: "transparent",
             border: `1px solid ${S.rim}`,
-            padding: "2px 10px",
+            padding: "6px 12px",
             cursor: "pointer",
             borderRadius: 2,
             letterSpacing: "0.04em",
@@ -390,7 +390,7 @@ export default function TradeHistoryPage() {
       {/* ── 2. COMMAND STRIP (40px) ──────────────────────────────────────── */}
       <div style={commandStrip}>
         {/* Status tabs */}
-        <div style={{ display: "flex", gap: 0, flex: 1 }}>
+        <div style={{ display: "flex", gap: 0, flex: 1, flexWrap: "wrap" }}>
           {STATUS_TABS.map((tab) => {
             const active = statusFilter === tab;
             return (
@@ -445,10 +445,10 @@ export default function TradeHistoryPage() {
             color: S.secondary,
             background: S.bgPanel,
             border: `1px solid ${S.rim}`,
-            padding: "2px 6px",
+            padding: "4px 8px",
             cursor: "pointer",
             outline: "none",
-            height: 24,
+            height: 28,
           }}
         >
           <option value="newest">Newest</option>

@@ -153,7 +153,7 @@ function StatusBadge({ status }: { status: ExecStatus }) {
       fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
       color: cfg.color, background: `color-mix(in srgb, ${cfg.color} 12%, transparent)`,
       border: `1px solid color-mix(in srgb, ${cfg.color} 28%, transparent)`,
-      padding: "2px 6px", borderRadius: 2, whiteSpace: "nowrap",
+      padding: "4px 8px", borderRadius: 2, whiteSpace: "nowrap", minHeight: 24, display: "inline-flex", alignItems: "center",
     }}>{cfg.label}</span>
   );
 }
@@ -167,7 +167,7 @@ function ActionBtn({ label, color, onClick, disabled, loading, disabledReason }:
       fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
       color: disabled ? S.tertiary : color, background: "transparent",
       border: `1px solid ${disabled ? S.rim : `color-mix(in srgb, ${color} 40%, transparent)`}`,
-      padding: "2px 7px", cursor: disabled ? "not-allowed" : "pointer",
+      padding: "5px 8px", cursor: disabled ? "not-allowed" : "pointer", minHeight: 28,
       borderRadius: 2, opacity: loading ? 0.5 : 1, transition: "all 0.1s",
     }}>{loading ? "…" : label}</button>
   );
@@ -241,10 +241,10 @@ function SortHeader({ label, column, activeColumn, activeDir, onSort, align }: {
 }
 
 // ── Modal components ─────────────────────────────────────────────────────────
-function ModalOverlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+function ModalOverlay({ onClose, children, isMobile }: { onClose: () => void; children: React.ReactNode; isMobile?: boolean }) {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: "24px 28px", minWidth: 400, maxWidth: 500, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: "24px 28px", minWidth: isMobile ? "auto" : 400, width: isMobile ? "90%" : "auto", maxWidth: 500, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
         {children}
       </div>
     </div>
@@ -767,7 +767,7 @@ export default function PositionDeskPage() {
 
       {/* ── Readiness Summary Strip ─────────────────────────────────────────── */}
       <div style={{
-        display: "flex", alignItems: "center", gap: 0, flexShrink: 0,
+        display: "flex", alignItems: "center", gap: 0, flexShrink: 0, flexWrap: "wrap",
         borderBottom: `1px solid ${S.rim}`,
         background: S.bgSub,
       }}>
@@ -1047,7 +1047,7 @@ export default function PositionDeskPage() {
                   borderBottom: `1px solid ${S.soft}`,
                   borderLeft: `3px solid ${cfg.borderColor}`,
                   display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                  gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr",
                   gap: "8px 24px",
                 }}>
                   <div>
@@ -1137,7 +1137,7 @@ export default function PositionDeskPage() {
 
       {/* ── Assign Policy Modal ─────────────────────────────────────────────── */}
       {modal.type === "assign-policy" && pos && (
-        <ModalOverlay onClose={closeModal}>
+        <ModalOverlay onClose={closeModal} isMobile={isMobile}>
           <ModalHeader title="Assign Policy" subtitle={`${pos.record_id} · ${pos.entity} (${pos.currency})`} />
           {(() => {
             const activeTemplateId = activePolicyInstance?.template_id ?? null;
@@ -1248,7 +1248,7 @@ export default function PositionDeskPage() {
 
       {/* ── Proposal Info Modal ─────────────────────────────────────────────── */}
       {modal.type === "proposal-info" && pos && (
-        <ModalOverlay onClose={closeModal}>
+        <ModalOverlay onClose={closeModal} isMobile={isMobile}>
           <ModalHeader title="4-Eyes Execution Proposal" subtitle={`${pos.record_id} · ${pos.entity} (${pos.currency})`} />
           <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber, padding: "8px 12px", border: `1px solid color-mix(in srgb, ${S.amber} 25%, transparent)`, background: `color-mix(in srgb, ${S.amber} 6%, transparent)`, marginBottom: 14, lineHeight: 1.7 }}>
             <strong>4-Eyes Workflow Required — Segregation of Duties</strong><br />
@@ -1274,7 +1274,7 @@ export default function PositionDeskPage() {
 
       {/* ── Reject Modal ────────────────────────────────────────────────────── */}
       {modal.type === "reject" && pos && (
-        <ModalOverlay onClose={closeModal}>
+        <ModalOverlay onClose={closeModal} isMobile={isMobile}>
           <ModalHeader title="Reject Position" subtitle={`${pos.record_id} · ${pos.entity} (${pos.currency})`} />
           <ModalInput
             label="Rejection Reason * (mandatory for audit)"
@@ -1298,7 +1298,7 @@ export default function PositionDeskPage() {
         });
         const skippedCount = selected.size - rejectableIds.length;
         return (
-          <ModalOverlay onClose={() => { if (!bulkRejecting) { setBulkRejectOpen(false); setBulkRejectResult(null); } }}>
+          <ModalOverlay onClose={() => { if (!bulkRejecting) { setBulkRejectOpen(false); setBulkRejectResult(null); } }} isMobile={isMobile}>
             <ModalHeader
               title="Bulk Reject Positions"
               subtitle={`${selected.size} selected · ${rejectableIds.length} rejectable · ${skippedCount} skipped (HEDGED/already REJECTED)`}
@@ -1367,7 +1367,7 @@ export default function PositionDeskPage() {
         const p = positions.find((x) => x.id === deleteConfirmId);
         if (!p) return null;
         return (
-          <ModalOverlay onClose={() => { if (!deleteRunning) setDeleteConfirmId(null); }}>
+          <ModalOverlay onClose={() => { if (!deleteRunning) setDeleteConfirmId(null); }} isMobile={isMobile}>
             <ModalHeader title="Remove Position" subtitle={`${p.record_id} · ${p.entity} (${p.currency})`} />
             <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, lineHeight: 1.6, marginBottom: 16 }}>
               This will <strong style={{ color: S.primary }}>permanently remove</strong> this position from the active view.<br />
@@ -1397,7 +1397,7 @@ export default function PositionDeskPage() {
 
       {/* ── Bulk Assign Policy Modal ─────────────────────────────────────────── */}
       {bulkAssignOpen && (
-        <ModalOverlay onClose={() => { if (!bulkRunning) setBulkAssignOpen(false); }}>
+        <ModalOverlay onClose={() => { if (!bulkRunning) setBulkAssignOpen(false); }} isMobile={isMobile}>
           <ModalHeader
             title="Bulk Assign Policy"
             subtitle={`Assign one policy to ${selected.size} selected position${selected.size !== 1 ? 's' : ''}`}

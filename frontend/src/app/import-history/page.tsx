@@ -8,6 +8,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
+import { logger } from "@/lib/logger";
 import {
   listConnectorRuns,
   getConnectorRunDetail,
@@ -926,7 +927,7 @@ export default function ImportHistoryPage() {
       const res = await listConnectorRuns(token, 200);
       setRuns(res.items);
     } catch (err) {
-      console.error("Failed to fetch connector runs:", err);
+      logger.error("Failed to fetch connector runs:", err);
       setError("Failed to load import history");
       setRuns([]);
     } finally {
@@ -979,7 +980,7 @@ export default function ImportHistoryPage() {
           const detail = await getConnectorRunDetail(runId, token ?? undefined);
           setDetailMap((prev) => ({ ...prev, [runId]: detail }));
         } catch (err) {
-          console.error("Failed to load run detail:", err);
+          logger.error("Failed to load run detail:", err);
         } finally {
           setLoadingDetail(null);
         }

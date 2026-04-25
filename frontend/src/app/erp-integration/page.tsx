@@ -216,7 +216,7 @@ export default function ERPIntegrationPage() {
   const isMobile = useIsMobile();
   const _planAllowed = usePlanRedirect("professional");
   const renderTs = useRenderTs();
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, isLoading, token } = useAuth();
   const router = useRouter();
 
   // -- State -------------------------------------------------------------------
@@ -234,13 +234,17 @@ export default function ERPIntegrationPage() {
   const [testState,   setTestState]   = useState<TestState>("idle");
   const [testResult,  setTestResult]  = useState<TestResult | null>(null);
   const [syncState,   setSyncState]   = useState<SyncState>("idle");
+  const [syncError,   setSyncError]   = useState<string | null>(null);
   const [oAuthFlash,  setOAuthFlash]  = useState<ERPTab | null>(null);
+  const [oAuthErrors, setOAuthErrors] = useState<Record<ERPTab, string | null>>({
+    SAP: null, Oracle: null, NetSuite: null, "Microsoft Dynamics": null,
+  });
   const [mappingSaved, setMappingSaved] = useState(false);
 
   // -- Auth guard (useEffect, not early return) ---------------------------------
   useEffect(() => {
-    if (!isAuthenticated) router.push("/auth/login");
-  }, [isAuthenticated, router]);
+    if (!isLoading && !isAuthenticated) router.push("/auth/login");
+  }, [isLoading, isAuthenticated, router]);
 
   // -- Load from localStorage on mount -----------------------------------------
   useEffect(() => {
@@ -285,6 +289,7 @@ export default function ERPIntegrationPage() {
     setTestState("idle");
     setTestResult(null);
     setSyncState("idle");
+    setSyncError(null);
     setMappingSaved(false);
   }, [activeTab]);
 
@@ -339,30 +344,62 @@ export default function ERPIntegrationPage() {
           auth_method:  currentConfig.authMethod,
         }),
       });
-      const data = (await res.json()) as TestResult;
+      let data: TestResult;
+      try {
+        data = (await res.json()) as TestResult;
+      } catch {
+        // Non-JSON response (e.g. 404 HTML page)
+        data = {
+          reachable: false,
+          status_code: res.status,
+          error: res.status === 404
+            ? "Probe endpoint not found (paper mode)"
+            : `Unexpected response: HTTP ${res.status}`,
+        };
+      }
       setTestResult(data);
       setTestState(data.reachable ? "success" : "failed");
       if (data.reachable) updateStatus(activeTab, "AUTHORIZED");
-    } catch {
+    } catch (err) {
       setTestState("failed");
-      setTestResult({ reachable: false, error: "Network error" });
+      setTestResult({
+        reachable: false,
+        error: err instanceof Error ? err.message : "Network error — ERP probe unreachable",
+      });
     }
   }
 
   function handleAuthorize(system: ERPTab) {
+    setOAuthErrors(prev => ({ ...prev, [system]: null }));
     const popup = window.open(
       `/api/erp-oauth-start?system=${encodeURIComponent(system)}`,
       "erp-oauth",
       "width=600,height=700,scrollbars=yes"
     );
+
+    // Safety timeout: abort after 5 minutes
+    const timeout = setTimeout(() => {
+      clearInterval(poll);
+      if (popup && !popup.closed) popup.close();
+      setOAuthErrors(prev => ({ ...prev, [system]: "Authorization timed out. Please try again." }));
+      updateStatus(system, "ERROR");
+    }, 5 * 60 * 1000);
+
     const poll = setInterval(() => {
       if (popup?.closed) {
         clearInterval(poll);
-        const authorized = localStorage.getItem(`ordr_erp_oauth_${system}`);
-        if (authorized === "authorized") {
+        clearTimeout(timeout);
+        const result = localStorage.getItem(`ordr_erp_oauth_${system}`);
+        if (result === "authorized") {
           updateStatus(system, "AUTHORIZED");
           setOAuthFlash(system);
           setTimeout(() => setOAuthFlash(null), 3000);
+          localStorage.removeItem(`ordr_erp_oauth_${system}`);
+        } else if (result?.startsWith("error:")) {
+          const errMsg = result.slice(6);
+          setOAuthErrors(prev => ({ ...prev, [system]: errMsg }));
+          updateStatus(system, "ERROR");
+          localStorage.removeItem(`ordr_erp_oauth_${system}`);
         }
       }
     }, 500);
@@ -371,6 +408,7 @@ export default function ERPIntegrationPage() {
   async function handleSyncNow() {
     if (!currentConfig.endpointUrl) return;
     setSyncState("syncing");
+    setSyncError(null);
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
       const res = await fetch(`${apiBase}/v1/connectors/erp/sync`, {
@@ -381,9 +419,23 @@ export default function ERPIntegrationPage() {
         },
         body: JSON.stringify({ system: activeTab, config: currentConfig }),
       });
-      setSyncState(res.ok ? "complete" : "failed");
-    } catch {
+      if (res.ok) {
+        setSyncState("complete");
+      } else {
+        setSyncState("failed");
+        let detail = `HTTP ${res.status}`;
+        try {
+          const body = await res.json();
+          detail = body.detail ?? body.error ?? detail;
+        } catch {
+          // non-JSON error response
+          if (res.status === 404) detail = "Sync endpoint not available (paper mode)";
+        }
+        setSyncError(detail);
+      }
+    } catch (err) {
       setSyncState("failed");
+      setSyncError(err instanceof Error ? err.message : "Network error — sync failed");
     }
     setTimeout(() => setSyncState("idle"), 4000);
   }
@@ -718,6 +770,8 @@ export default function ERPIntegrationPage() {
                       </button>
                       {oAuthFlash === activeTab || currentStatus === "AUTHORIZED" ? (
                         <span style={badge("AUTHORIZED ✓", S.pass)}>AUTHORIZED ✓</span>
+                      ) : currentStatus === "ERROR" ? (
+                        <span style={badge("AUTH FAILED", S.fail)}>AUTH FAILED</span>
                       ) : (
                         <span style={badge("PENDING AUTHORIZATION", S.amber)}>
                           PENDING AUTHORIZATION
@@ -726,6 +780,21 @@ export default function ERPIntegrationPage() {
                     </>
                   )}
                 </div>
+                {oAuthErrors[activeTab] && (
+                  <div style={{
+                    fontFamily: S.fontMono,
+                    fontSize: 12,
+                    color: S.fail,
+                    background: `color-mix(in srgb, ${S.fail} 8%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${S.fail} 25%, transparent)`,
+                    borderLeft: `2px solid ${S.fail}`,
+                    borderRadius: 2,
+                    padding: "6px 10px",
+                    marginTop: 6,
+                  }}>
+                  {oAuthErrors[activeTab]}
+                  </div>
+                )}
                 <div style={{
                   fontFamily:    S.fontMono,
                   fontSize: 12,
@@ -1065,6 +1134,22 @@ export default function ERPIntegrationPage() {
             >
               {syncLabel()}
             </button>
+
+            {syncError && syncState === "failed" && (
+              <div style={{
+                fontFamily: S.fontMono,
+                fontSize: 12,
+                color: S.fail,
+                background: `color-mix(in srgb, ${S.fail} 8%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${S.fail} 25%, transparent)`,
+                borderLeft: `2px solid ${S.fail}`,
+                borderRadius: 2,
+                padding: "6px 10px",
+                whiteSpace: "nowrap",
+              }}>
+                {syncError}
+              </div>
+            )}
 
             <div style={{ flex: 1 }} />
 

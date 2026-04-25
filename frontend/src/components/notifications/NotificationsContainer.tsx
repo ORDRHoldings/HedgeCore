@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { logger } from "@/lib/logger";
 import type { CalculateResponse, ValidationErrorDetail } from "../../api/types";
 import {
   exportAlertsPdf,
@@ -243,7 +244,7 @@ function AlertExportPanel({ alerts, result }: AlertExportPanelProps) {
   ) => {
     setBusy(true);
     try { await fn(); setDone(true); setTimeout(() => setDone(false), 2200); }
-    catch (e) { console.error('Alert export failed:', e); }
+    catch (e) { logger.error('Alert export failed:', e); }
     finally { setBusy(false); }
   };
 

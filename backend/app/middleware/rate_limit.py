@@ -212,6 +212,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return "anonymous"
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        # Bypass rate limiting for localhost in dev/SQLite demo mode
+        client = request.client
+        if client and client.host in ("127.0.0.1", "::1", "localhost"):
+            try:
+                from app.core.config import settings
+                if getattr(settings, "ALLOW_SQLITE_DEMO", False):
+                    return await call_next(request)
+            except Exception:
+                pass
+
         key = self._resolve_key(request)
 
         if self._redis_bucket is not None:

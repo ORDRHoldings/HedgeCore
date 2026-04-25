@@ -207,7 +207,7 @@ function makeEmptyRow(): FieldMapping {
 export default function AccountingConnectionPage() {
   const isMobile = useIsMobile();
   const _planAllowed = usePlanRedirect("professional");
-  const { isAuthenticated, token, user } = useAuth();
+  const { isAuthenticated, isLoading, token, user } = useAuth();
   const router   = useRouter();
   const renderTs = useRenderTs();
 
@@ -221,6 +221,7 @@ export default function AccountingConnectionPage() {
   const [connDetails, setConnDetails] = useState<
     Record<string, { connectedAs: string; tenantId: string; expiresAt: string } | null>
   >({});
+  const [connErrors, setConnErrors] = useState<Record<string, string | null>>({});
 
   // ── UI state ────────────────────────────────────────────────────────────
   const [selectedSystem, setSelectedSystem] = useState<string>("quickbooks");
@@ -249,8 +250,8 @@ export default function AccountingConnectionPage() {
 
   // ── Auth guard ──────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isAuthenticated) router.push("/auth/login");
-  }, [isAuthenticated, router]);
+    if (!isLoading && !isAuthenticated) router.push("/auth/login");
+  }, [isLoading, isAuthenticated, router]);
 
   // ── Restore persisted connections on mount ──────────────────────────────
   useEffect(() => {
@@ -321,6 +322,7 @@ export default function AccountingConnectionPage() {
   // ── Connect handler (OAuth popup) ────────────────────────────────────────
   function handleConnect(systemId: string) {
     setConnections(prev => ({ ...prev, [systemId]: "connecting" }));
+    setConnErrors(prev => ({ ...prev, [systemId]: null }));
     setImportResult(null);
     setImportError(null);
 
@@ -330,9 +332,23 @@ export default function AccountingConnectionPage() {
       "width=600,height=700,scrollbars=yes"
     );
 
+    // Safety timeout: abort connecting after 5 minutes
+    const timeout = setTimeout(() => {
+      clearInterval(poll);
+      if (popup && !popup.closed) popup.close();
+      setConnections(prev => {
+        if (prev[systemId] === "connecting") {
+          setConnErrors(p => ({ ...p, [systemId]: "Connection timed out. The OAuth window was open too long. Please try again." }));
+          return { ...prev, [systemId]: "error" };
+        }
+        return prev;
+      });
+    }, 5 * 60 * 1000);
+
     const poll = setInterval(() => {
       if (popup?.closed) {
         clearInterval(poll);
+        clearTimeout(timeout);
         const result = localStorage.getItem(lsOAuthResult(systemId));
         if (result === "authorized") {
           const details = {
@@ -350,6 +366,11 @@ export default function AccountingConnectionPage() {
           try {
             localStorage.setItem(lsConnKey(systemId), JSON.stringify({ status: "connected", details }));
           } catch { /* quota */ }
+          localStorage.removeItem(lsOAuthResult(systemId));
+        } else if (result?.startsWith("error:")) {
+          const errMsg = result.slice(6);
+          setConnErrors(prev => ({ ...prev, [systemId]: errMsg }));
+          setConnections(prev => ({ ...prev, [systemId]: "error" }));
           localStorage.removeItem(lsOAuthResult(systemId));
         } else {
           setConnections(prev => ({ ...prev, [systemId]: "not_connected" }));
@@ -867,7 +888,24 @@ export default function AccountingConnectionPage() {
                     >
                       CONNECT {activeSystem.name.toUpperCase()}
                     </button>
-                    {activeStatus === "error" && (
+                    {activeStatus === "error" && connErrors[selectedSystem] && (
+                      <div style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 12,
+                        color: S.fail,
+                        background: `color-mix(in srgb, ${S.fail} 8%, transparent)`,
+                        border: `1px solid color-mix(in srgb, ${S.fail} 25%, transparent)`,
+                        borderLeft: `2px solid ${S.fail}`,
+                        borderRadius: 2,
+                        padding: "8px 12px",
+                        maxWidth: 400,
+                        textAlign: "center",
+                        lineHeight: 1.5,
+                      }}>
+                        {connErrors[selectedSystem]}
+                      </div>
+                    )}
+                    {activeStatus === "error" && !connErrors[selectedSystem] && (
                       <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.fail }}>
                         Authorization failed or was cancelled. Try again.
                       </span>

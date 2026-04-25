@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.pool import NullPool
+from sqlalchemy.types import Uuid
 
 # Teach SQLite how to render PostgreSQL-specific types so
 # Base.metadata.create_all() works in ALLOW_SQLITE_DEMO mode.
@@ -25,6 +26,29 @@ def _compile_jsonb_sqlite(type_, compiler, **kw):
 @compiles(ARRAY, "sqlite")
 def _compile_array_sqlite(type_, compiler, **kw):
     return "JSON"
+
+# Fix UUID binding on SQLite: default Uuid.bind_processor uses value.hex
+# which strips hyphens, but our seed data stores UUIDs with hyphens.
+# Override so SQLite binds UUIDs as hyphenated strings.
+_original_uuid_bind = Uuid.bind_processor
+
+def _uuid_bind_processor(self, dialect):
+    if dialect.name == "sqlite":
+        if self.as_uuid:
+            def process(value):
+                if value is not None:
+                    value = str(value)
+                return value
+            return process
+        else:
+            def process(value):
+                if value is not None:
+                    value = value.replace("-", "")
+                return value
+            return process
+    return _original_uuid_bind(self, dialect)
+
+Uuid.bind_processor = _uuid_bind_processor
 
 logger = logging.getLogger("hedgecalc.db")
 

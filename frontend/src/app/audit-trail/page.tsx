@@ -624,14 +624,14 @@ function EventRow({ event, expanded, onToggle }: {
 export default function AuditTrailPage() {
   const _planAllowed = usePlanRedirect("enterprise");
   const renderTs = useRenderTs();
-  const { isAuthenticated, token, user } = useAuth();
+  const { isAuthenticated, isLoading, token, user } = useAuth();
   const router = useRouter();
   const isMobile = useIsMobile();
 
   // Auth guard
   useEffect(() => {
-    if (!isAuthenticated) router.push("/auth/login");
-  }, [isAuthenticated, router]);
+    if (!isLoading && !isAuthenticated) router.push("/auth/login");
+  }, [isLoading, isAuthenticated, router]);
 
   // Data state
   const [events,    setEvents]    = useState<AuditEvent[]>([]);

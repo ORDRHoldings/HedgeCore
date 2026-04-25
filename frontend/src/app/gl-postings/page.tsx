@@ -5,6 +5,7 @@ import { CheckCircle, XCircle, Send, FileText, AlertCircle, RefreshCw as Refresh
 import { PageShell } from "@/components/layout/PageShell";
 import { useAuth } from "@/lib/authContext";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
+import { Skeleton, SkeletonTable } from "@/components/ui/Skeleton";
 import {
   listJournalEntries,
   approveJournalEntry,
@@ -113,7 +114,10 @@ export default function GLPostingsPage() {
         )}
 
         {loading ? (
-          <div style={{ color: S.textSub, fontSize: 13, padding: 20 }}>Loading...</div>
+          <div style={{ padding: 24 }}>
+            <Skeleton width={140} height={16} style={{ marginBottom: 12 }} />
+            <SkeletonTable columns={6} rows={4} />
+          </div>
         ) : entries.length === 0 ? (
           <div style={{ color: S.textSub, fontSize: 13, padding: 40, textAlign: "center" }}>No journal entries found</div>
         ) : (
@@ -181,7 +185,7 @@ export default function GLPostingsPage() {
 
         {rejectModal && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-            <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 6, padding: 24, width: 420 }}>
+            <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 6, padding: 24, width: isMobile ? "90%" : 420, maxWidth: 420 }}>
               <h2 style={{ fontFamily: S.fontMono, fontSize: 13, letterSpacing: "0.06em", color: S.text, marginBottom: 16, textTransform: "uppercase" }}>
                 Reject Journal Entry
               </h2>

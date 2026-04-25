@@ -360,7 +360,8 @@ function BankStatementsInner() {
             )}
 
             <div style={{ background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 6, overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, fontFamily: S.mono }}>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, fontFamily: S.mono }}>
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                     {["ACCOUNT", "DATE", "OPENING", "CLOSING", "CCY", "FORMAT", "TXs", "FILE"].map(h => (
@@ -386,6 +387,7 @@ function BankStatementsInner() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         ) : tab === "TRANSACTIONS" ? (
@@ -414,7 +416,8 @@ function BankStatementsInner() {
             </div>
 
             <div style={{ background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 6, overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.mono }}>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.mono }}>
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                     {["DATE", "AMOUNT", "CCY", "DIR", "DESCRIPTION", "COUNTERPARTY", "REF", "STATUS", ""].map(h => (
@@ -439,13 +442,13 @@ function BankStatementsInner() {
                       <td style={{ padding: "10px 12px" }}>
                         {tx.reconciliation_status === "UNMATCHED" && (
                           <button onClick={() => handleMarkException(tx.id)} title="Mark Exception"
-                            style={{ background: "none", border: `1px solid ${HEX.red}40`, borderRadius: 3, color: HEX.red, cursor: "pointer", padding: "2px 6px", fontSize: 10, fontFamily: S.mono, fontWeight: 700 }}>
+                            style={{ background: "none", border: `1px solid ${HEX.red}40`, borderRadius: 3, color: HEX.red, cursor: "pointer", padding: "4px 8px", fontSize: 10, fontFamily: S.mono, fontWeight: 700, minHeight: 24, display: "inline-flex", alignItems: "center" }}>
                             <X size={10} />
                           </button>
                         )}
                         {tx.reconciliation_status === "MATCHED" && (
                           <button onClick={() => handleUnmatch(tx.id)} title="Unmatch"
-                            style={{ background: "none", border: `1px solid ${HEX.amber}40`, borderRadius: 3, color: HEX.amber, cursor: "pointer", padding: "2px 6px", fontSize: 10, fontFamily: S.mono, fontWeight: 700 }}>
+                            style={{ background: "none", border: `1px solid ${HEX.amber}40`, borderRadius: 3, color: HEX.amber, cursor: "pointer", padding: "4px 8px", fontSize: 10, fontFamily: S.mono, fontWeight: 700, minHeight: 24, display: "inline-flex", alignItems: "center" }}>
                             <X size={10} />
                           </button>
                         )}
@@ -454,6 +457,7 @@ function BankStatementsInner() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         ) : (

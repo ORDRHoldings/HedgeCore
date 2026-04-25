@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, type ReactNode, type ErrorInfo } from "react";
+import { logger } from "@/lib/logger";
 
 interface Props {
   widgetId: string;
@@ -23,7 +24,7 @@ export default class WidgetErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error(`[WidgetErrorBoundary] ${this.props.widgetId} crashed:`, error, info);
+    logger.error(`[WidgetErrorBoundary] ${this.props.widgetId} crashed:`, error, info);
   }
 
   render() {

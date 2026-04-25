@@ -5,6 +5,7 @@ import axios from "axios";
 import type { PolicyConfig } from "./types";
 import type { PolicyPreset } from "@/constants/policyPresets";
 import type { QuestionnaireAnswers, AIPolicyResult, AIPolicyRecommendation } from "@/app/api/policy-ai/route";
+import { logger } from "@/lib/logger";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
@@ -18,13 +19,10 @@ function getApiKey(): string {
     const stored = localStorage.getItem("hc_api_key");
     if (stored) return stored;
   }
-  if (process.env.NODE_ENV === "development") {
-    // eslint-disable-next-line no-console
-    console.warn(
-      "[policyClient] No API key found. Set NEXT_PUBLIC_HEDGECALC_API_KEY (all envs) " +
-      "or localStorage.setItem('hc_api_key', '<key>') (dev only)."
-    );
-  }
+  logger.warn(
+    "[policyClient] No API key found. Set NEXT_PUBLIC_HEDGECALC_API_KEY (all envs) " +
+    "or localStorage.setItem('hc_api_key', '<key>') (dev only)."
+  );
   return "";
 }
 

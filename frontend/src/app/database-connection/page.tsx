@@ -149,7 +149,7 @@ const TRANSFORM_FUNCTIONS = [
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function DatabaseConnectionPage() {
   const _planAllowed = usePlanRedirect("professional");
-  const { isAuthenticated, token, user } = useAuth();
+  const { isAuthenticated, isLoading, token, user } = useAuth();
   const router = useRouter();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<TabView>("connection");
@@ -207,10 +207,10 @@ export default function DatabaseConnectionPage() {
 
   // Auth guard
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       router.push("/auth/login");
     }
-  }, [isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, router]);
 
   // Initialize default validation rules
   useEffect(() => {

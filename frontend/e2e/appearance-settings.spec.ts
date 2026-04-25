@@ -2,52 +2,13 @@
  * E2E: Appearance & UX Settings — template selection + CSS variable persistence.
  */
 import { test, expect, Page } from "@playwright/test";
+import { loginAsDemo } from "./helpers/auth";
 
 const BASE = "http://localhost:3000";
 
-/** Inject auth tokens so the app thinks we're logged in. */
-async function mockAuth(page: Page) {
-  await page.addInitScript(() => {
-    const fakeToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXIiLCJlbWFpbCI6InRlc3RAb3Jkci5jb20iLCJleHAiOjk5OTk5OTk5OTksInJvbGUiOiJhZG1pbiJ9.fake";
-    localStorage.setItem("ordr_access_token", fakeToken);
-    localStorage.setItem("ordr_refresh_token", "fake-refresh");
-    localStorage.setItem("ordr_user", JSON.stringify({
-      id: "test-user-id",
-      email: "test@ordr.com",
-      role: "admin",
-      company_id: "test-company",
-    }));
-  });
-
-  // Mock auth refresh to prevent redirect
-  await page.route("**/auth/refresh", route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ access_token: "fake", user: { id: "test-user-id", email: "test@ordr.com", role: "admin" } }) })
-  );
-
-  // Mock company settings
-  await page.route("**/v1/company/settings", route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ governance_mode: "solo", name: "Test Co", slug: "test-co" }) })
-  );
-
-  // Mock UI prefs
-  await page.route("**/v1/ui/prefs", route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ show_quickstart: false, quickstart_dismissed_at: null }) })
-  );
-
-  // Mock appearance prefs
-  await page.route("**/v1/ui/appearance", route =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
-      theme_id: "ordr-default", mode_override: "dark", accent_id: "ruddy-blue",
-      density: "standard", ui_font: "IBM Plex Sans", numeric_font: "IBM Plex Mono",
-      base_font_size: 13, tabular_numerals: true, reduced_motion: false,
-      high_contrast: false, color_plus_icon: true, template_id: null,
-    }) })
-  );
-}
-
 test.describe("Appearance & UX Settings", () => {
   test.beforeEach(async ({ page }) => {
-    await mockAuth(page);
+    await loginAsDemo(page);
   });
 
   test("navigates to appearance tab via URL", async ({ page }) => {
@@ -73,10 +34,10 @@ test.describe("Appearance & UX Settings", () => {
     await page.goto(`${BASE}/settings?tab=appearance`);
     await page.waitForTimeout(1000);
 
-    await expect(page.locator("text=ORDR Default")).toBeVisible();
-    await expect(page.locator("text=Institutional Obsidian")).toBeVisible();
-    await expect(page.locator("text=Algorithmic Slate")).toBeVisible();
-    await expect(page.locator("text=Executive Clarity")).toBeVisible();
+    await expect(page.locator("text=ORDR Default").first()).toBeVisible();
+    await expect(page.locator("text=Institutional Obsidian").first()).toBeVisible();
+    await expect(page.locator("text=Algorithmic Slate").first()).toBeVisible();
+    await expect(page.locator("text=Executive Clarity").first()).toBeVisible();
   });
 
   test("displays live preview pane", async ({ page }) => {

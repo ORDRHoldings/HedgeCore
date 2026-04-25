@@ -310,8 +310,9 @@ export default function PreTradeTcaPage() {
             No estimates yet.
           </p>
         ) : (
-          <table
-            style={{
+          <div style={{ overflowX: "auto" }}>
+            <table
+              style={{
               width: "100%",
               borderCollapse: "collapse",
               fontFamily: S.fontMono,
@@ -374,7 +375,8 @@ export default function PreTradeTcaPage() {
                 );
               })}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </section>
     </div>

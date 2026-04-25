@@ -26,6 +26,7 @@ import {
   type QuestionnaireAnswers,
 } from "@/api/policyClient";
 import type { PolicyConfig } from "@/api/types";
+import { logger } from "@/lib/logger";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const S = {
@@ -192,7 +193,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
       setResult(res);
       setStatus("done");
     } catch (err: unknown) {
-      console.error("[PolicyAIBuilder] generate failed:", err);
+      logger.error("[PolicyAIBuilder] generate failed:", err);
       setStatus("error");
     }
   }

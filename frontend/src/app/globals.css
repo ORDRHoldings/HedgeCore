@@ -1084,4 +1084,13 @@ button:not(.no-scale):active:not(:disabled) {
     min-height: 44px;
     min-width: 44px;
   }
+
+  /* Skeleton pulse animation */
+  @keyframes skeletonPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .ordr-skeleton-pulse {
+    animation: skeletonPulse 1.5s ease-in-out infinite;
+  }
 }

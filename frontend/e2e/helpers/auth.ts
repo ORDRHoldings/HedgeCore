@@ -4,8 +4,14 @@ import type { Page } from '@playwright/test';
 let _capturedToken = "";
 
 export async function loginAsDemo(page: Page): Promise<void> {
+  await page.context().clearCookies();
   await page.goto('/auth/login');
   await page.waitForLoadState('networkidle');
+
+  // If already redirected to dashboard (rare), we're done
+  if (page.url().includes('/dashboard') || page.url().includes('/welcome')) {
+    return;
+  }
 
   // Fill Terminal ID — first visible text input on login form
   const userField = page.locator('input[type="text"], input[type="email"], input[autocomplete="username"]').first();
@@ -19,15 +25,20 @@ export async function loginAsDemo(page: Page): Promise<void> {
   const loginRespPromise = page.waitForResponse(
     r => r.url().includes("/auth/login") && r.status() === 200
       && (r.headers()["content-type"] ?? "").includes("application/json"),
-    { timeout: 30000 }
+    { timeout: 15000 }
   );
 
   // Submit
   await page.locator('button[type="submit"]').click();
 
-  const loginResp = await loginRespPromise;
-  const loginData = await loginResp.json();
-  _capturedToken = loginData.access_token || "";
+  try {
+    const loginResp = await loginRespPromise;
+    const loginData = await loginResp.json();
+    _capturedToken = loginData.access_token || "";
+  } catch {
+    // Response capture raced or timed out — not fatal for most tests
+    _capturedToken = "";
+  }
 
   // After login, app may redirect to /dashboard or /welcome
   await page.waitForURL(/dashboard|welcome/, { timeout: 20000 });

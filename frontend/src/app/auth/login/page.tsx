@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/authContext";
 import { classifyError, type ErrKind } from "@/lib/auth/loginClassifier";
 import { useParticleField } from "@/lib/hooks/useParticleField";
+import { useTheme } from "@/lib/theme/ThemeProvider";
 
 // ─── Design tokens — CSS variable references, inherits app theme ─────────────
 const C = {
@@ -116,6 +117,7 @@ export default function LoginPage() {
 
   const { login }   = useAuth();
   const router      = useRouter();
+  const { resolvedMode } = useTheme();
   const usernameRef = useRef<HTMLInputElement>(null);
   const warmupRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canvasRef   = useRef<HTMLCanvasElement>(null);
@@ -242,7 +244,7 @@ export default function LoginPage() {
   const inputStyle = (field: "user" | "pass", hasErr: boolean): React.CSSProperties => ({
     width: "100%",
     padding: "11px 14px",
-    background: loading ? "#0e0e12" : C.inputBg,
+    background: loading ? "var(--bg-sidebar)" : C.inputBg,
     border: `1.5px solid ${
       hasErr         ? C.red
       : focusField === field ? C.borderFocus
@@ -322,8 +324,8 @@ export default function LoginPage() {
           width: "100%", padding: "12px",
           fontFamily: C.fontMono, fontSize: "12px", fontWeight: 700,
           textTransform: "uppercase", letterSpacing: "0.22em",
-          color: "#fff",
-          background: (mfaLoading || mfaCode.length !== 6) ? C.border : "#1a1a1e",
+          color: "var(--text-primary)",
+          background: (mfaLoading || mfaCode.length !== 6) ? C.border : "var(--bg-panel)",
           border: "1px solid rgba(255,255,255,0.08)", borderRadius: 5,
           cursor: (mfaLoading || mfaCode.length !== 6) ? "not-allowed" : "pointer",
           transition: "all 0.2s ease",
@@ -450,12 +452,12 @@ export default function LoginPage() {
           width: "100%", padding: "12px",
           fontFamily: C.fontMono, fontSize: "12px", fontWeight: 700,
           textTransform: "uppercase", letterSpacing: "0.22em",
-          color: loading ? C.text3 : "#fff",
+          color: loading ? C.text3 : "var(--text-primary)",
           background: loading
             ? C.border
             : btnHovered
-            ? "#2a2a2e"
-            : "#1a1a1e",
+            ? "var(--bg-sub)"
+            : "var(--bg-panel)",
           border: "1px solid rgba(255,255,255,0.08)", borderRadius: 5,
           cursor: loading ? "not-allowed" : "pointer",
           transition: "background 0.15s ease, box-shadow 0.15s ease",
@@ -588,7 +590,7 @@ export default function LoginPage() {
             style={{
               width: 152, height: "auto",
               display: "block", margin: "0 auto",
-              filter: "brightness(0) invert(1)",
+              filter: resolvedMode === "dark" ? "brightness(0) invert(1)" : "brightness(0)",
               opacity: 0.88,
             }}
           />

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
+import { logger } from "@/lib/logger";
 
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -460,7 +461,7 @@ function RevokeCell({
       }
       // Non-2xx: parse error body without assuming JSON on 204
       const err = await res.json().catch(() => ({ detail: "Revoke failed" })) as { detail?: string };
-      console.error("Revoke failed:", err.detail ?? `HTTP ${res.status}`);
+      logger.error("Revoke failed:", err.detail ?? `HTTP ${res.status}`);
     } finally {
       setRevoking(false);
       setConfirming(false);

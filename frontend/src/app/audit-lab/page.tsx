@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import Link from "next/link";
+import { Skeleton, SkeletonTable } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import { PageShell } from "@/components/layout/PageShell";
@@ -139,7 +140,10 @@ export default function AuditLabPage() {
       </div>
 
       {loading ? (
-        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>Loading…</div>
+        <div style={{ padding: 24 }}>
+          <Skeleton width={160} height={16} style={{ marginBottom: 12 }} />
+          <SkeletonTable columns={5} rows={4} />
+        </div>
       ) : error ? (
         <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.red }}>{error}</div>
       ) : (

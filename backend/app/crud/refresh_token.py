@@ -155,7 +155,10 @@ async def is_valid_for_refresh(db: AsyncSession, *, jti: str) -> bool:
     if token.revoked:
         logger.debug("RefreshToken:is_valid jti=%s -> False (revoked)", jti)
         return False
-    if token.expires_at <= datetime.now(UTC):
+    # SQLite returns naive datetimes; normalize before compare
+    _now = datetime.now(UTC)
+    _expires = token.expires_at.replace(tzinfo=UTC) if token.expires_at.tzinfo is None else token.expires_at
+    if _expires <= _now:
         logger.debug("RefreshToken:is_valid jti=%s -> False (expired)", jti)
         return False
     logger.debug("RefreshToken:is_valid jti=%s -> True", jti)

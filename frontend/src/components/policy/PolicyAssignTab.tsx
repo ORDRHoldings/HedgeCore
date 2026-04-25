@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { logger } from "@/lib/logger";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
@@ -335,7 +336,7 @@ export default function PolicyAssignTab() {
         setTemplates(temps);
         setFavorites(favs);
       } catch (err) {
-        console.error("Failed to load policies:", err);
+        logger.error("Failed to load policies:", err);
       } finally {
         setLoadingPolicies(false);
       }
@@ -506,7 +507,7 @@ export default function PolicyAssignTab() {
       setAiRecommendations(recommendations);
       setAssignMode("ai");
     } catch (err) {
-      console.error("AI recommendation failed:", err);
+      logger.error("AI recommendation failed:", err);
     } finally {
       setGeneratingAI(false);
     }

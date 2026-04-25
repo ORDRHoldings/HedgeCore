@@ -1,8 +1,10 @@
 /**
  * CTA Event Tracking -- lightweight, privacy-respecting event layer.
- * Currently logs to console + localStorage journal.
+ * Logs to localStorage journal; dev-only console trace via logger.
  * Replace trackEvent body when a real analytics provider is added.
  */
+
+import { logger } from "@/lib/logger";
 
 export interface CTAEvent {
   action: string;       // "click_launch_terminal" | "click_contact_sales" | etc.
@@ -36,10 +38,7 @@ export function trackEvent(action: string, label?: string): void {
     timestamp: new Date().toISOString(),
   };
 
-  // Console in dev
-  if (process.env.NODE_ENV === "development") {
-    console.log("[ORDR Event]", event);
-  }
+  logger.debug("[ORDR Event]", event);
 
   // Persist to localStorage journal (for later batch upload)
   try {
