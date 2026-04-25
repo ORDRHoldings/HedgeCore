@@ -2175,23 +2175,43 @@ def custom_openapi() -> dict[str, Any]:
 
 
     schema = get_openapi(
-
         title=settings.APP_NAME,
-
         version="1.0.0",
-
-        description="ORDR Terminal API",
-
+        description=(
+            "ORDR TreasuryFX API. Authentication via JWT Bearer (interactive sessions) "
+            "or API key Bearer with HK_live_* prefix (server-to-server)."
+        ),
         routes=app.routes,
-
+        contact={
+            "name": "ORDR Integrations",
+            "email": "hello@ordrtreasuryfx.com",
+            "url": "https://ordrtreasuryfx.com/contact",
+        },
+        license_info={"name": "Proprietary"},
+        terms_of_service="https://ordrtreasuryfx.com/legal/terms",
     )
 
+    schema["servers"] = [
+        {"url": "https://api.ordrtreasuryfx.com/api", "description": "Production"},
+        {"url": "https://preview-api.ordrtreasuryfx.com/api", "description": "Preview"},
+        {"url": "/api", "description": "Same-origin (current host)"},
+    ]
 
-
-    schema["servers"] = [{"url": "/api"}]
+    schema.setdefault("components", {})["securitySchemes"] = {
+        "bearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT or HK_live_*",
+            "description": (
+                "Bearer token. Accepts a JWT (interactive sessions) or an API key "
+                "with prefix HK_live_ (server-to-server). API keys are issued from "
+                "Settings → API Keys in the platform UI."
+            ),
+        },
+    }
+    schema["security"] = [{"bearerAuth": []}]
 
     app.openapi_schema = schema
-
     return schema
 
 
