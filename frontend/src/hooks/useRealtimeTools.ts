@@ -12,7 +12,10 @@ import { dashboardFetch } from "@/lib/api/dashboardClient";
 // The hook (useRealtimeVoice) gates execution on a click-to-confirm card; on
 // denial, the tool resolves with {error: "User denied execution"} and the
 // model is informed so it doesn't retry.
-export const MUTATING_TOOLS: ReadonlySet<string> = new Set(["pin_pair"]);
+export const MUTATING_TOOLS: ReadonlySet<string> = new Set([
+  "pin_pair",
+  "unpin_pair",
+]);
 
 export function isMutatingTool(name: string): boolean {
   return MUTATING_TOOLS.has(name);
@@ -39,6 +42,10 @@ export async function executeToolCall(
         return await callGetPendingApprovals(token);
       case "pin_pair":
         return await callPinPair(args, token);
+      case "unpin_pair":
+        return await callUnpinPair(args, token);
+      case "get_recent_runs":
+        return await callGetRecentRuns(args, token);
       default:
         return JSON.stringify({ error: `Unknown function: ${name}` });
     }
@@ -237,5 +244,76 @@ async function callPinPair(
     pinned: pair,
     watchlist_id: target.id.slice(0, 8),
     total_symbols: nextSymbols.length,
+  });
+}
+
+// MUTATING: remove a currency pair from the user's primary watchlist.
+// Find-and-remove flow: GET /v1/watchlists, then PUT with the symbol filtered out.
+async function callUnpinPair(
+  args: Record<string, unknown>,
+  token: string,
+): Promise<string> {
+  const pair = String(args.pair ?? "").trim().toUpperCase();
+  if (!/^[A-Z]{6}$/.test(pair)) {
+    return JSON.stringify({ error: `Invalid pair: ${pair || "(empty)"}` });
+  }
+
+  const listResp = await dashboardFetch("/v1/watchlists", token);
+  if (!listResp.ok) return JSON.stringify({ error: `HTTP ${listResp.status}` });
+  const lists = (await listResp.json()) as Array<{
+    id: string;
+    name: string;
+    symbols: string[];
+  }>;
+
+  const target = lists[0];
+  if (!target) {
+    return JSON.stringify({ error: "No watchlist exists" });
+  }
+
+  if (!target.symbols.includes(pair)) {
+    return JSON.stringify({
+      unpinned: pair,
+      watchlist_id: target.id.slice(0, 8),
+      total_symbols: target.symbols.length,
+      not_present: true,
+    });
+  }
+
+  const nextSymbols = target.symbols.filter((s) => s !== pair);
+  const putResp = await dashboardFetch(`/v1/watchlists/${target.id}`, token, {
+    method: "PUT",
+    body: JSON.stringify({ symbols: nextSymbols }),
+  });
+  if (!putResp.ok) return JSON.stringify({ error: `HTTP ${putResp.status}` });
+
+  return JSON.stringify({
+    unpinned: pair,
+    watchlist_id: target.id.slice(0, 8),
+    total_symbols: nextSymbols.length,
+  });
+}
+
+// READ-ONLY: fetch the N most recent calculation runs for the caller's company.
+async function callGetRecentRuns(
+  args: Record<string, unknown>,
+  token: string,
+): Promise<string> {
+  const rawLimit = Number(args.limit ?? 5);
+  const limit = Math.max(1, Math.min(20, Number.isFinite(rawLimit) ? rawLimit : 5));
+
+  const resp = await dashboardFetch(`/v1/runs?limit=${limit}`, token);
+  if (!resp.ok) return JSON.stringify({ error: `HTTP ${resp.status}` });
+
+  const data = await resp.json();
+  const items = Array.isArray(data) ? data : data.items ?? [];
+  return JSON.stringify({
+    count: items.length,
+    runs: items.slice(0, limit).map((r: Record<string, unknown>) => ({
+      run_id: String(r.run_id ?? r.id ?? "").slice(0, 8),
+      trades: r.trade_count ?? 0,
+      hedges: r.hedge_count ?? 0,
+      at: r.created_at ?? "—",
+    })),
   });
 }

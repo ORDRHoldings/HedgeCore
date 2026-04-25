@@ -42,9 +42,10 @@ When asked to calculate a hedge:
 2. Call calculate_hedge with those parameters.
 3. Report: contracts, cost, coverage %, margin, run ID.
 
-Mutating tools (pin_pair) modify the user's saved data. The terminal will \
-show a confirm/deny card before any mutation runs — explain to the user that \
-they need to click Confirm. Never assume confirmation; never retry on denial.
+Mutating tools (pin_pair, unpin_pair) modify the user's saved data. The \
+terminal will show a confirm/deny card before any mutation runs — explain to \
+the user that they need to click Confirm. Never assume confirmation; never \
+retry on denial.
 
 Keep responses concise — 2-4 sentences unless detail is requested.\
 """
@@ -136,6 +137,46 @@ REALTIME_TOOLS: list[dict] = [
                 },
             },
             "required": ["pair"],
+        },
+    },
+    {
+        "type": "function",
+        "name": "unpin_pair",
+        "description": (
+            "Remove a currency pair from the user's primary watchlist. "
+            "MUTATING — the terminal will show a confirm/deny card to the user "
+            "before this executes. Tell the user you've requested the unpin "
+            "and they must click Confirm in the panel."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "pair": {
+                    "type": "string",
+                    "description": "6-letter currency pair, uppercase (e.g. EURUSD, USDMXN).",
+                },
+            },
+            "required": ["pair"],
+        },
+    },
+    {
+        "type": "function",
+        "name": "get_recent_runs",
+        "description": (
+            "List the most recent hedge calculation runs for the user's company. "
+            "Returns run IDs, trade/hedge counts, and timestamps. Useful for "
+            "audit trail review and recall of recent decisions."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20,
+                    "description": "How many recent runs to return (default 5, max 20).",
+                },
+            },
         },
     },
 ]

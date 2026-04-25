@@ -38,9 +38,11 @@ beforeEach(() => {
 // ── isMutatingTool / MUTATING_TOOLS ───────────────────────────────────────────
 
 describe("MUTATING_TOOLS gate set", () => {
-  it("classifies pin_pair as mutating", () => {
+  it("classifies pin_pair and unpin_pair as mutating", () => {
     expect(isMutatingTool("pin_pair")).toBe(true);
+    expect(isMutatingTool("unpin_pair")).toBe(true);
     expect(MUTATING_TOOLS.has("pin_pair")).toBe(true);
+    expect(MUTATING_TOOLS.has("unpin_pair")).toBe(true);
   });
 
   it("classifies read-only tools as non-mutating", () => {
@@ -51,6 +53,7 @@ describe("MUTATING_TOOLS gate set", () => {
       "get_portfolio_summary",
       "list_policies",
       "get_pending_approvals",
+      "get_recent_runs",
     ]) {
       expect(isMutatingTool(name)).toBe(false);
     }
@@ -158,5 +161,124 @@ describe("pin_pair", () => {
     mockFetch.mockResolvedValueOnce(_resp({}, false, 422));
     const result = await executeToolCall("pin_pair", { pair: "EURUSD" }, "tok");
     expect(JSON.parse(result).error).toBe("HTTP 422");
+  });
+});
+
+// ── unpin_pair (mutating, find-and-remove flow) ───────────────────────────────
+
+describe("unpin_pair", () => {
+  it("rejects invalid pairs without hitting the API", async () => {
+    const result = await executeToolCall("unpin_pair", { pair: "EU" }, "tok");
+    expect(JSON.parse(result).error).toMatch(/Invalid pair/);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("returns an error when no watchlists exist", async () => {
+    mockFetch.mockResolvedValueOnce(_resp([]));
+    const result = await executeToolCall("unpin_pair", { pair: "EURUSD" }, "tok");
+    expect(JSON.parse(result).error).toBe("No watchlist exists");
+    expect(mockFetch).toHaveBeenCalledTimes(1); // only the GET
+  });
+
+  it("returns not_present and skips PUT when symbol isn't pinned", async () => {
+    mockFetch.mockResolvedValueOnce(
+      _resp([{ id: "wl-abc", name: "Default", symbols: ["USDMXN"] }]),
+    );
+    const result = await executeToolCall("unpin_pair", { pair: "EURUSD" }, "tok");
+    const parsed = JSON.parse(result);
+    expect(parsed.not_present).toBe(true);
+    expect(parsed.unpinned).toBe("EURUSD");
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("removes symbol and PUTs the trimmed list", async () => {
+    mockFetch.mockResolvedValueOnce(
+      _resp([{ id: "wl-abc", name: "Default", symbols: ["USDMXN", "EURUSD", "GBPUSD"] }]),
+    );
+    mockFetch.mockResolvedValueOnce(
+      _resp({ id: "wl-abc", name: "Default", symbols: ["USDMXN", "GBPUSD"] }),
+    );
+
+    const result = await executeToolCall("unpin_pair", { pair: "eurusd" }, "tok");
+    const parsed = JSON.parse(result);
+    expect(parsed.unpinned).toBe("EURUSD");
+    expect(parsed.total_symbols).toBe(2);
+
+    const putCall = mockFetch.mock.calls[1];
+    expect(putCall[0]).toBe("/v1/watchlists/wl-abc");
+    const putBody = JSON.parse((putCall[2] as RequestInit).body as string);
+    expect(putBody.symbols).toEqual(["USDMXN", "GBPUSD"]);
+  });
+
+  it("propagates HTTP errors from the PUT", async () => {
+    mockFetch.mockResolvedValueOnce(
+      _resp([{ id: "wl-abc", name: "Default", symbols: ["EURUSD"] }]),
+    );
+    mockFetch.mockResolvedValueOnce(_resp({}, false, 500));
+    const result = await executeToolCall("unpin_pair", { pair: "EURUSD" }, "tok");
+    expect(JSON.parse(result).error).toBe("HTTP 500");
+  });
+});
+
+// ── get_recent_runs (read-only) ──────────────────────────────────────────────
+
+describe("get_recent_runs", () => {
+  it("uses default limit=5 when no arg provided and maps RunSummary fields", async () => {
+    mockFetch.mockResolvedValueOnce(
+      _resp({
+        items: [
+          {
+            run_id: "11111111-aaaa-bbbb-cccc-000000000001",
+            trade_count: 12,
+            hedge_count: 4,
+            created_at: "2026-04-25T10:00:00Z",
+          },
+          {
+            run_id: "22222222-aaaa-bbbb-cccc-000000000002",
+            trade_count: 7,
+            hedge_count: 2,
+            created_at: "2026-04-25T09:00:00Z",
+          },
+        ],
+        total: 2,
+      }),
+    );
+
+    const result = await executeToolCall("get_recent_runs", {}, "tok");
+    const parsed = JSON.parse(result);
+    expect(mockFetch.mock.calls[0][0]).toBe("/v1/runs?limit=5");
+    expect(parsed.count).toBe(2);
+    expect(parsed.runs[0]).toEqual({
+      run_id: "11111111",
+      trades: 12,
+      hedges: 4,
+      at: "2026-04-25T10:00:00Z",
+    });
+  });
+
+  it("clamps limit into [1, 20]", async () => {
+    mockFetch.mockResolvedValueOnce(_resp({ items: [], total: 0 }));
+    await executeToolCall("get_recent_runs", { limit: 999 }, "tok");
+    expect(mockFetch.mock.calls[0][0]).toBe("/v1/runs?limit=20");
+
+    mockFetch.mockResolvedValueOnce(_resp({ items: [], total: 0 }));
+    await executeToolCall("get_recent_runs", { limit: 0 }, "tok");
+    expect(mockFetch.mock.calls[1][0]).toBe("/v1/runs?limit=1");
+  });
+
+  it("propagates HTTP errors", async () => {
+    mockFetch.mockResolvedValueOnce(_resp({}, false, 503));
+    const result = await executeToolCall("get_recent_runs", { limit: 3 }, "tok");
+    expect(JSON.parse(result).error).toBe("HTTP 503");
+  });
+
+  it("handles bare-array responses (in case the endpoint changes)", async () => {
+    mockFetch.mockResolvedValueOnce(
+      _resp([{ run_id: "abcdef01-...", trade_count: 1, hedge_count: 1, created_at: "2026-04-25" }]),
+    );
+    const result = await executeToolCall("get_recent_runs", { limit: 1 }, "tok");
+    const parsed = JSON.parse(result);
+    expect(parsed.count).toBe(1);
+    expect(parsed.runs[0].run_id).toBe("abcdef01");
   });
 });
