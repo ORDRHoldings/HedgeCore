@@ -238,6 +238,66 @@ async def test_voice_transcript_disclosure_ack_false_no_event(authed_client):
 
 
 @pytest.mark.asyncio
+async def test_voice_transcript_handoff_emits_event(authed_client):
+    """handoff_requested=True emits VOICE_HUMAN_HANDOFF with reason in payload."""
+    body = {
+        "session_id": "sess-handoff-001",
+        "transport": "openai-realtime",
+        "model": "gpt-realtime",
+        "handoff_requested": True,
+        "handoff_reason": "Need a human to confirm a same-day FX trade",
+    }
+
+    with patch("app.api.routes.v1_voice_transcript.emit_audit", new_callable=AsyncMock) as mock_emit:
+        async with authed_client as client:
+            resp = await client.post("/api/v1/voice/transcript", headers=_BEARER, json=body)
+
+    assert resp.status_code == 200
+    assert resp.json()["events_logged"] == 1
+    assert mock_emit.await_count == 1
+    kwargs = mock_emit.await_args_list[0].kwargs
+    assert kwargs["event_type"] == "VOICE_HUMAN_HANDOFF"
+    assert kwargs["payload"]["reason"] == "Need a human to confirm a same-day FX trade"
+
+
+@pytest.mark.asyncio
+async def test_voice_transcript_handoff_false_no_event(authed_client):
+    body = {
+        "session_id": "sess-no-handoff-1",
+        "transport": "openai-realtime",
+        "model": "gpt-realtime",
+        "handoff_requested": False,
+    }
+    with patch("app.api.routes.v1_voice_transcript.emit_audit", new_callable=AsyncMock) as mock_emit:
+        async with authed_client as client:
+            resp = await client.post("/api/v1/voice/transcript", headers=_BEARER, json=body)
+
+    assert resp.status_code == 200
+    assert resp.json()["events_logged"] == 0
+    assert mock_emit.await_count == 0
+
+
+@pytest.mark.asyncio
+async def test_voice_transcript_handoff_with_no_reason_emits_event(authed_client):
+    """The affordance matters even without a reason — empty/missing reason still emits."""
+    body = {
+        "session_id": "sess-handoff-noresn",
+        "transport": "openai-realtime",
+        "model": "gpt-realtime",
+        "handoff_requested": True,
+    }
+
+    with patch("app.api.routes.v1_voice_transcript.emit_audit", new_callable=AsyncMock) as mock_emit:
+        async with authed_client as client:
+            resp = await client.post("/api/v1/voice/transcript", headers=_BEARER, json=body)
+
+    assert resp.status_code == 200
+    assert mock_emit.await_count == 1
+    payload = mock_emit.await_args_list[0].kwargs["payload"]
+    assert payload["reason"] is None
+
+
+@pytest.mark.asyncio
 async def test_voice_transcript_truncates_oversized_tool_arguments(authed_client):
     """Tool arguments larger than _MAX_TOOL_ARG_BYTES should land in payload as truncated."""
     huge_blob = "A" * 4096  # 4KB

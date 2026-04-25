@@ -68,6 +68,11 @@ class VoiceTranscriptBatch(BaseModel):
     # acknowledgement so the WORM chain has a tamper-evident record of consent.
     disclosure_ack: bool = False
     disclosure_text: str | None = Field(default=None, max_length=2048)
+    # EU AI Act Art. 14 + Fed SR 11-7 human oversight: client signals user
+    # invoked the "talk to a human" escape hatch. Audited so reviewers can
+    # prove the affordance was offered and exercised.
+    handoff_requested: bool = False
+    handoff_reason: str | None = Field(default=None, max_length=512)
     # Provenance manifest — model + prompt + tools hashes from /voice/token.
     # When present, written into the VOICE_SESSION_START payload so auditors
     # can prove what code was running for any given session.
@@ -142,6 +147,21 @@ async def log_voice_transcript(
             payload={
                 **session_scope,
                 "disclosure_text": batch.disclosure_text,
+            },
+        )
+        events_logged += 1
+
+    if batch.handoff_requested:
+        await emit_audit(
+            session=session,
+            user=current_user,
+            event_type="VOICE_HUMAN_HANDOFF",
+            description="User requested handoff to human operator (EU AI Act Art. 14)",
+            entity_type="voice_session",
+            entity_id=batch.session_id,
+            payload={
+                **session_scope,
+                "reason": batch.handoff_reason,
             },
         )
         events_logged += 1

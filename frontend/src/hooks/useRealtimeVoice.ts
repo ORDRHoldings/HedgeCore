@@ -72,6 +72,10 @@ interface AuditBuffer {
   tool_calls: AuditToolCall[];
   disclosure_ack: boolean;
   disclosure_text: string | null;
+  // EU AI Act Art. 14 + SR 11-7 human oversight — user invoked the
+  // "talk to a human" escape hatch. Flushed as VOICE_HUMAN_HANDOFF.
+  handoff_requested: boolean;
+  handoff_reason: string | null;
   // Provenance manifest from POST /v1/voice/token — sent only on the
   // first flush (the one carrying session_start) so auditors can replay
   // exactly which model + prompt + tools were active.
@@ -96,6 +100,8 @@ function _makeBuffer(model: string): AuditBuffer {
     tool_calls: [],
     disclosure_ack: false,
     disclosure_text: null,
+    handoff_requested: false,
+    handoff_reason: null,
     model_id: null,
     instructions_sha256: null,
     tools_sha256: null,
@@ -122,6 +128,12 @@ interface UseRealtimeVoiceReturn {
    * Emits a VOICE_AI_DISCLOSURE_ACK audit event on the next flush.
    */
   acknowledgeDisclosure: (text: string) => void;
+  /**
+   * Invoke the "talk to a human" escape hatch. Emits a VOICE_HUMAN_HANDOFF
+   * audit event then tears down the WebRTC session. Required by EU AI Act
+   * Art. 14 (human oversight) and Fed SR 11-7.
+   */
+  requestHumanHandoff: (reason?: string) => void;
 }
 
 let _entryId = 0;
@@ -158,7 +170,8 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
         buf.session_start !== null ||
         buf.turns.length > 0 ||
         buf.tool_calls.length > 0 ||
-        buf.disclosure_ack;
+        buf.disclosure_ack ||
+        buf.handoff_requested;
       // Skip mid-session no-op flushes; on close, always emit session_end.
       if (!closeSession && !hasContent) return;
 
@@ -181,6 +194,10 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
         payload.disclosure_ack = true;
         if (buf.disclosure_text) payload.disclosure_text = buf.disclosure_text;
       }
+      if (buf.handoff_requested) {
+        payload.handoff_requested = true;
+        if (buf.handoff_reason) payload.handoff_reason = buf.handoff_reason;
+      }
 
       // Drain so we don't double-log on retries
       buf.session_start = null;
@@ -188,6 +205,8 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
       buf.tool_calls = [];
       buf.disclosure_ack = false;
       buf.disclosure_text = null;
+      buf.handoff_requested = false;
+      buf.handoff_reason = null;
       buf.model_id = null;
       buf.instructions_sha256 = null;
       buf.tools_sha256 = null;
@@ -629,6 +648,26 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
     void flushAudit(false);
   }, [flushAudit]);
 
+  // ── Human handoff (EU AI Act Art. 14 / SR 11-7) ─────────────────────────
+
+  const requestHumanHandoff = useCallback(
+    (reason?: string) => {
+      const buf = auditBufRef.current;
+      if (buf && !buf.handoff_requested) {
+        buf.handoff_requested = true;
+        buf.handoff_reason = (reason ?? "").trim() || null;
+      }
+      // disconnect() flushes with session_end; the handoff flag rides along.
+      emitTranscript(
+        "system",
+        "Voice session ended — a human operator has been notified.",
+        true,
+      );
+      disconnect();
+    },
+    [emitTranscript, disconnect],
+  );
+
   // ── Toggle mic ──────────────────────────────────────────────────────────
 
   const toggleMic = useCallback(() => {
@@ -642,5 +681,14 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
     setIsMicOn(track.enabled);
   }, []);
 
-  return { connect, disconnect, sendText, toggleMic, isMicOn, status, acknowledgeDisclosure };
+  return {
+    connect,
+    disconnect,
+    sendText,
+    toggleMic,
+    isMicOn,
+    status,
+    acknowledgeDisclosure,
+    requestHumanHandoff,
+  };
 }

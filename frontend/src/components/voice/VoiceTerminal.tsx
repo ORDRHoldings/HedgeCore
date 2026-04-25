@@ -25,6 +25,7 @@ import {
   VolumeXIcon,
   ShieldAlertIcon,
   InfoIcon,
+  UserRoundIcon,
 } from "lucide-react";
 
 const DISCLOSURE_STORAGE_KEY = "ordr_voice_ai_disclosure_ack_v1";
@@ -118,14 +119,22 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
     setPending(p);
   }, []);
 
-  const { connect, disconnect, sendText, toggleMic, isMicOn, status, acknowledgeDisclosure } =
-    useRealtimeVoice({
-      token,
-      onTranscript: handleTranscript,
-      onFunctionCall: handleFunctionCall,
-      onConfirmRequired: handleConfirmRequired,
-      onError: handleError,
-    });
+  const {
+    connect,
+    disconnect,
+    sendText,
+    toggleMic,
+    isMicOn,
+    status,
+    acknowledgeDisclosure,
+    requestHumanHandoff,
+  } = useRealtimeVoice({
+    token,
+    onTranscript: handleTranscript,
+    onFunctionCall: handleFunctionCall,
+    onConfirmRequired: handleConfirmRequired,
+    onError: handleError,
+  });
 
   const handleAcknowledgeDisclosure = useCallback(() => {
     acknowledgeDisclosure(AI_DISCLOSURE_TEXT);
@@ -179,6 +188,26 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
     pending.deny();
     setPending(null);
   }, [pending]);
+
+  const handleHumanHandoff = useCallback(() => {
+    // Best-effort prompt for reason; cancel still triggers handoff (the
+    // affordance availability matters for compliance, the reason is bonus).
+    let reason: string | null = null;
+    try {
+      reason = window.prompt(
+        "Tell us briefly what you'd like a human to help with (optional):",
+        "",
+      );
+    } catch {
+      reason = null;
+    }
+    if (pending) {
+      pending.deny();
+      setPending(null);
+    }
+    requestHumanHandoff(reason ?? undefined);
+    setOpen(false);
+  }, [pending, requestHumanHandoff]);
 
   // ── Send text message ───────────────────────────────────────────────────
   const handleSendText = useCallback(() => {
@@ -324,6 +353,23 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
                 ) : (
                   <VolumeXIcon size={13} color={T.muted} />
                 )}
+              </button>
+              {/* Human handoff — EU AI Act Art. 14 / SR 11-7 */}
+              <button
+                onClick={handleHumanHandoff}
+                aria-label="Talk to a human"
+                title="Talk to a human (ends voice session)"
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  padding: 2,
+                  opacity: 0.7,
+                }}
+              >
+                <UserRoundIcon size={13} color={T.muted} />
               </button>
               <button
                 onClick={closePanel}
