@@ -28,7 +28,6 @@ import type { ConnectorRun } from "../../api/connectorClient";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { CONNECTORS_HELP } from "@/lib/helpContent";
 
-import { PageShell } from "@/components/layout/PageShell";
 import { LayoutDashboard } from "lucide-react";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
@@ -581,8 +580,6 @@ export default function ConnectorsPage() {
                     : run.status === "RUNNING" ? S.cyan
                     : S.amber;
                   return (
-                    <PageShell icon={LayoutDashboard} title="Connectors" breadcrumb={["Dashboard", "Connectors"]} noPadding>
-
                     <tr key={run.id} style={{
                       borderBottom: `1px solid ${S.soft}`,
                       background: i % 2 === 0 ? "transparent" : `color-mix(in srgb, ${S.bgSub} 40%, transparent)`,
@@ -617,8 +614,6 @@ export default function ConnectorsPage() {
                         {run.triggered_by}
                       </td>
                     </tr>
-                  
-                    </PageShell>
                   );
                 })}
               </tbody>

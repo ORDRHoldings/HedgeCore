@@ -50,7 +50,6 @@ import { ChevronDownIcon, ChevronUpIcon, ChevronsUpDownIcon,
 import AddPositionDrawer from "@/components/position/AddPositionDrawer";
 import ImportCsvModal from "@/components/position/ImportCsvModal";
 
-import { PageShell } from "@/components/layout/PageShell";
 
 // ── Design tokens ────────────────────────────────────────────────────────────
 const S = {
@@ -1454,15 +1453,11 @@ export default function PositionDeskPage() {
                     {filteredBulkOthers.map(t => {
                       const instId = instanceIdFor(t);
                       return (
-                        <PageShell icon={LayoutDashboard} title="Position Desk" breadcrumb={["Dashboard", "Position Desk"]} noPadding>
-
                         <PolicySelectorRow key={t.id} tmpl={t}
                           isSelected={!!instId && bulkPolicyId === instId}
                           isFavorite={false} isActive={t.id === activeTemplateId}
                           onSelect={() => { if (instId) setBulkPolicyId(instId); }}
                         />
-                      
-                        </PageShell>
                       );
                     })}
                   </>)}

@@ -19,7 +19,6 @@ import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
-import { PageShell } from "@/components/layout/PageShell";
 import { Play } from "lucide-react";
 
 const S = {
@@ -456,8 +455,6 @@ export default function HedgeMonitorPage() {
                     const days = daysUntil(h.expiry!);
                     const urgency = days < 7 ? S.red : days < 14 ? S.amber : S.green;
                     return (
-                      <PageShell icon={Play} title="Hedge Monitor" breadcrumb={["Dashboard","Hedge Monitor"]}>
-
                       <div key={h.id} style={{
                         display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr 1fr" : "1fr auto auto auto",
                         alignItems: "center", gap: 16, padding: "10px 12px",
@@ -480,8 +477,6 @@ export default function HedgeMonitorPage() {
                           {days < 0 ? "EXPIRED" : days < 7 ? `${days}d CRITICAL` : days < 14 ? `${days}d WARNING` : `${days}d`}
                         </span>
                       </div>
-                    
-                      </PageShell>
                     );
                   })}
                 {activeHedges.every(h => !h.instrument || !parseExpiryFromInstrument(h.instrument)) && (
