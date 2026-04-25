@@ -173,6 +173,11 @@ from app.api.routes.v1_voice_token import router as v1_voice_token_router
 
 router.include_router(v1_voice_token_router)
 
+# Voice Transcript — WORM-log Realtime session transcripts (owns /v1/voice/transcript)
+from app.api.routes.v1_voice_transcript import router as v1_voice_transcript_router
+
+router.include_router(v1_voice_transcript_router)
+
 # Audit Lab — FX transaction audit (owns /v1/audit-lab)
 from app.api.routes.v1_audit_lab import router as v1_audit_lab_router
 
