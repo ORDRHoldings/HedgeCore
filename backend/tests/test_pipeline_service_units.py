@@ -99,9 +99,14 @@ class TestCheckSnapshotStaleness:
         assert check_snapshot_staleness(old) is True
 
     def test_exact_threshold(self):
-        # At exactly 30 minutes, delta == threshold so not strictly >, should be False
-        at_threshold = datetime.now(UTC) - timedelta(minutes=30)
-        assert check_snapshot_staleness(at_threshold) is False
+        # At exactly 30 minutes, delta == threshold so not strictly >, should be False.
+        # Pin _now() so the test isn't sensitive to wall-clock drift between the
+        # datetime.now() call here and the one inside check_snapshot_staleness —
+        # under load the difference can flip the strict-inequality boundary.
+        fixed_now = datetime(2026, 4, 25, 12, 0, 0, tzinfo=UTC)
+        at_threshold = fixed_now - timedelta(minutes=30)
+        with patch("app.services.pipeline_service._now", return_value=fixed_now):
+            assert check_snapshot_staleness(at_threshold) is False
 
     def test_custom_threshold(self):
         ts = datetime.now(UTC) - timedelta(minutes=10)

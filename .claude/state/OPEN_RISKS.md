@@ -1,12 +1,12 @@
 # Open Risks
 
-## RISK-TEST-ISO-01: TestAssertRunAccessible isolation flake
+## RISK-TEST-ISO-01: Suite-level test flake (root cause identified + fixed)
 - **Severity**: LOW
-- **Component**: backend/tests/test_report_studio_governance.py::TestAssertRunAccessible
-- **Description**: 7 tests pass in isolation but fail when the suite runs as a unit. Symptom suggests module-level patching of `app.api.routes.v1_calculate._assert_run_accessible` leaks between tests or collides with a parallel test that mutates the same attribute.
-- **Mitigation**: Tests pass when the class runs alone — coverage is intact, but CI green requires either fixing the patch scope or running this class in its own worker.
-- **Status**: Open — deferred, not caused by this session's work (discovered during test-hardening pass).
-- **Opened**: 2026-04-19
+- **Component**: backend/tests/test_pipeline_service_units.py::TestCheckSnapshotStaleness::test_exact_threshold (the actual flake; the original TestAssertRunAccessible note was misdiagnosed and now passes reliably)
+- **Description**: `test_exact_threshold` was wall-clock sensitive: it computed `at_threshold = datetime.now(UTC) - timedelta(minutes=30)` then called `check_snapshot_staleness`, which re-reads `datetime.now(UTC)` internally. Under suite load the two clocks drifted past the strict-inequality boundary (`delta > 30`), flipping the assertion.
+- **Resolution**: 2026-04-25 — patched `app.services.pipeline_service._now` to a fixed instant inside the test so both timestamps are bit-identical. Full suite now: 5247 passed, 158 skipped, 0 failed.
+- **Status**: CLOSED.
+- **Opened**: 2026-04-19  /  **Closed**: 2026-04-25
 
 ## RISK-INF-01: Free-tier cold starts cause 503 on first request
 - **Severity**: HIGH
