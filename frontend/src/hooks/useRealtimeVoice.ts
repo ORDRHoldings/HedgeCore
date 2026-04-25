@@ -87,6 +87,12 @@ interface AuditBuffer {
 const _FLUSH_TURN_THRESHOLD = 10;
 const _MAX_RESULT_SUMMARY_LEN = 240;
 
+// ── Auto-reconnect on ICE failure ───────────────────────────────────────────
+// 1s, 3s, 8s backoff — three tries, then surface error. Each reconnect is a
+// fresh OpenAI session (the Realtime API has no resume); audit chain shows
+// clean session_end → session_start so reviewers can see the gap.
+const _RECONNECT_BACKOFFS_MS: readonly number[] = [1000, 3000, 8000];
+
 function _makeBuffer(model: string): AuditBuffer {
   return {
     session_id:
@@ -161,6 +167,11 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
   // WORM audit buffer — accumulates turns + tool calls, flushed on
   // (a) every _FLUSH_TURN_THRESHOLD finalized turns, (b) disconnect, (c) page hide.
   const auditBufRef = useRef<AuditBuffer | null>(null);
+
+  // Auto-reconnect state. Lives in refs so async ICE callbacks see fresh values.
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const connectRef = useRef<(() => Promise<void>) | null>(null);
 
   const flushAudit = useCallback(
     async (closeSession: boolean): Promise<void> => {
@@ -269,6 +280,67 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
     },
     [onTranscript],
   );
+
+  // ── Auto-reconnect plumbing ─────────────────────────────────────────────
+
+  const cancelReconnect = useCallback(() => {
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    reconnectAttemptsRef.current = 0;
+  }, []);
+
+  const teardownPeer = useCallback(() => {
+    // WebRTC + mic teardown only — no audit flush, no panel close.
+    // Used between reconnect attempts so the UX stays continuous (panel
+    // open, transcript preserved, disclosure ack already in localStorage).
+    dcRef.current?.close();
+    dcRef.current = null;
+    pcRef.current?.getSenders().forEach((s) => {
+      if (s.track) s.track.stop();
+    });
+    pcRef.current?.close();
+    pcRef.current = null;
+    micStreamRef.current?.getTracks().forEach((t) => t.stop());
+    micStreamRef.current = null;
+    setIsMicOn(false);
+    if (audioElRef.current) {
+      audioElRef.current.srcObject = null;
+      audioElRef.current = null;
+    }
+  }, []);
+
+  const scheduleReconnect = useCallback(() => {
+    if (reconnectTimerRef.current) return; // already scheduled — don't double-fire on cascading ICE events
+    const attemptIdx = reconnectAttemptsRef.current;
+    if (attemptIdx >= _RECONNECT_BACKOFFS_MS.length) {
+      cancelReconnect();
+      teardownPeer();
+      updateStatus("error");
+      onError?.("Voice connection lost — please reconnect manually.");
+      return;
+    }
+    reconnectAttemptsRef.current = attemptIdx + 1;
+    const backoffMs = _RECONNECT_BACKOFFS_MS[attemptIdx];
+
+    emitTranscript(
+      "system",
+      `Connection lost — retrying (${attemptIdx + 1}/${_RECONNECT_BACKOFFS_MS.length}) in ${Math.round(backoffMs / 1000)}s…`,
+      true,
+    );
+    updateStatus("connecting");
+
+    // Close the broken session cleanly so the audit chain has a session_end.
+    void flushAudit(true);
+    auditBufRef.current = null;
+    teardownPeer();
+
+    reconnectTimerRef.current = setTimeout(() => {
+      reconnectTimerRef.current = null;
+      void connectRef.current?.();
+    }, backoffMs);
+  }, [cancelReconnect, updateStatus, emitTranscript, flushAudit, teardownPeer, onError]);
 
   // ── Send event via data channel ─────────────────────────────────────────
 
@@ -479,6 +551,15 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
       const pc = new RTCPeerConnection();
       pcRef.current = pc;
 
+      // ICE failure → auto-reconnect with backoff. "disconnected" is a
+      // transient warning state (per WebRTC spec, can self-recover); only
+      // "failed" is terminal — that's our retry trigger.
+      pc.oniceconnectionstatechange = () => {
+        if (pc.iceConnectionState === "failed") {
+          scheduleReconnect();
+        }
+      };
+
       // 3. Set up remote audio playback
       const audioEl = document.createElement("audio");
       audioEl.autoplay = true;
@@ -557,18 +638,34 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
       const answerSdp = await sdpResp.text();
       await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
 
+      // Reaching here = SDP exchange succeeded. Reset reconnect counter
+      // so a future drop gets the full retry budget again.
+      reconnectAttemptsRef.current = 0;
+
       emitTranscript("system", "Connected — session active", true);
     } catch (err) {
       updateStatus("error");
       const msg = err instanceof Error ? err.message : String(err);
       onError?.(msg);
       emitTranscript("system", `Connection failed: ${msg}`, true);
+      // The connection attempt failed before SDP completed — count it as
+      // a reconnect attempt and try again unless we've exhausted the budget.
+      scheduleReconnect();
     }
-  }, [token, updateStatus, emitTranscript, handleEvent, onError]);
+  }, [token, updateStatus, emitTranscript, handleEvent, onError, scheduleReconnect]);
+
+  // Keep connectRef pointing at the latest connect closure — scheduleReconnect's
+  // setTimeout uses this to break the circular dep between reconnect and connect.
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   // ── Disconnect ──────────────────────────────────────────────────────────
 
   const disconnect = useCallback(() => {
+    // User-initiated disconnect: cancel any pending auto-reconnect first.
+    cancelReconnect();
+
     // Final WORM flush with session_end before tearing down WebRTC
     void flushAudit(true);
     auditBufRef.current = null;
@@ -596,7 +693,7 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
     }
 
     updateStatus("disconnected");
-  }, [updateStatus, flushAudit]);
+  }, [updateStatus, flushAudit, cancelReconnect]);
 
   // Flush audit on tab hide / page unload — survives browser crashes mid-session
   useEffect(() => {
