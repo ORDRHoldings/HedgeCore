@@ -54,9 +54,17 @@ describe("MUTATING_TOOLS gate set", () => {
       "list_policies",
       "get_pending_approvals",
       "get_recent_runs",
+      "recall_recent_sessions",
     ]) {
       expect(isMutatingTool(name)).toBe(false);
     }
+  });
+
+  it("contains exactly the two ADR-0016-sanctioned mutating tools", () => {
+    // Adding a third entry without an ADR amendment would silently expand the
+    // bounded deviation from ADR-0014. This test fails loudly if that happens.
+    expect(MUTATING_TOOLS.size).toBe(2);
+    expect([...MUTATING_TOOLS].sort()).toEqual(["pin_pair", "unpin_pair"]);
   });
 
   it("treats unknown tools as non-mutating (fail-open for the model, fail-closed for action)", () => {
@@ -280,5 +288,85 @@ describe("get_recent_runs", () => {
     const parsed = JSON.parse(result);
     expect(parsed.count).toBe(1);
     expect(parsed.runs[0].run_id).toBe("abcdef01");
+  });
+});
+
+// ── recall_recent_sessions (read-only, ADR-0016 control 9) ───────────────────
+
+describe("recall_recent_sessions", () => {
+  it("uses default limit=3 when no arg provided", async () => {
+    mockFetch.mockResolvedValueOnce(_resp({ count: 0, sessions: [] }));
+    await executeToolCall("recall_recent_sessions", {}, "tok");
+    expect(mockFetch.mock.calls[0][0]).toBe("/v1/voice/memory/recent?limit=3");
+  });
+
+  it("clamps limit into [1, 5]", async () => {
+    mockFetch.mockResolvedValueOnce(_resp({ count: 0, sessions: [] }));
+    await executeToolCall("recall_recent_sessions", { limit: 99 }, "tok");
+    expect(mockFetch.mock.calls[0][0]).toBe("/v1/voice/memory/recent?limit=5");
+
+    mockFetch.mockResolvedValueOnce(_resp({ count: 0, sessions: [] }));
+    await executeToolCall("recall_recent_sessions", { limit: 0 }, "tok");
+    expect(mockFetch.mock.calls[1][0]).toBe("/v1/voice/memory/recent?limit=1");
+  });
+
+  it("falls back to default when limit is not a finite number", async () => {
+    mockFetch.mockResolvedValueOnce(_resp({ count: 0, sessions: [] }));
+    await executeToolCall("recall_recent_sessions", { limit: "banana" }, "tok");
+    expect(mockFetch.mock.calls[0][0]).toBe("/v1/voice/memory/recent?limit=3");
+  });
+
+  it("maps backend session fields to compact shape and slices session_id to 8 chars", async () => {
+    mockFetch.mockResolvedValueOnce(
+      _resp({
+        count: 1,
+        sessions: [
+          {
+            session_id: "abcdefgh-1111-2222-3333-444444444444",
+            started_at: "2026-04-25T10:00:00Z",
+            ended_at: "2026-04-25T10:05:00Z",
+            last_user_turn: "What's USDMXN spot?",
+            last_assistant_turn: "USDMXN mid is 17.24.",
+            tool_calls_count: 2,
+            turn_count: 4,
+          },
+        ],
+      }),
+    );
+
+    const result = await executeToolCall(
+      "recall_recent_sessions",
+      { limit: 1 },
+      "tok",
+    );
+    const parsed = JSON.parse(result);
+    expect(parsed.count).toBe(1);
+    expect(parsed.sessions[0]).toEqual({
+      session_id: "abcdefgh",
+      started_at: "2026-04-25T10:00:00Z",
+      ended_at: "2026-04-25T10:05:00Z",
+      last_user_turn: "What's USDMXN spot?",
+      last_assistant_turn: "USDMXN mid is 17.24.",
+      tool_calls: 2,
+      turns: 4,
+    });
+  });
+
+  it("returns an empty list shape when the backend has no sessions", async () => {
+    mockFetch.mockResolvedValueOnce(_resp({ count: 0, sessions: [] }));
+    const result = await executeToolCall("recall_recent_sessions", {}, "tok");
+    expect(JSON.parse(result)).toEqual({ count: 0, sessions: [] });
+  });
+
+  it("handles malformed backend payload (non-array sessions) without throwing", async () => {
+    mockFetch.mockResolvedValueOnce(_resp({ sessions: null }));
+    const result = await executeToolCall("recall_recent_sessions", {}, "tok");
+    expect(JSON.parse(result)).toEqual({ count: 0, sessions: [] });
+  });
+
+  it("propagates HTTP errors", async () => {
+    mockFetch.mockResolvedValueOnce(_resp({}, false, 502));
+    const result = await executeToolCall("recall_recent_sessions", {}, "tok");
+    expect(JSON.parse(result).error).toBe("HTTP 502");
   });
 });
