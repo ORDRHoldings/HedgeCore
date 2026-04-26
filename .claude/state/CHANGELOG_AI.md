@@ -1,5 +1,51 @@
 # Changelog (AI-maintained)
 
+## 2026-04-26 — Backend test-suite warning collapse (188 → 2)
+
+Three orthogonal warning streams swept in one flush; suite still 5264 passed / 158 skipped.
+
+### Sources collapsed
+
+1. **RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited** (33 instances).
+   Root cause: tests mock `AsyncSession` with `AsyncMock()`, but SQLAlchemy's `session.add` and `session.add_all` are synchronous — the mock returned un-awaited coroutines.
+   Fix: `tests/conftest.py` patches `AsyncMock.__init__` so new instances expose `add` and `add_all` as `MagicMock` by default. `delete` is async in SQLAlchemy AsyncSession (verified against `cash_pool_service.py:186` `await session.delete(member)`) so it stays as the inherited AsyncMock. `spec=`/`spec_set=` callers are skipped to avoid clobbering legitimate class-spec mocks. Six per-file `_make_db()` helpers updated to match.
+
+2. **PytestWarning: marked '@pytest.mark.asyncio' but is not async** (151 instances).
+   Five files had module-level `pytestmark = pytest.mark.asyncio` for content that was 0–10% async (`test_cycle_lifecycle.py`: 0/69 async, `test_security_jwt.py`: 0/7, `test_sprint2_resilience.py`: 0/29, `test_sprint3_architecture.py`: 0/27, `test_sprint1_security.py`: 3/22). Removed the module mark — the 3 async tests in `test_sprint1_security.py` already carried their own `@pytest.mark.asyncio` decorator.
+
+3. **PytestDeprecationWarning: asyncio_default_fixture_loop_scope unset** (2 instances).
+   Set to `function` in `pytest.ini`.
+
+### Remaining
+
+2 `InsecureKeyLengthWarning` from PyJWT — legitimate signal from negative-path tests using intentionally-short HMAC keys (14 + 16 bytes). Kept.
+
+### Commits
+
+- `732d0b4` — `test(backend): silence pytest warnings (188 → 2)` — 13 files, +36 / -10
+
+---
+
+## 2026-04-26 — ESLint baseline drain residue: dead underscore-prefixed symbols swept (-313 LoC)
+
+Three sequential commits closed the underscore-rename residue from the baseline drain (memory: `project_lint_baseline_drain.md`). Per-symbol reference counting (count==1 → definition only / dead, count>=2 → live) found 9 dead functions and 2 dead module-level constants.
+
+### Commits
+
+- `eafed78` — `refactor(reports): delete orphaned _computeReportHash + false-assurance tests` (-177 LoC)
+- `4ba21fc` — `refactor(frontend): delete 9 dead underscore-prefixed orphan functions` (-129 LoC)
+- `5143413` — `refactor(frontend): remove 2 dead module-level constants from lint drain` (-2 LoC)
+
+### Method
+
+Per-file Grep with `output_mode=count` for each `_<symbol>` candidate; verified count==1 cases were definition-only (dead) and count>=3 cases were multiply-renamed (live). Count==2 cases manually verified — all 5 were live (definition + 1 actual call).
+
+### Preserved by intent
+
+`_PRICE_CCY` in `frontend/src/utils/currencySymbolMap.ts:29` — documentation crystal noting which currencies quote inverted. Per `project_lint_baseline_drain.md` it is "kept as documentation; not consumed yet."
+
+---
+
 ## 2026-04-26 — Backlog actioned: removed orphaned report-fingerprint code + false-assurance tests
 
 Triaged the `_computeReportHash` regression flagged in this morning's audit-closeout entry. Confirmed via `pytest` that 5 of 8 `TestEnhancedReportHash` tests were already failing locally (CI is currently billing-blocked, so the regression hadn't surfaced upstream). Chose deletion over wiring-up because the function was never called by the real export path:
