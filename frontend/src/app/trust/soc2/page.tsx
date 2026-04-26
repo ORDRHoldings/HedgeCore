@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable no-restricted-syntax -- public light-theme marketing page outside the dark-terminal design tokens */
 
 import TrustDocLayout, {
   H2, H3, P, UL, Callout, StatusTable, Pill,

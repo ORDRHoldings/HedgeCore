@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable no-restricted-syntax -- public light-theme marketing page outside the dark-terminal design tokens */
 
 import Link from "next/link";
 import { useState } from "react";

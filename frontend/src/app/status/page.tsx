@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable no-restricted-syntax -- public light-theme marketing page outside the dark-terminal design tokens */
 
 import { useState } from "react";
 import { CheckCircle2, AlertCircle, Activity, Clock, Copy, Check } from "lucide-react";

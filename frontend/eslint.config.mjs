@@ -14,6 +14,7 @@ export default [
       "**/*.spec.ts",
       "**/*.spec.tsx",
       "e2e/**",
+      "render_deploy_temp.mjs",
     ],
   },
 
