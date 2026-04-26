@@ -38,6 +38,7 @@ CANONICAL_MIDDLEWARE_ORDER: tuple[str, ...] = (
     "IPAllowlistMiddleware",         # ADR-0007: blocks before audit
     "CSRFMiddleware",
     "APIKeyAuthMiddleware",
+    "IdempotencyMiddleware",         # P0-2: replays short-circuit before rate-limit/audit
     "RateLimitMiddleware",
     "AuditHeadersMiddleware",
     "GovernanceMiddleware",

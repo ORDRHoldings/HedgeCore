@@ -36,6 +36,7 @@ from app.core.schema_loader import rebuild_all_schemas
 from app.middleware.api_key_auth import APIKeyAuthMiddleware
 from app.middleware.audit_headers import AuditHeadersMiddleware
 from app.middleware.csrf import CSRFMiddleware  # SEC-06: now enabled
+from app.middleware.idempotency import IdempotencyMiddleware  # P0-2: replay safety
 from app.middleware.ip_allowlist_middleware import IPAllowlistMiddleware
 from app.middleware.cors_preview import VercelPreviewCORSMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -2123,6 +2124,11 @@ app.add_middleware(
 
 )
 
+# P0-2 Idempotency runs AFTER auth (so principal is identifiable from header bytes)
+# but BEFORE business logic — replays must not double-bill rate limits or write audit events.
+# LIFO order: source-add here = executes after APIKeyAuth and before RateLimit/Audit.
+app.add_middleware(IdempotencyMiddleware)
+
 app.add_middleware(APIKeyAuthMiddleware)
 
 app.add_middleware(CSRFMiddleware)  # SEC-06: double-submit cookie CSRF protection
@@ -2273,6 +2279,32 @@ def custom_openapi() -> dict[str, Any]:
         },
     }
     schema["security"] = [{"bearerAuth": []}]
+
+    # P0-2: surface Idempotency-Key on every mutating operation. Treated as opt-in;
+    # callers that omit it get the same behavior as before (no replay safety).
+    _MUTATING = {"post", "put", "patch", "delete"}
+    _idempotency_param = {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": False,
+        "schema": {"type": "string", "maxLength": 255, "example": "f47ac10b-58cc-4372-a567-0e02b2c3d479"},
+        "description": (
+            "Optional client-supplied key (UUID v4 recommended) that makes this "
+            "request safely retryable. A retry within 24h with the same key returns "
+            "the original response byte-for-byte and the `Idempotency-Replayed: true` "
+            "response header. Scoped per-principal."
+        ),
+    }
+    for path_item in schema.get("paths", {}).values():
+        for method, operation in list(path_item.items()):
+            if method.lower() not in _MUTATING or not isinstance(operation, dict):
+                continue
+            params = operation.setdefault("parameters", [])
+            if not any(
+                isinstance(p, dict) and p.get("in") == "header" and p.get("name", "").lower() == "idempotency-key"
+                for p in params
+            ):
+                params.append(_idempotency_param)
 
     app.openapi_schema = schema
     return schema
