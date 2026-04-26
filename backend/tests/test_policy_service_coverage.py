@@ -37,6 +37,8 @@ from app.models.audit_event import GENESIS_HASH
 def _make_db() -> AsyncMock:
     """Return a minimal AsyncMock that looks like an AsyncSession."""
     db = AsyncMock()
+    db.add = MagicMock()
+    db.add_all = MagicMock()
     # Default execute result: empty scalars
     result = MagicMock()
     result.scalars.return_value.first.return_value = None

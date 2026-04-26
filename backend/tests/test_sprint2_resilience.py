@@ -41,8 +41,6 @@ os.environ.setdefault("ENV", "test")
 
 from app.middleware.rate_limit import TokenBucket, RateLimitMiddleware
 
-pytestmark = pytest.mark.asyncio
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Token Bucket — deterministic behavior

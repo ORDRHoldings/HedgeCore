@@ -33,6 +33,8 @@ import pytest
 
 def _make_db() -> AsyncMock:
     db = AsyncMock()
+    db.add = MagicMock()
+    db.add_all = MagicMock()
     result = MagicMock()
     result.scalars.return_value.first.return_value = None
     db.execute.return_value = result

@@ -49,6 +49,29 @@ IS_SQLITE = "sqlite" in _DB_URL.lower() or not _DB_URL
 IS_POSTGRES = "postgres" in _DB_URL.lower()
 
 
+# ---------------------------------------------------------------------
+# AsyncSession mock compatibility shim
+# ---------------------------------------------------------------------
+# SQLAlchemy AsyncSession.add/add_all/delete are synchronous, but tests
+# routinely mock the session with `AsyncMock()`, which makes those methods
+# return un-awaited coroutines and emit RuntimeWarning. Patch AsyncMock so
+# new instances expose those three names as MagicMock by default; tests
+# that need different behavior can override afterwards.
+import unittest.mock as _stdmock
+
+_orig_AsyncMock_init = _stdmock.AsyncMock.__init__
+
+def _async_mock_init_with_sync_session_methods(self, *args, **kwargs):
+    _orig_AsyncMock_init(self, *args, **kwargs)
+    if "spec" in kwargs or "spec_set" in kwargs or (args and args[0] is not None):
+        return
+    # SQLAlchemy AsyncSession: add/add_all are synchronous (delete is async)
+    self.add = _stdmock.MagicMock()
+    self.add_all = _stdmock.MagicMock()
+
+_stdmock.AsyncMock.__init__ = _async_mock_init_with_sync_session_methods
+
+
 def pytest_configure(config):
     config.addinivalue_line("markers", "requires_postgres: skip when not using PostgreSQL")
 

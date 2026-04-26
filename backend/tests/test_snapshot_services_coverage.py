@@ -26,6 +26,8 @@ import pytest
 def _make_db() -> AsyncMock:
     """Return a minimal AsyncMock that looks like an AsyncSession."""
     db = AsyncMock()
+    db.add = MagicMock()
+    db.add_all = MagicMock()
     result = MagicMock()
     result.scalars.return_value.first.return_value = None
     result.scalars.return_value.all.return_value = []

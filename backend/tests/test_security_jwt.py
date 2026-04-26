@@ -22,8 +22,6 @@ from app.core.security import (
 )
 from app.core.config import settings
 
-pytestmark = pytest.mark.asyncio
-
 
 # -------------------------------------------------------------------
 # ? Positive Tests

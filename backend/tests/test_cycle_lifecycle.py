@@ -35,8 +35,6 @@ os.environ.setdefault("ALLOW_SQLITE_DEMO", "true")
 os.environ.setdefault("JWT_SECRET", "***REDACTED_JWT_SECRET***")
 os.environ.setdefault("ENV", "test")
 
-pytestmark = pytest.mark.asyncio
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CL-1: Position FSM — valid transitions
