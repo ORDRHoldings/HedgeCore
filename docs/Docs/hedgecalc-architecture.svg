@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200">
+  <!-- Pure white background -->
+  <rect width="900" height="1200" fill="#FFFFFF"/>
+  
+  <!-- Title with professional styling -->
+  <text x="450" y="50" font-family="Inter, Roboto, Helvetica Neue" font-weight="700" font-size="26" fill="#0A1F44" text-anchor="middle">HedgeCalc Enterprise Architecture</text>
+  
+  <!-- Clients Layer -->
+  <rect x="300" y="80" width="300" height="60" rx="4" fill="#1C62F2" filter="url(#softShadow)"/>
+  <text x="450" y="116" font-family="Inter, Roboto, Helvetica Neue" font-weight="700" font-size="16" fill="#FFFFFF" text-anchor="middle">Users (Web / Mobile / API Clients)</text>
+  
+  <!-- Shadow filter for boxes -->
+  <defs>
+    <filter id="softShadow" x="-5%" y="-5%" width="110%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+  
+  <!-- Down Arrow -->
+  <path d="M450 140 L450 170" stroke="#0A1F44" stroke-width="2" stroke-dasharray="5,3"/>
+  <polygon points="445,170 455,170 450,180" fill="#0A1F44"/>
+  
+  <!-- CDN Layer -->
+  <rect x="300" y="180" width="300" height="60" rx="4" fill="#1C62F2" filter="url(#softShadow)"/>
+  <text x="450" y="216" font-family="Inter, Roboto, Helvetica Neue" font-weight="700" font-size="16" fill="#FFFFFF" text-anchor="middle">Global CDN (Cloudflare Enterprise)</text>
+  
+  <!-- Down Arrow -->
+  <path d="M450 240 L450 270" stroke="#0A1F44" stroke-width="2" stroke-dasharray="5,3"/>
+  <polygon points="445,270 455,270 450,280" fill="#0A1F44"/>
+  
+  <!-- Load Balancers -->
+  <rect x="250" y="280" width="400" height="60" rx="4" fill="#1C62F2" filter="url(#softShadow)"/>
+  <text x="450" y="316" font-family="Inter, Roboto, Helvetica Neue" font-weight="700" font-size="16" fill="#FFFFFF" text-anchor="middle">Load Balancers (AWS ELB / NGINX)</text>
+  
+  <!-- Down Arrow -->
+  <path d="M450 340 L450 370" stroke="#0A1F44" stroke-width="2" stroke-dasharray="5,3"/>
+  <polygon points="445,370 455,370 450,380" fill="#0A1F44"/>
+  
+  <!-- Microservices Layer -->
+  <rect x="250" y="380" width="400" height="60" rx="4" fill="#1C62F2" filter="url(#softShadow)"/>
+  <text x="450" y="416" font-family="Inter, Roboto, Helvetica Neue" font-weight="700" font-size="16" fill="#FFFFFF" text-anchor="middle">Microservices Layer (Docker + Kubernetes)</text>
+  
+  <!-- Down Arrow -->
+  <path d="M450 440 L450 470" stroke="#0A1F44" stroke-width="2" stroke-dasharray="5,3"/>
+  <polygon points="445,470 455,470 450,480" fill="#0A1F44"/>
+  
+  <!-- Service Mesh -->
+  <rect x="250" y="480" width="400" height="60" rx="4" fill="#1C62F2" filter="url(#softShadow)"/>
+  <text x="450" y="516" font-family="Inter, Roboto, Helvetica Neue" font-weight="700" font-size="16" fill="#FFFFFF" text-anchor="middle">Service Mesh (Istio)</text>
+  
+  <!-- Down Arrow -->
+  <path d="M450 540 L450 570" stroke="#0A1F44" stroke-width="2" stroke-dasharray="5,3"/>
+  <polygon points="445,570 455,570 450,580" fill="#0A1F44"/>
+  
+  <!-- API Gateway -->
+  <rect x="250" y="580" width="400" height="60" rx="4" fill="#1C62F2" filter="url(#softShadow)"/>
+  <text x="450" y="616" font-family="Inter, Roboto, Helvetica Neue" font-weight="700" font-size="16" fill="#FFFFFF" text-anchor="middle">API Gateway (AWS API Gateway + WAF)</text>
+
+  <!-- Down Arrow -->
+  <path d="M450 640 L450 670" stroke="#0A1F44" stroke-width="2" stroke-dasharray="5,3"/>
+  <polygon points="445,670 455,670 450,680" fill="#0A1F44"/>
+  
+  <!-- Core Services Box with clean border -->
+  <rect x="100" y="680" width="700" height="190" rx="6" fill="#FFFFFF" stroke="#D7D9DD" stroke-width="1.5" filter="url(#softShadow)"/>
+  <rect x="100" y="680" width="700" height="36" rx="6" fill="#F0F2F5"/>
+  <text x="450" y="704" font-family="Inter, Roboto, Helvetica Neue" font-weight="700" font-size="18" fill="#0A1F44" text-anchor="middle">Core Services (Modular Microservices)</text>
+  
+  <!-- Core Services -->
+  <rect x="120" y="726" width="180" height="35" rx="3" fill="#EDF2F7"/>
+  <text x="210" y="750" font-family="Inter, Roboto, Helvetica Neue" font-weight="500" font-size="14" fill="#0A1F44" text-anchor="middle">User Management</text>
+  
+  <!-- Highlighted core engine -->
+  <rect x="320" y="726" width="260" height="35" rx="3" fill="#2ECC71" filter="url(#softShadow)"/>
+  <text x="450" y="750" font-family="Inter, Roboto, Helvetica Neue" font-weight="700" font-size="15" fill="#FFFFFF" text-anchor="middle">Hedge Calculation Engine</text>
+  
+  <rect x="600" y="726" width="180" height="35" rx="3" fill="#EDF2F7"/>
+  <text x="690" y="750" font-family="Inter, Roboto, Helvetica Neue" font-weight="500" font-size="14" fill="#0A1F44" text-anchor="middle">Real-Time Data Aggregator</text>
+  
+  <rect x="120" y="771" width="180" height="35" rx="3" fill="#EDF2F7"/>
+  <text x="210" y="795" font-family="Inter, Roboto, Helvetica Neue" font-weight="500" font-size="14" fill="#0A1F44" text-anchor="middle">Portfolio Risk Management</text>
+  
+  <rect x="320" y="771" width="180" height="35" rx="3" fill="#EDF2F7"/>
+  <text x="410" y="795" font-family="Inter, Roboto, Helvetica Neue" font-weight="500" font-size="14" fill="#0A1F44" text-anchor="middle">Alerts & Notifications</text>
+  
+  <rect x="520" y="771" width="180" height="35" rx="3" fill="#EDF2F7"/>
+  <text x="610" y="795" font-family="Inter, Roboto, Helvetica Neue" font-weight="500" font-size="14" fill="#0A1F44" text-anchor="middle">Payment Processing</text>
+  
+  <rect x="320" y="816" width="260" height="35" rx="3" fill="#EDF2F7"/>
+  <text x="450" y="840" font-family="Inter, Roboto, Helvetica Neue" font-weight="500" font-size="14" fill="#0A1F44" text-anchor="middle">Affiliate & Partner Service</text>
+  
+  <!-- Down Arrow -->
+  <path d="M450 870 L450 900" stroke="#0A1F44" stroke-width="2" stroke-dasharray="5,3"/>
+  <polygon points="445,900 455,900 450,910" fill="#0A1F44"/>
+  
+  <!-- Databases Box -->
+  <rect x="100" y="910" width="700" height="160" rx="6" fill="#FFFFFF" stroke="#D7D9DD" stroke-width="1.5" filter="url(#softShadow)"/>
+  <rect x="100" y="910" width="700" height="36" rx="6" fill="#F0F2F5"/>
+  <text x="450" y="934" font-family="Inter, Roboto, Helvetica Neue" font-weight="700" font-size="18" fill="#0A1F44" text-anchor="middle">Databases (Highly available & encrypted)</text>
+  
+  <!-- Database components -->
+  <rect x="120" y="955" width="200" height="35" rx="3" fill="#6EB6FF"/>
+  <text x="220" y="979" font-family="Inter, Roboto, Helvetica Neue" font-weight="500" font-size="14" fill="#0A1F44" text-anchor="middle">PostgreSQL (Transactional)</text>
+  
+  <rect x="340" y="955" width="200" height="35" rx="3" fill="#6EB6FF"/>
+  <text x="440" y="979" font-family="Inter, Roboto, Helvetica Neue" font-weight="500" font-size="14" fill="#0A1F44" text-anchor="middle">Redis (In-memory cache)</text>
+  
+  <rect x="560" y="955" width="220" height="35" rx="3" fill="#6EB6FF"/>
+  <text x="670" y="979" font-family="Inter, Roboto, Helvetica Neue" font-weight="500" font-size="14" fill="#0A1F44" text-anchor="middle">Amazon S3 (Data Lake)</text>
+  
+  <rect x="340" y="1000" width="220" height="35" rx="3" fill="#6EB6FF"/>
+  <text x="450" y="1024" font-family="Inter, Roboto, Helvetica Neue" font-weight="500" font-size="14" fill="#0A1F44" text-anchor="middle">DynamoDB (Session, states)</text>
+  
+  <!-- Down Arrow -->
+  <path d="M450 1070 L450 1100" stroke="#0A1F44" stroke-width="2" stroke-dasharray="5,3"/>
+  <polygon points="445,1100 455,1100 450,1110" fill="#0A1F44"/>
+  
+  <!-- Security Layer -->
+  <rect x="150" y="1110" width="600" height="60" rx="4" fill="#E74C3C" filter="url(#softShadow)"/>
+  <text x="450" y="1146" font-family="Inter, Roboto, Helvetica Neue" font-weight="700" font-size="16" fill="#FFFFFF" text-anchor="middle">Security & Compliance Layer</text>
+  
+  <!-- Shield icon -->
+  <path d="M190 1140 L170 1130 L190 1120 L210 1130 Z" fill="#FFFFFF" opacity="0.8"/>
+  <path d="M190 1140 L190 1120 L210 1130 L190 1140" fill="#FFFFFF" opacity="0.6"/>
+  
+  <!-- Clean professional legend -->
+  <rect x="700" y="38" width="180" height="110" rx="4" fill="#FFFFFF" stroke="#D7D9DD" stroke-width="1"/>
+  
+  <rect x="710" y="50" width="15" height="15" fill="#1C62F2"/>
+  <text x="735" y="62" font-family="Inter, Roboto, Helvetica Neue" font-weight="500" font-size="12" fill="#0A1F44" text-anchor="start">Infrastructure</text>
+  
+  <rect x="710" y="75" width="15" height="15" fill="#2ECC71"/>
+  <text x="735" y="87" font-family="Inter, Roboto, Helvetica Neue" font-weight="500" font-size="12" fill="#0A1F44" text-anchor="start">Core Engine</text>
+  
+  <rect x="710" y="100" width="15" height="15" fill="#6EB6FF"/>
+  <text x="735" y="112" font-family="Inter, Roboto, Helvetica Neue" font-weight="500" font-size="12" fill="#0A1F44" text-anchor="start">Data Storage</text>
+  
+  <rect x="710" y="125" width="15" height="15" fill="#E74C3C"/>
+  <text x="735" y="137" font-family="Inter, Roboto, Helvetica Neue" font-weight="500" font-size="12" fill="#0A1F44" text-anchor="start">Security</text>
+  
+  <!-- Clean footer with logo hint -->
+  <line x1="0" y1="1180" x2="900" y2="1180" stroke="#D7D9DD" stroke-width="1"/>
+  <text x="860" y="1198" font-family="Inter, Roboto, Helvetica Neue" font-weight="500" font-size="14" fill="#0A1F44" text-anchor="end">HedgeCalc © 2025</text>
+  <circle cx="40" cy="1198" r="12" fill="#1C62F2"/>
+  <text x="40" y="1203" font-family="Inter, Roboto, Helvetica Neue" font-weight="700" font-size="12" fill="#FFFFFF" text-anchor="middle">H</text>
+</svg>
