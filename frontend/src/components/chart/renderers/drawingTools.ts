@@ -56,18 +56,6 @@ function drawHandle(ctx: CanvasRenderingContext2D, x: number, y: number, r: numb
   }
 }
 
-function _drawDiamondHandle(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string): void {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(Math.PI / 4);
-  ctx.fillStyle = THEME.canvasBg;
-  ctx.fillRect(-size, -size, size * 2, size * 2);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1;
-  ctx.strokeRect(-size, -size, size * 2, size * 2);
-  ctx.restore();
-}
-
 function drawLabel(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, color: string, bg?: string, fontSize?: number): void {
   const fs = fontSize || 9;
   ctx.font = `${fs}px 'IBM Plex Mono', monospace`;

@@ -233,16 +233,6 @@ function scoreFallback(preset: PolicyPreset, answers: QuestionnaireAnswers): num
   return score;
 }
 
-function _findNearestPreset(answers: QuestionnaireAnswers): PolicyPreset {
-  let best = POLICY_PRESETS[0];
-  let bestScore = -Infinity;
-  for (const preset of POLICY_PRESETS) {
-    const s = scoreFallback(preset, answers);
-    if (s > bestScore) { bestScore = s; best = preset; }
-  }
-  return best;
-}
-
 /** Return top N presets by score */
 function findTopPresets(answers: QuestionnaireAnswers, n: number): PolicyPreset[] {
   return [...POLICY_PRESETS]

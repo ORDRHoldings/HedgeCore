@@ -68,10 +68,6 @@ function getStepMeta(step: string): StepMeta {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-function _shortHash(h: string, n = 16): string {
-  return h ? `${h.slice(0, n)}…` : "—";
-}
-
 function fmtTimestamp(ts: string): string {
   try {
     return ts.replace("T", " ").slice(0, 19) + " UTC";

@@ -28,10 +28,6 @@ function fmt(n: number, dp = 0): string {
   return sign + "$" + abs.toFixed(dp);
 }
 
-function _fmtBps(n: number): string {
-  return n.toFixed(1) + " bps";
-}
-
 // ─── Basel III SA-CCR Model ────────────────────────────────────────────────────
 // Per BCBS 279 (March 2014) and finalized Basel III framework (2017)
 

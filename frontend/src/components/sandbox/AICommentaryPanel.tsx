@@ -31,11 +31,6 @@ function fmtUSD(n: number): string {
   return sign + abs.toFixed(0);
 }
 
-function _fmtPct(n: number, decimals = 1): string {
-  if (!isFinite(n)) return "—";
-  return (n >= 0 ? "+" : "") + (n * 100).toFixed(decimals) + "%";
-}
-
 // ─── Crisis Correlation Reference Table ───────────────────────────────────────
 // Historical correlations during stress episodes — sourced from BIS papers,
 // Longin & Solnik (2001), and IMF WEO data.

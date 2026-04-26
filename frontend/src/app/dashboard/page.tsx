@@ -212,45 +212,6 @@ function SectionHeader({ title, badge }: { title: string; badge?: string }) {
   );
 }
 
-function _FxRateCard({ pair, mid, bid, ask, change }: {
-  pair: string; mid: number; bid: number; ask: number; change: number;
-}) {
-  const isUp = change > 0;
-  const isDown = change < 0;
-  const changeColor = isUp ? T.pass : isDown ? T.fail : T.tertiary;
-  const arrow = isUp ? "\u25B2" : isDown ? "\u25BC" : "\u2014";
-  const pairDisplay = pair.length >= 6 ? `${pair.slice(0, 3)}/${pair.slice(3)}` : pair;
-
-  return (
-    <div style={{
-      background: T.bgPanel, border: `1px solid ${T.rim}`, borderRadius: 4,
-      padding: "16px 14px", display: "flex", flexDirection: "column", gap: 4,
-    }}>
-      <div style={{
-        fontFamily: T.fontMono, fontSize: 11, fontWeight: 600,
-        color: T.secondary, letterSpacing: "0.04em",
-      }}>
-        {pairDisplay}
-      </div>
-      <div style={{
-        fontFamily: T.fontMono, fontSize: 22, fontWeight: 700, color: T.primary,
-      }}>
-        {(mid ?? 0).toFixed((mid ?? 0) >= 100 ? 2 : 4)}
-      </div>
-      <div style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, color: changeColor }}>
-        {arrow} {change > 0 ? "+" : ""}{(change ?? 0).toFixed(2)}%
-      </div>
-      <div style={{
-        display: "flex", gap: 12, fontFamily: T.fontMono,
-        fontSize: 10, color: T.tertiary, marginTop: 2,
-      }}>
-        <span>B {(bid ?? 0).toFixed((bid ?? 0) >= 100 ? 2 : 4)}</span>
-        <span>A {(ask ?? 0).toFixed((ask ?? 0) >= 100 ? 2 : 4)}</span>
-      </div>
-    </div>
-  );
-}
-
 function MacroCard({ label, display, trend, context }: {
   label: string; display: string; trend: string; context: string;
 }) {

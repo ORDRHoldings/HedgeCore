@@ -826,27 +826,6 @@ function EmptyStateView({ onUploadClick }: { onUploadClick: () => void }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Skeleton Loading
-// ═══════════════════════════════════════════════════════════════════════════════
-function _SkeletonRow() {
-  return (
-    <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
-      <td colSpan={12} style={{ padding: "12px 20px" }}>
-        <div
-          style={{
-            height: 20,
-            background: `linear-gradient(90deg, ${S.bgSub} 25%, ${S.bgPanel} 50%, ${S.bgSub} 75%)`,
-            backgroundSize: "200% 100%",
-            animation: "shimmer 1.5s infinite",
-            borderRadius: 2,
-          }}
-        />
-      </td>
-    </tr>
-  );
-}
-
 function SkeletonTable() {
   return (
     <div style={{ padding: "20px" }}>

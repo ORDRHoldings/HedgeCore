@@ -96,32 +96,6 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
-function _Select({
-  value, onChange, options, placeholder,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-  placeholder?: string;
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      style={{
-        fontFamily: S.fontMono, fontSize: 12, color: S.textPrimary,
-        background: S.bgPanel, border: `1px solid ${S.border}`, borderRadius: 3,
-        padding: "6px 8px", width: "100%", outline: "none",
-      }}
-    >
-      {placeholder && <option value="">{placeholder}</option>}
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>{o.label}</option>
-      ))}
-    </select>
-  );
-}
-
 function RadioGroup({
   value, onChange, options,
 }: {

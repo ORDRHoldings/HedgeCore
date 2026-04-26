@@ -60,14 +60,6 @@ function protectionRatio(scenarioResults: ScenarioResults): number | null {
   return (avgHedged - avgUnhedged) / Math.abs(avgUnhedged);
 }
 
-/** Color for a P&L value. */
-function _pnlColor(v: number): string {
-  if (v > 0)   return 'var(--accent-green)';
-  if (v < -500_000) return 'var(--accent-red)';
-  if (v < 0)   return 'var(--accent-amber)';
-  return 'var(--text-tertiary)';
-}
-
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
 function SectionHead({ index, title, badge }: { index: string; title: string; badge?: string }) {
