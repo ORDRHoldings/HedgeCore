@@ -3,9 +3,13 @@
 Sprint: Production Readiness + E2E Coverage
 Status: COMPLETE + SHIPPED (deploys verified live 2026-04-26)
 Started: 2026-04-22
-Updated: 2026-04-26 (audit closeout shipped; live OpenAPI verified; CHANGELOG_AI updated)
+Updated: 2026-04-26 (post-shipment cleanup: dead-code regression closed, full backend suite green at 5264/0)
 
-> Closeout note: The OpenAPI audit follow-up (P0-1…P1-4 + P1-2) shipped to production on 2026-04-26 in 18 commits and was verified against the live OpenAPI schema. P2-1 (81-tag consolidation) deferred to v1.5. GitHub Actions CI is currently blocked at the org level by a billing failure — Render/Vercel deploy webhooks fired independently. See `.claude/state/CHANGELOG_AI.md` 2026-04-26 entry for details.
+> Closeout note: The OpenAPI audit follow-up (P0-1…P1-4 + P1-2) shipped to production on 2026-04-26 in 18 commits and was verified against the live OpenAPI schema. P2-1 (81-tag consolidation) deferred to v1.5. GitHub Actions CI is currently blocked at the org level by a billing failure — Render/Vercel deploy webhooks fired independently.
+>
+> Post-shipment maintenance (commits `eafed78`): the lint drain in `08d87cc` had silently broken 5 of 8 `TestEnhancedReportHash` assertions by underscore-prefixing the helpers; the helpers were never wired into the real export path anyway. Deleted both helpers + all 16 grep-only contract tests; documented v1.5 backlog item if user-visible report fingerprinting is wanted (wire into `@/utils/clientExport`, not `page.tsx`). Full backend suite re-verified: **5264 passed, 0 failed, 158 skipped (PG-only)**.
+>
+> See `.claude/state/CHANGELOG_AI.md` 2026-04-26 entries for details.
 
 ## Goal
 Make ORDR Terminal production-ready with comprehensive E2E test coverage across every section. Fix all known UI/UX bugs, runtime errors, and missing API contracts.
