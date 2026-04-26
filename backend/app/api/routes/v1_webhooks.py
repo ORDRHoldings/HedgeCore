@@ -8,6 +8,7 @@ DELETE /v1/webhooks/{id}    -- soft-delete (sets is_active=False)
 from __future__ import annotations
 
 import uuid
+from enum import Enum
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, field_validator
@@ -24,18 +25,19 @@ from app.services.webhook_service import generate_webhook_secret
 router = APIRouter(prefix="/v1/webhooks", tags=["v1-webhooks"])
 
 
+# WebhookEventType is generated from SUPPORTED_EVENTS so the OpenAPI schema
+# enumerates the allowed event names; SDKs surface them in IntelliSense.
+WebhookEventType = Enum(
+    "WebhookEventType",
+    {name.upper().replace(".", "_"): name for name in sorted(SUPPORTED_EVENTS)},
+    type=str,
+)
+
+
 class WebhookRegisterRequest(BaseModel):
     url: str
     description: str | None = None
-    events: list[str] = []
-
-    @field_validator("events")
-    @classmethod
-    def validate_events(cls, v: list[str]) -> list[str]:
-        invalid = set(v) - SUPPORTED_EVENTS
-        if invalid:
-            raise ValueError(f"Unsupported events: {invalid}")
-        return v
+    events: list[WebhookEventType] = []
 
     @field_validator("url")
     @classmethod
@@ -49,7 +51,7 @@ class WebhookResponse(BaseModel):
     id: str
     url: str
     description: str | None
-    events: list[str]
+    events: list[WebhookEventType]
     is_active: bool
     created_at: str | None
 
@@ -101,7 +103,7 @@ async def register_webhook(
         )
 
     secret = generate_webhook_secret()
-    events_str = ",".join(sorted(body.events)) if body.events else ""
+    events_str = ",".join(sorted(e.value for e in body.events)) if body.events else ""
 
     endpoint = WebhookEndpoint(
         company_id=current_user.company_id,
@@ -134,6 +136,26 @@ async def list_webhooks(
     )
     endpoints = result.scalars().all()
     return [_endpoint_to_response(ep) for ep in endpoints]
+
+
+@router.get("/{webhook_id}", response_model=WebhookResponse)
+async def get_webhook(
+    request: Request,
+    webhook_id: uuid.UUID,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    await _check_permission(db, current_user, "api_keys.manage")
+    result = await db.execute(
+        select(WebhookEndpoint)
+        .where(WebhookEndpoint.id == webhook_id)
+        .where(WebhookEndpoint.company_id == current_user.company_id)
+        .where(WebhookEndpoint.is_active.is_(True))
+    )
+    endpoint = result.scalar_one_or_none()
+    if endpoint is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Webhook endpoint not found.")
+    return _endpoint_to_response(endpoint)
 
 
 @router.delete("/{webhook_id}", status_code=status.HTTP_204_NO_CONTENT)
