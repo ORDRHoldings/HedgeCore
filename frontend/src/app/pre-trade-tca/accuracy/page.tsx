@@ -153,12 +153,12 @@ export default function TcaAccuracyPage() {
           >
             <thead>
               <tr style={{ borderBottom: `1px solid ${S.rim}`, color: S.textSec }}>
-                <th style={{ textAlign: "left", padding: 8 }}>{groupBy.toUpperCase()}</th>
-                <th style={{ textAlign: "right", padding: 8 }}>Samples</th>
-                <th style={{ textAlign: "right", padding: 8 }}>Mean Var</th>
-                <th style={{ textAlign: "right", padding: 8 }}>StdDev</th>
-                <th style={{ textAlign: "right", padding: 8 }}>MAE</th>
-                <th style={{ textAlign: "right", padding: 8 }}>Bias</th>
+                <th scope="col" style={{ textAlign: "left", padding: 8 }}>{groupBy.toUpperCase()}</th>
+                <th scope="col" style={{ textAlign: "right", padding: 8 }}>Samples</th>
+                <th scope="col" style={{ textAlign: "right", padding: 8 }}>Mean Var</th>
+                <th scope="col" style={{ textAlign: "right", padding: 8 }}>StdDev</th>
+                <th scope="col" style={{ textAlign: "right", padding: 8 }}>MAE</th>
+                <th scope="col" style={{ textAlign: "right", padding: 8 }}>Bias</th>
               </tr>
             </thead>
             <tbody>

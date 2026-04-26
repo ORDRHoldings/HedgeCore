@@ -36,6 +36,7 @@ const S = {
   rim: "var(--border-rim)",
   textPri: "var(--text-primary)",
   textSec: "var(--text-secondary)",
+  white: "#fff",
 } as const;
 
 const fmtUsd = (n: number | null | undefined) =>
@@ -412,7 +413,7 @@ export default function CounterpartyDetailPage() {
             style={{
               padding: "8px 14px",
               background: "var(--accent-cyan, #3b82f6)",
-              color: "#fff",
+              color: S.white,
               border: "none",
               fontFamily: S.fontUI,
               fontSize: 11,
@@ -430,7 +431,7 @@ export default function CounterpartyDetailPage() {
             <tr style={{ background: S.bgSub }}>
               {["Type", "Amount", "Currency", "Effective", "Expiry", "Active", ""].map(
                 (h) => (
-                  <th
+                  <th scope="col"
                     key={h}
                     style={{
                       textAlign: "left",
@@ -558,7 +559,7 @@ export default function CounterpartyDetailPage() {
             padding: "8px 16px",
             marginTop: 10,
             background: "var(--accent-cyan, #3b82f6)",
-            color: "#fff",
+            color: S.white,
             border: "none",
             fontFamily: S.fontUI,
             fontSize: 12,
@@ -618,7 +619,7 @@ export default function CounterpartyDetailPage() {
                   <thead>
                     <tr style={{ background: S.bgSub }}>
                       {["Type", "Limit", "Actual", "Utilization", "Severity"].map((h) => (
-                        <th
+                        <th scope="col"
                           key={h}
                           style={{
                             textAlign: "left",

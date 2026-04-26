@@ -1,9 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
-import { S, inputStyle } from "../../types/settings";
+import { S } from "../../types/settings";
 import SectionHeader from "../shared/SectionHeader";
-import Field from "../shared/Field";
 
 interface CompanyInfo {
   id:             string;
@@ -30,11 +29,11 @@ interface Props { token: string; }
 export default function OrganisationTab({ token }: Props) {
   const [company,  setCompany]  = useState<CompanyInfo | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [depts,    setDepts]    = useState<Department[]>([]);
+  const [_depts,   _setDepts]   = useState<Department[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState<string | null>(null);
   const [editing,  setEditing]  = useState(false);
-  const [name,     setName]     = useState("");
+  const [_name,    setName]     = useState("");
   const [govMode,  setGovMode]  = useState<"solo" | "team">("team");
   const [saving,   setSaving]   = useState(false);
   const [toast,    setToast]    = useState<{ kind: "success" | "error"; msg: string } | null>(null);
@@ -185,7 +184,7 @@ export default function OrganisationTab({ token }: Props) {
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={handleSave} disabled={saving} style={{
                   fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em",
-                  color: "#000", background: saving ? S.tertiary : S.cyan, border: "none", borderRadius: 2,
+                  color: S.black, background: saving ? S.tertiary : S.cyan, border: "none", borderRadius: 2,
                   padding: "7px 18px", cursor: saving ? "wait" : "pointer",
                 }}>
                   {saving ? "SAVING…" : "SAVE"}

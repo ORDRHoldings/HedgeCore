@@ -11,11 +11,11 @@ export default function ScenarioTable({ totals }: Props) {
       <table className="table-enterprise">
         <thead>
           <tr>
-            <th>Shock</th>
-            <th className="numeric">Shocked Spot</th>
-            <th className="numeric">Unhedged Portfolio Impact</th>
-            <th className="numeric">Hedge Instrument Impact</th>
-            <th className="numeric">Loss Reduction</th>
+            <th scope="col">Shock</th>
+            <th scope="col" className="numeric">Shocked Spot</th>
+            <th scope="col" className="numeric">Unhedged Portfolio Impact</th>
+            <th scope="col" className="numeric">Hedge Instrument Impact</th>
+            <th scope="col" className="numeric">Loss Reduction</th>
           </tr>
         </thead>
         <tbody>

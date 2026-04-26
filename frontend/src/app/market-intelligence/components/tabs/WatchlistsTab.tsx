@@ -29,7 +29,7 @@ function SyncBadge({ synced }: { synced: boolean | null }) {
   if (synced === null) return null;
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+      fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
       letterSpacing: "0.08em", padding: "2px 6px",
       borderRadius: 3, marginLeft: 8,
       background: synced ? "rgba(5,150,105,0.10)" : "rgba(217,119,6,0.10)",
@@ -272,13 +272,13 @@ export default function WatchlistsTab({ userId, token }: { userId?: string; toke
                 minWidth: 80, padding: "4px 10px",
                 borderRight: `1px solid ${S.rim}`,
               }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.06em" }}>
                   {sym}
                 </span>
                 <span style={{ fontFamily: S.fontMono, fontSize: 14, fontWeight: 700, color: S.primary }}>
                   {fmtPrice(tick.mid)}
                 </span>
-                <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
                   B {fmtPrice(tick.bid)} / A {fmtPrice(tick.ask)}
                 </span>
               </div>

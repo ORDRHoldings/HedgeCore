@@ -93,7 +93,7 @@ function ExecutionProposalsPanel({ token }: { token: string }) {
           <thead>
             <tr style={{ background: "var(--bg-sub)" }}>
               {["PROPOSAL ID", "POSITION", "EXECUTION REF", "AMOUNT USD", "RATE", "PROPOSED BY", "AGE", "ACTION"].map(h => (
-                <th key={h} style={{ padding: "7px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12, letterSpacing: "0.07em", color: "var(--text-tertiary)", textAlign: "left" as const, borderBottom: "1px solid var(--border-rim)" }}>
+                <th scope="col" key={h} style={{ padding: "7px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12, letterSpacing: "0.07em", color: "var(--text-tertiary)", textAlign: "left" as const, borderBottom: "1px solid var(--border-rim)" }}>
                   {h}
                 </th>
               ))}
@@ -199,7 +199,7 @@ function StatusChip({ status }: { status: string }) {
   const color = STATUS_COLORS[status] ?? S.tertiary;
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: "0.5625rem", fontWeight: 700,
+      fontFamily: S.fontMono, fontSize: "0.75rem", fontWeight: 700,
       letterSpacing: "0.08em", padding: "1px 6px",
       border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
       color, background: `color-mix(in srgb, ${color} 10%, transparent)`,
@@ -219,7 +219,7 @@ function IntegrityBar({ score }: { score: number }) {
         <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${score}%`, background: color }} />
       </div>
       <span style={{
-        fontFamily: S.fontMono, fontSize: "0.6875rem", color, fontWeight: 600,
+        fontFamily: S.fontMono, fontSize: "0.75rem", color, fontWeight: 600,
         width: 28, textAlign: "right" as const, flexShrink: 0,
       }}>{score}</span>
     </div>
@@ -237,7 +237,7 @@ function ApprovalDots({ current, required }: { current: number; required: number
           border: `1px solid ${i < current ? S.pass : S.soft}`,
         }} />
       ))}
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary, marginLeft: 2 }}>
+      <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, marginLeft: 2 }}>
         {current}/{required}
       </span>
     </div>
@@ -352,10 +352,10 @@ export default function StagingListPage() {
   function SortHeader({ field, label }: { field: SortField; label: string }) {
     const isActive = sortField === field;
     return (
-      <th
+      <th scope="col"
         onClick={() => toggleSort(field)}
         style={{
-          padding: "8px 12px", fontFamily: S.fontMono, fontSize: "0.5625rem",
+          padding: "8px 12px", fontFamily: S.fontMono, fontSize: "0.75rem",
           letterSpacing: "0.07em", textTransform: "uppercase",
           color: isActive ? S.cyan : S.tertiary,
           textDecoration: isActive ? "underline" : "none",
@@ -380,7 +380,7 @@ export default function StagingListPage() {
           background: toast.ok ? `color-mix(in srgb, ${S.pass} 12%, var(--bg-panel))` : `color-mix(in srgb, ${S.fail} 12%, var(--bg-panel))`,
           border: `1px solid ${toast.ok ? S.pass : S.fail}`,
           borderLeft: `3px solid ${toast.ok ? S.pass : S.fail}`,
-          fontFamily: S.fontMono, fontSize: "0.6875rem", fontWeight: 700,
+          fontFamily: S.fontMono, fontSize: "0.75rem", fontWeight: 700,
           color: toast.ok ? S.pass : S.fail,
           letterSpacing: "0.06em",
           boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
@@ -400,7 +400,7 @@ export default function StagingListPage() {
           }}>
             {pendingCount > 0 && (
               <span style={{
-                fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px",
+                fontFamily: S.fontMono, fontSize: "0.75rem", padding: "1px 6px",
                 border: `1px solid ${S.amber}`, color: S.amber,
                 background: `color-mix(in srgb, ${S.amber} 8%, transparent)`,
                 display: "flex", alignItems: "center", gap: 5,
@@ -413,14 +413,14 @@ export default function StagingListPage() {
             <button
               onClick={() => token && dispatch(listStagingThunk({ token }))}
               style={{
-                fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
+                fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
                 background: "transparent", border: `1px solid ${S.rim}`,
                 padding: "2px 8px", cursor: "pointer", letterSpacing: "0.04em",
               }}
             >
               ↻ REFRESH
             </button>
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{renderTs}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>{renderTs}</span>
           </div>
 
           {/* ── KPI strip ── */}
@@ -440,7 +440,7 @@ export default function StagingListPage() {
                   gap: 2, padding: "0 20px",
                   borderRight: i < arr.length - 1 ? `1px solid ${S.rim}` : "none",
                 }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.09em" }}>{label}</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.09em" }}>{label}</span>
                   <span style={{ fontFamily: S.fontMono, fontSize: "0.875rem", fontWeight: 700, color, lineHeight: 1 }}>{value}</span>
                 </div>
               ))}
@@ -468,13 +468,13 @@ export default function StagingListPage() {
             {/* Filter bar */}
             {!stagingLoading && stagingArtifacts.length > 0 && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary, letterSpacing: "0.07em" }}>FILTER:</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.07em" }}>FILTER:</span>
                 {uniqueStatuses.map(status => (
                   <button
                     key={status}
                     onClick={() => setFilterStatus(status)}
                     style={{
-                      fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.07em", fontWeight: 600,
+                      fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.07em", fontWeight: 600,
                       padding: "2px 8px", borderRadius: 2, cursor: "pointer",
                       border: `1px solid ${filterStatus === status ? S.cyan : S.rim}`,
                       color: filterStatus === status ? S.bgDeep : S.tertiary,
@@ -484,7 +484,7 @@ export default function StagingListPage() {
                     {status}
                   </button>
                 ))}
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary, marginLeft: "auto" }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, marginLeft: "auto" }}>
                   {sorted.length} of {stagingArtifacts.length} artifacts
                 </span>
               </div>
@@ -527,20 +527,20 @@ export default function StagingListPage() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr>
-                      <th style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
+                      <th scope="col" style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
                         STAGING ID
                       </th>
-                      <th style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
+                      <th scope="col" style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
                         PROPOSAL
                       </th>
                       <SortHeader field="status" label="Status" />
                       <SortHeader field="integrity_score" label="Integrity" />
                       <SortHeader field="approvals" label="Approvals" />
-                      <th style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
+                      <th scope="col" style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
                         SUBMITTER
                       </th>
                       <SortHeader field="submitted_at" label="Age" />
-                      <th style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary, textAlign: "right", borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
+                      <th scope="col" style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary, textAlign: "right", borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
                         ACTION
                       </th>
                     </tr>
@@ -563,10 +563,10 @@ export default function StagingListPage() {
                           onMouseEnter={e => (e.currentTarget.style.background = `color-mix(in srgb, ${S.cyan} 5%, transparent)`)}
                           onMouseLeave={e => (e.currentTarget.style.background = isPending ? `color-mix(in srgb, ${S.amber} 3%, transparent)` : i % 2 === 0 ? "transparent" : `color-mix(in srgb, ${S.rim} 8%, transparent)`)}
                         >
-                          <td style={{ padding: "7px 12px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.cyan }}>
+                          <td style={{ padding: "7px 12px", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan }}>
                             {artifact.staging_id.slice(0, 12)}…
                           </td>
-                          <td style={{ padding: "7px 12px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary }}>
+                          <td style={{ padding: "7px 12px", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>
                             {artifact.proposal_id.slice(0, 12)}…
                           </td>
                           <td style={{ padding: "7px 12px" }}>
@@ -575,7 +575,7 @@ export default function StagingListPage() {
                               {artifact.second_approver_required && (
                                 artifact.second_approver_id ? (
                                   <span style={{
-                                    fontFamily: S.fontMono, fontSize: "0.5625rem", fontWeight: 700,
+                                    fontFamily: S.fontMono, fontSize: "0.75rem", fontWeight: 700,
                                     letterSpacing: "0.08em", padding: "1px 6px",
                                     border: `1px solid color-mix(in srgb, ${S.pass} 30%, transparent)`,
                                     color: S.pass,
@@ -586,7 +586,7 @@ export default function StagingListPage() {
                                   </span>
                                 ) : (
                                   <span style={{
-                                    fontFamily: S.fontMono, fontSize: "0.5625rem", fontWeight: 700,
+                                    fontFamily: S.fontMono, fontSize: "0.75rem", fontWeight: 700,
                                     letterSpacing: "0.08em", padding: "1px 6px",
                                     border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`,
                                     color: S.amber,
@@ -608,7 +608,7 @@ export default function StagingListPage() {
                           <td style={{ padding: "7px 12px", fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary }}>
                             {artifact.submitted_by}
                           </td>
-                          <td style={{ padding: "7px 12px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, whiteSpace: "nowrap" as const }}>
+                          <td style={{ padding: "7px 12px", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, whiteSpace: "nowrap" as const }}>
                             {relativeTime(artifact.submitted_at)}
                           </td>
                           <td style={{ padding: "7px 12px", textAlign: "right" }}>
@@ -618,7 +618,7 @@ export default function StagingListPage() {
                                   onClick={e => handleSecondApprove(artifact.proposal_id, e)}
                                   disabled={secondApproving === artifact.proposal_id}
                                   style={{
-                                    fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.07em", fontWeight: 700,
+                                    fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.07em", fontWeight: 700,
                                     padding: "3px 10px",
                                     border: `1px solid ${S.amber}`,
                                     color: secondApproving === artifact.proposal_id ? S.tertiary : S.bgDeep,
@@ -633,7 +633,7 @@ export default function StagingListPage() {
                               <button
                                 onClick={e => { e.stopPropagation(); router.push(`/staging/${artifact.proposal_id}`); }}
                                 style={{
-                                  fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.07em", fontWeight: 700,
+                                  fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.07em", fontWeight: 700,
                                   padding: "3px 10px",
                                   border: `1px solid ${isPending ? S.amber : S.rim}`,
                                   color: isPending ? S.amber : S.tertiary,
@@ -657,14 +657,14 @@ export default function StagingListPage() {
           <footer style={{
             height: isMobile ? "auto" : 32, display: "flex", alignItems: "center", gap: 8, padding: isMobile ? "8px 12px" : "0 20px",
             borderTop: `1px solid ${S.rim}`, background: S.bgPanel,
-            fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
+            fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
             letterSpacing: "0.04em", flexShrink: 0, flexWrap: "wrap",
           }}>
             <span>ORDR Terminal · Staging Queue</span>
             <span style={{ color: S.rim }}>·</span>
             <span>Governance Pipeline v1</span>
             <span style={{ flex: 1 }} />
-            <button onClick={() => router.push("/hedgewiki")} style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary, background: "transparent", border: `1px solid ${S.soft}`, padding: "1px 8px", cursor: "pointer", letterSpacing: "0.04em" }}>
+            <button onClick={() => router.push("/hedgewiki")} style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary, background: "transparent", border: `1px solid ${S.soft}`, padding: "1px 8px", cursor: "pointer", letterSpacing: "0.04em" }}>
               HEDGE WIKI →
             </button>
             <span style={{ color: S.rim }}>·</span>

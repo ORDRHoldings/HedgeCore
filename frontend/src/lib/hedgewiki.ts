@@ -121,7 +121,7 @@ export async function fetchPolicyPresets(): Promise<WikiPolicyPreset[]> {
 export async function fetchComputeEffectiveness(
   periods: Array<{ periodIndex: number; hedgedItemChange: number; instrumentChange: number }>,
   config?: { standard?: string; method?: string },
-): Promise<any | null> {
+): Promise<unknown | null> {
   try {
     const res = await fetch(`${WIKI_BASE}/compute/effectiveness`, {
       method: 'POST',

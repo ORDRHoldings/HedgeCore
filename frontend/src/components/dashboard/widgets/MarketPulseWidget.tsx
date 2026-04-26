@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Radio, X, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { UserContext } from "@/lib/authContext";
 import EmptyState from "@/components/ui/EmptyState";
@@ -171,7 +171,7 @@ function TickerTape({ quotes }: { quotes: QuoteData[] }) {
   );
 }
 
-export default function MarketPulseWidget({ token, user, onRemove }: Props) {
+export default function MarketPulseWidget({ token: _token, user: _user, onRemove }: Props) {
   const [time, setTime] = useState("");
   const [quotes, setQuotes] = useState<QuoteData[]>([]);
   const [loading, setLoading] = useState(true);

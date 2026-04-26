@@ -84,18 +84,19 @@ export default class FeatureErrorBoundary extends Component<Props, State> {
       >
         <div
           style={{
-            fontSize: "0.7rem",
+            fontSize: 12,
             color: "var(--accent-red,#B91C1C)",
             letterSpacing: "0.14em",
             textTransform: "uppercase",
             marginBottom: 12,
+            fontWeight: 700,
           }}
         >
           {this.props.feature} — Error
         </div>
         <div
           style={{
-            fontSize: "0.75rem",
+            fontSize: 13,
             color: "var(--text-secondary)",
             maxWidth: 520,
             textAlign: "center",
@@ -108,7 +109,7 @@ export default class FeatureErrorBoundary extends Component<Props, State> {
         </div>
         <div
           style={{
-            fontSize: "0.65rem",
+            fontSize: 12,
             color: "var(--text-tertiary)",
             fontFamily: "'JetBrains Mono',monospace",
             maxWidth: 600,
@@ -122,7 +123,7 @@ export default class FeatureErrorBoundary extends Component<Props, State> {
         <button
           onClick={this.reset}
           style={{
-            fontSize: "0.7rem",
+            fontSize: 12,
             fontFamily: "'IBM Plex Mono',monospace",
             color: "var(--accent-cyan)",
             background: "transparent",

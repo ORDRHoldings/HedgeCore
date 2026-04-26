@@ -16,6 +16,8 @@ import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
 import { listConnectorRuns } from "../../api/connectorClient";
 import type { ConnectorRun } from "../../api/connectorClient";
+import { dashboardFetch } from "@/lib/api/dashboardClient";
+import { generateOauthState, oauthStateKey } from "@/lib/oauth/sanitize";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { CONNECTORS_HELP } from "@/lib/helpContent";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
@@ -326,8 +328,21 @@ export default function AccountingConnectionPage() {
     setImportResult(null);
     setImportError(null);
 
+    // CSRF protection: generate a one-time state value, persist to sessionStorage
+    // for the callback to verify, and pass to the OAuth start endpoint. The state
+    // round-trips through the IdP and lands back as ?state= on /accounting-oauth-callback.
+    let state: string;
+    try {
+      state = generateOauthState();
+      sessionStorage.setItem(oauthStateKey("accounting", systemId), state);
+    } catch {
+      setConnections(prev => ({ ...prev, [systemId]: "error" }));
+      setConnErrors(prev => ({ ...prev, [systemId]: "Browser secure storage unavailable. Cannot start OAuth flow." }));
+      return;
+    }
+
     const popup = window.open(
-      `/api/accounting-oauth-start?system=${systemId}`,
+      `/api/accounting-oauth-start?system=${systemId}&state=${encodeURIComponent(state)}`,
       "accounting-oauth",
       "width=600,height=700,scrollbars=yes"
     );
@@ -395,13 +410,8 @@ export default function AccountingConnectionPage() {
     setImportResult(null);
     setImportError(null);
     try {
-      const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
-      const res = await fetch(`${BASE}/v1/connectors/accounting/import`, {
-        method:  "POST",
-        headers: {
-          "Content-Type":  "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
+      const res = await dashboardFetch("/v1/connectors/accounting/import", token ?? "", {
+        method: "POST",
         body: JSON.stringify({
           system:         selectedSystem,
           document_types: selectedDocs,
@@ -1215,7 +1225,7 @@ export default function AccountingConnectionPage() {
                   <thead>
                     <tr style={{ background: S.bgSub }}>
                       {["SOURCE FIELD", "ORDR FIELD", "TRANSFORM", "STATUS", ""].map((h, i) => (
-                        <th key={i} style={{
+                        <th scope="col" key={i} style={{
                           padding:       "7px 12px",
                           textAlign:     "left",
                           fontFamily:    S.fontMono,
@@ -1374,7 +1384,7 @@ export default function AccountingConnectionPage() {
                     <thead>
                       <tr style={{ background: S.bgSub }}>
                         {["RUN ID", "TYPE", "STATUS", "ROWS", "OK", "ERR", "STARTED AT"].map(h => (
-                          <th key={h} style={{
+                          <th scope="col" key={h} style={{
                             padding:       "7px 12px",
                             textAlign:     "left",
                             fontFamily:    S.fontMono,

@@ -20,7 +20,11 @@ export interface RunData {
   run_hash: string;
   methodology_version: string;
   created_at?: string;
+  // TODO: define a typed Finding interface; the callers access markup_amount,
+  // severity, etc. as numbers/strings — narrowing them properly is a refactor.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   summary: Record<string, any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   findings: Array<Record<string, any>>;
   markup_by_pair: Record<string, number>;
   markup_by_counterparty: Record<string, number>;
@@ -293,7 +297,7 @@ export async function exportAuditLabPdf(runData: RunData): Promise<void> {
       styles: {
         fillColor: [21, 33, 56],
         textColor: [229, 234, 242],
-        fontSize: 6.5,
+        fontSize: 10.5,
         lineColor: [42, 53, 69],
         lineWidth: 0.1,
         overflow: 'linebreak',
@@ -350,7 +354,7 @@ export async function exportAuditLabPdf(runData: RunData): Promise<void> {
       styles: {
         fillColor: [21, 33, 56],
         textColor: [229, 234, 242],
-        fontSize: 7.5,
+        fontSize: 10.5,
         lineColor: [42, 53, 69],
         lineWidth: 0.1,
       },
@@ -404,7 +408,7 @@ export async function exportAuditLabPdf(runData: RunData): Promise<void> {
       styles: {
         fillColor: [21, 33, 56],
         textColor: [229, 234, 242],
-        fontSize: 7.5,
+        fontSize: 10.5,
         lineColor: [42, 53, 69],
         lineWidth: 0.1,
       },
@@ -673,15 +677,17 @@ export async function exportBoardSummaryPdf(runData: RunData): Promise<void> {
   doc.rect(0, 0, 3, PAGE_H, 'F');
 
   // CONFIDENTIAL watermark (diagonal)
+  // jsPDF GState is exposed on the instance but not in the public typings.
+  const docWithGState = doc as unknown as { GState: new (opts: { opacity: number }) => unknown };
   doc.setTextColor(34, 211, 238);
-  doc.setGState(new (doc as any).GState({ opacity: 0.06 }));
+  doc.setGState(new docWithGState.GState({ opacity: 0.06 }));
   doc.setFontSize(72);
   doc.setFont('helvetica', 'bold');
   doc.text('CONFIDENTIAL', PAGE_W / 2, PAGE_H / 2, {
     align: 'center',
     angle: 45,
   });
-  doc.setGState(new (doc as any).GState({ opacity: 1 }));
+  doc.setGState(new docWithGState.GState({ opacity: 1 }));
 
   // Header
   doc.setTextColor(...TEXT3);
@@ -896,7 +902,7 @@ export async function exportBoardSummaryPdf(runData: RunData): Promise<void> {
       styles: {
         fillColor: [21, 33, 56],
         textColor: [229, 234, 242],
-        fontSize: 7,
+        fontSize: 10,
         lineColor: [42, 53, 69],
         lineWidth: 0.1,
         overflow: 'linebreak',
@@ -918,7 +924,8 @@ export async function exportBoardSummaryPdf(runData: RunData): Promise<void> {
     });
 
     if (findings.length > 10) {
-      const lastY = (doc as any).lastAutoTable?.finalY ?? y + 60;
+      // jspdf-autotable attaches lastAutoTable to the doc instance.
+      const lastY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 60;
       doc.setTextColor(...TEXT3);
       doc.setFontSize(6.5);
       doc.text(`Showing top 10 of ${findings.length} findings. See full Audit Lab report for complete details.`, MARGIN + 6, lastY + 6);
@@ -1019,7 +1026,7 @@ export async function exportBoardSummaryPdf(runData: RunData): Promise<void> {
       styles: {
         fillColor: [21, 33, 56],
         textColor: [229, 234, 242],
-        fontSize: 7,
+        fontSize: 10,
         lineColor: [42, 53, 69],
         lineWidth: 0.1,
       },

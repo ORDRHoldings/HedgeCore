@@ -90,7 +90,7 @@ function Badge({
     <span
       style={{
         fontFamily: S.fontMono,
-        fontSize: "0.5625rem",
+        fontSize: "0.75rem",
         letterSpacing: "0.06em",
         padding: "2px 8px",
         border: `1px solid ${color}`,
@@ -119,7 +119,7 @@ function SectionHeader({
     <div
       style={{
         fontFamily: S.fontMono,
-        fontSize: "0.5rem",
+        fontSize: "0.75rem",
         letterSpacing: "0.1em",
         color: color ?? S.tertiary,
         fontWeight: 700,
@@ -146,7 +146,7 @@ function KernelField({
       <span
         style={{
           fontFamily: S.fontMono,
-          fontSize: "0.5rem",
+          fontSize: "0.75rem",
           letterSpacing: "0.06em",
           color: S.tertiary,
           textTransform: "uppercase",
@@ -196,7 +196,7 @@ function ClassificationRow({
       <span
         style={{
           fontFamily: S.fontMono,
-          fontSize: "0.5625rem",
+          fontSize: "0.75rem",
           color: borderColor,
           fontWeight: 700,
           letterSpacing: "0.04em",
@@ -207,7 +207,7 @@ function ClassificationRow({
       <span
         style={{
           fontFamily: S.fontMono,
-          fontSize: "0.5rem",
+          fontSize: "0.75rem",
           color: S.secondary,
           letterSpacing: "0.03em",
         }}
@@ -217,7 +217,7 @@ function ClassificationRow({
       <span
         style={{
           fontFamily: S.fontMono,
-          fontSize: "0.5rem",
+          fontSize: "0.75rem",
           color: S.tertiary,
           letterSpacing: "0.03em",
           textAlign: "right",
@@ -314,7 +314,7 @@ export default function PolicyDetailDrawer({
             <div
               style={{
                 fontFamily: S.fontMono,
-                fontSize: "0.5625rem",
+                fontSize: "0.75rem",
                 color: S.cyan,
                 letterSpacing: "0.1em",
                 fontWeight: 700,
@@ -339,7 +339,7 @@ export default function PolicyDetailDrawer({
           <span
             style={{
               fontFamily: S.fontMono,
-              fontSize: "0.625rem",
+              fontSize: "0.75rem",
               letterSpacing: "0.06em",
               padding: "2px 8px",
               border: `1px solid ${S.cyan}`,
@@ -405,7 +405,7 @@ export default function PolicyDetailDrawer({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.5rem",
+                    fontSize: "0.75rem",
                     color: S.tertiary,
                     letterSpacing: "0.06em",
                   }}
@@ -415,7 +415,7 @@ export default function PolicyDetailDrawer({
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.6875rem",
+                    fontSize: "0.75rem",
                     color: S.primary,
                     fontWeight: 600,
                     marginTop: 2,
@@ -428,7 +428,7 @@ export default function PolicyDetailDrawer({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.5rem",
+                    fontSize: "0.75rem",
                     color: S.tertiary,
                     letterSpacing: "0.06em",
                   }}
@@ -438,7 +438,7 @@ export default function PolicyDetailDrawer({
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.6875rem",
+                    fontSize: "0.75rem",
                     color: S.primary,
                     fontWeight: 600,
                     marginTop: 2,
@@ -451,7 +451,7 @@ export default function PolicyDetailDrawer({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.5rem",
+                    fontSize: "0.75rem",
                     color: S.tertiary,
                     letterSpacing: "0.06em",
                   }}
@@ -461,7 +461,7 @@ export default function PolicyDetailDrawer({
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.6875rem",
+                    fontSize: "0.75rem",
                     color: S.primary,
                     fontWeight: 600,
                     marginTop: 2,
@@ -483,7 +483,7 @@ export default function PolicyDetailDrawer({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.5rem",
+                    fontSize: "0.75rem",
                     color: S.tertiary,
                     letterSpacing: "0.04em",
                   }}
@@ -497,7 +497,7 @@ export default function PolicyDetailDrawer({
                   <span
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: "0.5rem",
+                      fontSize: "0.75rem",
                       color: S.tertiary,
                       letterSpacing: "0.04em",
                     }}
@@ -546,7 +546,7 @@ export default function PolicyDetailDrawer({
               <span
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: "0.5rem",
+                  fontSize: "0.75rem",
                   color: S.tertiary,
                   letterSpacing: "0.06em",
                 }}
@@ -556,7 +556,7 @@ export default function PolicyDetailDrawer({
               <div
                 style={{
                   fontFamily: S.fontUI,
-                  fontSize: "0.6875rem",
+                  fontSize: "0.75rem",
                   color: S.secondary,
                   marginTop: 2,
                 }}
@@ -630,7 +630,7 @@ export default function PolicyDetailDrawer({
             <div
               style={{
                 fontFamily: S.fontMono,
-                fontSize: "0.5rem",
+                fontSize: "0.75rem",
                 color: S.tertiary,
                 lineHeight: 1.5,
                 letterSpacing: "0.03em",
@@ -672,7 +672,7 @@ export default function PolicyDetailDrawer({
             <div
               style={{
                 fontFamily: S.fontUI,
-                fontSize: "0.6875rem",
+                fontSize: "0.75rem",
                 color: S.secondary,
                 lineHeight: 1.5,
               }}
@@ -708,7 +708,7 @@ export default function PolicyDetailDrawer({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.5rem",
+                    fontSize: "0.75rem",
                     color: S.tertiary,
                     letterSpacing: "0.06em",
                   }}
@@ -718,7 +718,7 @@ export default function PolicyDetailDrawer({
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.6875rem",
+                    fontSize: "0.75rem",
                     color: S.primary,
                     fontWeight: 600,
                     marginTop: 2,
@@ -731,7 +731,7 @@ export default function PolicyDetailDrawer({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.5rem",
+                    fontSize: "0.75rem",
                     color: S.tertiary,
                     letterSpacing: "0.06em",
                   }}
@@ -741,7 +741,7 @@ export default function PolicyDetailDrawer({
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.6875rem",
+                    fontSize: "0.75rem",
                     color: S.primary,
                     fontWeight: 600,
                     marginTop: 2,
@@ -754,7 +754,7 @@ export default function PolicyDetailDrawer({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.5rem",
+                    fontSize: "0.75rem",
                     color: S.tertiary,
                     letterSpacing: "0.06em",
                   }}
@@ -764,7 +764,7 @@ export default function PolicyDetailDrawer({
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.6875rem",
+                    fontSize: "0.75rem",
                     color: S.primary,
                     fontWeight: 600,
                     marginTop: 2,
@@ -777,7 +777,7 @@ export default function PolicyDetailDrawer({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.5rem",
+                    fontSize: "0.75rem",
                     color: S.tertiary,
                     letterSpacing: "0.06em",
                   }}
@@ -787,7 +787,7 @@ export default function PolicyDetailDrawer({
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.6875rem",
+                    fontSize: "0.75rem",
                     color: S.primary,
                     fontWeight: 600,
                     marginTop: 2,
@@ -800,7 +800,7 @@ export default function PolicyDetailDrawer({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.5rem",
+                    fontSize: "0.75rem",
                     color: S.tertiary,
                     letterSpacing: "0.06em",
                   }}
@@ -810,7 +810,7 @@ export default function PolicyDetailDrawer({
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.6875rem",
+                    fontSize: "0.75rem",
                     color: S.primary,
                     fontWeight: 600,
                     marginTop: 2,
@@ -844,7 +844,7 @@ export default function PolicyDetailDrawer({
               <span
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: "0.4375rem",
+                  fontSize: "0.75rem",
                   color: S.tertiary,
                   letterSpacing: "0.06em",
                   fontWeight: 700,
@@ -855,7 +855,7 @@ export default function PolicyDetailDrawer({
               <span
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: "0.4375rem",
+                  fontSize: "0.75rem",
                   color: S.tertiary,
                   letterSpacing: "0.06em",
                   fontWeight: 700,
@@ -866,7 +866,7 @@ export default function PolicyDetailDrawer({
               <span
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: "0.4375rem",
+                  fontSize: "0.75rem",
                   color: S.tertiary,
                   letterSpacing: "0.06em",
                   fontWeight: 700,
@@ -923,7 +923,7 @@ export default function PolicyDetailDrawer({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.5rem",
+                    fontSize: "0.75rem",
                     color: S.tertiary,
                     letterSpacing: "0.06em",
                   }}
@@ -933,7 +933,7 @@ export default function PolicyDetailDrawer({
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.6875rem",
+                    fontSize: "0.75rem",
                     color: S.primary,
                     fontWeight: 600,
                     marginTop: 2,
@@ -950,7 +950,7 @@ export default function PolicyDetailDrawer({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.5rem",
+                    fontSize: "0.75rem",
                     color: S.tertiary,
                     letterSpacing: "0.06em",
                   }}
@@ -960,7 +960,7 @@ export default function PolicyDetailDrawer({
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.6875rem",
+                    fontSize: "0.75rem",
                     color: S.primary,
                     fontWeight: 600,
                     marginTop: 2,
@@ -975,7 +975,7 @@ export default function PolicyDetailDrawer({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.5rem",
+                    fontSize: "0.75rem",
                     color: S.tertiary,
                     letterSpacing: "0.06em",
                   }}
@@ -985,7 +985,7 @@ export default function PolicyDetailDrawer({
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.6875rem",
+                    fontSize: "0.75rem",
                     color: S.primary,
                     fontWeight: 600,
                     marginTop: 2,
@@ -998,7 +998,7 @@ export default function PolicyDetailDrawer({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.5rem",
+                    fontSize: "0.75rem",
                     color: S.tertiary,
                     letterSpacing: "0.06em",
                   }}
@@ -1008,7 +1008,7 @@ export default function PolicyDetailDrawer({
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: "0.6875rem",
+                    fontSize: "0.75rem",
                     color: S.primary,
                     fontWeight: 600,
                     marginTop: 2,
@@ -1067,7 +1067,7 @@ export default function PolicyDetailDrawer({
               <span
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: "0.4375rem",
+                  fontSize: "0.75rem",
                   color: S.tertiary,
                   letterSpacing: "0.06em",
                   padding: "2px 6px",
@@ -1100,7 +1100,7 @@ export default function PolicyDetailDrawer({
                   <span
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: "0.5rem",
+                      fontSize: "0.75rem",
                       color: S.tertiary,
                       letterSpacing: "0.04em",
                       width: 70,
@@ -1113,7 +1113,7 @@ export default function PolicyDetailDrawer({
                   <span
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: "0.5625rem",
+                      fontSize: "0.75rem",
                       color: S.primary,
                       fontWeight: 700,
                       width: 40,
@@ -1125,7 +1125,7 @@ export default function PolicyDetailDrawer({
                   <span
                     style={{
                       fontFamily: S.fontUI,
-                      fontSize: "0.5rem",
+                      fontSize: "0.75rem",
                       color: S.tertiary,
                       flex: 1,
                       minWidth: 0,
@@ -1163,7 +1163,7 @@ export default function PolicyDetailDrawer({
                 }
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: "0.5rem",
+                  fontSize: "0.75rem",
                   letterSpacing: "0.06em",
                   padding: "4px 12px",
                   border: `1px solid ${S.amber}`,
@@ -1184,7 +1184,7 @@ export default function PolicyDetailDrawer({
             onClick={onClose}
             style={{
               fontFamily: S.fontMono,
-              fontSize: "0.5rem",
+              fontSize: "0.75rem",
               letterSpacing: "0.06em",
               padding: "4px 12px",
               border: `1px solid ${S.rim}`,

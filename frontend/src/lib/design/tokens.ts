@@ -33,9 +33,23 @@ export const T = {
   fail: "var(--status-fail)",
   warn: "var(--status-warn)",
 
+  // Data signal palette — for KPI deltas, status pills, chart series.
+  // NEVER use these on chrome (sidebar, page header, panel borders) — chrome uses `accent`.
+  signalCyan:  "var(--accent-cyan)",
+  signalAmber: "var(--accent-amber)",
+  signalRed:   "var(--accent-red)",
+
   // Fonts
   fontUI:   "'IBM Plex Sans', var(--font-terminal, sans-serif)",
   fontMono: "'IBM Plex Mono', var(--font-terminal-mono, monospace)",
 } as const;
 
 export type TokenKey = keyof typeof T;
+
+/**
+ * Migration note (ADR-0017):
+ * Per-page `const S = {...}` objects that mirror these keys are deprecated.
+ * Import T directly: `import { T } from "@/lib/design/tokens";`
+ * Use `T.bgPanel`, `T.signalCyan`, etc. The ESLint design-system rule blocks
+ * new hex literals and sub-12px font sizes; this consolidation closes the loop.
+ */

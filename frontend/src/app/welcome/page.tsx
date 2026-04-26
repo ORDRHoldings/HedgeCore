@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 export default function WelcomePage() {
-  const isMobile = useIsMobile();
+  const _isMobile = useIsMobile();
   const router = useRouter();
   useEffect(() => { router.replace("/dashboard"); }, [router]);
   return null;

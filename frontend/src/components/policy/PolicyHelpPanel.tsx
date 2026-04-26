@@ -51,7 +51,7 @@ const SECTION_TABS: { key: HelpSection; label: string }[] = [
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      fontFamily: S.fontMono, fontSize: "0.625rem", letterSpacing: "0.12em",
+      fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.12em",
       color: S.cyan, fontWeight: 700, textTransform: "uppercase",
       borderBottom: `1px solid ${S.border}`, paddingBottom: 6, marginBottom: 10,
     }}>
@@ -78,13 +78,13 @@ function FieldRow({ label, desc, note }: { label: string; desc: string; note?: s
       padding: "6px 0", borderBottom: `1px solid ${S.border}`,
       alignItems: "start",
     }}>
-      <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.cyan, letterSpacing: "0.04em" }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan, letterSpacing: "0.04em" }}>
         {label}
       </div>
       <div>
         <div style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.textSecondary }}>{desc}</div>
         {note && (
-          <div style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.textTertiary, marginTop: 2 }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.textTertiary, marginTop: 2 }}>
             ↳ {note}
           </div>
         )}
@@ -96,7 +96,7 @@ function FieldRow({ label, desc, note }: { label: string; desc: string; note?: s
 function Chip({ color, children }: { color: string; children: React.ReactNode }) {
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: "0.5625rem", padding: "1px 5px",
+      fontFamily: S.fontMono, fontSize: "0.75rem", padding: "1px 5px",
       border: `1px solid ${color}`, color, borderRadius: 2, letterSpacing: "0.06em",
     }}>
       {children}
@@ -112,7 +112,7 @@ function TipRow({ type, text }: { type: "TIP" | "WARN" | "NOTE" | "REG"; text: s
       borderBottom: `1px solid ${S.border}`, alignItems: "flex-start",
     }}>
       <Chip color={color}>{type}</Chip>
-      <span style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.textSecondary, lineHeight: 1.5 }}>
+      <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.textSecondary, lineHeight: 1.5 }}>
         {text}
       </span>
     </div>
@@ -122,7 +122,7 @@ function TipRow({ type, text }: { type: "TIP" | "WARN" | "NOTE" | "REG"; text: s
 function CodeBlock({ children }: { children: React.ReactNode }) {
   return (
     <pre style={{
-      fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.amber,
+      fontFamily: S.fontMono, fontSize: "0.75rem", color: S.amber,
       background: S.bgSub, border: `1px solid ${S.border}`,
       padding: "8px 10px", margin: "8px 0", overflowX: "auto", lineHeight: 1.6,
       whiteSpace: "pre",
@@ -198,7 +198,7 @@ function WizardHelp() {
       <SectionTitle>AI Analysis Flow</SectionTitle>
       <Para>
         On Phase G, clicking <strong>✦ ANALYZE WITH AI →</strong> sends all wizard state to
-        <code style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.amber }}> POST /api/policy-ai </code>
+        <code style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.amber }}> POST /api/policy-ai </code>
         which proxies to the Claude API. The AI returns 3 ranked recommendations.
         The first recommendation is auto-selected to enable immediate saving.
       </Para>
@@ -281,7 +281,7 @@ Practical example (MXN/USD, 1-month):
       <Para>
         IFRS 9 requires an effectiveness ratio between 80% and 125% for hedge accounting
         qualification. The ORDR policy engine enforces this via the constraint:
-        <code style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.amber }}> forecast_ratio ≤ confirmed_ratio</code>.
+        <code style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.amber }}> forecast_ratio ≤ confirmed_ratio</code>.
       </Para>
       <CodeBlock>
 {`Effectiveness = (Change in FV of hedging instrument)
@@ -448,13 +448,13 @@ export default function PolicyHelpPanel({ open, onClose }: HelpPanelProps) {
         }}>
           <div>
             <div style={{
-              fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.12em",
+              fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.12em",
               color: S.cyan, fontWeight: 700, textTransform: "uppercase",
             }}>
               POLICY ENGINE · HELP
             </div>
             <div style={{
-              fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.textSecondary, marginTop: 2,
+              fontFamily: S.fontUI, fontSize: "0.75rem", color: S.textSecondary, marginTop: 2,
             }}>
               Institutional FX Hedge Policy Framework
             </div>
@@ -486,7 +486,7 @@ export default function PolicyHelpPanel({ open, onClose }: HelpPanelProps) {
                 style={{
                   flex: 1,
                   padding: "8px 4px",
-                  fontFamily: S.fontMono, fontSize: "0.5625rem",
+                  fontFamily: S.fontMono, fontSize: "0.75rem",
                   letterSpacing: "0.06em", fontWeight: active ? 700 : 400,
                   color: active ? S.cyan : S.textTertiary,
                   background: active ? S.bgPanel : "transparent",
@@ -513,7 +513,7 @@ export default function PolicyHelpPanel({ open, onClose }: HelpPanelProps) {
         <div style={{
           flexShrink: 0, padding: "8px 16px",
           borderTop: `1px solid ${S.border}`,
-          fontFamily: S.fontMono, fontSize: "0.5625rem",
+          fontFamily: S.fontMono, fontSize: "0.75rem",
           color: S.textTertiary, letterSpacing: "0.06em",
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>

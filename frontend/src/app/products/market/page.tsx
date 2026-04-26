@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   ChevronLeft, ArrowRight, Monitor, BarChart3, TrendingUp, Pencil, Radio, Code2,
-  Brain, MessageSquare, Terminal, Zap, Layers, Eye, Shield, BookOpen, Play,
+  Brain, MessageSquare, Layers, Eye, Shield, Play,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";

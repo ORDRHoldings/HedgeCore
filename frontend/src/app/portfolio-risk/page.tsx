@@ -73,6 +73,14 @@ const C = {
   shadowLift: "0 8px 25px rgba(0,0,0,0.08), 0 4px 10px rgba(0,0,0,0.04)",
   shadowGlow: "0 0 20px rgba(37,99,235,0.1)",
   radius: 10,
+  white: "#fff",
+  redDeep: "#dc2626",
+  amberDeep: "#d97706",
+  greenDeep: "#16a34a",
+  redLite: "#fca5a5",
+  amberLite: "#fcd34d",
+  blueLite: "#93c5fd",
+  greenLite: "#86efac",
 } as const;
 
 /* ═══════════════════════════════════════════════════════
@@ -241,9 +249,9 @@ function pctColor(pct: number): string {
 
 function RegimeBadge({ regime }: { regime: string }) {
   const cfg: Record<string, { color: string; bg: string; glow: string }> = {
-    HIGH: { color: "#fff", bg: "linear-gradient(135deg, #dc2626, #ef4444)", glow: "0 2px 8px rgba(239,68,68,0.3)" },
-    MODERATE: { color: "#fff", bg: "linear-gradient(135deg, #d97706, #f59e0b)", glow: "0 2px 8px rgba(245,158,11,0.3)" },
-    LOW: { color: "#fff", bg: "linear-gradient(135deg, #16a34a, #22c55e)", glow: "0 2px 8px rgba(34,197,94,0.3)" },
+    HIGH: { color: C.white, bg: `linear-gradient(135deg, ${C.redDeep}, ${C.red})`, glow: "0 2px 8px rgba(239,68,68,0.3)" },
+    MODERATE: { color: C.white, bg: `linear-gradient(135deg, ${C.amberDeep}, ${C.amber})`, glow: "0 2px 8px rgba(245,158,11,0.3)" },
+    LOW: { color: C.white, bg: `linear-gradient(135deg, ${C.greenDeep}, ${C.green})`, glow: "0 2px 8px rgba(34,197,94,0.3)" },
     NONE: { color: C.textTertiary, bg: C.borderLight, glow: "none" },
   };
   const { color, bg, glow } = cfg[regime] ?? cfg.NONE;
@@ -440,7 +448,7 @@ function WaterfallChart({ items, height = 140 }: { items: { label: string; value
               boxShadow: `0 2px 8px ${item.color}30`,
               transition: "height 0.6s cubic-bezier(0.4,0,0.2,1)",
             }} />
-            <span style={{ fontFamily: C.fontMono, fontSize: 9, color: C.textTertiary, textAlign: "center", lineHeight: 1.1, maxWidth: 60 }}>
+            <span style={{ fontFamily: C.fontMono, fontSize: 10, color: C.textTertiary, textAlign: "center", lineHeight: 1.1, maxWidth: 60 }}>
               {item.label.split(" ").slice(0, 2).join(" ")}
             </span>
           </div>
@@ -629,7 +637,7 @@ export default function PortfolioRisk() {
         }}>HOME</button>
         <div style={{ width: 1, height: 32, background: "rgba(255,255,255,0.1)" }} />
         <div>
-          <div style={{ fontFamily: C.fontHead, fontSize: 16, fontWeight: 800, color: "#fff", letterSpacing: "-0.01em" }}>
+          <div style={{ fontFamily: C.fontHead, fontSize: 16, fontWeight: 800, color: C.white, letterSpacing: "-0.01em" }}>
             Portfolio Risk Analytics
           </div>
           <div style={{ fontFamily: C.fontMono, fontSize: 11, color: "rgba(255,255,255,0.4)", letterSpacing: "0.06em" }}>
@@ -640,11 +648,11 @@ export default function PortfolioRisk() {
 
         {/* Header KPI strip */}
         {[
-          { label: "VaR 99%", value: fmtM(totalVar99), color: "#fca5a5", spark: sparkVaR },
-          { label: "CVaR 99%", value: fmtM(totalCvar99), color: "#fca5a5" },
-          { label: "GROSS EXP", value: grossExposureUsd > 0 ? fmtM(grossExposureUsd) : "—", color: "#93c5fd", spark: sparkExp },
-          { label: "HEDGE", value: hedgeCoverPct > 0 ? `${hedgeCoverPct.toFixed(0)}%` : "—", color: "#86efac", spark: sparkHedge },
-          { label: "RISK SCORE", value: `${riskScore}`, color: riskScore >= 70 ? "#86efac" : riskScore >= 50 ? "#fcd34d" : "#fca5a5" },
+          { label: "VaR 99%", value: fmtM(totalVar99), color: C.redLite, spark: sparkVaR },
+          { label: "CVaR 99%", value: fmtM(totalCvar99), color: C.redLite },
+          { label: "GROSS EXP", value: grossExposureUsd > 0 ? fmtM(grossExposureUsd) : "—", color: C.blueLite, spark: sparkExp },
+          { label: "HEDGE", value: hedgeCoverPct > 0 ? `${hedgeCoverPct.toFixed(0)}%` : "—", color: C.greenLite, spark: sparkHedge },
+          { label: "RISK SCORE", value: `${riskScore}`, color: riskScore >= 70 ? C.greenLite : riskScore >= 50 ? C.amberLite : C.redLite },
         ].map(({ label, value, color, spark }) => (
           <div key={label} style={{
             padding: "8px 16px", display: "flex", alignItems: "center", gap: 10,
@@ -710,7 +718,7 @@ export default function PortfolioRisk() {
           <span style={{ fontFamily: C.fontMono, fontSize: 12, color: C.amber, fontWeight: 700 }}>NO ACTIVE CALCULATION</span>
           <span style={{ fontFamily: C.fontUI, fontSize: 13, color: C.textSecondary }}>Run the hedge engine from Position Desk to populate live analytics.</span>
           <button onClick={() => router.push("/position-desk")} style={{
-            fontFamily: C.fontMono, fontSize: 11, color: "#fff", background: `linear-gradient(135deg, ${C.amber}, #d97706)`,
+            fontFamily: C.fontMono, fontSize: 11, color: C.white, background: `linear-gradient(135deg, ${C.amber}, ${C.amberDeep})`,
             border: "none", padding: "6px 16px", cursor: "pointer", marginLeft: "auto", borderRadius: 8, fontWeight: 700,
           }}>RUN ENGINE <ChevronRight size={12} style={{ marginLeft: 2, verticalAlign: "middle" }} /></button>
         </div>
@@ -759,7 +767,7 @@ export default function PortfolioRisk() {
                   <thead>
                     <tr style={{ background: C.headerGradient }}>
                       {["DIM", "RISK FACTOR", "VaR 99%", "", "CVaR 99%", "EXPOSURE", "HEDGE", "RESIDUAL", "REGIME"].map(h => (
-                        <th key={h} style={{
+                        <th scope="col" key={h} style={{
                           padding: "10px 12px", fontFamily: C.fontMono, fontSize: 10,
                           letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", fontWeight: 600,
                           textAlign: "left", whiteSpace: "nowrap",
@@ -930,7 +938,7 @@ export default function PortfolioRisk() {
                       <thead>
                         <tr style={{ background: C.headerGradient }}>
                           {["RECORD ID", "ENTITY", "TYPE", "CCY", "AMOUNT", "VALUE DATE", "STATUS", "EXECUTION"].map(h => (
-                            <th key={h} style={{ padding: "10px 14px", fontFamily: C.fontMono, fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left", whiteSpace: "nowrap" }}>{h}</th>
+                            <th scope="col" key={h} style={{ padding: "10px 14px", fontFamily: C.fontMono, fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left", whiteSpace: "nowrap" }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -950,7 +958,7 @@ export default function PortfolioRisk() {
                               <td style={{ padding: "11px 14px", fontFamily: C.fontMono, fontSize: 11, color: C.textTertiary }}>{p.record_id}</td>
                               <td style={{ padding: "11px 14px", fontFamily: C.fontUI, fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{p.entity}</td>
                               <td style={{ padding: "11px 14px" }}>
-                                <span style={{ fontFamily: C.fontMono, fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20, color: "#fff", background: isAR ? `linear-gradient(135deg, ${C.green}, #16a34a)` : `linear-gradient(135deg, ${C.red}, #dc2626)` }}>{p.type}</span>
+                                <span style={{ fontFamily: C.fontMono, fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20, color: C.white, background: isAR ? `linear-gradient(135deg, ${C.green}, ${C.greenDeep})` : `linear-gradient(135deg, ${C.red}, ${C.redDeep})` }}>{p.type}</span>
                               </td>
                               <td style={{ padding: "11px 14px", fontFamily: C.fontMono, fontSize: 13, color: C.textSecondary, fontWeight: 700 }}>{p.currency}</td>
                               <td style={{ padding: "11px 14px", fontFamily: C.fontMono, fontSize: 13, color: isAR ? C.green : C.red, fontWeight: 700 }}>
@@ -976,7 +984,7 @@ export default function PortfolioRisk() {
                   <BarChart3 size={32} color={C.textMuted} style={{ marginBottom: 12 }} />
                   <div style={{ fontFamily: C.fontMono, fontSize: 14, color: C.textTertiary, marginBottom: 12 }}>No positions in ledger</div>
                   <button onClick={() => router.push("/position-desk")} style={{
-                    fontFamily: C.fontMono, fontSize: 12, color: "#fff", background: `linear-gradient(135deg, ${C.blueMid}, ${C.blue})`,
+                    fontFamily: C.fontMono, fontSize: 12, color: C.white, background: `linear-gradient(135deg, ${C.blueMid}, ${C.blue})`,
                     border: "none", padding: "8px 24px", cursor: "pointer", borderRadius: 10, fontWeight: 700,
                   }}>GO TO POSITION DESK</button>
                 </Card>
@@ -1011,7 +1019,7 @@ export default function PortfolioRisk() {
                       <thead>
                         <tr style={{ background: C.headerGradient }}>
                           {["FACTOR", "P&L IMPACT", "SHARE", ""].map(h => (
-                            <th key={h} style={{ padding: "10px 14px", fontFamily: C.fontMono, fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left", letterSpacing: "0.1em" }}>{h}</th>
+                            <th scope="col" key={h} style={{ padding: "10px 14px", fontFamily: C.fontMono, fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left", letterSpacing: "0.1em" }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -1123,7 +1131,7 @@ export default function PortfolioRisk() {
                     <thead>
                       <tr style={{ background: C.headerGradient }}>
                         {["TENOR", "TARGET", "ACTUAL", "COVERAGE DELTA", "EFFECTIVENESS", "IFRS 9"].map(h => (
-                          <th key={h} style={{ padding: "10px 14px", fontFamily: C.fontMono, fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left", letterSpacing: "0.1em" }}>{h}</th>
+                          <th scope="col" key={h} style={{ padding: "10px 14px", fontFamily: C.fontMono, fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left", letterSpacing: "0.1em" }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -1149,7 +1157,7 @@ export default function PortfolioRisk() {
                             <td style={{ padding: "12px 14px" }}>
                               <span style={{
                                 fontFamily: C.fontMono, fontSize: 10, fontWeight: 700, padding: "3px 12px", borderRadius: 20,
-                                color: "#fff", background: h.status === "PASS" ? `linear-gradient(135deg, ${C.green}, #16a34a)` : `linear-gradient(135deg, ${C.red}, #dc2626)`,
+                                color: C.white, background: h.status === "PASS" ? `linear-gradient(135deg, ${C.green}, ${C.greenDeep})` : `linear-gradient(135deg, ${C.red}, ${C.redDeep})`,
                                 boxShadow: h.status === "PASS" ? `0 2px 6px rgba(34,197,94,0.3)` : `0 2px 6px rgba(239,68,68,0.3)`,
                               }}>{h.status}</span>
                             </td>
@@ -1167,8 +1175,8 @@ export default function PortfolioRisk() {
                     <div style={{ fontFamily: C.fontMono, fontSize: 10, color: C.blueMid, fontWeight: 700, letterSpacing: "0.1em", marginBottom: 12 }}>IFRS 9 §6.4.1 QUALIFICATION</div>
                     {["Economic relationship established", "Credit risk non-dominant", "Hedge ratio reflects actual quantities", "Designation documented at inception", "Prospective effectiveness assessed", "Ineffectiveness measured & disclosed"].map((c, i) => (
                       <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: `1px solid ${C.borderLight}` }}>
-                        <div style={{ width: 18, height: 18, borderRadius: "50%", background: `linear-gradient(135deg, ${C.green}, #16a34a)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: `0 2px 6px rgba(34,197,94,0.2)` }}>
-                          <span style={{ color: "#fff", fontSize: 10, fontWeight: 800 }}>✓</span>
+                        <div style={{ width: 18, height: 18, borderRadius: "50%", background: `linear-gradient(135deg, ${C.green}, ${C.greenDeep})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: `0 2px 6px rgba(34,197,94,0.2)` }}>
+                          <span style={{ color: C.white, fontSize: 10, fontWeight: 800 }}>✓</span>
                         </div>
                         <span style={{ fontFamily: C.fontUI, fontSize: 13, color: C.textSecondary }}>{c}</span>
                       </div>
@@ -1215,7 +1223,7 @@ export default function PortfolioRisk() {
                 <AlertTriangle size={32} color={C.textMuted} style={{ marginBottom: 12 }} />
                 <div style={{ fontFamily: C.fontMono, fontSize: 14, color: C.amber, marginBottom: 12 }}>No margin data available</div>
                 <button onClick={() => router.push("/position-desk")} style={{
-                  fontFamily: C.fontMono, fontSize: 12, color: "#fff", background: `linear-gradient(135deg, ${C.blueMid}, ${C.blue})`,
+                  fontFamily: C.fontMono, fontSize: 12, color: C.white, background: `linear-gradient(135deg, ${C.blueMid}, ${C.blue})`,
                   border: "none", padding: "8px 24px", cursor: "pointer", borderRadius: 10, fontWeight: 700,
                 }}>RUN ENGINE</button>
               </Card>
@@ -1233,7 +1241,7 @@ export default function PortfolioRisk() {
                         <thead>
                           <tr style={{ background: C.headerGradient }}>
                             {["BUCKET", "INSTRUMENT", "NOTIONAL", "INITIAL MARGIN", "MAINTENANCE", "STRESS", "FUNDING"].map(h => (
-                              <th key={h} style={{ padding: "10px 14px", fontFamily: C.fontMono, fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left", letterSpacing: "0.1em" }}>{h}</th>
+                              <th scope="col" key={h} style={{ padding: "10px 14px", fontFamily: C.fontMono, fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left", letterSpacing: "0.1em" }}>{h}</th>
                             ))}
                           </tr>
                         </thead>
@@ -1295,7 +1303,7 @@ export default function PortfolioRisk() {
                         <table style={{ width: "100%", borderCollapse: "collapse" }}>
                           <thead><tr style={{ background: C.headerGradient }}>
                             {["INSTRUMENT", "NOTIONAL", "CONC %", "LIMIT", "STATUS"].map(h => (
-                              <th key={h} style={{ padding: "8px 12px", fontFamily: C.fontMono, fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left", letterSpacing: "0.1em" }}>{h}</th>
+                              <th scope="col" key={h} style={{ padding: "8px 12px", fontFamily: C.fontMono, fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left", letterSpacing: "0.1em" }}>{h}</th>
                             ))}
                           </tr></thead>
                           <tbody>
@@ -1313,7 +1321,7 @@ export default function PortfolioRisk() {
                                   </td>
                                   <td style={{ padding: "10px 12px", fontFamily: C.fontMono, fontSize: 12, color: C.textTertiary }}>{(c.limit_pct * 100).toFixed(0)}%</td>
                                   <td style={{ padding: "10px 12px" }}>
-                                    <span style={{ fontFamily: C.fontMono, fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20, color: "#fff", background: sColor === C.green ? `linear-gradient(135deg, ${C.green}, #16a34a)` : sColor === C.amber ? `linear-gradient(135deg, ${C.amber}, #d97706)` : `linear-gradient(135deg, ${C.red}, #dc2626)` }}>{c.status}</span>
+                                    <span style={{ fontFamily: C.fontMono, fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20, color: C.white, background: sColor === C.green ? `linear-gradient(135deg, ${C.green}, ${C.greenDeep})` : sColor === C.amber ? `linear-gradient(135deg, ${C.amber}, ${C.amberDeep})` : `linear-gradient(135deg, ${C.red}, ${C.redDeep})` }}>{c.status}</span>
                                   </td>
                                 </tr>
                               );
@@ -1384,7 +1392,7 @@ export default function PortfolioRisk() {
                           <table style={{ width: "100%", borderCollapse: "collapse" }}>
                             <thead><tr style={{ background: C.headerGradient }}>
                               {["CONF", "HEDGED VaR", "UNHEDGED VaR", "HEDGED CVaR", "UNHEDGED CVaR"].map(h => (
-                                <th key={h} style={{ padding: "8px 10px", fontFamily: C.fontMono, fontSize: 9, color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left", letterSpacing: "0.1em" }}>{h}</th>
+                                <th scope="col" key={h} style={{ padding: "8px 10px", fontFamily: C.fontMono, fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left", letterSpacing: "0.1em" }}>{h}</th>
                               ))}
                             </tr></thead>
                             <tbody>
@@ -1408,7 +1416,7 @@ export default function PortfolioRisk() {
                               { label: "HEDGE BENEFIT", value: `${riskSummary.monte_carlo.hedge_benefit_pct.toFixed(1)}%`, color: C.blueMid },
                             ].map(({ label, value, color }) => (
                               <Card key={label} hover style={{ padding: "10px 12px" }}>
-                                <div style={{ fontFamily: C.fontMono, fontSize: 9, color: C.textTertiary, letterSpacing: "0.08em" }}>{label}</div>
+                                <div style={{ fontFamily: C.fontMono, fontSize: 10, color: C.textTertiary, letterSpacing: "0.08em" }}>{label}</div>
                                 <div style={{ fontFamily: C.fontMono, fontSize: 14, fontWeight: 800, color, marginTop: 2 }}>{value}</div>
                               </Card>
                             ))}
@@ -1469,7 +1477,7 @@ export default function PortfolioRisk() {
         background: C.headerGradient, flexShrink: 0,
         fontFamily: C.fontMono, fontSize: 11, color: "rgba(255,255,255,0.5)",
       }}>
-        <span style={{ color: "#fff", fontWeight: 700, letterSpacing: "0.04em" }}>ORDR-TERMINAL</span>
+        <span style={{ color: C.white, fontWeight: 700, letterSpacing: "0.04em" }}>ORDR-TERMINAL</span>
         <span style={{ color: "rgba(255,255,255,0.2)" }}>|</span>
         <span>Portfolio Risk Analytics</span>
         <span style={{ color: "rgba(255,255,255,0.2)" }}>|</span>

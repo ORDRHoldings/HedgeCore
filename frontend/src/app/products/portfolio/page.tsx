@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import {
-  ChevronLeft, ArrowRight, Layers, PieChart, Target, Globe2, BarChart3, Zap,
-  Shield, Eye,
+  ChevronLeft, ArrowRight, PieChart, Target, Globe2, BarChart3, Zap,
+  Eye,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";

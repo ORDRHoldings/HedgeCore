@@ -103,7 +103,7 @@ export default function ImportHistoryPanel({ token }: Props) {
         background:          S.bgSub,
         border:              `1px solid ${S.border}`,
         fontFamily:          S.fontMono,
-        fontSize:            "0.4375rem",
+        fontSize:            "0.75rem",
         letterSpacing:       "0.08em",
         color:               S.tertiary,
       }}>
@@ -135,7 +135,7 @@ export default function ImportHistoryPanel({ token }: Props) {
               {run.source_filename ?? "—"}
             </span>
             <span style={{
-              fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.04em",
+              fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.04em",
               color: S.tertiary, overflow: "hidden", textOverflow: "ellipsis",
             }}>
               {run.connector_type}
@@ -149,7 +149,7 @@ export default function ImportHistoryPanel({ token }: Props) {
             <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: run.error_count > 0 ? S.red : S.tertiary }}>
               {run.error_count}
             </span>
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: statusColor(run.status) }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: statusColor(run.status) }}>
               {fmtDate(run.started_at)}
             </span>
           </div>
@@ -171,8 +171,8 @@ export default function ImportHistoryPanel({ token }: Props) {
                   ["Completed", run.completed_at ? fmtDate(run.completed_at) : "—"],
                 ].map(([label, val]) => (
                   <div key={label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", letterSpacing: "0.08em", color: S.tertiary }}>{label}</span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary }}>{val}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em", color: S.tertiary }}>{label}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>{val}</span>
                   </div>
                 ))}
               </div>
@@ -180,11 +180,11 @@ export default function ImportHistoryPanel({ token }: Props) {
               {/* Error rows */}
               {run.error_count > 0 && (
                 <>
-                  <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.08em", color: S.tertiary, marginBottom: 6 }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em", color: S.tertiary, marginBottom: 6 }}>
                     ROW ERRORS
                   </div>
                   {detailLoading && (
-                    <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>Loading errors…</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>Loading errors…</div>
                   )}
                   {detail?.errors.map((err, i) => (
                     <div
@@ -193,7 +193,7 @@ export default function ImportHistoryPanel({ token }: Props) {
                         display: "flex", gap: 10, alignItems: "flex-start",
                         padding: "5px 0",
                         borderBottom: `1px solid ${S.borderSoft}`,
-                        fontFamily: S.fontMono, fontSize: "0.6875rem",
+                        fontFamily: S.fontMono, fontSize: "0.75rem",
                       }}
                     >
                       <span style={{ color: S.amber, minWidth: 40 }}>
@@ -208,7 +208,7 @@ export default function ImportHistoryPanel({ token }: Props) {
                 </>
               )}
               {run.error_count === 0 && (
-                <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.green }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.green }}>
                   All {run.total_rows} rows imported successfully.
                 </div>
               )}
@@ -222,7 +222,7 @@ export default function ImportHistoryPanel({ token }: Props) {
         <button
           onClick={load}
           style={{
-            fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em",
+            fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em",
             padding: "3px 10px", border: `1px solid ${S.border}`,
             color: S.tertiary, background: "transparent", cursor: "pointer",
           }}

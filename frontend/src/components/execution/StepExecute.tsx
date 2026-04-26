@@ -24,6 +24,8 @@ const S = {
   amber:     "var(--accent-amber)",
   pass:      "var(--status-pass,#22c55e)",
   fail:      "var(--accent-red,#ef4444)",
+  warnRed:   "#E74C3C",
+  ctaBlue:   "#1C62F2",
 } as const;
 
 /* ── Formatters ────────────────────────────────────────────────────────── */
@@ -267,7 +269,7 @@ export default function StepExecute({
         positionCount: positions.length,
       },
     };
-  }, [aggregatedOrders, totalContracts, runId, positions.length]);
+  }, [aggregatedOrders, totalContracts, runId, positions.length, ibkrAccountId]);
 
   /* ── Download IBKR JSON ────────────────────────────────────────────── */
   const downloadIbkr = useCallback(() => {
@@ -508,9 +510,9 @@ export default function StepExecute({
                 EXECUTION LEGS
               </div>
               {isDefaultIbkrAccount && (
-                <div style={{ margin: "12px 0", padding: "10px 14px", background: "rgba(231,76,60,0.08)", border: "1px solid #E74C3C", borderRadius: 4, fontFamily: S.fontMono, fontSize: 12, color: "#E74C3C", display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ margin: "12px 0", padding: "10px 14px", background: "rgba(231,76,60,0.08)", border: `1px solid ${S.warnRed}`, borderRadius: 4, fontFamily: S.fontMono, fontSize: 12, color: S.warnRed, display: "flex", alignItems: "center", gap: 6 }}>
                   &#9888; IBKR account not configured — JSON/FIX export disabled. Configure in Settings → Execution.
-                  <a href="/settings" style={{ color: "#1C62F2", marginLeft: "auto", textDecoration: "none", fontSize: 12 }}>Open Settings →</a>
+                  <a href="/settings" style={{ color: S.ctaBlue, marginLeft: "auto", textDecoration: "none", fontSize: 12 }}>Open Settings →</a>
                 </div>
               )}
               {aggregatedOrders.map((agg, i) => (
@@ -669,7 +671,7 @@ export default function StepExecute({
                   <thead>
                     <tr style={{ borderBottom: `1px solid ${S.soft}` }}>
                       {["Scenario", "Shocked Spot", "Unhedged P&L", "Hedged P&L", "Hedge Benefit"].map((h) => (
-                        <th key={h} style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary, textTransform: "uppercase" }}>
+                        <th scope="col" key={h} style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary, textTransform: "uppercase" }}>
                           {h}
                         </th>
                       ))}

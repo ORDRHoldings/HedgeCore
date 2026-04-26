@@ -34,6 +34,7 @@ const S = {
   rim: "var(--border-rim)",
   textPri: "var(--text-primary)",
   textSec: "var(--text-secondary)",
+  white: "#fff",
 } as const;
 
 const FRAMEWORKS: SubmissionFramework[] = [
@@ -217,7 +218,7 @@ export default function RegulatorySubmissionsPage() {
         ))}
       </div>
     );
-  }, [stats]);
+  }, [stats, isMobile]);
 
   return (
     <div style={{ padding: 20, fontFamily: S.fontUI, color: S.textPri }}>
@@ -282,7 +283,7 @@ export default function RegulatorySubmissionsPage() {
           onClick={() => setShowCreate(!showCreate)}
           style={{
             background: "var(--accent-cyan, #3b82f6)",
-            color: "#fff",
+            color: S.white,
             border: "none",
             padding: "6px 14px",
             fontFamily: S.fontMono,
@@ -351,7 +352,7 @@ export default function RegulatorySubmissionsPage() {
             disabled={creating}
             style={{
               background: "var(--success, #38a169)",
-              color: "#fff",
+              color: S.white,
               border: "none",
               padding: "8px 16px",
               fontFamily: S.fontMono,
@@ -369,16 +370,16 @@ export default function RegulatorySubmissionsPage() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: 12 }}>
           <thead>
             <tr style={{ background: S.bgDeep, color: S.textSec }}>
-              <th style={thStyle}>Framework</th>
-              <th style={thStyle}>UTI</th>
-              <th style={thStyle}>Status</th>
-              <th style={thStyle}>Run</th>
-              <th style={thStyle}>Doc hash</th>
-              <th style={thStyle}>Created</th>
-              <th style={thStyle}>Submitted</th>
-              <th style={thStyle}>Ack ref</th>
-              <th style={thStyle}>Retries</th>
-              <th style={thStyle}>Actions</th>
+              <th scope="col" style={thStyle}>Framework</th>
+              <th scope="col" style={thStyle}>UTI</th>
+              <th scope="col" style={thStyle}>Status</th>
+              <th scope="col" style={thStyle}>Run</th>
+              <th scope="col" style={thStyle}>Doc hash</th>
+              <th scope="col" style={thStyle}>Created</th>
+              <th scope="col" style={thStyle}>Submitted</th>
+              <th scope="col" style={thStyle}>Ack ref</th>
+              <th scope="col" style={thStyle}>Retries</th>
+              <th scope="col" style={thStyle}>Actions</th>
             </tr>
           </thead>
           <tbody>

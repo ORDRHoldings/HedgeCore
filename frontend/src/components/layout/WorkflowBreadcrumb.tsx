@@ -117,7 +117,7 @@ export default function WorkflowBreadcrumb({ active, pipelinePhase }: Props) {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: 7,
+                  fontSize: 10,
                   fontWeight: 700,
                   color: isDone ? "var(--bg-deep)" : isActive && isLast ? "var(--bg-deep)" : color,
                   flexShrink: 0,

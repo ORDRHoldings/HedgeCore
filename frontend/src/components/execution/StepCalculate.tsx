@@ -214,7 +214,7 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
     }
 
     setRunning(false);
-  }, [currencyResults, policy]);
+  }, [currencyResults, policy, token]);
 
   /* ── Derived aggregations ────────────────────────────────────────── */
   const allDone = currencyResults.length > 0 && currencyResults.every((cr) => cr.status === "done");
@@ -350,7 +350,7 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
                       {fmtDec.format(cr.market.spot_rate)}
                     </span>
                     <span style={{
-                      fontFamily: S.fontMono, fontSize: 7, padding: "1px 4px",
+                      fontFamily: S.fontMono, fontSize: 10, padding: "1px 4px",
                       borderRadius: 2, letterSpacing: "0.06em",
                       background: isLive ? "rgba(34,197,94,0.1)" : "rgba(245,158,11,0.1)",
                       color: isLive ? S.pass : S.amber,

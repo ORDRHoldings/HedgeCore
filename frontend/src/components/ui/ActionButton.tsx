@@ -14,7 +14,7 @@ interface ActionButtonProps {
 const variantStyles: Record<Variant, React.CSSProperties> = {
   primary: {
     background: T.accent,
-    color: "#FFFFFF",
+    color: "var(--text-primary)",
     border: "none",
   },
   secondary: {

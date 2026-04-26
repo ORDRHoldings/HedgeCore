@@ -75,7 +75,7 @@ export default function BucketTicketCard({ bucket, mapping, worstCase, runId, ba
   const maxLossUsd = worstCase ? Math.abs(worstCase.hedge_benefit_usd) : null;
 
   // Simplified header action label
-  const headerAction = isFutures && hasAction
+  const _headerAction = isFutures && hasAction
     ? `${side} ${contracts} ${contracts === 1 ? 'contract' : 'contracts'}`
     : hasAction
       ? getDirectionLabel(bucket.action_mxn, baseCcy)

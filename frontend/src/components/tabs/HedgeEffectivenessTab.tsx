@@ -159,7 +159,7 @@ export default function HedgeEffectivenessTab({
   asOf,
 }: Props) {
   const { totals, per_bucket } = scenarioResults;
-  const { buckets, summary }   = hedgePlan;
+  const { buckets, summary: _summary } = hedgePlan;
 
   const allResults = computeEffectiveness(totals);
 
@@ -181,7 +181,7 @@ export default function HedgeEffectivenessTab({
   const retroPassCount    = retroResults.filter(r => r.qualifies).length;
 
   // Unique buckets from per_bucket
-  const uniqueBuckets = [...new Set(per_bucket.map(r => r.bucket))].sort();
+  const _uniqueBuckets = [...new Set(per_bucket.map(r => r.bucket))].sort();
 
   const nowUtc = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
 
@@ -295,7 +295,7 @@ export default function HedgeEffectivenessTab({
               <thead>
                 <tr className="border-b border-[var(--border-soft)]">
                   {['Sigma', 'ΔFV Hedge Instr.', 'ΔFV Hedged Item', 'Ratio', 'Status'].map(h => (
-                    <th key={h} className="text-left pb-2 pr-4 text-[9px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
+                    <th scope="col" key={h} className="text-left pb-2 pr-4 text-[9px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
                       {h}
                     </th>
                   ))}
@@ -350,7 +350,7 @@ export default function HedgeEffectivenessTab({
             <thead>
               <tr className="border-b border-[var(--border-soft)]">
                 {['Bucket', 'Gross Exposure', 'Net Hedge Position', 'Coverage', 'Target', 'Status', 'Direction'].map(h => (
-                  <th key={h} className="text-left pb-2 pr-4 text-[9px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
+                  <th scope="col" key={h} className="text-left pb-2 pr-4 text-[9px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
                     {h}
                   </th>
                 ))}

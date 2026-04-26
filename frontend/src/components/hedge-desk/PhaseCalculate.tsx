@@ -710,7 +710,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack, i
             style={{
               display: "flex", alignItems: "center", gap: 8,
               fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
-              color: "#ffffff",
+              color: HD.white,
               background: canRun ? HD.royal : HD.slate,
               border: "none", padding: "10px 28px",
               cursor: canRun ? "pointer" : "not-allowed",
@@ -727,7 +727,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack, i
             style={{
               display: "flex", alignItems: "center", gap: 8,
               fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
-              color: "#ffffff",
+              color: HD.white,
               background: HD.royal,
               border: "none", padding: "10px 28px",
               cursor: "pointer",

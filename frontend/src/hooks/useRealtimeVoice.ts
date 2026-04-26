@@ -578,12 +578,10 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
       };
 
       // 4. Add local audio track (mic or transceiver fallback — SDP requires audio section)
-      let hasMic = false;
       try {
         const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         micStreamRef.current = micStream;
         pc.addTrack(micStream.getTracks()[0]);
-        hasMic = true;
         setIsMicOn(true);
       } catch {
         // No mic — add a recvonly audio transceiver so SDP has an audio m= line

@@ -55,7 +55,7 @@ const RATE_LIMIT_LABELS: Record<string, string> = {
 const IN_MEMORY_BADGE = (
   <span style={{
     fontFamily: S.fontMono,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: 700,
     letterSpacing: "0.08em",
     color: S.amber,

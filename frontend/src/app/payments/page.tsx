@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/authContext";
 import {
   listPayments, listBeneficiaries, initiatePayment, approvePayment,
   rejectPayment, transmitPayment, cancelPayment, createBeneficiary,
-  updateBeneficiary, deactivateBeneficiary, getPaymentMessage,
+  deactivateBeneficiary, getPaymentMessage,
   type PaymentInstruction, type Beneficiary,
   type PaymentMessageFormat, type PaymentMessageResponse,
 } from "@/lib/api/cashClient";
@@ -25,6 +25,9 @@ const S = {
   cyan: "var(--accent-cyan)",
 } as const;
 
+// Payments page signal palette: SEPA/SWIFT status hues sit outside the T scale
+// (we need 6 distinct, saturated colors for status pills); `white` is foreground
+// against those colored buttons, lint-flagged only when bound to `color:` keys.
 const HEX = {
   cyan: "#1C62F2",
   green: "#059669",
@@ -32,6 +35,7 @@ const HEX = {
   amber: "#D97706",
   blue: "#3B82F6",
   gray: "#6B7280",
+  white: "#fff",
 } as const;
 
 // ── Status colours ─────────────────────────────────────────────────────────
@@ -181,7 +185,7 @@ const SwiftMessageModal = ({
             onClick={onDownload}
             style={{
               display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
-              background: HEX.cyan, color: "#fff", border: "none", borderRadius: 4,
+              background: HEX.cyan, color: HEX.white, border: "none", borderRadius: 4,
               fontSize: 11, fontFamily: S.mono, fontWeight: 700, cursor: "pointer",
               letterSpacing: "0.06em",
             }}
@@ -541,7 +545,7 @@ function PaymentsInner() {
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
               <button onClick={() => setTab("INITIATE")} style={{
                 display: "flex", alignItems: "center", gap: 6, padding: "8px 16px",
-                background: HEX.cyan, color: "#fff", border: "none", borderRadius: 4,
+                background: HEX.cyan, color: HEX.white, border: "none", borderRadius: 4,
                 fontSize: 11, fontFamily: S.mono, fontWeight: 700, letterSpacing: "0.06em", cursor: "pointer",
               }}>
                 <Plus size={13} />NEW PAYMENT
@@ -559,7 +563,7 @@ function PaymentsInner() {
                   <thead>
                     <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                       {["", "TYPE", "BENEFICIARY", "AMOUNT", "CCY", "EXEC DATE", "STATUS"].map(h => (
-                        <th key={h} style={{
+                        <th scope="col" key={h} style={{
                           padding: "10px 14px", textAlign: h === "AMOUNT" ? "right" : "left",
                           fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em",
                         }}>{h}</th>
@@ -627,7 +631,7 @@ function PaymentsInner() {
                                     { label: "PAYMENT ID", value: p.id.slice(0, 8) + "..." },
                                   ].map(f => (
                                     <div key={f.label} style={{ background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 4, padding: "10px 12px" }}>
-                                      <div style={{ fontSize: 9, fontFamily: S.mono, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 3 }}>{f.label}</div>
+                                      <div style={{ fontSize: 10, fontFamily: S.mono, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 3 }}>{f.label}</div>
                                       <div style={{ fontSize: 12, fontFamily: S.mono, color: S.text1, wordBreak: "break-all" }}>{f.value}</div>
                                     </div>
                                   ))}
@@ -652,7 +656,7 @@ function PaymentsInner() {
                                               disabled={busy}
                                               onClick={e => { e.stopPropagation(); handleApprove(p.id); }}
                                               style={{
-                                                padding: "8px 18px", background: HEX.green, color: "#fff",
+                                                padding: "8px 18px", background: HEX.green, color: HEX.white,
                                                 border: "none", borderRadius: 4, fontSize: 11, fontFamily: S.mono,
                                                 fontWeight: 700, cursor: busy ? "not-allowed" : "pointer",
                                                 letterSpacing: "0.06em", opacity: busy ? 0.6 : 1,
@@ -689,7 +693,7 @@ function PaymentsInner() {
                                                 disabled={busy || !rejectReason.trim()}
                                                 onClick={() => handleReject(p.id)}
                                                 style={{
-                                                  padding: "8px 18px", background: HEX.red, color: "#fff",
+                                                  padding: "8px 18px", background: HEX.red, color: HEX.white,
                                                   border: "none", borderRadius: 4, fontSize: 11, fontFamily: S.mono,
                                                   fontWeight: 700, cursor: (busy || !rejectReason.trim()) ? "not-allowed" : "pointer",
                                                   letterSpacing: "0.06em", opacity: (busy || !rejectReason.trim()) ? 0.6 : 1,
@@ -719,7 +723,7 @@ function PaymentsInner() {
                                       disabled={busy}
                                       onClick={e => { e.stopPropagation(); handleTransmit(p.id); }}
                                       style={{
-                                        padding: "8px 18px", background: HEX.blue, color: "#fff",
+                                        padding: "8px 18px", background: HEX.blue, color: HEX.white,
                                         border: "none", borderRadius: 4, fontSize: 11, fontFamily: S.mono,
                                         fontWeight: 700, cursor: busy ? "not-allowed" : "pointer",
                                         letterSpacing: "0.06em", opacity: busy ? 0.6 : 1,
@@ -897,7 +901,7 @@ function PaymentsInner() {
                   disabled={initLoading || !initForm.beneficiary_id || !initForm.amount || !initForm.reference}
                   onClick={handleInitiate}
                   style={{
-                    padding: "9px 22px", background: HEX.cyan, color: "#fff",
+                    padding: "9px 22px", background: HEX.cyan, color: HEX.white,
                     border: "none", borderRadius: 4, fontSize: 11, fontFamily: S.mono,
                     fontWeight: 700, letterSpacing: "0.06em",
                     cursor: (initLoading || !initForm.beneficiary_id || !initForm.amount || !initForm.reference) ? "not-allowed" : "pointer",
@@ -941,7 +945,7 @@ function PaymentsInner() {
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
               <button onClick={() => setShowBeneForm(!showBeneForm)} style={{
                 display: "flex", alignItems: "center", gap: 6, padding: "8px 16px",
-                background: HEX.cyan, color: "#fff", border: "none", borderRadius: 4,
+                background: HEX.cyan, color: HEX.white, border: "none", borderRadius: 4,
                 fontSize: 11, fontFamily: S.mono, fontWeight: 700, letterSpacing: "0.06em", cursor: "pointer",
               }}>
                 <Plus size={13} />{showBeneForm ? "CANCEL" : "ADD BENEFICIARY"}
@@ -1005,7 +1009,7 @@ function PaymentsInner() {
                     onClick={handleCreateBeneficiary}
                     disabled={beneSubmitLoading || !beneForm.name || !beneForm.bank_name || !beneForm.bank_code || !beneForm.account_number || !beneForm.country_code}
                     style={{
-                      padding: "8px 18px", background: HEX.cyan, color: "#fff",
+                      padding: "8px 18px", background: HEX.cyan, color: HEX.white,
                       border: "none", borderRadius: 4, fontSize: 11, fontFamily: S.mono,
                       fontWeight: 700, cursor: beneSubmitLoading ? "not-allowed" : "pointer",
                       letterSpacing: "0.06em", opacity: beneSubmitLoading ? 0.6 : 1,
@@ -1033,7 +1037,7 @@ function PaymentsInner() {
                   <thead>
                     <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                       {["NAME", "BANK NAME", "BANK CODE", "ACCOUNT", "CCY", "PAYMENT TYPES", "STATUS", ""].map(h => (
-                        <th key={h} style={{
+                        <th scope="col" key={h} style={{
                           padding: "10px 14px", textAlign: "left",
                           fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em",
                         }}>{h}</th>

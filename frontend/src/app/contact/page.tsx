@@ -194,7 +194,7 @@ export default function ContactPage() {
                   background: "#F9FAFB", border: `1px solid ${C.border}`,
                   borderRadius: 6, padding: "16px 24px", display: "inline-block", textAlign: "left",
                 }}>
-                  <div style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>
+                  <div style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>
                     WHAT HAPPENS NEXT
                   </div>
                   {TIMELINE_STEPS.map((s) => (
@@ -210,7 +210,7 @@ export default function ContactPage() {
                 {/* Inquiry type selector */}
                 <div style={{ borderBottom: `1px solid ${C.border}`, padding: "28px 32px" }}>
                   <div style={{
-                    fontFamily: F.mono, fontSize: 9, fontWeight: 600,
+                    fontFamily: F.mono, fontSize: 10, fontWeight: 600,
                     color: C.textMuted, letterSpacing: "0.12em",
                     textTransform: "uppercase", marginBottom: 14,
                   }}>
@@ -254,7 +254,7 @@ export default function ContactPage() {
                     {[["First Name", "text", true], ["Last Name", "text", false]].map(([label, type, req]) => (
                       <div key={label as string}>
                         <label style={{
-                          display: "block", fontFamily: F.mono, fontSize: 9, fontWeight: 600,
+                          display: "block", fontFamily: F.mono, fontSize: 10, fontWeight: 600,
                           color: C.textMuted, letterSpacing: "0.1em",
                           textTransform: "uppercase", marginBottom: 6,
                         }}>{label as string}{req ? " *" : ""}</label>
@@ -275,7 +275,7 @@ export default function ContactPage() {
 
                   {/* Work email */}
                   <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: "block", fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
+                    <label style={{ display: "block", fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
                       WORK EMAIL *
                     </label>
                     <input
@@ -298,7 +298,7 @@ export default function ContactPage() {
                   {/* Company + Role */}
                   <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
                     <div>
-                      <label style={{ display: "block", fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
+                      <label style={{ display: "block", fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
                         COMPANY *
                       </label>
                       <input
@@ -314,7 +314,7 @@ export default function ContactPage() {
                       />
                     </div>
                     <div>
-                      <label style={{ display: "block", fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
+                      <label style={{ display: "block", fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
                         YOUR ROLE *
                       </label>
                       <div style={{ position: "relative" }}>
@@ -350,7 +350,7 @@ export default function ContactPage() {
                   {/* Company size + FX exposure */}
                   <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
                     <div>
-                      <label style={{ display: "block", fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
+                      <label style={{ display: "block", fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
                         COMPANY SIZE
                       </label>
                       <div style={{ position: "relative" }}>
@@ -375,7 +375,7 @@ export default function ContactPage() {
                       </div>
                     </div>
                     <div>
-                      <label style={{ display: "block", fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
+                      <label style={{ display: "block", fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
                         FX EXPOSURE / AUM
                       </label>
                       <div style={{ position: "relative" }}>
@@ -404,7 +404,7 @@ export default function ContactPage() {
 
                   {/* Products of interest */}
                   <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: "block", fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>
+                    <label style={{ display: "block", fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>
                       PRODUCTS OF INTEREST
                     </label>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -431,7 +431,7 @@ export default function ContactPage() {
 
                   {/* Timeline */}
                   <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: "block", fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
+                    <label style={{ display: "block", fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
                       EVALUATION TIMELINE
                     </label>
                     <div style={{ position: "relative" }}>
@@ -456,7 +456,7 @@ export default function ContactPage() {
 
                   {/* Message */}
                   <div style={{ marginBottom: 24 }}>
-                    <label style={{ display: "block", fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
+                    <label style={{ display: "block", fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
                       USE CASE / ADDITIONAL CONTEXT
                     </label>
                     <textarea
@@ -515,7 +515,7 @@ export default function ContactPage() {
                 padding: "16px 20px", borderBottom: `1px solid ${C.border}`,
                 background: "#FAFAFA",
               }}>
-                <div style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+                <div style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase" }}>
                   WHAT HAPPENS NEXT
                 </div>
               </div>
@@ -553,7 +553,7 @@ export default function ContactPage() {
                 padding: "16px 20px", borderBottom: `1px solid ${C.border}`,
                 background: "#FAFAFA",
               }}>
-                <div style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+                <div style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase" }}>
                   DIRECT CHANNELS
                 </div>
               </div>
@@ -573,7 +573,7 @@ export default function ContactPage() {
                       }}>{ch.email}</a>
                     </div>
                     <span style={{
-                      fontFamily: F.mono, fontSize: 9, color: C.textMuted,
+                      fontFamily: F.mono, fontSize: 10, color: C.textMuted,
                       letterSpacing: "0.04em", whiteSpace: "nowrap",
                     }}>{ch.note}</span>
                   </div>
@@ -606,7 +606,7 @@ export default function ContactPage() {
               border: "1px solid #1E3A5F",
               borderRadius: 8, padding: "20px",
             }}>
-              <div style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.35)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 12 }}>
+              <div style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.35)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 12 }}>
                 SYSTEM STATUS
               </div>
               {[
@@ -627,11 +627,11 @@ export default function ContactPage() {
                       boxShadow: "0 0 6px rgba(34,197,94,0.6)",
                       display: "inline-block",
                     }} />
-                    <span style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: "#22C55E", letterSpacing: "0.06em" }}>{s.status}</span>
+                    <span style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: "#22C55E", letterSpacing: "0.06em" }}>{s.status}</span>
                   </span>
                 </div>
               ))}
-              <div style={{ fontFamily: F.mono, fontSize: 9, color: "rgba(255,255,255,0.2)", marginTop: 10 }}>
+              <div style={{ fontFamily: F.mono, fontSize: 10, color: "rgba(255,255,255,0.2)", marginTop: 10 }}>
                 API LATENCY: 12ms · Uptime: 99.97%
               </div>
             </div>
@@ -674,7 +674,7 @@ export default function ContactPage() {
                 <div style={{ fontFamily: F.heading, fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 4 }}>
                   {p.role}
                 </div>
-                <div style={{ fontFamily: F.mono, fontSize: 9, fontWeight: 600, color: C.textMuted, letterSpacing: "0.06em", marginBottom: 10, textTransform: "uppercase" }}>
+                <div style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 600, color: C.textMuted, letterSpacing: "0.06em", marginBottom: 10, textTransform: "uppercase" }}>
                   {p.org}
                 </div>
                 <div style={{ fontFamily: F.ui, fontSize: 12, color: C.textSub, lineHeight: 1.6 }}>

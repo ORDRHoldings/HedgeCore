@@ -224,7 +224,6 @@ export default function TradingViewEmbed({ symbol }: Props) {
 
   // retryKey in deps: manual Retry click triggers a full re-run of this effect.
   // containerId is stable (derived from useId which is mount-stable).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, containerId, retryKey]);
 
   return (

@@ -351,7 +351,7 @@ export default function RiskPulseWidget({ onRemove }: Props) {
               </div>
               <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "flex-end", paddingTop: 4 }}>
                 <Sparkline data={snapshot.sparkline} color={regColor} />
-                <span style={{ fontFamily: S.fontMono, fontSize: 7, color: S.tertiary, marginTop: 3 }}>last {snapshot.sparkline.length} readings</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginTop: 3 }}>last {snapshot.sparkline.length} readings</span>
               </div>
             </div>
 
@@ -363,7 +363,7 @@ export default function RiskPulseWidget({ onRemove }: Props) {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
                 {(["LOW","GUARDED","ELEVATED","HIGH","CRISIS"] as const).map((lbl) => (
-                  <span key={lbl} style={{ fontFamily: S.fontMono, fontSize: 7, color: lbl === regime.toUpperCase() ? regColor : S.tertiary, letterSpacing: "0.04em" }}>{lbl}</span>
+                  <span key={lbl} style={{ fontFamily: S.fontMono, fontSize: 10, color: lbl === regime.toUpperCase() ? regColor : S.tertiary, letterSpacing: "0.04em" }}>{lbl}</span>
                 ))}
               </div>
             </div>
@@ -372,7 +372,7 @@ export default function RiskPulseWidget({ onRemove }: Props) {
             <div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 64px 36px 52px 28px 36px", gap: 4, padding: "4px 0", borderBottom: `1px solid ${S.rim}`, marginBottom: 2 }}>
                 {["FACTOR","VALUE","Z","IMPACT","WT","CTRIB"].map((h) => (
-                  <span key={h} style={{ fontFamily: S.fontMono, fontSize: 7, color: S.tertiary, letterSpacing: "0.08em", textAlign: h === "FACTOR" ? "left" : "right" }}>{h}</span>
+                  <span key={h} style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.08em", textAlign: h === "FACTOR" ? "left" : "right" }}>{h}</span>
                 ))}
               </div>
               {snapshot.factors.map((f) => <FactorRow key={f.id} f={f} regColor={regColor} />)}
@@ -410,7 +410,7 @@ export default function RiskPulseWidget({ onRemove }: Props) {
               <div style={{ borderTop: `1px solid ${S.soft}`, paddingTop: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em" }}>AI INSIGHT</span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 7, color: insight.ai_assisted ? S.cyan : S.tertiary, border: `1px solid currentColor`, padding: "1px 4px", borderRadius: 2 }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 10, color: insight.ai_assisted ? S.cyan : S.tertiary, border: `1px solid currentColor`, padding: "1px 4px", borderRadius: 2 }}>
                     {insight.ai_assisted ? "CLAUDE" : "RULE"}
                   </span>
                 </div>
@@ -437,7 +437,7 @@ export default function RiskPulseWidget({ onRemove }: Props) {
 
             {/* ── Footer ───────────────────────────────────────────────────── */}
             <div style={{ borderTop: `1px solid ${S.soft}`, paddingTop: 8 }}>
-              <p style={{ fontFamily: S.fontMono, fontSize: 7, color: S.tertiary, margin: 0, lineHeight: 1.6 }}>
+              <p style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, margin: 0, lineHeight: 1.6 }}>
                 Score = Σ(weight×impact)×10 · GEO/NEWS 20% + OIL SHOCK 20% + EQUITY 18% + RATES 12% + VOL 12% + CREDIT 10% + USD 8% ·
                 Geo: Claude Haiku (Finnhub general+forex, 5m cache) · Market: Yahoo Finance + Finnhub · 30s snapshot · Not investment advice
               </p>

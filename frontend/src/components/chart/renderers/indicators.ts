@@ -462,7 +462,7 @@ export function drawPivotPoints(
   viewport: Viewport,
   scale: PriceScale = "linear",
 ): void {
-  const { mainTop, mainHeight, chartLeft, chartWidth, priceAxisWidth, canvasWidth } = layout;
+  const { mainTop, mainHeight, chartLeft, chartWidth: _chartWidth, priceAxisWidth, canvasWidth } = layout;
   const { priceMin, priceMax } = viewport;
 
   const lineRight = canvasWidth - priceAxisWidth;

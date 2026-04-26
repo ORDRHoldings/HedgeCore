@@ -4,9 +4,6 @@ import Link from "next/link";
 import {
   ChevronLeft,
   Building2,
-  Cpu,
-  Brain,
-  Layers,
   Mail,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";

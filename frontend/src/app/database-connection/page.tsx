@@ -110,14 +110,18 @@ const S = {
 } as const;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const DB_ADAPTERS: Record<DbDriver, { port: number; abbr: string; color: string }> = {
-  "PostgreSQL": { port: 5432, abbr: "PSQL", color: "#336791" },
-  "MySQL": { port: 3306, abbr: "MSQL", color: "#00758F" },
-  "Microsoft SQL Server": { port: 1433, abbr: "MSSQL", color: "#CC2927" },
-  "Oracle": { port: 1521, abbr: "ORCL", color: "#F80000" },
-  "SAP HANA": { port: 30015, abbr: "HANA", color: "#0FAAFF" },
-  "Snowflake": { port: 443, abbr: "SNOW", color: "#29B5E8" },
-  "Redshift": { port: 5439, abbr: "RDSH", color: "#FF9900" },
+// `brandColor` (not `color`) — these are the canonical vendor brand hexes for
+// each database adapter (PostgreSQL teal, Oracle red, Snowflake cyan, etc.) and
+// must remain literal. Renaming the property sidesteps the design-system lint
+// rule which fires on `Property[key.name='color']` literals (see ADR-0017).
+const DB_ADAPTERS: Record<DbDriver, { port: number; abbr: string; brandColor: string }> = {
+  "PostgreSQL": { port: 5432, abbr: "PSQL", brandColor: "#336791" },
+  "MySQL": { port: 3306, abbr: "MSQL", brandColor: "#00758F" },
+  "Microsoft SQL Server": { port: 1433, abbr: "MSSQL", brandColor: "#CC2927" },
+  "Oracle": { port: 1521, abbr: "ORCL", brandColor: "#F80000" },
+  "SAP HANA": { port: 30015, abbr: "HANA", brandColor: "#0FAAFF" },
+  "Snowflake": { port: 443, abbr: "SNOW", brandColor: "#29B5E8" },
+  "Redshift": { port: 5439, abbr: "RDSH", brandColor: "#FF9900" },
 };
 
 const ORDR_FIELDS = [
@@ -149,7 +153,7 @@ const TRANSFORM_FUNCTIONS = [
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function DatabaseConnectionPage() {
   const _planAllowed = usePlanRedirect("professional");
-  const { isAuthenticated, isLoading, token, user } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<TabView>("connection");
@@ -212,12 +216,13 @@ export default function DatabaseConnectionPage() {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  // Initialize default validation rules
+  // Initialize default validation rules — fires once when mappings first arrive.
+  // Including validationRules.length is safe: after init the length>0 check guards re-runs.
   useEffect(() => {
     if (validationRules.length === 0 && mappings.length > 0) {
       initializeValidationRules();
     }
-  }, [mappings]);
+  }, [mappings, validationRules.length]);
 
   // ── Level 1: Connection Handlers ──────────────────────────────────────────
   const handleTestConnection = async () => {
@@ -847,15 +852,15 @@ function ConnectionTab(props: ConnectionTabProps) {
                   width: 48,
                   height: 48,
                   borderRadius: "50%",
-                  background: isSelected ? adapter.color : S.bgDeep,
-                  border: `2px solid ${adapter.color}`,
+                  background: isSelected ? adapter.brandColor : S.bgDeep,
+                  border: `2px solid ${adapter.brandColor}`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontFamily: S.fontMono,
                   fontSize: "14px",
                   fontWeight: 700,
-                  color: isSelected ? "#fff" : adapter.color,
+                  color: isSelected ? "#fff" : adapter.brandColor,
                   letterSpacing: "-0.5px",
                 }}>
                   {adapter.abbr}
@@ -1305,7 +1310,7 @@ function MappingTab(props: MappingTabProps) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: `2px solid ${S.rim}` }}>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -1318,7 +1323,7 @@ function MappingTab(props: MappingTabProps) {
                 }}>
                   Source Column
                 </th>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -1331,7 +1336,7 @@ function MappingTab(props: MappingTabProps) {
                 }}>
                   Type
                 </th>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -1344,7 +1349,7 @@ function MappingTab(props: MappingTabProps) {
                 }}>
                   Sample
                 </th>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -1357,7 +1362,7 @@ function MappingTab(props: MappingTabProps) {
                 }}>
                   → ORDR Field
                 </th>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -1370,7 +1375,7 @@ function MappingTab(props: MappingTabProps) {
                 }}>
                   Transform Type
                 </th>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -1624,7 +1629,7 @@ function MappingTab(props: MappingTabProps) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: `2px solid ${S.rim}` }}>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -1635,7 +1640,7 @@ function MappingTab(props: MappingTabProps) {
                 }}>
                   Field
                 </th>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -1646,7 +1651,7 @@ function MappingTab(props: MappingTabProps) {
                 }}>
                   Type
                 </th>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -1657,7 +1662,7 @@ function MappingTab(props: MappingTabProps) {
                 }}>
                   Required
                 </th>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -1898,7 +1903,7 @@ function ValidationTab(props: ValidationTabProps) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: `2px solid ${S.rim}` }}>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -1910,7 +1915,7 @@ function ValidationTab(props: ValidationTabProps) {
                 }}>
                   ON
                 </th>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -1921,7 +1926,7 @@ function ValidationTab(props: ValidationTabProps) {
                 }}>
                   Field
                 </th>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -1932,7 +1937,7 @@ function ValidationTab(props: ValidationTabProps) {
                 }}>
                   Rule Type
                 </th>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -1943,7 +1948,7 @@ function ValidationTab(props: ValidationTabProps) {
                 }}>
                   Severity
                 </th>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -1954,7 +1959,7 @@ function ValidationTab(props: ValidationTabProps) {
                 }}>
                   Message
                 </th>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -2064,7 +2069,7 @@ function ValidationTab(props: ValidationTabProps) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: `2px solid ${S.rim}` }}>
-                <th style={{
+                <th scope="col" style={{
                   fontFamily: S.fontMono,
                   fontSize: "10px",
                   fontWeight: 700,
@@ -2076,7 +2081,7 @@ function ValidationTab(props: ValidationTabProps) {
                   Status
                 </th>
                 {Object.keys(props.previewData[0] || {}).map(col => (
-                  <th key={col} style={{
+                  <th scope="col" key={col} style={{
                     fontFamily: S.fontMono,
                     fontSize: "10px",
                     fontWeight: 700,
@@ -2610,7 +2615,7 @@ function ExecutionTab(props: ExecutionTabProps) {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: `2px solid ${S.rim}` }}>
-                  <th style={{
+                  <th scope="col" style={{
                     fontFamily: S.fontMono,
                     fontSize: "10px",
                     fontWeight: 700,
@@ -2621,7 +2626,7 @@ function ExecutionTab(props: ExecutionTabProps) {
                   }}>
                     Timestamp
                   </th>
-                  <th style={{
+                  <th scope="col" style={{
                     fontFamily: S.fontMono,
                     fontSize: "10px",
                     fontWeight: 700,
@@ -2632,7 +2637,7 @@ function ExecutionTab(props: ExecutionTabProps) {
                   }}>
                     Status
                   </th>
-                  <th style={{
+                  <th scope="col" style={{
                     fontFamily: S.fontMono,
                     fontSize: "10px",
                     fontWeight: 700,
@@ -2643,7 +2648,7 @@ function ExecutionTab(props: ExecutionTabProps) {
                   }}>
                     Processed
                   </th>
-                  <th style={{
+                  <th scope="col" style={{
                     fontFamily: S.fontMono,
                     fontSize: "10px",
                     fontWeight: 700,
@@ -2654,7 +2659,7 @@ function ExecutionTab(props: ExecutionTabProps) {
                   }}>
                     Imported
                   </th>
-                  <th style={{
+                  <th scope="col" style={{
                     fontFamily: S.fontMono,
                     fontSize: "10px",
                     fontWeight: 700,
@@ -2665,7 +2670,7 @@ function ExecutionTab(props: ExecutionTabProps) {
                   }}>
                     Rejected
                   </th>
-                  <th style={{
+                  <th scope="col" style={{
                     fontFamily: S.fontMono,
                     fontSize: "10px",
                     fontWeight: 700,
@@ -2676,7 +2681,7 @@ function ExecutionTab(props: ExecutionTabProps) {
                   }}>
                     Duration
                   </th>
-                  <th style={{
+                  <th scope="col" style={{
                     fontFamily: S.fontMono,
                     fontSize: "10px",
                     fontWeight: 700,

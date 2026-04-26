@@ -134,7 +134,7 @@ function InlineDatePicker({
           userSelect: "none", transition: "border-color 0.1s",
         }}>
         <span>{value || "YYYY-MM-DD"}</span>
-        <span style={{ fontSize: "0.625rem", color: S.tertiary, marginLeft: 4 }}>{open ? "\u25B2" : "\u25BC"}</span>
+        <span style={{ fontSize: "0.75rem", color: S.tertiary, marginLeft: 4 }}>{open ? "\u25B2" : "\u25BC"}</span>
       </div>
       {open && (
         <div style={{
@@ -144,13 +144,13 @@ function InlineDatePicker({
           padding: "10px 10px 8px", fontFamily: S.fontMono,
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <button onClick={prevMonth} style={{ background: "none", border: `1px solid ${S.rim}`, color: S.secondary, cursor: "pointer", padding: "2px 7px", fontFamily: "inherit", fontSize: "0.6875rem" }}>{"\u25C4"}</button>
+            <button onClick={prevMonth} style={{ background: "none", border: `1px solid ${S.rim}`, color: S.secondary, cursor: "pointer", padding: "2px 7px", fontFamily: "inherit", fontSize: "0.75rem" }}>{"\u25C4"}</button>
             <span style={{ fontSize: "0.75rem", fontWeight: 700, color: S.primary, letterSpacing: "0.06em" }}>{MONTHS[viewMonth]} {viewYear}</span>
-            <button onClick={nextMonth} style={{ background: "none", border: `1px solid ${S.rim}`, color: S.secondary, cursor: "pointer", padding: "2px 7px", fontFamily: "inherit", fontSize: "0.6875rem" }}>{"\u25BA"}</button>
+            <button onClick={nextMonth} style={{ background: "none", border: `1px solid ${S.rim}`, color: S.secondary, cursor: "pointer", padding: "2px 7px", fontFamily: "inherit", fontSize: "0.75rem" }}>{"\u25BA"}</button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
             {DAYS.map(d => (
-              <div key={d} style={{ textAlign: "center", fontSize: "0.5625rem", color: S.tertiary, letterSpacing: "0.04em", padding: "2px 0" }}>{d}</div>
+              <div key={d} style={{ textAlign: "center", fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.04em", padding: "2px 0" }}>{d}</div>
             ))}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
@@ -168,7 +168,7 @@ function InlineDatePicker({
               return (
                 <button key={i} onClick={() => !isPast && selectDay(day)}
                   style={{
-                    textAlign: "center", padding: "3px 0", fontSize: "0.6875rem",
+                    textAlign: "center", padding: "3px 0", fontSize: "0.75rem",
                     fontFamily: "inherit", cursor: isPast ? "not-allowed" : "pointer", borderRadius: 2,
                     border: isToday ? `1px solid ${S.amber}` : "1px solid transparent",
                     background: isSelected ? S.cyan : "transparent",
@@ -179,7 +179,7 @@ function InlineDatePicker({
             })}
           </div>
           <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${S.soft}` }}>
-            <div style={{ fontSize: "0.5625rem", color: S.tertiary, letterSpacing: "0.08em", marginBottom: 4 }}>TYPE DATE</div>
+            <div style={{ fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.08em", marginBottom: 4 }}>TYPE DATE</div>
             <input type="text" value={textInput}
               onChange={e => setTextInput(e.target.value)}
               onBlur={handleTextBlur}
@@ -307,7 +307,7 @@ export default function AddPositionDrawer({ open, onClose, token, onSuccess }: P
     display: "flex", flexDirection: "column", gap: 6,
   };
   const labelStyle: React.CSSProperties = {
-    fontFamily: S.fontMono, fontSize: "0.625rem",
+    fontFamily: S.fontMono, fontSize: "0.75rem",
     letterSpacing: "0.12em", color: S.tertiary,
     textTransform: "uppercase",
     display: "flex", alignItems: "center", gap: 6,
@@ -428,7 +428,7 @@ export default function AddPositionDrawer({ open, onClose, token, onSuccess }: P
                 <label style={labelStyle}>FLOW TYPE</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, borderBottom: fb("type", false), paddingBottom: 3 }}>
                   <span style={{
-                    fontFamily: S.fontMono, fontSize: "0.5625rem", fontWeight: 700,
+                    fontFamily: S.fontMono, fontSize: "0.75rem", fontWeight: 700,
                     padding: "1px 5px", borderRadius: 2, letterSpacing: "0.06em",
                     background: form.type === "AP"
                       ? `color-mix(in srgb, ${S.red} 12%, transparent)`

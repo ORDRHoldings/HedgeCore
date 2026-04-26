@@ -157,11 +157,11 @@ function EventRow({ event, isLast }: EventRowProps) {
             display: "flex", alignItems: "center", gap: 8, marginTop: 2,
           }}>
             {event.actor_email && (
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.04em" }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.04em" }}>
                 {event.actor_email}
               </span>
             )}
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.04em" }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.04em" }}>
               {new Date(event.created_at).toLocaleString("en-GB", {
                 day: "2-digit", month: "short", year: "numeric",
                 hour: "2-digit", minute: "2-digit", second: "2-digit",
@@ -169,7 +169,7 @@ function EventRow({ event, isLast }: EventRowProps) {
               })}
             </span>
             {hasPayload && (
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.04em" }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.04em" }}>
                 {expanded ? "▲ HIDE" : "▼ DETAILS"}
               </span>
             )}
@@ -178,7 +178,7 @@ function EventRow({ event, isLast }: EventRowProps) {
 
         {/* Event ID chip */}
         <span style={{
-          fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.04em",
+          fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.04em",
           color: S.tertiary, flexShrink: 0, paddingTop: 2,
         }}>
           {event.id.slice(0, 8).toUpperCase()}
@@ -191,7 +191,7 @@ function EventRow({ event, isLast }: EventRowProps) {
           marginTop: 6, marginLeft: 28,
           background: S.bgDeep, border: `1px solid ${S.soft}`,
           padding: "8px 10px",
-          fontFamily: S.fontMono, fontSize: "0.5rem", color: S.secondary, letterSpacing: "0.03em",
+          fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary, letterSpacing: "0.03em",
           whiteSpace: "pre-wrap", wordBreak: "break-all",
         }}>
           {JSON.stringify(event.payload, null, 2)}
@@ -211,7 +211,7 @@ interface VerifyBadgeProps {
 function VerifyBadge({ state, detail }: VerifyBadgeProps) {
   if (state === "idle") return null;
   if (state === "verifying") return (
-    <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.cyan, letterSpacing: "0.06em" }}>
+    <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan, letterSpacing: "0.06em" }}>
       VERIFYING…
     </span>
   );
@@ -219,7 +219,7 @@ function VerifyBadge({ state, detail }: VerifyBadgeProps) {
     <span
       data-testid="chain-verify-pass"
       style={{
-        fontFamily: S.fontMono, fontSize: "0.5rem", color: S.green,
+        fontFamily: S.fontMono, fontSize: "0.75rem", color: S.green,
         letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 4,
       }}
     >
@@ -231,7 +231,7 @@ function VerifyBadge({ state, detail }: VerifyBadgeProps) {
     <span
       data-testid="chain-verify-fail"
       style={{
-        fontFamily: S.fontMono, fontSize: "0.5rem", color: S.red,
+        fontFamily: S.fontMono, fontSize: "0.75rem", color: S.red,
         letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 4,
       }}
     >
@@ -244,7 +244,7 @@ function VerifyBadge({ state, detail }: VerifyBadgeProps) {
     <span
       data-testid="chain-verify-error"
       style={{
-        fontFamily: S.fontMono, fontSize: "0.5rem", color: S.amber,
+        fontFamily: S.fontMono, fontSize: "0.75rem", color: S.amber,
         letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 4,
       }}
     >
@@ -349,7 +349,7 @@ export default function PolicyRevisionDrawer({
         }}>
           <Clock size={14} color={S.amber} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.amber, letterSpacing: "0.1em", fontWeight: 700 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.amber, letterSpacing: "0.1em", fontWeight: 700 }}>
               AUDIT HISTORY
             </div>
             <div style={{
@@ -358,7 +358,7 @@ export default function PolicyRevisionDrawer({
             }}>
               {templateName}
             </div>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.05em" }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.05em" }}>
               {templateCode} · {templateId.slice(0, 8).toUpperCase()}
             </div>
           </div>
@@ -379,7 +379,7 @@ export default function PolicyRevisionDrawer({
         <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
           {loading && (
             <div style={{
-              fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.cyan,
+              fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan,
               letterSpacing: "0.08em", padding: "20px 0",
             }}>
               LOADING AUDIT TRAIL…
@@ -397,14 +397,14 @@ export default function PolicyRevisionDrawer({
                 display: "flex", alignItems: "center", gap: 8,
               }}
             >
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.amber, flex: 1 }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.amber, flex: 1 }}>
                 ⚠ {error}
               </span>
               <button
                 type="button"
                 onClick={load}
                 style={{
-                  fontFamily: S.fontMono, fontSize: "0.5rem", letterSpacing: "0.06em",
+                  fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em",
                   padding: "2px 8px", border: `1px solid ${S.amber}`,
                   color: S.amber, background: "transparent", cursor: "pointer",
                 }}
@@ -416,7 +416,7 @@ export default function PolicyRevisionDrawer({
 
           {!loading && !error && events.length === 0 && (
             <div style={{
-              fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary,
+              fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
               letterSpacing: "0.06em", padding: "20px 0",
             }}>
               NO AUDIT EVENTS FOUND FOR THIS TEMPLATE
@@ -432,7 +432,7 @@ export default function PolicyRevisionDrawer({
                 border: `1px solid color-mix(in srgb, ${S.cyan} 20%, ${S.rim})`,
                 background: `color-mix(in srgb, ${S.cyan} 4%, ${S.bgPanel})`,
               }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.cyan, letterSpacing: "0.08em" }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan, letterSpacing: "0.08em" }}>
                   {events.length} EVENT{events.length !== 1 ? "S" : ""} · MOST RECENT FIRST · CLICK ROW FOR PAYLOAD
                 </span>
               </div>
@@ -462,7 +462,7 @@ export default function PolicyRevisionDrawer({
               onClick={handleVerify}
               disabled={verifyState === "verifying"}
               style={{
-                fontFamily: S.fontMono, fontSize: "0.5rem", letterSpacing: "0.06em",
+                fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em",
                 padding: "3px 10px",
                 border: `1px solid ${verifyState === "pass" ? S.green : verifyState === "fail" ? S.red : S.rim}`,
                 color: verifyState === "pass" ? S.green : verifyState === "fail" ? S.red : S.secondary,
@@ -480,14 +480,14 @@ export default function PolicyRevisionDrawer({
 
           {/* Bottom row: worm label + close */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.05em" }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.05em" }}>
               WORM-PROTECTED · HASH-CHAINED · TAMPER-EVIDENT
             </span>
             <button
               type="button"
               onClick={onClose}
               style={{
-                fontFamily: S.fontMono, fontSize: "0.5rem", letterSpacing: "0.06em",
+                fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em",
                 padding: "3px 12px", border: `1px solid ${S.rim}`,
                 color: S.tertiary, background: "transparent", cursor: "pointer",
               }}

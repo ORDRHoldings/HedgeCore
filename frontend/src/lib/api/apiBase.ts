@@ -27,3 +27,36 @@ export function getApiBase(): string {
 
 /** Resolved once at module load. */
 export const API_BASE = getApiBase();
+
+/**
+ * Authentication-less fetch for endpoints called before a JWT exists
+ * (signup, /v1/mfa/verify with provisional token in header, public health).
+ *
+ * Same URL resolution + 15 s timeout as dashboardFetch but no Bearer/CSRF
+ * injection. Caller is responsible for any required auth headers.
+ */
+const PUBLIC_DEFAULT_TIMEOUT_MS = 15_000;
+
+function publicWithTimeout(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal {
+  const t = AbortSignal.timeout(timeoutMs);
+  if (!signal) return t;
+  type AnyFn = (sigs: AbortSignal[]) => AbortSignal;
+  const any = (AbortSignal as unknown as { any?: AnyFn }).any;
+  return any ? any([signal, t]) : signal;
+}
+
+export async function publicFetch(
+  path: string,
+  options?: RequestInit,
+): Promise<Response> {
+  const url = `${API_BASE}${path}`;
+  const isFormData = options?.body instanceof FormData;
+  return fetch(url, {
+    ...options,
+    signal: publicWithTimeout(options?.signal ?? undefined, PUBLIC_DEFAULT_TIMEOUT_MS),
+    headers: {
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      ...(options?.headers ?? {}),
+    },
+  });
+}

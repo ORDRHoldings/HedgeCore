@@ -26,6 +26,7 @@ const HD = {
   cyan:    "var(--accent-cyan)",
   amber:   "var(--accent-amber)",
   rim:     "var(--border-rim)",
+  white:   "#fff",
 } as const;
 
 const PHASES = ["SELECT", "ASSIGN POLICY", "CALCULATE", "RISK", "REVIEW", "EXECUTE", "COMPLETE"];
@@ -95,7 +96,7 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
       });
     }, 500);
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-  }, [phase, selectedPositions.length, runId, proposalIds.length, draftChecked, userId, governanceMode, policyInstanceId, riskVerdict, riskDecisionHash, selectedPositions]);
+  }, [phase, selectedPositions.length, runId, proposalIds, draftChecked, userId, governanceMode, policyInstanceId, riskVerdict, riskDecisionHash, selectedPositions]);
 
   const advance = useCallback(() => {
     setPhase(p => {
@@ -195,7 +196,7 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
                 }}
                 style={{
                   fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
-                  color: "#fff", background: HD.cyan,
+                  color: HD.white, background: HD.cyan,
                   border: `1px solid ${HD.cyan}`, padding: "7px 16px",
                   cursor: "pointer", borderRadius: 2,
                 }}

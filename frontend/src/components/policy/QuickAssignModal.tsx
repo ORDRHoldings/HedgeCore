@@ -159,10 +159,10 @@ export default function QuickAssignModal({
         }}>
           <Zap size={15} color={S.amber} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.amber, letterSpacing: '0.12em', fontWeight: 700 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.amber, letterSpacing: '0.12em', fontWeight: 700 }}>
               QUICK ASSIGN POLICY
             </div>
-            <div style={{ fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.secondary, marginTop: 2 }}>
+            <div style={{ fontFamily: S.fontUI, fontSize: '0.75rem', color: S.secondary, marginTop: 2 }}>
               {assignablePositions.length} position{assignablePositions.length !== 1 ? 's' : ''} selected
               {positions.length !== assignablePositions.length && (
                 <span style={{ color: S.tertiary }}>
@@ -192,10 +192,10 @@ export default function QuickAssignModal({
             }}>
               <Check size={11} color={S.cyan} />
               <div>
-                <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.cyan, letterSpacing: '0.1em' }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.cyan, letterSpacing: '0.1em' }}>
                   ACTIVE POLICY
                 </span>
-                <span style={{ fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.primary, marginLeft: 8 }}>
+                <span style={{ fontFamily: S.fontUI, fontSize: '0.75rem', color: S.primary, marginLeft: 8 }}>
                   [{activePolicyInstance.template.short_name}] {activePolicyInstance.template.name}
                 </span>
               </div>
@@ -211,7 +211,7 @@ export default function QuickAssignModal({
               display: 'flex', alignItems: 'center', gap: 8,
             }}>
               <AlertTriangle size={11} color={S.amber} />
-              <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.amber, letterSpacing: '0.06em' }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.amber, letterSpacing: '0.06em' }}>
                 NO ACTIVE POLICY — activate one on the Policy Library first
               </span>
             </div>
@@ -241,7 +241,7 @@ export default function QuickAssignModal({
               <>
                 <div style={{
                   padding: '4px 10px',
-                  fontFamily: S.fontMono, fontSize: '0.4625rem',
+                  fontFamily: S.fontMono, fontSize: '0.75rem',
                   color: S.amber, letterSpacing: '0.1em',
                   borderBottom: `1px solid ${S.rim}`,
                   background: S.bgDeep,
@@ -269,7 +269,7 @@ export default function QuickAssignModal({
               <>
                 <div style={{
                   padding: '4px 10px',
-                  fontFamily: S.fontMono, fontSize: '0.4625rem',
+                  fontFamily: S.fontMono, fontSize: '0.75rem',
                   color: S.tertiary, letterSpacing: '0.1em',
                   borderBottom: `1px solid ${S.rim}`,
                   background: S.bgDeep,
@@ -293,7 +293,7 @@ export default function QuickAssignModal({
             {favTemplates.length === 0 && otherTemplates.length === 0 && (
               <div style={{
                 padding: '24px', textAlign: 'center',
-                fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.tertiary,
+                fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary,
               }}>
                 {templates.length === 0 ? 'LOADING POLICIES…' : 'NO POLICIES MATCH'}
               </div>
@@ -306,7 +306,7 @@ export default function QuickAssignModal({
               marginTop: 8, padding: '6px 10px',
               border: `1px solid color-mix(in srgb, ${S.amber} 30%, ${S.rim})`,
               background: `color-mix(in srgb, ${S.amber} 5%, ${S.bgPanel})`,
-              fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.amber,
+              fontFamily: S.fontMono, fontSize: '0.75rem', color: S.amber,
               letterSpacing: '0.06em',
             }}>
               ⚠ [{selectedTemplate.short_name}] is not the active policy instance.
@@ -319,7 +319,7 @@ export default function QuickAssignModal({
             <div style={{ marginTop: 12 }}>
               <div style={{
                 display: 'flex', justifyContent: 'space-between', marginBottom: 4,
-                fontFamily: S.fontMono, fontSize: '0.5rem', color: S.secondary, letterSpacing: '0.06em',
+                fontFamily: S.fontMono, fontSize: '0.75rem', color: S.secondary, letterSpacing: '0.06em',
               }}>
                 <span>{assigning ? 'ASSIGNING…' : 'COMPLETE'}</span>
                 <span>{progress.done}/{progress.total}</span>
@@ -341,7 +341,7 @@ export default function QuickAssignModal({
               marginTop: 10, padding: '8px 12px',
               border: `1px solid color-mix(in srgb, ${S.green} 30%, ${S.rim})`,
               background: `color-mix(in srgb, ${S.green} 5%, ${S.bgPanel})`,
-              fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.green, letterSpacing: '0.06em',
+              fontFamily: S.fontMono, fontSize: '0.75rem', color: S.green, letterSpacing: '0.06em',
             }}>
               <Check size={11} style={{ verticalAlign: 'middle', marginRight: 5 }} />
               {(progress?.done ?? 0) - errors.length} position{((progress?.done ?? 0) - errors.length) !== 1 ? 's' : ''} assigned
@@ -360,14 +360,14 @@ export default function QuickAssignModal({
             }}>
               {errors.slice(0, 5).map((e, i) => (
                 <div key={i} style={{
-                  fontFamily: S.fontMono, fontSize: '0.5rem', color: S.red,
+                  fontFamily: S.fontMono, fontSize: '0.75rem', color: S.red,
                   letterSpacing: '0.04em', marginBottom: 2,
                 }}>
                   {e}
                 </div>
               ))}
               {errors.length > 5 && (
-                <div style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.tertiary }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary }}>
                   +{errors.length - 5} more errors
                 </div>
               )}
@@ -387,7 +387,7 @@ export default function QuickAssignModal({
               onClick={onClose}
               style={{
                 flex: 1, padding: '7px 16px',
-                fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.08em', fontWeight: 700,
+                fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.08em', fontWeight: 700,
                 border: `1px solid ${S.cyan}`, color: S.cyan, background: 'transparent',
                 cursor: 'pointer',
               }}
@@ -401,7 +401,7 @@ export default function QuickAssignModal({
                 disabled={assigning}
                 style={{
                   padding: '7px 14px',
-                  fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.06em',
+                  fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em',
                   border: `1px solid ${S.rim}`, color: S.tertiary, background: 'transparent',
                   cursor: assigning ? 'not-allowed' : 'pointer',
                 }}
@@ -420,7 +420,7 @@ export default function QuickAssignModal({
                 }
                 style={{
                   flex: 1, padding: '7px 16px',
-                  fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.08em', fontWeight: 700,
+                  fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.08em', fontWeight: 700,
                   border: `1px solid ${canAssign ? S.amber : S.rim}`,
                   color: canAssign ? 'var(--bg-deep)' : S.tertiary,
                   background: canAssign ? S.amber : 'transparent',
@@ -491,14 +491,14 @@ function TemplateRow({
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{
-            fontFamily: S.fontMono, fontSize: '0.5625rem', fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: '0.75rem', fontWeight: 700,
             color: isSelected ? 'var(--accent-amber,#fbbf24)' : S.secondary,
             letterSpacing: '0.06em',
           }}>
             [{template.short_name}]
           </span>
           <span style={{
-            fontFamily: S.fontUI, fontSize: '0.6875rem',
+            fontFamily: S.fontUI, fontSize: '0.75rem',
             color: S.primary,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>
@@ -507,12 +507,12 @@ function TemplateRow({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
           <span style={{
-            fontFamily: S.fontMono, fontSize: '0.4375rem',
+            fontFamily: S.fontMono, fontSize: '0.75rem',
             color: rc, letterSpacing: '0.06em',
           }}>
             {template.risk_posture}
           </span>
-          <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary }}>
             CONF {Math.round(template.config.hedge_ratios.confirmed * 100)}%
             · FCST {Math.round(template.config.hedge_ratios.forecast * 100)}%
           </span>
@@ -523,7 +523,7 @@ function TemplateRow({
         {isFavorite && <Bookmark size={9} fill="var(--accent-amber,#fbbf24)" color="var(--accent-amber,#fbbf24)" />}
         {isActive && (
           <span style={{
-            fontFamily: S.fontMono, fontSize: '0.4rem', padding: '1px 4px',
+            fontFamily: S.fontMono, fontSize: '0.75rem', padding: '1px 4px',
             border: '1px solid var(--accent-cyan,#22d3ee)',
             color: 'var(--accent-cyan,#22d3ee)', letterSpacing: '0.06em',
           }}>

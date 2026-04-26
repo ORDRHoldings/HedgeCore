@@ -78,11 +78,11 @@ const HedgeEfficiencyPanel: React.FC<HedgeEfficiencyPanelProps> = ({ buckets, su
       <table className="table-enterprise" style={{ width: '100%', marginBottom: '1.5rem' }}>
         <thead>
           <tr>
-            <th>Bucket</th>
-            <th style={{ textAlign: 'right' }}>Commercial MXN</th>
-            <th style={{ textAlign: 'right' }}>Hedge Position MXN</th>
-            <th style={{ textAlign: 'right' }}>Coverage %</th>
-            <th>Status</th>
+            <th scope="col">Bucket</th>
+            <th scope="col" style={{ textAlign: 'right' }}>Commercial MXN</th>
+            <th scope="col" style={{ textAlign: 'right' }}>Hedge Position MXN</th>
+            <th scope="col" style={{ textAlign: 'right' }}>Coverage %</th>
+            <th scope="col">Status</th>
           </tr>
         </thead>
         <tbody>

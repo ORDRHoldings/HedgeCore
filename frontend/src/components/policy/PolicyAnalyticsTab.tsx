@@ -25,9 +25,7 @@ import {
 } from "@/utils/policyEffectivenessScore";
 import {
   Shield,
-  Activity,
   Users,
-  Clock,
   BarChart2,
   AlertTriangle,
   ChevronRight,
@@ -144,7 +142,7 @@ export default function PolicyAnalyticsTab() {
   const [activeInstance, setActiveInstance] = useState<PolicyInstance | null>(
     null,
   );
-  const [templates, setTemplates] = useState<PolicyTemplate[]>([]);
+  const [_templates, setTemplates] = useState<PolicyTemplate[]>([]);
   const [positions, setPositions] = useState<PositionSummary[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [positionsError, setPositionsError] = useState(false);
@@ -374,7 +372,7 @@ export default function PolicyAnalyticsTab() {
                   letterSpacing: "0.06em",
                   padding: "8px 20px",
                   background: S.cyan,
-                  color: "#000",
+                  color: S.bgDeep,
                   border: "none",
                   borderRadius: 4,
                   cursor: "pointer",

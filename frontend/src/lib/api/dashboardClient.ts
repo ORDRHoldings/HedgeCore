@@ -31,13 +31,32 @@ function getCsrfToken(): string {
 
 const CSRF_SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
 
+/** Default per-request timeout. Matches authContext login timeout (30 s). */
+const DEFAULT_TIMEOUT_MS = 15_000;
+
+/**
+ * Combine an optional caller-supplied signal with a timeout signal.
+ * If the browser supports AbortSignal.any (Chrome 116+, FF 124+, Safari 17.4+)
+ * we compose. Otherwise we fall back to whichever is available.
+ */
+function withTimeout(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal {
+  const t = AbortSignal.timeout(timeoutMs);
+  if (!signal) return t;
+  // AbortSignal.any may not exist in older runtimes — guard.
+  type AnyFn = (sigs: AbortSignal[]) => AbortSignal;
+  const any = (AbortSignal as unknown as { any?: AnyFn }).any;
+  return any ? any([signal, t]) : signal;
+}
+
 /**
  * Authenticated fetch for dashboard endpoints.
  *
  * @param path   Path relative to API_BASE, starting with "/".
  *               e.g. "/v1/dashboard/summary"
  * @param token  JWT access token from useAuth()
- * @param options  Optional additional RequestInit overrides
+ * @param options  Optional additional RequestInit overrides. Pass `signal` to
+ *                 add caller-side cancellation; a 15 s timeout is always
+ *                 applied in addition.
  *
  * Usage:
  *   const res = await dashboardFetch("/v1/dashboard/summary", token);
@@ -60,6 +79,7 @@ export async function dashboardFetch(
   const isFormData = options?.body instanceof FormData;
   return fetch(url, {
     ...options,
+    signal: withTimeout(options?.signal ?? undefined, DEFAULT_TIMEOUT_MS),
     headers: {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
       Authorization: `Bearer ${token}`,

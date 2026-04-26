@@ -101,7 +101,7 @@ function liquidityColor(l: string) {
 /* ── Main page ───────────────────────────────────────────────────────────── */
 export default function PortfolioPage() {
   const { token } = useAuth();
-  const router = useRouter();
+  const _router = useRouter();
   const isMobile = useIsMobile();
   const [data, setData] = useState<PortfolioData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -146,7 +146,7 @@ export default function PortfolioPage() {
                 ORDR PORTFOLIO
               </span>
               <span style={{
-                fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
                 color: S.amber, border: `1px solid ${S.amber}`,
                 padding: "1px 6px", borderRadius: 2, letterSpacing: "0.1em",
               }}>
@@ -212,7 +212,7 @@ export default function PortfolioPage() {
             padding: "14px 20px", borderRight: `1px solid ${S.rim}`,
             background: loading ? S.sub : S.panel,
           }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, color: S.tertiary, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, color: S.tertiary, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>
               {k.label}
             </div>
             <div style={{ fontFamily: S.fontMono, fontSize: 16, fontWeight: 700, color: k.color ?? S.primary, marginBottom: 2 }}>
@@ -253,7 +253,7 @@ export default function PortfolioPage() {
               <thead>
                 <tr style={{ background: S.sub }}>
                   {["CCY", "GROSS", "HEDGED", "UNHEDGED", "RATIO", "VaR 99%", "VOL", "LIQ", "POSITIONS"].map(h => (
-                    <th key={h} style={{
+                    <th scope="col" key={h} style={{
                       padding: "7px 14px", fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
                       color: S.tertiary, textAlign: h === "CCY" ? "left" : "right",
                       borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap",
@@ -271,7 +271,7 @@ export default function PortfolioPage() {
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan }}>{row.currency}</span>
                         {row.is_em && (
-                          <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.amber, border: `1px solid ${S.amber}`, padding: "0 4px", borderRadius: 2 }}>EM</span>
+                          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, border: `1px solid ${S.amber}`, padding: "0 4px", borderRadius: 2 }}>EM</span>
                         )}
                       </div>
                     </td>
@@ -287,7 +287,7 @@ export default function PortfolioPage() {
                     <td style={{ padding: "9px 14px", fontFamily: S.fontMono, fontSize: 11, color: S.red, textAlign: "right" }}>{fmtM(row.unhedged_var_99)}</td>
                     <td style={{ padding: "9px 14px", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, textAlign: "right" }}>{fmtPct(row.vol_ann)}</td>
                     <td style={{ padding: "9px 14px", textAlign: "right" }}>
-                      <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, color: liquidityColor(row.liquidity) }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, color: liquidityColor(row.liquidity) }}>
                         {liquidityLabel(row.liquidity)}
                       </span>
                     </td>
@@ -367,7 +367,7 @@ export default function PortfolioPage() {
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
                   <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>{card.title}</span>
                   <span style={{
-                    fontFamily: S.fontMono, fontSize: 8, fontWeight: 700,
+                    fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
                     color: card.badgeColor, border: `1px solid ${card.badgeColor}`,
                     padding: "0 4px", borderRadius: 2, letterSpacing: "0.06em",
                   }}>{card.badge}</span>
@@ -383,7 +383,7 @@ export default function PortfolioPage() {
             padding: "12px 18px", borderBottom: `1px solid ${S.rim}`,
             background: S.sub,
           }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 8 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 8 }}>
               CALCULATION RUNS — LAST 30 DAYS
             </div>
             {data?.run_history && data.run_history.length > 0 ? (
@@ -412,7 +412,7 @@ export default function PortfolioPage() {
 
           {/* Quick nav to positions */}
           <div style={{ padding: "16px 18px", background: S.panel }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 10 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 10 }}>
               QUICK ACTIONS
             </div>
             {[

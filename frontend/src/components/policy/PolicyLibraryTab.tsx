@@ -137,7 +137,7 @@ function PresetCard({
         {/* Row 1: category + badges + action buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
           <span style={{
-            fontFamily: S.fontMono, fontSize: '0.5625rem',
+            fontFamily: S.fontMono, fontSize: '0.75rem',
             letterSpacing: '0.08em', color: S.tertiary, flex: 1,
           }}>
             {preset.category}
@@ -146,7 +146,7 @@ function PresetCard({
           {/* Effectiveness score */}
           {effectivenessScore !== undefined && effectivenessBadge && effectivenessColor && (
             <span style={{
-              fontFamily: S.fontMono, fontSize: '0.5rem', padding: '1px 4px',
+              fontFamily: S.fontMono, fontSize: '0.75rem', padding: '1px 4px',
               borderRadius: 2, letterSpacing: '0.05em',
               background: `color-mix(in srgb, ${effectivenessColor} 14%, transparent)`,
               color: effectivenessColor,
@@ -157,7 +157,7 @@ function PresetCard({
 
           {/* Risk posture */}
           <span style={{
-            fontFamily: S.fontMono, fontSize: '0.5625rem', padding: '1px 5px',
+            fontFamily: S.fontMono, fontSize: '0.75rem', padding: '1px 5px',
             borderRadius: 2, letterSpacing: '0.06em',
             background: `color-mix(in srgb, ${rc} 14%, transparent)`,
             color: rc,
@@ -175,14 +175,14 @@ function PresetCard({
           {preset.name}
         </div>
         <div style={{
-          fontFamily: S.fontMono, fontSize: '0.625rem', color: S.tertiary,
+          fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary,
           letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 6,
         }}>
           {preset.shortName}
           {/* UX-POLICY-4: version + last-updated chip from DB */}
           {dbVersion !== undefined && (
             <span style={{
-              fontFamily: S.fontMono, fontSize: '0.4375rem', padding: '1px 4px',
+              fontFamily: S.fontMono, fontSize: '0.75rem', padding: '1px 4px',
               border: `1px solid color-mix(in srgb, ${S.cyan} 22%, ${S.rim})`,
               color: S.cyan, letterSpacing: '0.04em',
             }}>
@@ -190,7 +190,7 @@ function PresetCard({
             </span>
           )}
           {dbUpdatedAt && (
-            <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.tertiary, letterSpacing: '0.03em' }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary, letterSpacing: '0.03em' }}>
               {new Date(dbUpdatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}
             </span>
           )}
@@ -208,7 +208,7 @@ function PresetCard({
           ].map(({ label, value }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
               <span style={{
-                fontFamily: S.fontMono, fontSize: '0.4375rem',
+                fontFamily: S.fontMono, fontSize: '0.75rem',
                 color: S.tertiary, letterSpacing: '0.06em',
               }}>
                 {label}
@@ -226,7 +226,7 @@ function PresetCard({
         {/* One-line description shown on hover */}
         {hovered && (
           <div style={{
-            fontFamily: S.fontUI, fontSize: '0.5625rem', color: S.secondary,
+            fontFamily: S.fontUI, fontSize: '0.75rem', color: S.secondary,
             lineHeight: 1.4, marginTop: 5, borderTop: `1px solid ${S.rim}`, paddingTop: 5,
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
             overflow: 'hidden',
@@ -245,7 +245,7 @@ function PresetCard({
             { label: 'ACCT', value: preset.accounting_mode },
           ].map(({ label, value, color }) => (
             <span key={label} style={{
-              fontFamily: S.fontMono, fontSize: '0.4375rem', padding: '1px 4px',
+              fontFamily: S.fontMono, fontSize: '0.75rem', padding: '1px 4px',
               border: `1px solid ${color ?? S.soft}`,
               color: color ?? S.tertiary, letterSpacing: '0.04em',
             }}>
@@ -269,7 +269,7 @@ function PresetCard({
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
             <Check size={10} color={S.cyan} />
             <span style={{
-              fontFamily: S.fontMono, fontSize: '0.5625rem',
+              fontFamily: S.fontMono, fontSize: '0.75rem',
               color: S.cyan, letterSpacing: '0.06em',
             }}>
               ACTIVE
@@ -283,7 +283,7 @@ function PresetCard({
             title={!canActivate ? 'Template not available — try refreshing' : 'Activate this policy'}
             style={{
               flex: 1,
-              fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
+              fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em',
               padding: '3px 8px',
               border: `1px solid ${!canActivate ? S.rim : hovered ? S.cyan : `color-mix(in srgb, ${S.cyan} 35%, ${S.rim})`}`,
               color: !canActivate ? S.tertiary : hovered ? S.cyan : S.secondary,
@@ -606,10 +606,10 @@ export default function PolicyLibraryTab() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Shield size={16} color={S.cyan} />
           <div>
-            <div style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.cyan, letterSpacing: '0.1em', fontWeight: 700 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.cyan, letterSpacing: '0.1em', fontWeight: 700 }}>
               POLICY ENGINE
             </div>
-            <div style={{ fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.secondary, marginTop: 1 }}>
+            <div style={{ fontFamily: S.fontUI, fontSize: '0.75rem', color: S.secondary, marginTop: 1 }}>
               Manage and activate FX hedge policies · {POLICY_PRESETS.length} system presets
             </div>
           </div>
@@ -624,7 +624,7 @@ export default function PolicyLibraryTab() {
             background: `color-mix(in srgb, ${S.cyan} 6%, transparent)`,
           }}>
             <Check size={11} color={S.cyan} />
-            <span style={{ fontFamily: S.fontMono, fontSize: '0.625rem', color: S.cyan, letterSpacing: '0.06em' }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.cyan, letterSpacing: '0.06em' }}>
               ACTIVE: {POLICY_PRESETS.find(p => p.id === activePresetId)?.shortName ?? 'POLICY'}
             </span>
           </div>
@@ -640,7 +640,7 @@ export default function PolicyLibraryTab() {
               color: S.amber,
             }}>
               <Star size={11} fill={S.amber} />
-              <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em' }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em' }}>
                 {favCount} FAVORITE{favCount !== 1 ? 'S' : ''}
               </span>
             </div>
@@ -657,7 +657,7 @@ export default function PolicyLibraryTab() {
             }}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', fontWeight: 700,
+              fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.08em', fontWeight: 700,
               padding: '6px 14px',
               border: `1px solid ${compareMode ? S.amber : S.rim}`,
               color: compareMode ? 'var(--bg-deep)' : S.tertiary,
@@ -675,7 +675,7 @@ export default function PolicyLibraryTab() {
             onClick={() => router.push('/ai-policy-wizard')}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', fontWeight: 700,
+              fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.08em', fontWeight: 700,
               padding: '6px 14px',
               border: `1px solid ${S.amber}`,
               color: 'var(--bg-deep)', background: S.amber,
@@ -702,7 +702,7 @@ export default function PolicyLibraryTab() {
                 onClick={() => setActiveCategory(key)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
-                  fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.06em',
+                  fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em',
                   padding: '4px 10px',
                   border: `1px solid ${isActive ? S.cyan : S.rim}`,
                   color: isActive ? S.cyan : S.tertiary,
@@ -712,7 +712,7 @@ export default function PolicyLibraryTab() {
               >
                 <Icon size={10} />
                 {label}
-                <span style={{ opacity: 0.6, fontSize: '0.4rem' }}>({count})</span>
+                <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>({count})</span>
               </button>
             );
           })}
@@ -724,7 +724,7 @@ export default function PolicyLibraryTab() {
               onClick={() => setShowFavoritesOnly(prev => !prev)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 5,
-                fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.06em',
+                fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em',
                 padding: '4px 10px',
                 border: `1px solid ${showFavoritesOnly ? S.amber : `color-mix(in srgb, ${S.amber} 40%, ${S.rim})`}`,
                 color: showFavoritesOnly ? 'var(--bg-deep)' : S.amber,
@@ -744,7 +744,7 @@ export default function PolicyLibraryTab() {
               padding: '4px 10px',
               border: `1px solid color-mix(in srgb, ${S.amber} 30%, ${S.rim})`,
               color: S.amber,
-              fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
+              fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em',
               animation: compareIds.size === 0 ? 'none' : undefined,
             }}>
               <Bolt size={10} />
@@ -766,7 +766,7 @@ export default function PolicyLibraryTab() {
                 searchDebounceRef.current = setTimeout(() => setDebouncedSearch(val), 300);
               }}
               placeholder="Search policies…"
-              style={{ border: 'none', background: 'transparent', color: S.primary, fontFamily: S.fontUI, fontSize: '0.6875rem', outline: 'none', width: 150 }}
+              style={{ border: 'none', background: 'transparent', color: S.primary, fontFamily: S.fontUI, fontSize: '0.75rem', outline: 'none', width: 150 }}
             />
             {searchQuery && (
               <button onClick={() => { setSearchQuery(''); setDebouncedSearch(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: S.tertiary, padding: 0, display: 'flex', alignItems: 'center' }}>
@@ -782,7 +782,7 @@ export default function PolicyLibraryTab() {
             padding: '6px 12px', marginBottom: 12,
             border: `1px solid color-mix(in srgb, ${S.cyan} 20%, ${S.rim})`,
             background: `color-mix(in srgb, ${S.cyan} 4%, ${S.bgPanel})`,
-            fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.cyan, letterSpacing: '0.08em',
+            fontFamily: S.fontMono, fontSize: '0.75rem', color: S.cyan, letterSpacing: '0.08em',
           }}>
             LOADING TEMPLATES FROM SERVER…
           </div>
@@ -800,7 +800,7 @@ export default function PolicyLibraryTab() {
               display: 'flex', alignItems: 'center', gap: 10,
             }}
           >
-            <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.amber, letterSpacing: '0.08em', flex: 1 }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.amber, letterSpacing: '0.08em', flex: 1 }}>
               ⚠ POLICY TEMPLATE LOAD FAILED — activation is unavailable until resolved.{' '}
               <span style={{ opacity: 0.8 }}>{templatesError}</span>
             </span>
@@ -819,7 +819,7 @@ export default function PolicyLibraryTab() {
                   });
               }}
               style={{
-                fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
+                fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em',
                 padding: '3px 10px',
                 border: `1px solid ${S.amber}`,
                 color: S.amber, background: 'transparent',
@@ -848,7 +848,7 @@ export default function PolicyLibraryTab() {
             padding: '8px 14px', marginBottom: 12,
             border: `1px solid color-mix(in srgb, ${S.amber} 30%, ${S.rim})`,
             background: `color-mix(in srgb, ${S.amber} 5%, ${S.bgPanel})`,
-            fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.amber, letterSpacing: '0.08em',
+            fontFamily: S.fontMono, fontSize: '0.75rem', color: S.amber, letterSpacing: '0.08em',
           }}>
             ⚠ No policy templates found in DB. Activate button will be disabled. Run POST /api/v1/policies/templates/seed to populate.
           </div>
@@ -898,7 +898,7 @@ export default function PolicyLibraryTab() {
           {filteredPresets.length === 0 && !templatesLoading && (
             <div style={{
               gridColumn: '1 / -1', textAlign: 'center', padding: '40px 0',
-              fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.tertiary, letterSpacing: '0.06em',
+              fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary, letterSpacing: '0.06em',
             }}>
               NO POLICIES MATCH YOUR SEARCH
             </div>
@@ -910,7 +910,7 @@ export default function PolicyLibraryTab() {
           <div style={{ borderTop: `1px solid ${S.rim}`, paddingTop: 18 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
               <Sparkles size={13} color={S.amber} />
-              <span style={{ fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.1em', color: S.amber, fontWeight: 700 }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.1em', color: S.amber, fontWeight: 700 }}>
                 CUSTOM POLICIES ({savedTemplates.length})
               </span>
             </div>
@@ -929,11 +929,11 @@ export default function PolicyLibraryTab() {
                     }}>
                       {tmpl.name}
                     </div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.tertiary, letterSpacing: '0.05em', marginTop: 2 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary, letterSpacing: '0.05em', marginTop: 2 }}>
                       {tmpl.short_name} · {tmpl.category} · {tmpl.risk_posture}
                     </div>
                   </div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.secondary }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.secondary }}>
                     Conf: {Math.round(tmpl.config.hedge_ratios.confirmed * 100)}% · Fcst: {Math.round(tmpl.config.hedge_ratios.forecast * 100)}%
                   </div>
                   {/* Inspect button */}
@@ -945,7 +945,7 @@ export default function PolicyLibraryTab() {
                     }}
                     title="Inspect"
                     style={{
-                      fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
+                      fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em',
                       padding: '3px 8px',
                       border: `1px solid ${S.rim}`,
                       color: S.tertiary, background: 'transparent',
@@ -961,7 +961,7 @@ export default function PolicyLibraryTab() {
                     onClick={() => setHistoryDrawer({ id: tmpl.id, name: tmpl.name, code: tmpl.short_name })}
                     title="View audit history"
                     style={{
-                      fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
+                      fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em',
                       padding: '3px 8px',
                       border: `1px solid ${S.rim}`,
                       color: S.tertiary, background: 'transparent',
@@ -978,7 +978,7 @@ export default function PolicyLibraryTab() {
                     }}
                     disabled={activatingId === tmpl.id}
                     style={{
-                      fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
+                      fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em',
                       padding: '3px 10px',
                       border: `1px solid ${S.cyan}`,
                       color: S.cyan, background: 'transparent',
@@ -1006,14 +1006,14 @@ export default function PolicyLibraryTab() {
           boxShadow: `0 0 24px color-mix(in srgb, ${S.amber} 18%, transparent)`,
         }}>
           <GitCompare size={13} color={S.amber} />
-          <span style={{ fontFamily: S.fontMono, fontSize: '0.625rem', color: S.amber, letterSpacing: '0.06em' }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.amber, letterSpacing: '0.06em' }}>
             {compareIds.size} POLICIES SELECTED
           </span>
           <button
             type="button"
             onClick={() => setShowCompareModal(true)}
             style={{
-              fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.08em',
+              fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.08em',
               padding: '4px 14px', border: `1px solid ${S.amber}`,
               color: 'var(--bg-deep)', background: S.amber,
               cursor: 'pointer', fontWeight: 700,
@@ -1025,7 +1025,7 @@ export default function PolicyLibraryTab() {
             type="button"
             onClick={() => setCompareIds(new Set())}
             style={{
-              fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.06em',
+              fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em',
               padding: '4px 10px', border: `1px solid ${S.rim}`,
               color: S.tertiary, background: 'transparent', cursor: 'pointer',
             }}
@@ -1079,7 +1079,7 @@ export default function PolicyLibraryTab() {
           >
             {/* Modal title */}
             <div style={{
-              fontFamily: S.fontMono, fontSize: '0.6875rem', fontWeight: 700,
+              fontFamily: S.fontMono, fontSize: '0.75rem', fontWeight: 700,
               letterSpacing: '0.12em', color: S.amber, marginBottom: 18,
             }}>
               POLICY ACTIVATION CONFIRMATION
@@ -1088,7 +1088,7 @@ export default function PolicyLibraryTab() {
             {/* Template identity */}
             <div style={{ marginBottom: 16 }}>
               <div style={{
-                fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.08em',
+                fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.08em',
                 color: S.tertiary, marginBottom: 4,
               }}>
                 TEMPLATE NAME
@@ -1100,7 +1100,7 @@ export default function PolicyLibraryTab() {
               </div>
               {activationModal.template.short_name && (
                 <div style={{
-                  fontFamily: S.fontMono, fontSize: '0.625rem', color: S.tertiary,
+                  fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary,
                   letterSpacing: '0.06em', marginTop: 2,
                 }}>
                   {activationModal.template.short_name}
@@ -1117,14 +1117,14 @@ export default function PolicyLibraryTab() {
               marginBottom: 14,
             }}>
               <div style={{
-                fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.08em',
+                fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.08em',
                 color: S.tertiary, marginBottom: 6,
               }}>
                 CONFIG HASH
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{
-                  fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.cyan,
+                  fontFamily: S.fontMono, fontSize: '0.75rem', color: S.cyan,
                   letterSpacing: '0.04em', wordBreak: 'break-all' as const, flex: 1,
                 }}>
                   {activationModal.hash.slice(0, 16)}…{activationModal.hash.slice(-8)}
@@ -1138,7 +1138,7 @@ export default function PolicyLibraryTab() {
                     setTimeout(() => setModalHashCopied(false), 1500);
                   }}
                   style={{
-                    fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.06em',
+                    fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em',
                     padding: '2px 6px',
                     border: `1px solid ${S.rim}`,
                     color: modalHashCopied ? S.green : S.tertiary,
@@ -1170,13 +1170,13 @@ export default function PolicyLibraryTab() {
                   border: `1px solid color-mix(in srgb, ${govColor} 25%, transparent)`,
                 }}>
                   <span style={{
-                    fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.08em',
+                    fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.08em',
                     padding: '1px 6px', fontWeight: 700,
                     border: `1px solid ${govColor}`, color: govColor,
                   }}>
                     {govTier}
                   </span>
-                  <span style={{ fontFamily: S.fontUI, fontSize: '0.625rem', color: S.secondary }}>
+                  <span style={{ fontFamily: S.fontUI, fontSize: '0.75rem', color: S.secondary }}>
                     {govLabel}
                   </span>
                 </div>
@@ -1200,7 +1200,7 @@ export default function PolicyLibraryTab() {
                     borderLeft: `3px solid ${S.cyan}`, padding: '8px 12px', marginBottom: 10,
                   }}>
                     <div style={{
-                      fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.1em',
+                      fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.1em',
                       color: S.cyan, marginBottom: 6, fontWeight: 700,
                     }}>
                       EFFECT SURFACE — FIELDS CONSUMED BY HEDGE ENGINE
@@ -1213,7 +1213,7 @@ export default function PolicyLibraryTab() {
                         { label: 'EXECUTION PRODUCT', value: cfg?.execution_product ?? '—' },
                       ].map(({ label, value }) => (
                         <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                          <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.tertiary, letterSpacing: '0.06em' }}>{label}</span>
+                          <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary, letterSpacing: '0.06em' }}>{label}</span>
                           <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', fontWeight: 700, color: S.primary }}>{value}</span>
                         </div>
                       ))}
@@ -1226,7 +1226,7 @@ export default function PolicyLibraryTab() {
                     borderLeft: `3px solid ${S.soft}`, padding: '8px 12px', marginBottom: 14,
                   }}>
                     <div style={{
-                      fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.1em',
+                      fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.1em',
                       color: S.tertiary, marginBottom: 6, fontWeight: 700,
                     }}>
                       METADATA — DOES NOT AFFECT HEDGE CALCULATION
@@ -1240,8 +1240,8 @@ export default function PolicyLibraryTab() {
                         { label: 'ACCOUNTING MODE', value: activationModal.preset?.accounting_mode ?? '—' },
                       ].map(({ label, value }) => (
                         <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                          <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.tertiary, letterSpacing: '0.06em' }}>{label}</span>
-                          <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.secondary }}>{value}</span>
+                          <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary, letterSpacing: '0.06em' }}>{label}</span>
+                          <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.secondary }}>{value}</span>
                         </div>
                       ))}
                     </div>
@@ -1256,7 +1256,7 @@ export default function PolicyLibraryTab() {
               if (govTier === 'COMMITTEE') {
                 return (
                   <div style={{
-                    fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.secondary,
+                    fontFamily: S.fontUI, fontSize: '0.75rem', color: S.secondary,
                     lineHeight: 1.55, marginBottom: 22, padding: '8px 10px',
                     background: `color-mix(in srgb, ${S.red} 5%, ${S.bgSub})`,
                     border: `1px solid color-mix(in srgb, ${S.red} 20%, transparent)`,
@@ -1268,7 +1268,7 @@ export default function PolicyLibraryTab() {
               if (govTier === 'ENHANCED') {
                 return (
                   <div style={{
-                    fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.secondary,
+                    fontFamily: S.fontUI, fontSize: '0.75rem', color: S.secondary,
                     lineHeight: 1.55, marginBottom: 22, padding: '8px 10px',
                     background: `color-mix(in srgb, ${S.amber} 5%, ${S.bgSub})`,
                     border: `1px solid color-mix(in srgb, ${S.amber} 20%, transparent)`,
@@ -1279,7 +1279,7 @@ export default function PolicyLibraryTab() {
               }
               return (
                 <div style={{
-                  fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.secondary,
+                  fontFamily: S.fontUI, fontSize: '0.75rem', color: S.secondary,
                   lineHeight: 1.55, marginBottom: 22, padding: '8px 10px',
                   background: `color-mix(in srgb, ${S.amber} 5%, ${S.bgSub})`,
                   border: `1px solid color-mix(in srgb, ${S.amber} 20%, transparent)`,
@@ -1304,7 +1304,7 @@ export default function PolicyLibraryTab() {
                     type="button"
                     onClick={() => setActivationModal({ template: null, hash: '', preset: null })}
                     style={{
-                      fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.06em',
+                      fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em',
                       padding: '6px 16px',
                       border: `1px solid ${S.rim}`,
                       color: S.tertiary, background: 'transparent',
@@ -1317,7 +1317,7 @@ export default function PolicyLibraryTab() {
                     type="button"
                     onClick={doActivateConfirmed}
                     style={{
-                      fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.08em',
+                      fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.08em',
                       fontWeight: 700,
                       padding: '6px 18px',
                       border: `1px solid ${btnColor}`,

@@ -142,7 +142,7 @@ export default function HedgeAccountingPanel({ buckets }: HedgeAccountingPanelPr
             <thead>
               <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                 {["BUCKET", "HEDGE RATIO", "WITHIN BAND", "STATUS"].map(h => (
-                  <th key={h} style={{
+                  <th scope="col" key={h} style={{
                     padding: "6px 10px",
                     textAlign: h === "BUCKET" ? "left" : "right",
                     fontSize: 12,

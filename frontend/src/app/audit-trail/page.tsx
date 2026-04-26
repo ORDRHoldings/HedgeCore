@@ -274,7 +274,7 @@ function GroupedView({ events }: { events: AuditEvent[] }) {
               {/* Type breakdown */}
               {Object.entries(typeBreakdown).map(([type, count]) => (
                 <span key={type} style={{
-                  fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
                   color: TYPE_COLORS[type as EventType] ?? S.tertiary,
                   padding: "1px 5px", borderRadius: 2,
                   border: `1px solid ${TYPE_COLORS[type as EventType] ?? S.rim}`,
@@ -285,14 +285,14 @@ function GroupedView({ events }: { events: AuditEvent[] }) {
               ))}
               {/* Impact */}
               <span style={{
-                fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
                 color: impact === "EXECUTED" ? S.pass : impact === "APPROVED" ? S.pass : impact === "IN PROGRESS" ? S.amber : S.tertiary,
                 padding: "1px 6px", borderRadius: 2,
                 border: `1px solid ${impact === "EXECUTED" || impact === "APPROVED" ? S.pass : impact === "IN PROGRESS" ? S.amber : S.rim}`,
               }}>
                 {impact}
               </span>
-              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginLeft: 4 }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginLeft: 4 }}>
                 {isOpen ? "▲" : "▼"}
               </span>
             </div>
@@ -335,7 +335,7 @@ function GroupedView({ events }: { events: AuditEvent[] }) {
                       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 2 }}>
                         <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{evt.timestamp.slice(0, 16)}</span>
                         <span style={{
-                          fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                          fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
                           color: TYPE_COLORS[evt.type] ?? S.tertiary,
                           padding: "0 4px", border: `1px solid ${TYPE_COLORS[evt.type] ?? S.rim}`,
                           borderRadius: 2,
@@ -344,7 +344,7 @@ function GroupedView({ events }: { events: AuditEvent[] }) {
                       </div>
                       <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>{evt.description}</div>
                     </div>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, flexShrink: 0 }}>{evt.hash}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, flexShrink: 0 }}>{evt.hash}</span>
                   </div>
                 ))}
               </div>
@@ -382,11 +382,11 @@ function TopBar({ renderTs, onBack, onRefresh, loading }: {
         Audit Trail
       </span>
       <span style={{
-        fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.08em",
+        fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em",
         color: S.secondary, padding: "1px 5px", border: `1px solid ${S.rim}`,
       }}>GOVERNANCE · IMMUTABLE</span>
       <span style={{
-        fontFamily: S.fontMono, fontSize: "0.625rem", letterSpacing: "0.06em",
+        fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em",
         color: S.pass, padding: "1px 5px",
         border: `1px solid color-mix(in srgb, ${S.pass} 30%, transparent)`,
         background: `color-mix(in srgb, ${S.pass} 8%, transparent)`,
@@ -406,7 +406,7 @@ function TopBar({ renderTs, onBack, onRefresh, loading }: {
         {loading ? "Loading…" : "↻ Refresh"}
       </button>
       <span style={{
-        fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
+        fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
         letterSpacing: "0.04em",
       }}>
         AS OF {renderTs}
@@ -423,7 +423,7 @@ function Footer({ renderTs }: { renderTs: string }) {
       borderTop: `1px solid ${S.rim}`, background: S.bgPanel, flexShrink: 0,
     }}>
       <span suppressHydrationWarning style={{
-        fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary,
+        fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
         letterSpacing: "0.06em",
       }}>
         {renderTs} — ORDR · Audit Trail · Hash-Chained · PostgreSQL
@@ -446,7 +446,7 @@ function KpiCard({ label, value, badge, badgeColor }: {
     }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span style={{
-          fontFamily: S.fontUI, fontSize: "0.6875rem", fontWeight: 500,
+          fontFamily: S.fontUI, fontSize: "0.75rem", fontWeight: 500,
           color: S.tertiary, letterSpacing: "0.04em", textTransform: "uppercase",
         }}>
           {label}
@@ -497,7 +497,7 @@ function EventRow({ event, expanded, onToggle }: {
         }}
       >
         <span style={{
-          fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
+          fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
           letterSpacing: "0.02em", whiteSpace: "nowrap",
         }}>
           {event.timestamp}
@@ -522,7 +522,7 @@ function EventRow({ event, expanded, onToggle }: {
           {event.description}
         </span>
         <span style={{
-          fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary,
+          fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
           letterSpacing: "0.03em", textAlign: "right",
         }}>
           {event.hash}
@@ -539,33 +539,33 @@ function EventRow({ event, expanded, onToggle }: {
           }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <span style={{
-                fontFamily: S.fontUI, fontSize: "0.625rem", fontWeight: 600,
+                fontFamily: S.fontUI, fontSize: "0.75rem", fontWeight: 600,
                 color: S.tertiary, letterSpacing: "0.06em", textTransform: "uppercase",
               }}>Full Hash (SHA-256)</span>
               <span style={{
-                fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.cyan,
+                fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan,
                 wordBreak: "break-all",
               }}>{event.fullHash}</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <span style={{
-                fontFamily: S.fontUI, fontSize: "0.625rem", fontWeight: 600,
+                fontFamily: S.fontUI, fontSize: "0.75rem", fontWeight: 600,
                 color: S.tertiary, letterSpacing: "0.06em", textTransform: "uppercase",
               }}>Previous Hash</span>
               <span style={{
-                fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
+                fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
                 wordBreak: "break-all",
               }}>{event.prevHash}</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <span style={{
-                fontFamily: S.fontUI, fontSize: "0.625rem", fontWeight: 600,
+                fontFamily: S.fontUI, fontSize: "0.75rem", fontWeight: 600,
                 color: S.tertiary, letterSpacing: "0.06em", textTransform: "uppercase",
               }}>Related Entity IDs</span>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                 {Object.entries(event.relatedIds).map(([key, val]) => (
                   <span key={key} style={{
-                    fontFamily: S.fontMono, fontSize: "0.625rem", color: S.secondary,
+                    fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary,
                     background: S.bgSub, border: `1px solid ${S.soft}`,
                     padding: "1px 5px", borderRadius: 2,
                   }}>
@@ -576,13 +576,13 @@ function EventRow({ event, expanded, onToggle }: {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <span style={{
-                fontFamily: S.fontUI, fontSize: "0.625rem", fontWeight: 600,
+                fontFamily: S.fontUI, fontSize: "0.75rem", fontWeight: 600,
                 color: S.tertiary, letterSpacing: "0.06em", textTransform: "uppercase",
               }}>Origin</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>
                 IP: {event.ip}
               </span>
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>
                 {event.userAgent}
               </span>
             </div>
@@ -591,11 +591,11 @@ function EventRow({ event, expanded, onToggle }: {
           {/* Raw payload */}
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={{
-              fontFamily: S.fontUI, fontSize: "0.625rem", fontWeight: 600,
+              fontFamily: S.fontUI, fontSize: "0.75rem", fontWeight: 600,
               color: S.tertiary, letterSpacing: "0.06em", textTransform: "uppercase",
             }}>Raw Event Payload</span>
             <pre style={{
-              fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary,
+              fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary,
               background: S.bgDeep, border: `1px solid ${S.rim}`,
               padding: "12px 14px", margin: 0,
               overflow: "auto", whiteSpace: "pre-wrap",
@@ -616,7 +616,7 @@ function EventRow({ event, expanded, onToggle }: {
 export default function AuditTrailPage() {
   const _planAllowed = usePlanRedirect("enterprise");
   const renderTs = useRenderTs();
-  const { isAuthenticated, isLoading, token, user } = useAuth();
+  const { isAuthenticated, isLoading, token, user: _user } = useAuth();
   const router = useRouter();
   const isMobile = useIsMobile();
 
@@ -772,7 +772,7 @@ export default function AuditTrailPage() {
               onClick={() => { setActiveTab(tab.key); setExpandedId(null); }}
               style={{
                 fontFamily:   S.fontUI,
-                fontSize:     "0.6875rem",
+                fontSize:     "0.75rem",
                 fontWeight:   active ? 600 : 400,
                 padding:      "0 16px",
                 border:       "none",
@@ -792,7 +792,7 @@ export default function AuditTrailPage() {
         })}
         <div style={{ flex: 1 }} />
         <span style={{
-          fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary,
+          fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
           display: "flex", alignItems: "center", letterSpacing: "0.06em",
         }}>
           {loading ? "…" : filteredEvents.length} EVENTS
@@ -849,7 +849,7 @@ export default function AuditTrailPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{
-                fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.primary,
+                fontFamily: S.fontMono, fontSize: "0.75rem", color: S.primary,
                 background: S.bgDeep, border: `1px solid ${S.rim}`,
                 padding: "4px 10px", outline: "none", width: 220,
               }}
@@ -857,7 +857,7 @@ export default function AuditTrailPage() {
 
             {/* Date range */}
             <span style={{
-              fontFamily: S.fontUI, fontSize: "0.625rem", fontWeight: 600,
+              fontFamily: S.fontUI, fontSize: "0.75rem", fontWeight: 600,
               color: S.tertiary, letterSpacing: "0.06em", textTransform: "uppercase",
             }}>From</span>
             <input
@@ -865,13 +865,13 @@ export default function AuditTrailPage() {
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               style={{
-                fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.primary,
+                fontFamily: S.fontMono, fontSize: "0.75rem", color: S.primary,
                 background: S.bgDeep, border: `1px solid ${S.rim}`,
                 padding: "4px 8px", outline: "none",
               }}
             />
             <span style={{
-              fontFamily: S.fontUI, fontSize: "0.625rem", fontWeight: 600,
+              fontFamily: S.fontUI, fontSize: "0.75rem", fontWeight: 600,
               color: S.tertiary, letterSpacing: "0.06em", textTransform: "uppercase",
             }}>To</span>
             <input
@@ -879,7 +879,7 @@ export default function AuditTrailPage() {
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               style={{
-                fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.primary,
+                fontFamily: S.fontMono, fontSize: "0.75rem", color: S.primary,
                 background: S.bgDeep, border: `1px solid ${S.rim}`,
                 padding: "4px 8px", outline: "none",
               }}
@@ -890,7 +890,7 @@ export default function AuditTrailPage() {
               value={actorFilter}
               onChange={(e) => setActorFilter(e.target.value)}
               style={{
-                fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.primary,
+                fontFamily: S.fontMono, fontSize: "0.75rem", color: S.primary,
                 background: S.bgDeep, border: `1px solid ${S.rim}`,
                 padding: "4px 8px", outline: "none", cursor: "pointer",
                 appearance: "none" as const,
@@ -913,7 +913,7 @@ export default function AuditTrailPage() {
               disabled={verifying || loading}
               style={{
                 fontFamily:   S.fontMono,
-                fontSize:     "0.6875rem",
+                fontSize:     "0.75rem",
                 fontWeight:   700,
                 letterSpacing: "0.06em",
                 color:        integrityReport?.is_intact
@@ -956,7 +956,7 @@ export default function AuditTrailPage() {
               disabled={events.length === 0}
               style={{
                 fontFamily:   S.fontMono,
-                fontSize:     "0.6875rem",
+                fontSize:     "0.75rem",
                 fontWeight:   600,
                 letterSpacing: "0.06em",
                 color:        events.length > 0 ? S.secondary : S.tertiary,
@@ -982,7 +982,7 @@ export default function AuditTrailPage() {
               {["TIMESTAMP", "TYPE", "ACTOR", "DESCRIPTION", "HASH"].map((h) => (
                 <span key={h} style={{
                   fontFamily:    S.fontMono,
-                  fontSize:      "0.625rem",
+                  fontSize:      "0.75rem",
                   fontWeight:    700,
                   letterSpacing: "0.08em",
                   color:         S.tertiary,

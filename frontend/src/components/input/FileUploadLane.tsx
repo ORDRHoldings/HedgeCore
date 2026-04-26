@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { importCsvAudited, importExcelAudited } from "@/api/connectorClient";
 import type { ConnectorRun } from "@/api/connectorClient";
 import { extractErrorDetail } from "@/lib/errors/extractDetail";
@@ -105,7 +105,7 @@ export default function FileUploadLane({ token, onImportComplete }: Props) {
         <div style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary }}>
           Accepted: <span style={{ color: S.cyan }}>.csv</span> and <span style={{ color: S.cyan }}>.xlsx</span>
         </div>
-        <div style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.tertiary, marginTop: 4 }}>
+        <div style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.tertiary, marginTop: 4 }}>
           Required columns: record_id · entity · flow_type · currency · amount · value_date
         </div>
       </div>
@@ -123,7 +123,7 @@ export default function FileUploadLane({ token, onImportComplete }: Props) {
         }}>
           <span style={{
             fontFamily:    S.fontMono,
-            fontSize:      "0.5625rem",
+            fontSize:      "0.75rem",
             letterSpacing: "0.06em",
             padding:       "2px 6px",
             border:        `1px solid ${isExcel ? S.amber : S.cyan}`,
@@ -131,10 +131,10 @@ export default function FileUploadLane({ token, onImportComplete }: Props) {
           }}>
             {isExcel ? "XLSX" : isCsv ? "CSV" : "FILE"}
           </span>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.primary, flex: 1 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.primary, flex: 1 }}>
             {file.name}
           </span>
-          <span style={{ fontFamily: S.fontUI, fontSize: "0.625rem", color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.tertiary }}>
             {(file.size / 1024).toFixed(1)} KB
           </span>
           <button
@@ -155,7 +155,7 @@ export default function FileUploadLane({ token, onImportComplete }: Props) {
             disabled={uploading}
             style={{
               fontFamily:    S.fontMono,
-              fontSize:      "0.5625rem",
+              fontSize:      "0.75rem",
               letterSpacing: "0.06em",
               fontWeight:    700,
               padding:       "6px 20px",
@@ -178,7 +178,7 @@ export default function FileUploadLane({ token, onImportComplete }: Props) {
           border:  `1px solid ${S.red}`,
           background: `color-mix(in srgb, ${S.red} 5%, ${S.bgPanel})`,
           fontFamily: S.fontMono,
-          fontSize:   "0.5625rem",
+          fontSize:   "0.75rem",
           color:      S.red,
           borderRadius: 3,
         }}>
@@ -202,7 +202,7 @@ function ConnectorRunBanner({ run, onDismiss }: { run: ConnectorRun; onDismiss: 
   const S2 = S;
   const success = run.status === "COMPLETED" && run.error_count === 0;
   const partial  = run.status === "COMPLETED" && run.error_count > 0;
-  const failed   = run.status === "FAILED";
+  const _failed  = run.status === "FAILED";
 
   const color = success ? S2.green : partial ? S2.amber : S2.red;
 
@@ -220,10 +220,10 @@ function ConnectorRunBanner({ run, onDismiss }: { run: ConnectorRun; onDismiss: 
         padding:        "8px 14px",
         borderBottom:   `1px solid ${color}`,
       }}>
-        <span style={{ fontFamily: S2.fontMono, fontSize: "0.6875rem", letterSpacing: "0.08em", color }}>
+        <span style={{ fontFamily: S2.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em", color }}>
           {success ? "IMPORT COMPLETE" : partial ? "IMPORT PARTIAL" : "IMPORT FAILED"}
         </span>
-        <span style={{ fontFamily: S2.fontUI, fontSize: "0.625rem", color: S2.secondary }}>
+        <span style={{ fontFamily: S2.fontUI, fontSize: "0.75rem", color: S2.secondary }}>
           {run.created_ok}/{run.total_rows} rows created
           {run.error_count > 0 && ` · ${run.error_count} errors`}
         </span>
@@ -247,7 +247,7 @@ function ConnectorRunBanner({ run, onDismiss }: { run: ConnectorRun; onDismiss: 
           ["Run ID",     run.id.slice(0, 8) + "…"],
         ].map(([label, val]) => (
           <div key={label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <span style={{ fontFamily: S2.fontMono, fontSize: "0.625rem", color: S2.tertiary, letterSpacing: "0.08em" }}>
+            <span style={{ fontFamily: S2.fontMono, fontSize: "0.75rem", color: S2.tertiary, letterSpacing: "0.08em" }}>
               {label}
             </span>
             <span style={{ fontFamily: S2.fontMono, fontSize: "0.75rem", color: S2.primary }}>

@@ -575,7 +575,7 @@ function IndicatorRow({ ind, active, focused, onToggle }: IndicatorRowProps) {
       <span
         style={{
           fontFamily: FONT_MONO,
-          fontSize: 9,
+          fontSize: 10,
           letterSpacing: "0.05em",
           color: ind.type === "subpane" ? "#FF9800" : "#787B86",
           textTransform: "uppercase",

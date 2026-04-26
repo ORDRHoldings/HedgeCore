@@ -653,7 +653,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
                       borderRadius: 6, position: "relative",
                     }}>
                       <div style={{
-                        fontFamily: S.fontMono, fontSize: 7, color: stage.color,
+                        fontFamily: S.fontMono, fontSize: 10, color: stage.color,
                         letterSpacing: "0.06em", opacity: 0.7, marginBottom: 2,
                       }}>
                         {stage.icon} {stage.label}

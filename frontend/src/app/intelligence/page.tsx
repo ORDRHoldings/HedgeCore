@@ -11,19 +11,22 @@ import {
 } from "@/lib/api/intelligenceClient";
 import { Brain } from "lucide-react";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
+import { PageShell } from "@/components/layout/PageShell";
+import { T } from "@/lib/design/tokens";
 
 const S = {
-  mono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-  ui:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-  deep: "var(--bg-deep)",
-  panel: "var(--bg-panel)",
-  sub:  "var(--bg-sub)",
-  rim:  "var(--border-rim)",
-  cyan: "var(--accent-cyan)",
-  text1: "var(--text-primary)",
-  text2: "var(--text-secondary)",
-  green: "var(--status-pass,#059669)",
-  red:   "var(--accent-red,#DC2626)",
+  mono:  T.fontMono,
+  ui:    T.fontUI,
+  deep:  T.bgDeep,
+  panel: T.bgPanel,
+  sub:   T.bgSub,
+  rim:   T.rim,
+  cyan:  T.signalCyan,
+  text1: T.primary,
+  text2: T.secondary,
+  green: T.pass,
+  red:   T.signalRed,
+  white: "#fff",
 } as const;
 
 export default function IntelligencePage() {
@@ -65,27 +68,19 @@ export default function IntelligencePage() {
   const canToggle = user?.roles?.includes("admin") || user?.roles?.includes("cfo") || user?.is_superuser;
 
   return (
-    <div style={{ minHeight: "100vh", background: S.deep, padding: isMobile ? 12 : 32, fontFamily: S.ui }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: 6,
+    <PageShell
+      icon={Brain}
+      title="Intelligence"
+      actions={
+        <span style={{
+          padding: "2px 8px", borderRadius: 3,
           background: "rgba(0,200,200,0.1)", border: `1px solid ${S.cyan}`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          <Brain size={18} color={S.cyan} />
-        </div>
-        <div>
-          <div style={{ fontFamily: S.mono, fontSize: 14, color: S.text1, letterSpacing: 1 }}>
-            INTELLIGENCE
-          </div>
-          <div style={{ fontSize: 11, color: S.text2 }}>AI Add-On Tier — Advisory Only</div>
-        </div>
-        <div style={{
-          marginLeft: 12, padding: "2px 8px", borderRadius: 3,
-          background: "rgba(0,200,200,0.1)", border: `1px solid ${S.cyan}`,
-          fontFamily: S.mono, fontSize: 9, color: S.cyan, letterSpacing: 1,
-        }}>PHASE 3</div>
+          fontFamily: S.mono, fontSize: 12, color: S.cyan, letterSpacing: 1,
+        }}>PHASE 3</span>
+      }
+    >
+      <div style={{ fontFamily: S.ui, fontSize: 12, color: S.text2, marginBottom: 16 }}>
+        AI Add-On Tier — Advisory Only
       </div>
 
       {loading && (
@@ -118,7 +113,7 @@ export default function IntelligencePage() {
                   style={{
                     padding: "8px 16px", borderRadius: 4, cursor: toggling ? "not-allowed" : "pointer",
                     fontFamily: S.mono, fontSize: 11, letterSpacing: 1, border: "none",
-                    background: settings.enabled ? S.red : S.green, color: "#fff",
+                    background: settings.enabled ? S.red : S.green, color: S.white,
                     opacity: toggling ? 0.6 : 1,
                   }}
                 >
@@ -180,6 +175,6 @@ export default function IntelligencePage() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

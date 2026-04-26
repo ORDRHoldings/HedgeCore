@@ -37,6 +37,7 @@ function fmtBps(n: number): string {
 function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 
 // ─── Methodology footnote ─────────────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function MethodologyNote({ formula }: { formula: string }) {
   const [expanded, setExpanded] = useState(false);
   return (
@@ -689,10 +690,10 @@ export function FanChart({ points, title = "Forward Rate Fan Chart" }: { points:
         {/* P90/P10 labels */}
         <text x={PAD.left + chartW - 2} y={toY(points[points.length - 1]?.p90 ?? 0) - 3}
           textAnchor="end" fill={S.cyan} opacity={0.6}
-          style={{ fontFamily: S.fontMono, fontSize: 7 }}>P90</text>
+          style={{ fontFamily: S.fontMono, fontSize: 10 }}>P90</text>
         <text x={PAD.left + chartW - 2} y={toY(points[points.length - 1]?.p10 ?? 0) + 10}
           textAnchor="end" fill={S.cyan} opacity={0.6}
-          style={{ fontFamily: S.fontMono, fontSize: 7 }}>P10</text>
+          style={{ fontFamily: S.fontMono, fontSize: 10 }}>P10</text>
       </svg>
       <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>

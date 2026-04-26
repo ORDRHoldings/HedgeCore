@@ -23,7 +23,7 @@ import {
   LayoutDashboard, Play, FileText, Microscope, BarChart3,
   Zap, Globe, Settings, Monitor, HelpCircle,
   Upload, Scale, Shield, Book, Clock, Terminal, Plug,
-  ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen,
+  ChevronRight, LogOut, PanelLeftClose,
   Target, Cpu, PenSquare, Download, Key, User, Ticket, CircleHelp, Database,
   DollarSign, RefreshCw, BarChart2, Building2, CreditCard, Link2, TrendingUp, GitMerge,
   Layers, FileSpreadsheet, Brain, TrendingDown, Calculator, Users, FileCheck, Library,
@@ -48,6 +48,7 @@ const ST = {
   amber:          "var(--accent-amber, #E5A84B)",
   green:          "var(--status-pass, #4CAF50)",
   red:            "var(--accent-red, #E57373)",
+  white:          "#fff",
   collapsed: 64,
   expanded:  260,
 } as const;
@@ -303,7 +304,18 @@ function SectionRow({ sec, isActive, isExpanded, expandedOpen, onToggleExpanded,
     <div ref={ref}>
       {/* Section button */}
       <div
+        role="button"
+        tabIndex={0}
+        aria-label={!isExpanded ? sec.label : undefined}
+        aria-current={isActive ? "page" : undefined}
+        aria-expanded={isExpanded && sec.items.length > 1 ? isSubOpen : undefined}
         onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
         title={!isExpanded ? sec.label : undefined}
         style={{
           display:      "flex",
@@ -316,6 +328,13 @@ function SectionRow({ sec, isActive, isExpanded, expandedOpen, onToggleExpanded,
           position:     "relative",
           transition:   "background 100ms",
           background:   isActive ? ST.accentDim : "transparent",
+          outline:      "none",
+        }}
+        onFocus={e => {
+          if (!isActive) (e.currentTarget as HTMLElement).style.background = ST.sidebarBgHover;
+        }}
+        onBlur={e => {
+          if (!isActive) (e.currentTarget as HTMLElement).style.background = "transparent";
         }}
         onMouseEnter={e => {
           if (!isActive) (e.currentTarget as HTMLElement).style.background = ST.sidebarBgHover;
@@ -584,7 +603,7 @@ export default function AppSidebar({ mobileOpen, onMobileClose }: AppSidebarProp
                   display: "flex", alignItems: "center", justifyContent: "center",
                   boxShadow: `0 2px 8px ${ST.accentGlow}`,
                 }}>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 800, color: "#fff", letterSpacing: "0.04em" }}>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 800, color: ST.white, letterSpacing: "0.04em" }}>
                     O
                   </span>
                 </div>
@@ -638,7 +657,7 @@ export default function AppSidebar({ mobileOpen, onMobileClose }: AppSidebarProp
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "scale(1.05)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "scale(1)"; }}
             >
-              <span style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 800, color: "#fff" }}>O</span>
+              <span style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 800, color: ST.white }}>O</span>
             </button>
           )}
         </div>

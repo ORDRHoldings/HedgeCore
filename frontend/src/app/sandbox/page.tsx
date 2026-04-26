@@ -7,13 +7,12 @@ import { useAuth } from "../../lib/authContext";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import type { RootState, AppDispatch } from "../../lib/store";
 import {
-  sandboxCalculateThunk,
   sandboxCalculateMultiThunk,
   setXRayOpen,
   setXRayContext,
   setSelectedPair,
 } from "../../lib/store/slices/pipelineSlice";
-import type { CalculateRequest, PolicyConfig } from "../../api/types";
+import type { PolicyConfig } from "../../api/types";
 
 // ─── Fallback policy (used when no active policy is loaded) ───────────────────
 const DEFAULT_POLICY: PolicyConfig = {
@@ -45,7 +44,6 @@ import RiskAttributionPanel from "../../components/sandbox/RiskAttributionPanel"
 import WhatIfBuilder from "../../components/sandbox/WhatIfBuilder";
 import RegulatoryCapital from "../../components/sandbox/RegulatoryCapital";
 import MarketMicrostructure from "../../components/sandbox/MarketMicrostructure";
-import WhitepaperExport from "../../components/sandbox/WhitepaperExport";
 import { HedgeGauge } from "../../components/sandbox/VisualizationSuite";
 import AuditEngine from "../../components/sandbox/AuditEngine";
 import { AICommentaryPanel } from "../../components/sandbox/AICommentaryPanel";
@@ -78,6 +76,9 @@ const S = {
   green:    "var(--accent-green)",
   amber:    "var(--accent-amber)",
   red:      "var(--accent-red, #f87171)",
+  // Institutional blue CTA + button-text foreground for "RUN AS PRODUCTION CALCULATION".
+  cta:      "#1C62F2",
+  white:    "#fff",
 } as const;
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
@@ -260,7 +261,7 @@ function InlineAuditSummary({ sandboxResult, liveDataFetched }: {
           <thead>
             <tr style={{ background: S.panel }}>
               {["Rule ID", "Name", "Status", "Evidence", "Regulatory Ref"].map(h => (
-                <th key={h} style={{
+                <th scope="col" key={h} style={{
                   fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
                   color: S.tertiary, textTransform: "uppercase",
                   padding: "8px 14px", textAlign: "left",
@@ -320,8 +321,6 @@ function InlineAuditSummary({ sandboxResult, liveDataFetched }: {
 // ─── Widget embed mode ─────────────────────────────────────────────────────────
 function WidgetMode({ currency, notional, tab }: { currency: string; notional: number; tab: SandboxTab }) {
   const isMobile = useIsMobile();
-  const dispatch = useDispatch<AppDispatch>();
-  const { token } = useAuth();
   const { sandboxResult, sandboxLoading } = useSelector((s: RootState) => s.pipeline);
   const { liveSpot, liveStatus } = useLiveSpot(currency);
 
@@ -963,8 +962,8 @@ function SandboxPageInner() {
                         fontFamily: "'IBM Plex Mono', monospace",
                         fontSize: 12, fontWeight: 700,
                         padding: "8px 20px",
-                        background: "#1C62F2",
-                        color: "#fff",
+                        background: S.cta,
+                        color: S.white,
                         border: "none",
                         borderRadius: 3,
                         cursor: "pointer",
@@ -1015,8 +1014,8 @@ function SandboxPageInner() {
                       fontFamily: "'IBM Plex Mono', monospace",
                       fontSize: 12, fontWeight: 700,
                       padding: "8px 20px",
-                      background: "#1C62F2",
-                      color: "#fff",
+                      background: S.cta,
+                      color: S.white,
                       border: "none",
                       borderRadius: 3,
                       cursor: "pointer",
@@ -1136,7 +1135,7 @@ function SandboxPageInner() {
                           <thead>
                             <tr style={{ background: S.panel }}>
                               {["Standard", "Full Name", "Key Requirement", "Platform Implementation", "Status"].map(h => (
-                                <th key={h} style={{
+                                <th scope="col" key={h} style={{
                                   fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                                   color: S.tertiary, textTransform: "uppercase",
                                   padding: "9px 14px", textAlign: "left",

@@ -24,6 +24,7 @@ const S = {
   amber:    "var(--accent-amber)",
   green:    "var(--status-pass,#22c55e)",
   red:      "var(--accent-red,#f87171)",
+  black:    "#000",
 } as const;
 
 type ViewMode = "PAIRS" | "HEATMAP" | "CONCENTRATION" | "RECOMMENDATIONS";
@@ -95,7 +96,6 @@ const FALLBACK_EXPOSURE: Record<string, number> = {
 
 // ── GroupCard ──────────────────────────────────────────────────────────────────
 function GroupCard({ group }: { group: PairGroup }) {
-  const isMobile = useIsMobile();
   const pairs = getPairsByGroup(group);
   const ndfCount = pairs.filter(p => p.isNdf).length;
   return (
@@ -123,7 +123,7 @@ function GroupCard({ group }: { group: PairGroup }) {
         <thead>
           <tr style={{ background: S.sub }}>
             {["Pair", "Settlement", "1M Vol", "ADV"].map(h => (
-              <th key={h} style={{
+              <th scope="col" key={h} style={{
                 padding: "7px 14px", fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                 color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}`,
               }}>{h}</th>
@@ -187,7 +187,7 @@ function CorrelationHeatmap() {
             <span style={{
               padding: "2px 8px", borderRadius: 3,
               background: corrColor(hovered.v),
-              color: "#000", fontWeight: 700, fontSize: 11,
+              color: S.black, fontWeight: 700, fontSize: 11,
             }}>
               ρ = {hovered.v.toFixed(2)}
             </span>
@@ -209,7 +209,7 @@ function CorrelationHeatmap() {
           {CURRENCIES.map(c => (
             <div key={c} style={{
               width: CELL, flexShrink: 0, textAlign: "center",
-              fontFamily: S.fontMono, fontSize: 7, color: S.tertiary,
+              fontFamily: S.fontMono, fontSize: 10, color: S.tertiary,
               transform: "rotate(-60deg) translateX(-4px)", transformOrigin: "bottom center",
               height: 44, display: "flex", alignItems: "flex-end", justifyContent: "center",
             }}>
@@ -222,7 +222,7 @@ function CorrelationHeatmap() {
             {/* Row label */}
             <div style={{
               width: LABEL_W, flexShrink: 0,
-              fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
+              fontFamily: S.fontMono, fontSize: 10, color: S.tertiary,
               textAlign: "right", paddingRight: 6,
             }}>
               {row}
@@ -400,13 +400,13 @@ function ConcentrationPanel({ exposure, totalExp, dataSource }: {
               <div style={{ width: 70, display: "flex", gap: 4, flexShrink: 0 }}>
                 {r.isNdf && (
                   <span style={{
-                    fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.amber,
+                    fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.amber,
                     padding: "1px 4px", border: `1px solid ${S.amber}`, borderRadius: 2,
                   }}>NDF</span>
                 )}
                 {r.vol1m >= 14 && (
                   <span style={{
-                    fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.red,
+                    fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.red,
                     padding: "1px 4px", border: `1px solid ${S.red}`, borderRadius: 2,
                   }}>HI-VOL</span>
                 )}
@@ -579,7 +579,7 @@ function RecommendationsPanel() {
 export default function PortfolioMultiPage() {
   const isMobile = useIsMobile();
   const _planAllowed = usePlanRedirect("professional");
-  const { user, token } = useAuth();
+  const { user: _user, token } = useAuth();
   const [view, setView] = useState<ViewMode>("PAIRS");
   const [activeGroup, setActiveGroup] = useState<PairGroup | "ALL">("ALL");
 
@@ -644,7 +644,7 @@ export default function PortfolioMultiPage() {
             {PAIR_REGISTRY.length} pairs · {allNdf} NDF · {allDeliverable} Deliverable
           </span>
           <span style={{
-            fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
+            fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
             color: dataSource === "live" ? S.green : S.amber,
             border: `1px solid ${dataSource === "live" ? S.green : S.amber}`,
             padding: "1px 6px", borderRadius: 2,

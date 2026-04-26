@@ -35,6 +35,8 @@ const C = {
   text1: "#0F172A",
   text3: "#94A3B8",
   bgPanel: "#FFFFFF",
+  tooltipBg: "#FFFFFFEE",
+  borderWhite: "#FFFFFF",
 } as const;
 
 /** Palette for currency pair coloring — 10 distinct, institutional-grade hues */
@@ -58,7 +60,7 @@ const SPLIT_LINE = {
   lineStyle: { color: C.border, type: "dashed" as const, opacity: 0.5 },
 };
 const TOOLTIP_STYLE = {
-  backgroundColor: "#FFFFFFEE",
+  backgroundColor: C.tooltipBg,
   borderColor: C.border,
   borderWidth: 1,
   textStyle: { color: C.text1, fontSize: 12, fontFamily: "monospace" },
@@ -137,7 +139,7 @@ export default function RateScatterChart({
           color,
           shadowBlur: 6,
           shadowColor: color + "44",
-          borderColor: "#FFFFFF",
+          borderColor: C.borderWhite,
           borderWidth: 1,
         },
         emphasis: {

@@ -210,7 +210,7 @@ export default function ChartToolbar({
       )}
 
       {activeSubPanes.length > 0 && (
-        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: THEME.axisText, marginLeft: "auto" }}>
+        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: THEME.axisText, marginLeft: "auto" }}>
           {activeSubPanes.length}/3 PANES
         </span>
       )}
@@ -265,9 +265,9 @@ function DropdownGroup({ label, items, config, activeSubPanes, onToggle, onToggl
       >
         {label}
         {activeCount > 0 && (
-          <span style={{ fontSize: 9, opacity: 0.7 }}>({activeCount})</span>
+          <span style={{ fontSize: 10, opacity: 0.7 }}>({activeCount})</span>
         )}
-        <span style={{ fontSize: 8, marginLeft: 2 }}>{isOpen ? "\u25B4" : "\u25BE"}</span>
+        <span style={{ fontSize: 10, marginLeft: 2 }}>{isOpen ? "\u25B4" : "\u25BE"}</span>
       </button>
 
       {isOpen && (

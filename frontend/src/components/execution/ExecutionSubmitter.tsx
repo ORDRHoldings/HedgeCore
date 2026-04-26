@@ -47,6 +47,8 @@ const S = {
   pass:     "var(--status-pass,#10B981)",
   fail:     "var(--accent-red,#EF4444)",
   violet:   "#3B82F6",
+  // High-contrast button-text on saturated cyan/green CTA fills.
+  black:    "#000",
 } as const;
 
 // ── Order lifecycle ────────────────────────────────────────────────────────────
@@ -111,9 +113,6 @@ interface ExecutionSubmitterProps {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function fmt(n: number, dp = 0): string {
-  return n.toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp });
-}
 function fmtUsd(n: number): string {
   const abs = Math.abs(n);
   if (abs >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
@@ -137,7 +136,7 @@ function buildMailtoUrl(
   fxDeskEmail: string,
   order: OrderRecord,
   mapping: InstrumentMapping,
-  accountId: string,
+  _accountId: string,
 ): string {
   const subject = encodeURIComponent(`FX Hedge Order — ${order.orderId}`);
   const body = encodeURIComponent(
@@ -332,7 +331,7 @@ export default function ExecutionSubmitter({
             { label: "PENDING",   val: pending,   color: S.tertiary },
             { label: "SUBMITTED", val: submitted, color: S.cyan   },
             { label: "FILLED",    val: filled,    color: S.pass   },
-            { label: "SETTLED",   val: settled,   color: "#10B981" },
+            { label: "SETTLED",   val: settled,   color: S.pass   },
             { label: "CANCELLED", val: cancelled, color: S.amber  },
           ].filter(c => c.val > 0).map(c => (
             <span key={c.label} style={{
@@ -488,7 +487,7 @@ export default function ExecutionSubmitter({
                           onClick={() => handleSubmit(order, m)}
                           style={{
                             fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.05em",
-                            color: "#000", background: S.cyan, border: "none",
+                            color: S.black, background: S.cyan, border: "none",
                             borderRadius: 2, padding: "4px 10px", cursor: "pointer",
                             whiteSpace: "nowrap",
                           }}
@@ -514,8 +513,8 @@ export default function ExecutionSubmitter({
                           onClick={() => handleMarkSettled(order.orderId)}
                           style={{
                             fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.05em",
-                            color: "#10B981", background: "transparent",
-                            border: `1px solid #10B981`, borderRadius: 2,
+                            color: S.pass, background: "transparent",
+                            border: `1px solid ${S.pass}`, borderRadius: 2,
                             padding: "4px 10px", cursor: "pointer",
                           }}
                         >
@@ -561,7 +560,7 @@ export default function ExecutionSubmitter({
               <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
                 {[
                   { label: "ORDERS FILLED", value: `${filled}/${orders.length}`, color: S.pass },
-                  { label: "ORDERS SETTLED", value: `${settled}`, color: "#10B981" },
+                  { label: "ORDERS SETTLED", value: `${settled}`, color: S.pass },
                   {
                     label: "AVG SLIPPAGE",
                     value: avgSlippage !== null
@@ -684,7 +683,7 @@ export default function ExecutionSubmitter({
                     disabled={!fillModal.fillPrice}
                     style={{
                       flex: 1, fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
-                      color: "#000", background: fillModal.fillPrice ? S.pass : S.tertiary,
+                      color: S.black, background: fillModal.fillPrice ? S.pass : S.tertiary,
                       border: "none", borderRadius: 2, padding: "8px",
                       cursor: fillModal.fillPrice ? "pointer" : "not-allowed",
                     }}

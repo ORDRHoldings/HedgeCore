@@ -14,7 +14,7 @@ import { riskPulseCache, geoIntelCache, riskInsightCache } from "@/lib/market/ca
 import type { RiskFactor, RiskInsight, RiskRegime, GeoIntelligence } from "@/lib/market/types";
 
 const PULSE_KEY   = "risk_pulse";
-const GEO_KEY     = "geo_intel";
+const _GEO_KEY    = "geo_intel";
 const INSIGHT_KEY = "risk_pulse_insight";
 const TTL_MS      = 300_000;  // 5 min
 

@@ -89,7 +89,7 @@ export default function CsvUploader({ label, onFile, schemaType = 'trades' }: Pr
             cursor: 'pointer',
             padding: '3px 10px',
             fontFamily: S.fontMono,
-            fontSize: '0.625rem',
+            fontSize: '0.75rem',
             fontWeight: 500,
             border: `1px dashed ${dragActive ? S.cyan : S.border}`,
             color: dragActive ? S.cyan : S.textSecondary,
@@ -117,7 +117,7 @@ export default function CsvUploader({ label, onFile, schemaType = 'trades' }: Pr
             cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: S.fontMono,
-            fontSize: '0.6875rem',
+            fontSize: '0.75rem',
             color: S.textTertiary,
             flexShrink: 0,
           }}
@@ -151,7 +151,7 @@ export default function CsvUploader({ label, onFile, schemaType = 'trades' }: Pr
               background: S.bgSub,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.08em' }}>CSV IMPORT FORMAT</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textTertiary, letterSpacing: '0.08em' }}>CSV IMPORT FORMAT</span>
                 <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: S.textPrimary }}>
                   {schemaLabel} — Column Reference
                 </span>
@@ -182,7 +182,7 @@ export default function CsvUploader({ label, onFile, schemaType = 'trades' }: Pr
                     'Drag & drop the CSV file directly onto the import button',
                     'Maximum 500 rows per import. Duplicates are rejected by Record ID.',
                   ].map((tip, i) => (
-                    <li key={i} style={{ display: 'flex', gap: 8, fontSize: '0.6875rem', color: S.textSecondary, lineHeight: 1.5 }}>
+                    <li key={i} style={{ display: 'flex', gap: 8, fontSize: '0.75rem', color: S.textSecondary, lineHeight: 1.5 }}>
                       <span style={{ color: S.cyan, fontFamily: S.fontMono, flexShrink: 0 }}>{String(i + 1).padStart(2, '0')}</span>
                       <span>{tip}</span>
                     </li>
@@ -191,7 +191,7 @@ export default function CsvUploader({ label, onFile, schemaType = 'trades' }: Pr
               </div>
 
               {/* Schema table */}
-              <p style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 8 }}>COLUMN SCHEMA</p>
+              <p style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 8 }}>COLUMN SCHEMA</p>
               <div style={{ border: `1px solid ${S.border}`, overflow: 'hidden' }}>
                 {/* Table header */}
                 <div style={{
@@ -201,7 +201,7 @@ export default function CsvUploader({ label, onFile, schemaType = 'trades' }: Pr
                   padding: '6px 10px',
                 }}>
                   {['COLUMN', 'REQ.', 'TYPE', 'EXAMPLE', 'NOTES'].map(h => (
-                    <span key={h} style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.08em' }}>{h}</span>
+                    <span key={h} style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textTertiary, letterSpacing: '0.08em' }}>{h}</span>
                   ))}
                 </div>
                 {/* Rows */}
@@ -215,26 +215,26 @@ export default function CsvUploader({ label, onFile, schemaType = 'trades' }: Pr
                       background: i % 2 === 0 ? 'transparent' : `color-mix(in srgb, ${S.bgSub} 40%, transparent)`,
                     }}
                   >
-                    <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textPrimary }}>{col.name}</span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: '0.625rem', color: col.required ? S.red : S.textTertiary }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textPrimary }}>{col.name}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: col.required ? S.red : S.textTertiary }}>
                       {col.required ? '● required' : '○ optional'}
                     </span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: '0.625rem', color: S.amber }}>{col.type}</span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: '0.625rem', color: S.textSecondary }}>{col.example}</span>
-                    <span style={{ fontSize: '0.6875rem', color: S.textSecondary, lineHeight: 1.45 }}>{col.notes}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.amber }}>{col.type}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textSecondary }}>{col.example}</span>
+                    <span style={{ fontSize: '0.75rem', color: S.textSecondary, lineHeight: 1.45 }}>{col.notes}</span>
                   </div>
                 ))}
               </div>
 
               {/* CSV example */}
-              <p style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.08em', marginTop: 16, marginBottom: 8 }}>EXAMPLE CSV</p>
+              <p style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textTertiary, letterSpacing: '0.08em', marginTop: 16, marginBottom: 8 }}>EXAMPLE CSV</p>
               <div style={{
                 background: S.bgSub,
                 border: `1px solid ${S.border}`,
                 padding: '10px 14px',
                 overflowX: 'auto',
               }}>
-                <pre style={{ fontFamily: S.fontMono, fontSize: '0.625rem', color: S.textSecondary, margin: 0, lineHeight: 1.7 }}>
+                <pre style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textSecondary, margin: 0, lineHeight: 1.7 }}>
                   {schemaType === 'trades'
                     ? `record_id,entity,type,currency,amount,value_date,status,description\nINV-001,LatAm Corp,AP,MXN,14500000,2026-04-15,CONFIRMED,Q1 steel import\nINV-002,LatAm Corp,AR,EUR,800000,2026-04-30,CONFIRMED,EU customer receivable\nINV-003,LatAm Corp,AP,MXN,9200000,2026-05-10,FORECAST,Projected supplier payment`
                     : `hedge_id,instrument,direction,notional_mxn,value_date,status\nH-001,NDF,SELL_MXN_BUY_USD,12000000,2026-04-15,ACTIVE\nH-002,FWD,SELL_MXN_BUY_USD,9500000,2026-05-10,LOCKED`
@@ -262,7 +262,7 @@ export default function CsvUploader({ label, onFile, schemaType = 'trades' }: Pr
                     'direction must exactly match: SELL_MXN_BUY_USD or BUY_MXN_SELL_USD',
                     'value_date must align with an active market forward bucket for correct carry attribution',
                   ]).map((rule, i) => (
-                    <li key={i} style={{ display: 'flex', gap: 8, fontSize: '0.6875rem', color: S.textSecondary, lineHeight: 1.5 }}>
+                    <li key={i} style={{ display: 'flex', gap: 8, fontSize: '0.75rem', color: S.textSecondary, lineHeight: 1.5 }}>
                       <span style={{ color: S.amber, fontFamily: S.fontMono, flexShrink: 0 }}>V-{String(i + 1).padStart(2, '0')}</span>
                       <span>{rule}</span>
                     </li>
@@ -280,7 +280,7 @@ export default function CsvUploader({ label, onFile, schemaType = 'trades' }: Pr
               <button
                 onClick={() => setHelpOpen(false)}
                 style={{
-                  fontFamily: S.fontUI, fontSize: '0.6875rem', fontWeight: 500,
+                  fontFamily: S.fontUI, fontSize: '0.75rem', fontWeight: 500,
                   padding: '4px 14px',
                   border: `1px solid ${S.border}`,
                   color: S.textSecondary,

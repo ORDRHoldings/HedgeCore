@@ -30,6 +30,7 @@ const S = {
   pass:     "var(--status-pass,#22c55e)",
   fail:     "var(--accent-red,#ef4444)",
   amber:    "var(--accent-amber)",
+  black:    "#000",
 } as const;
 
 // ── Hash Chain Block Visualization ────────────────────────────────────────────
@@ -116,7 +117,7 @@ function HashChainView({ entries, onSelect }: { entries: LedgerEntry[]; onSelect
                   </span>
                   {isLatest && (
                     <span style={{
-                      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                      fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
                       color: S.cyan, padding: "1px 5px",
                       border: `1px solid ${S.cyan}`, borderRadius: 2,
                       letterSpacing: "0.08em",
@@ -124,7 +125,7 @@ function HashChainView({ entries, onSelect }: { entries: LedgerEntry[]; onSelect
                   )}
                   {isGenesis && (
                     <span style={{
-                      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                      fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
                       color: S.pass, padding: "1px 5px",
                       border: `1px solid ${S.pass}`, borderRadius: 2,
                       letterSpacing: "0.08em",
@@ -149,7 +150,7 @@ function HashChainView({ entries, onSelect }: { entries: LedgerEntry[]; onSelect
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "8px 24px" }}>
                   {/* Current hash */}
                   <div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 3 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 3 }}>
                       ROOT HASH
                     </div>
                     <div style={{
@@ -163,7 +164,7 @@ function HashChainView({ entries, onSelect }: { entries: LedgerEntry[]; onSelect
 
                   {/* Prev hash */}
                   <div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 3 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 3 }}>
                       ← PREV HASH {isGenesis ? "(GENESIS)" : ""}
                     </div>
                     <div style={{
@@ -177,7 +178,7 @@ function HashChainView({ entries, onSelect }: { entries: LedgerEntry[]; onSelect
 
                   {/* Order ID */}
                   <div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 3 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 3 }}>
                       ORDER ID
                     </div>
                     <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>
@@ -187,7 +188,7 @@ function HashChainView({ entries, onSelect }: { entries: LedgerEntry[]; onSelect
 
                   {/* Authorized by */}
                   <div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 3 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 3 }}>
                       AUTHORIZED BY
                     </div>
                     <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>
@@ -207,7 +208,7 @@ function HashChainView({ entries, onSelect }: { entries: LedgerEntry[]; onSelect
               width: 16, height: 16, borderRadius: "50%",
               background: S.pass, border: `2px solid ${S.pass}`,
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 8, color: "#000", fontWeight: 900,
+              fontSize: 10, color: S.black, fontWeight: 900,
             }}>G</div>
           </div>
           <div style={{
@@ -307,7 +308,7 @@ export default function LedgerListPage() {
                   <thead>
                     <tr style={{ background: S.bgSub }}>
                       {["LEDGER ID", "ORDER", "REPLAY", "ROOT HASH", "AUTHORIZED BY", "AUTHORIZED AT"].map(h => (
-                        <th key={h} style={{ padding: "7px 12px", fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.07em", color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}` }}>{h}</th>
+                        <th scope="col" key={h} style={{ padding: "7px 12px", fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.07em", color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}` }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -352,7 +353,7 @@ export default function LedgerListPage() {
       <footer style={{
         height: 32, display: "flex", alignItems: "center", gap: 8, padding: isMobile ? "0 12px" : "0 24px",
         borderTop: `1px solid ${S.rim}`, background: S.bgPanel,
-        fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
+        fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
         letterSpacing: "0.04em", flexShrink: 0,
         flexWrap: isMobile ? "wrap" : "nowrap",
       }}>
@@ -360,11 +361,11 @@ export default function LedgerListPage() {
         <span style={{ color: S.rim }}>·</span>
         <span>WORM Append-Only · SHA-256 Hash Chain</span>
         <div style={{ flex: 1 }} />
-        <button onClick={() => router.push("/staging")} style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary, background: "transparent", border: `1px solid ${S.soft}`, padding: "1px 8px", cursor: "pointer", letterSpacing: "0.04em" }}>
+        <button onClick={() => router.push("/staging")} style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary, background: "transparent", border: `1px solid ${S.soft}`, padding: "1px 8px", cursor: "pointer", letterSpacing: "0.04em" }}>
           STAGING QUEUE →
         </button>
         <span style={{ color: S.rim }}>·</span>
-        <button onClick={() => router.push("/hedgewiki")} style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary, background: "transparent", border: `1px solid ${S.soft}`, padding: "1px 8px", cursor: "pointer", letterSpacing: "0.04em" }}>
+        <button onClick={() => router.push("/hedgewiki")} style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary, background: "transparent", border: `1px solid ${S.soft}`, padding: "1px 8px", cursor: "pointer", letterSpacing: "0.04em" }}>
           HEDGE WIKI →
         </button>
       </footer>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
-import { S, monoInputStyle, inputStyle } from "../../types/settings";
+import { S, monoInputStyle } from "../../types/settings";
 
 interface RegulatorySettings {
   reporting_entity_lei:    string;
@@ -371,7 +371,7 @@ export default function RegulatorySettingsTab({ token }: Props) {
               width: 16,
               height: 16,
               borderRadius: "50%",
-              background: "#fff",
+              background: S.white,
               transition: "left 0.2s",
             }} />
           </div>

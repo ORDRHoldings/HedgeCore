@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   ChevronLeft, ArrowRight, Sliders, Box, BookMarked, RefreshCw, History, Shuffle,
-  Shield, Layers, BarChart3,
+  Shield, BarChart3,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";

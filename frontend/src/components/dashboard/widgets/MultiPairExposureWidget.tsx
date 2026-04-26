@@ -34,7 +34,7 @@ interface PairExposure {
   group: string;
 }
 
-export default function MultiPairExposureWidget({ token, user, onRemove }: WidgetProps) {
+export default function MultiPairExposureWidget({ token, user: _user, onRemove }: WidgetProps) {
   const [exposures, setExposures] = useState<PairExposure[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);

@@ -87,7 +87,7 @@ const S = {
   mutedLabel: {
     color: "#787B86",
     whiteSpace: "nowrap" as const,
-    fontSize: 9,
+    fontSize: 10,
     marginLeft: 2,
   },
   actionBtn: {
@@ -119,7 +119,7 @@ const S = {
   },
   sectionLabel: {
     fontFamily: "'IBM Plex Mono', monospace",
-    fontSize: 9,
+    fontSize: 10,
     color: "#545B69",
     padding: "2px 4px",
     alignSelf: "center" as const,

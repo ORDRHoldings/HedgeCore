@@ -29,6 +29,7 @@ const S = {
   green: "var(--status-pass,#22c55e)",
   fontUI: "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+  white: "#fff",
 } as const;
 
 interface Props {
@@ -157,7 +158,7 @@ export default function HedgeDeskOverview({ token, user, onStartRun }: Props) {
             onClick={onStartRun}
             style={{
               fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
-              color: "#fff", background: S.cyan,
+              color: S.white, background: S.cyan,
               border: `1px solid ${S.cyan}`, padding: "6px 14px",
               cursor: "pointer", borderRadius: 2,
               display: "flex", alignItems: "center", gap: 6,

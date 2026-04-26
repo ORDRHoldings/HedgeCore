@@ -7,7 +7,7 @@
  */
 
 import { X, Plus, Check } from "lucide-react";
-import { WIDGET_REGISTRY, type WidgetDef } from "@/lib/widgets/widgetRegistry";
+import { WIDGET_REGISTRY } from "@/lib/widgets/widgetRegistry";
 import { usePlanGate } from "@/lib/hooks/usePlanGate";
 import { useAuth } from "@/lib/authContext";
 
@@ -43,7 +43,7 @@ export default function WidgetCatalog({
   onAdd,
   onReset,
 }: WidgetCatalogProps) {
-  const { user, hasPermission } = useAuth();
+  const { user: _user, hasPermission } = useAuth();
   const { hasAccess: hasPlanAccess } = usePlanGate();
 
   const available = WIDGET_REGISTRY.filter((w) => {
@@ -104,7 +104,7 @@ export default function WidgetCatalog({
             </div>
             <div style={{
               fontFamily: S.fontMono,
-              fontSize: "0.6875rem",
+              fontSize: "0.75rem",
               color: S.tertiary,
               letterSpacing: "0.06em",
               marginTop: 2,
@@ -173,7 +173,7 @@ export default function WidgetCatalog({
                     {widget.requiredPermission && (
                       <div style={{
                         fontFamily: S.fontMono,
-                        fontSize: "0.6875rem",
+                        fontSize: "0.75rem",
                         color: S.tertiary,
                         letterSpacing: "0.05em",
                         marginTop: 2,
@@ -189,7 +189,7 @@ export default function WidgetCatalog({
                       alignItems: "center",
                       gap: 4,
                       fontFamily: S.fontMono,
-                      fontSize: "0.6875rem",
+                      fontSize: "0.75rem",
                       color: S.cyan,
                       border: `1px solid ${S.cyan}`,
                       padding: "2px 7px",
@@ -206,7 +206,7 @@ export default function WidgetCatalog({
                         alignItems: "center",
                         gap: 4,
                         fontFamily: S.fontMono,
-                        fontSize: "0.6875rem",
+                        fontSize: "0.75rem",
                         color: S.cyan,
                         background: "transparent",
                         border: `1px solid ${S.cyan}`,
@@ -235,7 +235,7 @@ export default function WidgetCatalog({
                   display: "flex",
                   gap: 8,
                   fontFamily: S.fontMono,
-                  fontSize: "0.625rem",
+                  fontSize: "0.75rem",
                   color: S.tertiary,
                   letterSpacing: "0.04em",
                 }}>
@@ -274,7 +274,7 @@ export default function WidgetCatalog({
           <div style={{
             marginTop: 8,
             fontFamily: S.fontMono,
-            fontSize: "0.625rem",
+            fontSize: "0.75rem",
             color: S.tertiary,
             textAlign: "center",
             letterSpacing: "0.04em",

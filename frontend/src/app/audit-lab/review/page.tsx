@@ -480,7 +480,7 @@ export default function AuditLabReviewPage() {
                   "Flags",
                   "Actions",
                 ].map((h) => (
-                  <th
+                  <th scope="col"
                     key={h}
                     style={{
                       fontFamily: S.fontMono,

@@ -47,6 +47,8 @@ const S = {
   redBdr:    "rgba(220,38,38,0.20)",
   mono:      "'IBM Plex Mono','JetBrains Mono',monospace",
   ui:        "'IBM Plex Sans',sans-serif",
+  white:     "#fff",
+  blueLight: "#3B82F6",
 } as const;
 
 const STEP_LABELS = ["POSITIONS", "POLICY", "MARKET", "REVIEW", "RESULTS"] as const;
@@ -196,7 +198,7 @@ function StepPositions({
                   display: "flex", alignItems: "center", justifyContent: "center",
                   transition: "all 80ms",
                 }}>
-                  {checked && <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{"\u2713"}</span>}
+                  {checked && <span style={{ color: S.white, fontSize: 12, fontWeight: 700 }}>{"\u2713"}</span>}
                 </div>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -573,8 +575,8 @@ function StepReview({
         disabled={calculating}
         style={{
           width: "100%", height: 48, borderRadius: 4, cursor: calculating ? "default" : "pointer",
-          background: calculating ? S.muted : `linear-gradient(135deg, ${S.blue} 0%, #3B82F6 100%)`,
-          border: "none", color: "#fff",
+          background: calculating ? S.muted : `linear-gradient(135deg, ${S.blue} 0%, ${S.blueLight} 100%)`,
+          border: "none", color: S.white,
           fontFamily: S.mono, fontSize: 13, fontWeight: 700, letterSpacing: "0.14em",
           boxShadow: calculating ? "none" : "0 4px 16px rgba(28,98,242,0.30)",
           transition: "all 120ms",
@@ -1061,7 +1063,7 @@ export default function CalculateWizardPage() {
               onClick={() => router.push("/hedge-desk")}
               style={{
                 fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
-                color: "#fff", background: S.blue, border: "none",
+                color: S.white, background: S.blue, border: "none",
                 padding: "6px 24px", borderRadius: 2, cursor: "pointer",
               }}
             >

@@ -321,7 +321,7 @@ export default function SecurityPage() {
                     <span
                       key={badge}
                       style={{
-                        fontFamily: F.mono, fontSize: 9, fontWeight: 700,
+                        fontFamily: F.mono, fontSize: 10, fontWeight: 700,
                         letterSpacing: "0.12em", color: "#ef4444",
                         border: "1px solid rgba(239,68,68,0.3)",
                         borderRadius: 3, padding: "2px 6px",

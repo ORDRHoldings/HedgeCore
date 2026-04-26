@@ -13,7 +13,6 @@ import { HelpCircle } from "lucide-react";
 // ── Guide data import (graceful fallback) ──────────────────────────────────────
 let GUIDES: GuideDoc[] = [];
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   GUIDES = require("@/lib/help/guides").GUIDES ?? [];
 } catch {
   GUIDES = [];
@@ -44,6 +43,11 @@ const S = {
   amber:     "var(--accent-amber)",
   pass:      "var(--status-pass,#4ade80)",
   fail:      "var(--accent-red,#B91C1C)",
+  // Code-block palette (GitHub-style dark + Tailwind gray-200 foreground).
+  // No T equivalent — these are intentionally distinct from the page chrome
+  // because code blocks must read as a separate visual surface.
+  codeBg:    "#0D1117",
+  codeFg:    "#E5E7EB",
 } as const;
 
 // ── Guide nav items ────────────────────────────────────────────────────────────
@@ -217,7 +221,7 @@ function DataTable({ table }: { table: GuideTable }) {
         <thead>
           <tr>
             {table.headers.map((h, i) => (
-              <th key={i} style={{
+              <th scope="col" key={i} style={{
                 padding: "6px 12px",
                 textAlign: "left",
                 background: `color-mix(in srgb, var(--accent-cyan) 12%, var(--bg-panel))`,
@@ -264,7 +268,7 @@ function FieldDict({ fields }: { fields: GuideFieldDict[] }) {
         <thead>
           <tr>
             {["Field", "Type", "Constraints", "Meaning", "Example"].map((h, i) => (
-              <th key={i} style={{
+              <th scope="col" key={i} style={{
                 padding: "6px 10px",
                 textAlign: "left",
                 background: `color-mix(in srgb, var(--accent-cyan) 12%, var(--bg-panel))`,
@@ -301,7 +305,7 @@ function FieldDict({ fields }: { fields: GuideFieldDict[] }) {
 function CodeBlock({ lang, code }: { lang: string; code: string }) {
   return (
     <div style={{
-      background: "#0D1117",
+      background: S.codeBg,
       border: `1px solid ${S.rim}`,
       marginBottom: 12,
       position: "relative",
@@ -323,7 +327,7 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
         padding: "12px 14px",
         fontFamily: S.fontMono,
         fontSize: 12,
-        color: "#E5E7EB",
+        color: S.codeFg,
         overflowX: "auto",
         lineHeight: 1.6,
         whiteSpace: "pre",
@@ -374,8 +378,8 @@ function LevelBadge({ level, small }: { level: GuideLevel; small?: boolean }) {
       display: "inline-flex",
       alignItems: "center",
       padding: small ? "1px 5px" : "2px 7px",
-      border: `1px solid ${meta.color}`,
-      color: meta.color,
+      border: `1px solid ${meta.accentColor}`,
+      color: meta.accentColor,
       fontFamily: S.fontMono,
       fontSize: small ? 9 : 10,
       letterSpacing: "0.06em",
@@ -442,7 +446,7 @@ function SectionCard({
           <span style={{
             fontFamily: S.fontMono,
             fontSize: 12,
-            color: "#4ade80",
+            color: S.pass,
             letterSpacing: "0.06em",
             display: "flex",
             alignItems: "center",
@@ -676,7 +680,7 @@ function HelpPageContent() {
             }}>
               Help &amp; Documentation
             </div>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.07em", color: S.tertiary }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.07em", color: S.tertiary }}>
               ORDR TERMINAL · PLATFORM GUIDE
             </div>
           </div>
@@ -689,7 +693,7 @@ function HelpPageContent() {
             </span>
           )}
           <span style={{ color: S.rim, fontSize: 12 }}>·</span>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{renderTs}</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>{renderTs}</span>
         </header>
 
         {/* ── Body ── */}
@@ -758,9 +762,9 @@ function HelpPageContent() {
                         fontFamily: S.fontMono,
                         fontSize: 12,
                         fontWeight: isActive ? 700 : 400,
-                        color: isActive ? meta.color : S.tertiary,
+                        color: isActive ? meta.accentColor : S.tertiary,
                         background: isActive ? meta.bg : "transparent",
-                        border: `1px solid ${isActive ? meta.color : S.soft}`,
+                        border: `1px solid ${isActive ? meta.accentColor : S.soft}`,
                         cursor: "pointer",
                         letterSpacing: "0.04em",
                         transition: "all 100ms",
@@ -777,7 +781,7 @@ function HelpPageContent() {
                   marginTop: 5,
                   fontFamily: S.fontMono,
                   fontSize: 12,
-                  color: GUIDE_LEVEL_META[levelHover].color,
+                  color: GUIDE_LEVEL_META[levelHover].accentColor,
                   letterSpacing: "0.04em",
                 }}>
                   {GUIDE_LEVEL_META[levelHover].description} — {GUIDE_LEVEL_META[levelHover].audience}
@@ -1002,9 +1006,9 @@ function HelpPageContent() {
                             padding: "4px 10px",
                             fontFamily: S.fontMono,
                             fontSize: 12,
-                            color: isActive ? meta.color : S.tertiary,
+                            color: isActive ? meta.accentColor : S.tertiary,
                             background: isActive ? meta.bg : "transparent",
-                            border: `1px solid ${isActive ? meta.color : S.soft}`,
+                            border: `1px solid ${isActive ? meta.accentColor : S.soft}`,
                             cursor: "pointer",
                             transition: "all 100ms",
                           }}
@@ -1013,7 +1017,7 @@ function HelpPageContent() {
                           {count > 0 && (
                             <span style={{
                               fontSize: 12,
-                              color: isActive ? meta.color : S.tertiary,
+                              color: isActive ? meta.accentColor : S.tertiary,
                               opacity: 0.8,
                             }}>
                               {count}
@@ -1023,7 +1027,7 @@ function HelpPageContent() {
                       );
                     })}
                   </div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 12, color: GUIDE_LEVEL_META[activeLevel].color, letterSpacing: "0.04em" }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 12, color: GUIDE_LEVEL_META[activeLevel].accentColor, letterSpacing: "0.04em" }}>
                     Showing {activeLevel} — {GUIDE_LEVEL_META[activeLevel].description}{" "}
                     <span style={{ color: S.tertiary }}>({GUIDE_LEVEL_META[activeLevel].audience})</span>
                   </div>
@@ -1074,7 +1078,7 @@ function HelpPageContent() {
                           </span>
                           <span style={{ marginLeft: "auto" }}>
                             {s.verified ? (
-                              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: "#4ade80" }}>✓</span>
+                              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.pass }}>✓</span>
                             ) : (
                               <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber }}>⚠</span>
                             )}
@@ -1335,7 +1339,7 @@ function HelpPageContent() {
           borderTop: `1px solid ${S.rim}`,
           background: S.bgPanel,
           fontFamily: S.fontMono,
-          fontSize: "0.6875rem",
+          fontSize: "0.75rem",
           color: S.tertiary,
           letterSpacing: "0.04em",
           flexShrink: 0,

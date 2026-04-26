@@ -96,7 +96,7 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Select({
+function _Select({
   value, onChange, options, placeholder,
 }: {
   value: string;

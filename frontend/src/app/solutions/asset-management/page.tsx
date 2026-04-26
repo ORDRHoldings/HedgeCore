@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import {
-  ChevronLeft, ArrowRight, Globe, PieChart, History, BookOpen,
+  ChevronLeft, ArrowRight, PieChart, History,
   TrendingUp, Brain, BarChart3, FileCheck,
-  Target, Layers, DollarSign, LineChart, Shield, Lock, Users,
+  DollarSign, LineChart, Lock, Users,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";

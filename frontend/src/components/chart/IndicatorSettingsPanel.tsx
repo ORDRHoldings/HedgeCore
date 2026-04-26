@@ -9,7 +9,7 @@
  */
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { RotateCcw, Trash2, Eye, EyeOff } from "lucide-react";
-import type { IndicatorSchema, IndicatorParam } from "./core/indicatorSchema";
+import type { IndicatorParam } from "./core/indicatorSchema";
 import { getIndicatorSchema, getDefaultParams, clampParam } from "./core/indicatorSchema";
 
 /* ================================================================

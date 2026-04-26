@@ -6,7 +6,6 @@ import type { PositionRow } from "@/api/positionClient";
 import { translateError, translateCaughtError, type TranslatedError } from "@/lib/errors/hedgeErrors";
 import HedgeErrorBanner from "./ErrorBanner";
 import { T, CME_SPECS } from "./tokens";
-import type { CmeSpec } from "./tokens";
 import {
   CheckCircleIcon,
   AlertTriangleIcon,
@@ -54,33 +53,6 @@ function SectionRule({ label }: { label: string }) {
         {label}
       </span>
       <div style={{ flex: 1, height: 1, background: T.rim }} />
-    </div>
-  );
-}
-
-function MetaKV({ label, value, valueColor, mono = true }: {
-  label: string; value: React.ReactNode; valueColor?: string; mono?: boolean;
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <span style={{
-        fontFamily:    T.fontMono,
-        fontSize:      12,
-        color:         T.tertiary,
-        letterSpacing: "0.10em",
-        minWidth:      76,
-        flexShrink:    0,
-      }}>
-        {label}
-      </span>
-      <span style={{
-        fontFamily: mono ? T.fontMono : T.fontUI,
-        fontSize:   13,
-        color:      valueColor ?? T.primary,
-        letterSpacing: mono ? "0.02em" : undefined,
-      }}>
-        {value}
-      </span>
     </div>
   );
 }
@@ -1230,7 +1202,7 @@ export default function PhaseReview({
               fontSize:      12,
               fontWeight:    700,
               letterSpacing: "0.08em",
-              color:         "#fff",
+              color:         T.white,
               background:    submitting ? T.tertiary : T.royal,
               border:       "none",
               padding:      "10px 24px",

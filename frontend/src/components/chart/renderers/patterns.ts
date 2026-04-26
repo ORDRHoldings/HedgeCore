@@ -481,7 +481,7 @@ export function drawPatterns(
       ctx.font = "10px 'IBM Plex Mono', monospace";
       const textWidth = ctx.measureText(text).width;
       const badgePadX = 6;
-      const badgePadY = 3;
+      const _badgePadY = 3;
       const badgeW = textWidth + badgePadX * 2;
       const badgeH = 16;
       const badgeX = labelCenterX - badgeW / 2;

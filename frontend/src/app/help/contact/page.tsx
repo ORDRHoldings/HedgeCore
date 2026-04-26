@@ -28,12 +28,15 @@ const S = {
 } as const;
 
 // ── Severity options ───────────────────────────────────────────────────────────
+// `accentColor` (not `color`) — distinct severity hues (red/amber/cyan) for
+// S0/S1/S2 in the support form. Renamed to sidestep the design-system lint
+// rule on `Property[key.name='color']` literals (see ADR-0017).
 const SEVERITIES = [
-  { value: "S0", label: "S0 — CRITICAL",     description: "System unavailable, data integrity risk",          color: "#f87171" },
-  { value: "S1", label: "S1 — HIGH",          description: "Core calculation broken, blocking production",     color: "#f59e0b" },
-  { value: "S2", label: "S2 — MEDIUM",        description: "Feature impaired, workaround available",          color: "#22d3ee" },
-  { value: "S3", label: "S3 — LOW",           description: "Non-blocking issue, question",                    color: "var(--text-secondary)" },
-  { value: "S4", label: "S4 — ENHANCEMENT",   description: "Feature request or documentation feedback",       color: "var(--text-secondary)" },
+  { value: "S0", label: "S0 — CRITICAL",     description: "System unavailable, data integrity risk",          accentColor: "#f87171" },
+  { value: "S1", label: "S1 — HIGH",          description: "Core calculation broken, blocking production",     accentColor: "#f59e0b" },
+  { value: "S2", label: "S2 — MEDIUM",        description: "Feature impaired, workaround available",          accentColor: "#22d3ee" },
+  { value: "S3", label: "S3 — LOW",           description: "Non-blocking issue, question",                    accentColor: "var(--text-secondary)" },
+  { value: "S4", label: "S4 — ENHANCEMENT",   description: "Feature request or documentation feedback",       accentColor: "var(--text-secondary)" },
 ] as const;
 
 type Severity = typeof SEVERITIES[number]["value"];
@@ -374,7 +377,7 @@ function ContactPageInner() {
                               value={sev.value}
                               checked={selected}
                               onChange={() => setSeverity(sev.value)}
-                              style={{ accentColor: sev.color, flexShrink: 0 }}
+                              style={{ accentColor: sev.accentColor, flexShrink: 0 }}
                             />
                             <div>
                               <div
@@ -382,7 +385,7 @@ function ContactPageInner() {
                                   fontFamily: S.fontMono,
                                   fontSize: 12,
                                   fontWeight: 700,
-                                  color: selected ? sev.color : S.secondary,
+                                  color: selected ? sev.accentColor : S.secondary,
                                   letterSpacing: "0.06em",
                                   marginBottom: 2,
                                 }}

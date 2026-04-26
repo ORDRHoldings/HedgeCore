@@ -27,7 +27,7 @@ import {
   vulnerabilityRanking,
 } from './reportCalcs';
 
-import { fmtMXN, fmtUSD, fmtPct, fmtCompact, fmtSigma } from './formatters';
+import { fmtMXN, fmtUSD, fmtPct, fmtSigma } from './formatters';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

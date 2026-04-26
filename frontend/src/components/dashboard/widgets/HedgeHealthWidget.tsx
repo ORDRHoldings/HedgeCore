@@ -45,7 +45,7 @@ function statusColor(status: string): string {
   }
 }
 
-export default function HedgeHealthWidget({ token, user, onRemove }: Props) {
+export default function HedgeHealthWidget({ token, user: _user, onRemove }: Props) {
   const [metrics, setMetrics] = useState<HealthMetric[]>([]);
   const [overallScore, setOverallScore] = useState<number | null>(null);
   const [overallStatus, setOverallStatus] = useState<string>("none");

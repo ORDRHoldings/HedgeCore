@@ -439,7 +439,7 @@ export default function ImportCsvModal({ open, onClose, token, onSuccess }: Prop
                   <thead>
                     <tr style={{ background: S.bgSub }}>
                       {["COLUMN", "TYPE", "FORMAT", "REQ"].map(h => (
-                        <th key={h} style={{ padding: "6px 10px", textAlign: "left", fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.12em", borderBottom: `1px solid ${S.rim}` }}>{h}</th>
+                        <th scope="col" key={h} style={{ padding: "6px 10px", textAlign: "left", fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.12em", borderBottom: `1px solid ${S.rim}` }}>{h}</th>
                       ))}
                     </tr>
                   </thead>

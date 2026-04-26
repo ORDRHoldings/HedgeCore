@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import type { BucketResult } from "@/api/types";
 import { translateError, translateCaughtError, type TranslatedError } from "@/lib/errors/hedgeErrors";
@@ -8,13 +8,16 @@ import HedgeErrorBanner from "./ErrorBanner";
 import {
   CheckCircleIcon, AlertCircleIcon, LoaderIcon, ChevronLeftIcon,
   CopyIcon, ExternalLinkIcon, ShieldCheckIcon, UserCheckIcon,
-  AlertTriangleIcon, InfoIcon, WifiIcon, WifiOffIcon,
+  AlertTriangleIcon, InfoIcon,
   ZapIcon, XCircleIcon,
 } from "lucide-react";
 import { T, CME_SPECS, DEFAULT_CME_SPEC } from "./tokens";
 import type { CmeSpec } from "./tokens";
 
 const DEFAULT_SPEC = DEFAULT_CME_SPEC;
+
+// High-contrast button-text on saturated green CTA fills.
+const PHC = { black: "#000" } as const;
 
 // ─── IBKR deep link helpers ──────────────────────────────────────────────────
 function ibkrNativeUrl(spec: CmeSpec, side: string, qty: number, rate: number): string {
@@ -734,7 +737,7 @@ export default function PhaseExecute({
           style={{
             display: "flex", alignItems: "center", gap: 8,
             background: done ? T.tertiary : executing ? "color-mix(in srgb, var(--status-pass,#22c55e) 60%, #000)" : T.green,
-            color: "#000", border: "none", borderRadius: 3, padding: "12px 28px",
+            color: PHC.black, border: "none", borderRadius: 3, padding: "12px 28px",
             cursor: !fillOk ? "default" : "pointer",
             fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, letterSpacing: "0.1em",
             transition: "background 0.2s ease",
@@ -909,7 +912,7 @@ export default function PhaseExecute({
                   style={{
                     fontFamily: T.fontMono, fontSize: 12, fontWeight: 700,
                     letterSpacing: "0.08em",
-                    color: "#000", background: T.green,
+                    color: PHC.black, background: T.green,
                     border: "none",
                     padding: "9px 20px", borderRadius: 3,
                     cursor: ibkrStatus === "connecting" || ibkrStatus === "executing" ? "default" : "pointer",

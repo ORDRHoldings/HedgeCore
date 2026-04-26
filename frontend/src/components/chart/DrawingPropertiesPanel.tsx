@@ -91,14 +91,14 @@ export default function DrawingPropertiesPanel({
     if (label !== drawing.label) update({ label });
   }, [label, drawing.label, update]);
 
-  const isTrendline = drawing.type === "trendline";
+  const _isTrendline = drawing.type === "trendline";
   const isRectangle = drawing.type === "rectangle";
   const hasTwoPoints = drawing.points.length >= 2;
   const isLineType = ["trendline", "ray", "extended_line", "horizontal_ray", "info_line", "trend_angle"].includes(drawing.type);
   const isChannel = ["parallel_channel", "regression_trend", "flat_top_bottom", "disjoint_channel",
     "pitchfork", "schiff_pitchfork", "mod_schiff_pitchfork", "inside_pitchfork"].includes(drawing.type);
   const isShape = ["circle", "ellipse", "triangle_shape", "arc"].includes(drawing.type);
-  const isAnnotation = ["text_note", "anchored_text", "callout", "price_label"].includes(drawing.type);
+  const _isAnnotation = ["text_note", "anchored_text", "callout", "price_label"].includes(drawing.type);
   const isPosition = ["long_position", "short_position"].includes(drawing.type);
   const hasExtend = isLineType || isRectangle || isChannel;
   const hasArrows = isLineType;
@@ -126,7 +126,7 @@ export default function DrawingPropertiesPanel({
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span>{getTypeName(drawing.type)}</span>
-          {drawing.locked && <span style={{ color: "#FF9800", fontSize: 9 }}>LOCKED</span>}
+          {drawing.locked && <span style={{ color: "#FF9800", fontSize: 10 }}>LOCKED</span>}
         </div>
         <button onClick={onClose} style={closeBtnS}>&times;</button>
       </div>
@@ -139,7 +139,7 @@ export default function DrawingPropertiesPanel({
             onClick={() => setActiveTab(tab)}
             style={{
               flex: 1, padding: "5px 0", border: "none", cursor: "pointer",
-              fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, fontWeight: 600,
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 600,
               textTransform: "uppercase",
               background: activeTab === tab ? "#2A2E39" : "transparent",
               color: activeTab === tab ? "#D1D4DC" : THEME.axisText,
@@ -388,7 +388,7 @@ export default function DrawingPropertiesPanel({
               {FONT_SIZES.map(s => (
                 <button key={s} onClick={() => update({ labelFontSize: s })} style={{
                   width: 24, height: 22, borderRadius: 3, padding: 0, cursor: "pointer",
-                  fontFamily: "'IBM Plex Mono', monospace", fontSize: 9,
+                  fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
                   background: (drawing.labelFontSize || 11) === s ? "#2A2E39" : "transparent",
                   border: (drawing.labelFontSize || 11) === s ? `1px solid ${drawing.color}` : "1px solid rgba(255,255,255,0.05)",
                   color: "#D1D4DC",
@@ -529,7 +529,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 function SectionHeader({ label }: { label: string }) {
   return (
     <div style={{
-      fontSize: 9, fontWeight: 700, color: THEME.axisText, textTransform: "uppercase",
+      fontSize: 10, fontWeight: 700, color: THEME.axisText, textTransform: "uppercase",
       letterSpacing: 0.5, marginTop: 4, paddingBottom: 2,
       borderBottom: `1px solid ${THEME.subPaneBorder}`,
     }}>
@@ -541,7 +541,7 @@ function SectionHeader({ label }: { label: string }) {
 function Tog({ active, onClick, label, color }: { active: boolean; onClick: () => void; label: string; color: string }) {
   return (
     <button onClick={onClick} style={{
-      fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, fontWeight: 600,
+      fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 600,
       padding: "3px 8px", borderRadius: 3,
       background: active ? `${color}22` : "transparent",
       border: `1px solid ${active ? color : "rgba(255,255,255,0.1)"}`,
@@ -579,7 +579,7 @@ function CoordInput({ value, onChange, label, step }: {
   };
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-      <span style={{ fontSize: 8, color: THEME.axisText }}>{label}</span>
+      <span style={{ fontSize: 10, color: THEME.axisText }}>{label}</span>
       <input value={val} onChange={(e) => setVal(e.target.value)}
         onBlur={commit} onKeyDown={(e) => { if (e.key === "Enter") commit(); }}
         step={step || 1} type="number"

@@ -229,7 +229,7 @@ export default function ChartContextMenu({
                 style={{
                   padding: "6px 12px 2px",
                   fontFamily: FONT_MONO,
-                  fontSize: 9,
+                  fontSize: 10,
                   fontWeight: 700,
                   color: "#545B69",
                   letterSpacing: "0.1em",

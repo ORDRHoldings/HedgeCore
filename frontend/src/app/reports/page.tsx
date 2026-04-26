@@ -13,7 +13,6 @@ import { useAuth } from "@/lib/authContext";
 import { PageShell } from "@/components/layout/PageShell";
 import { FileText } from "lucide-react";
 import { T } from "@/lib/design/tokens";
-import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 import { HASH_MAP, TAB_TO_PARAM } from "./types";
 import type { ReportStudioTab } from "./types";
@@ -55,7 +54,7 @@ import type { ReportStudioTab } from "./types";
  *
  * Required canonical fields: run_envelope_id, policy_id, sorted section keys.
  */
-async function computeReportHash(
+async function _computeReportHash(
   params: {
     run_envelope_id: string;
     policy_id: string;
@@ -90,7 +89,7 @@ async function computeReportHash(
  * export footer.  When reportHash is absent the footer shows "UNCOMPUTED" so
  * that the field is never silently omitted.
  */
-function buildReportHTML(params: {
+function _buildReportHTML(params: {
   title: string;
   body: string;
   reportHash?: string;
@@ -146,7 +145,6 @@ function ReportStudioInner() {
   const { isAuthenticated, isLoading, token, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isMobile = useIsMobile();
 
   // Derive active tab from URL
   const tabParam = searchParams.get("tab") ?? "";

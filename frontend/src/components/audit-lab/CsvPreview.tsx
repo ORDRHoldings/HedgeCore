@@ -253,7 +253,7 @@ export default function CsvPreview({ file }: CsvPreviewProps) {
                   const normalized = normalizeHeader(h);
                   const isRequired = (REQUIRED_COLUMNS as readonly string[]).includes(normalized);
                   return (
-                    <th key={i} style={{
+                    <th scope="col" key={i} style={{
                       fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                       letterSpacing: "0.08em",
                       color: isRequired ? S.cyan : S.tertiary,

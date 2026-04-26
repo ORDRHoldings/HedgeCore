@@ -6,9 +6,9 @@
  * WATCHLIST (mini price cards for major pairs).
  * All order inputs are UI-only — no backend execution.
  */
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
-  ChevronLeft, ChevronRight, ShoppingCart, List, Eye,
+  ChevronLeft, ChevronRight, List,
 } from "lucide-react";
 
 /* ===================================================================
@@ -166,7 +166,7 @@ export default function TradingPanel({
         <span
           style={{
             fontFamily: C.fontMono,
-            fontSize: 9,
+            fontSize: 10,
             marginLeft: 8,
             padding: "1px 5px",
             borderRadius: 3,
@@ -470,7 +470,7 @@ function OrderTab({
         <div
           style={{
             fontFamily: C.fontMono,
-            fontSize: 9,
+            fontSize: 10,
             color: C.textMuted,
             marginTop: 6,
             fontStyle: "italic",

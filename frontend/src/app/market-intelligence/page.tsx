@@ -29,7 +29,7 @@ import WatchlistsTab from "./components/tabs/WatchlistsTab";
 import SignalsTab from "./components/tabs/SignalsTab";
 
 function MarketIntelligenceInner() {
-  const isMobile = useIsMobile();
+  const _isMobile = useIsMobile();
   const { isAuthenticated, isLoading, user, token } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();

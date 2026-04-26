@@ -1251,7 +1251,7 @@ export function drawDrawingPriceLabels(
       ctx.save();
       ctx.font = "9px 'IBM Plex Mono', monospace";
       const text = price.toFixed(5);
-      const tw = ctx.measureText(text).width;
+      const _tw = ctx.measureText(text).width;
 
       // Colored background strip
       ctx.fillStyle = d.color;
@@ -1396,7 +1396,7 @@ function drawRectangleDrawing(
 
   let left = Math.min(x1, x2), right = Math.max(x1, x2);
   const top = Math.min(y1, y2), bot = Math.max(y1, y2);
-  const w = right - left;
+  const _w = right - left;
   const h = bot - top;
 
   // Extend left/right

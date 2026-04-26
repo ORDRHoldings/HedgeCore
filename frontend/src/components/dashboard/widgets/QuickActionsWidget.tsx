@@ -52,7 +52,7 @@ interface Props {
   onRemove?: () => void;
 }
 
-export default function QuickActionsWidget({ token, user, onRemove }: Props) {
+export default function QuickActionsWidget({ token: _token, user: _user, onRemove }: Props) {
   const { hasPermission } = useAuth();
   const router = useRouter();
 
@@ -90,7 +90,7 @@ export default function QuickActionsWidget({ token, user, onRemove }: Props) {
         <span
           style={{
             fontFamily: S.fontMono,
-            fontSize: "0.625rem",
+            fontSize: "0.75rem",
             letterSpacing: "0.1em",
             color: S.cyan,
             fontWeight: 700,
@@ -162,7 +162,7 @@ export default function QuickActionsWidget({ token, user, onRemove }: Props) {
                   <span
                     style={{
                       fontFamily: S.fontUI,
-                      fontSize: "0.6875rem",
+                      fontSize: "0.75rem",
                       fontWeight: 700,
                       color: S.primary,
                       lineHeight: 1.2,

@@ -747,15 +747,15 @@ export default function TenantsTab({ token }: { token: string }) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: S.bgSub }}>
-                <th style={thStyle}>NAME</th>
-                <th style={thStyle}>SLUG</th>
-                <th style={thStyle}>TIER</th>
-                <th style={thStyle}>GOV MODE</th>
-                <th style={{ ...thStyle, textAlign: "right" }}>USERS</th>
-                <th style={{ ...thStyle, textAlign: "right" }}>POSITIONS</th>
-                <th style={{ ...thStyle, textAlign: "right" }}>RUNS</th>
-                <th style={thStyle}>STATUS</th>
-                <th style={thStyle}>CREATED</th>
+                <th scope="col" style={thStyle}>NAME</th>
+                <th scope="col" style={thStyle}>SLUG</th>
+                <th scope="col" style={thStyle}>TIER</th>
+                <th scope="col" style={thStyle}>GOV MODE</th>
+                <th scope="col" style={{ ...thStyle, textAlign: "right" }}>USERS</th>
+                <th scope="col" style={{ ...thStyle, textAlign: "right" }}>POSITIONS</th>
+                <th scope="col" style={{ ...thStyle, textAlign: "right" }}>RUNS</th>
+                <th scope="col" style={thStyle}>STATUS</th>
+                <th scope="col" style={thStyle}>CREATED</th>
               </tr>
             </thead>
             <tbody>

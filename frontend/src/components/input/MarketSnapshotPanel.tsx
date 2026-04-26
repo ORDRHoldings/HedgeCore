@@ -163,10 +163,10 @@ export default function MarketSnapshotPanel({ market, onChange, mode, trades = [
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-[var(--bg-deep)] text-[var(--text-secondary)]">
-                  <th className="px-4 py-2 text-left font-medium">Bucket</th>
-                  <th className="px-4 py-2 text-right font-medium">Points</th>
-                  <th className="px-4 py-2 text-right font-medium">Implied Rate</th>
-                  <th className="px-4 py-2 w-10"></th>
+                  <th scope="col" className="px-4 py-2 text-left font-medium">Bucket</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">Points</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">Implied Rate</th>
+                  <th scope="col" className="px-4 py-2 w-10"></th>
                 </tr>
               </thead>
               <tbody>

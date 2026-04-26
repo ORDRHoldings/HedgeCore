@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { logger } from "@/lib/logger";
-import type { CalculateResponse, BucketResult, PolicyConfig } from "../../api/types";
+import type { CalculateResponse, PolicyConfig } from "../../api/types";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import { T } from "@/lib/design/tokens";
@@ -17,13 +17,21 @@ import {
 } from "./EChartsWrapper";
 import { fmtMXN, fmtUSD, fmtPct } from "../../utils/formatters";
 import {
-  scenarioKpis, concentrationAnalysis, bucketCoverageRatios, policyComplianceChecks,
+  scenarioKpis, concentrationAnalysis, policyComplianceChecks,
   generateExecutiveNarrative,
 } from "../../utils/reportCalcs";
 import {
   exportReportCsv, exportCommitteePackPdf, exportExecutiveBriefPdf, exportDataXlsx,
-  exportReportXlsx,
 } from "../../utils/clientExport";
+
+// Concentration-tier signal palette (HIGH / MODERATE / OK). Outside the T
+// scale because chart-legend dots need slightly lighter, more saturated hues
+// than `T.fail` / `T.warn` / `T.cyan` for at-a-glance distinction.
+const C = {
+  concHigh: "#F87171",
+  concMid:  "#FBB347",
+  concLow:  "#22D3EE",
+} as const;
 
 // ── Report versioning (L-14) ─────────────────────────────────────────────────
 interface SavedReport {
@@ -436,7 +444,7 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
 
           <div style={{ overflowX: "auto" }}>
             <table className="table-enterprise" style={{ width: "100%" }}>
-              <thead><tr><th>Bucket</th><th className="numeric">Exposure</th><th className="numeric">Hedge Action</th><th className="numeric">Residual</th><th className="numeric">Coverage</th></tr></thead>
+              <thead><tr><th scope="col">Bucket</th><th scope="col" className="numeric">Exposure</th><th scope="col" className="numeric">Hedge Action</th><th scope="col" className="numeric">Residual</th><th scope="col" className="numeric">Coverage</th></tr></thead>
               <tbody>
                 {buckets.map(b => {
                   const cov = Math.abs(b.commercial_exposure_mxn) > 0 ? Math.abs(b.hedge_position_mxn) / Math.abs(b.commercial_exposure_mxn) : 0;
@@ -496,7 +504,7 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
                 data={buckets.filter(b => !b.suppressed).map(b => ({
                   label: b.bucket,
                   value: b.friction_usd,
-                  color: "#FBB347",
+                  color: C.concMid,
                 }))}
                 yLabel="USD"
                 height={180}
@@ -506,7 +514,7 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
 
           <div style={{ overflowX: "auto" }}>
             <table className="table-enterprise" style={{ width: "100%" }}>
-              <thead><tr><th>Bucket</th><th className="numeric">Notional</th><th className="numeric">USD Equiv</th><th className="numeric">Spread (bps)</th><th className="numeric">Friction (USD)</th><th>Carry Note</th></tr></thead>
+              <thead><tr><th scope="col">Bucket</th><th scope="col" className="numeric">Notional</th><th scope="col" className="numeric">USD Equiv</th><th scope="col" className="numeric">Spread (bps)</th><th scope="col" className="numeric">Friction (USD)</th><th scope="col">Carry Note</th></tr></thead>
               <tbody>
                 {buckets.filter(b => !b.suppressed).map(b => (
                   <tr key={b.bucket}>
@@ -567,7 +575,7 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
 
           <div style={{ overflowX: "auto" }}>
             <table className="table-enterprise" style={{ width: "100%" }}>
-              <thead><tr><th>Shock ({"\u03C3"})</th><th className="numeric">Shocked Spot</th><th className="numeric">Unhedged (USD)</th><th className="numeric">Hedged (USD)</th><th className="numeric">Hedge Benefit</th></tr></thead>
+              <thead><tr><th scope="col">Shock ({"\u03C3"})</th><th scope="col" className="numeric">Shocked Spot</th><th scope="col" className="numeric">Unhedged (USD)</th><th scope="col" className="numeric">Hedged (USD)</th><th scope="col" className="numeric">Hedge Benefit</th></tr></thead>
               <tbody>
                 {scenario_results.totals.map(t => {
                   const isWorst = Math.abs(t.sigma + 0.10) < 0.001;
@@ -575,7 +583,7 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
                     <tr key={t.sigma} style={isWorst ? { background: "color-mix(in srgb, var(--accent-red) 4%, transparent)" } : undefined}>
                       <td style={{ fontFamily: T.fontMono, fontWeight: isWorst ? 700 : undefined, color: isWorst ? "var(--accent-red)" : undefined }}>
                         {t.sigma > 0 ? "+" : ""}{(t.sigma * 100).toFixed(0)}%
-                        {isWorst && <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.7 }}>{"\u2190"} stress</span>}
+                        {isWorst && <span style={{ marginLeft: 4, fontSize: 10, opacity: 0.7 }}>{"\u2190"} stress</span>}
                       </td>
                       <td className="numeric" style={{ fontFamily: T.fontMono }}>{t.shocked_spot.toFixed(4)}</td>
                       <td className="numeric" style={{ fontFamily: T.fontMono, color: "var(--accent-red)" }}>{fmtUSD(t.total_unhedged_usd)}</td>
@@ -746,15 +754,15 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
               height={200}
             />
             <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginTop: 8, fontSize: 10, fontFamily: T.fontMono, color: T.tertiary }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 2, display: "inline-block", background: "#F87171" }} />{"> 60% \u2014 HIGH CONC"}</span>
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 2, display: "inline-block", background: "#FBB347" }} />30{"\u2013"}60% {"\u2014"} MODERATE</span>
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 2, display: "inline-block", background: "#22D3EE" }} />{"< 30% \u2014 OK"}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 2, display: "inline-block", background: C.concHigh }} />{"> 60% \u2014 HIGH CONC"}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 2, display: "inline-block", background: C.concMid }} />30{"\u2013"}60% {"\u2014"} MODERATE</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 2, display: "inline-block", background: C.concLow }} />{"< 30% \u2014 OK"}</span>
             </div>
           </div>
 
           <div style={{ overflowX: "auto" }}>
             <table className="table-enterprise" style={{ width: "100%" }}>
-              <thead><tr><th>Rank</th><th>Bucket</th><th className="numeric">Exposure</th><th className="numeric">% of Total</th><th className="numeric">Coverage</th><th>Risk Flag</th></tr></thead>
+              <thead><tr><th scope="col">Rank</th><th scope="col">Bucket</th><th scope="col" className="numeric">Exposure</th><th scope="col" className="numeric">% of Total</th><th scope="col" className="numeric">Coverage</th><th scope="col">Risk Flag</th></tr></thead>
               <tbody>
                 {[...buckets]
                   .sort((a, b) => Math.abs(b.commercial_exposure_mxn) - Math.abs(a.commercial_exposure_mxn))
@@ -857,7 +865,7 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 4, marginTop: 4 }}>
                   {radarDimensions.map(d => (
                     <div key={d.name} style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 9, color: T.tertiary, fontFamily: T.fontMono, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div>
+                      <div style={{ fontSize: 10, color: T.tertiary, fontFamily: T.fontMono, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div>
                       <div style={{ fontSize: 10, fontFamily: T.fontMono, fontWeight: 700, color: T.accent }}>{d.value}</div>
                     </div>
                   ))}
@@ -909,9 +917,9 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
                   {["Prepared By", "Reviewed By", "Approved By"].map(role => (
                     <div key={role} style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 9, color: T.tertiary, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{role}</div>
+                      <div style={{ fontSize: 10, color: T.tertiary, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{role}</div>
                       <div style={{ height: 32, borderBottom: `1px solid ${T.rim}` }} />
-                      <div style={{ fontSize: 9, color: T.tertiary, marginTop: 4 }}>Signature / Date</div>
+                      <div style={{ fontSize: 10, color: T.tertiary, marginTop: 4 }}>Signature / Date</div>
                     </div>
                   ))}
                 </div>

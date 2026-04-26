@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {
-  ChevronLeft, ArrowRight, Cpu, Users, Shield, FileCheck, Settings, FileSpreadsheet,
+  ChevronLeft, ArrowRight, Users, Shield, FileCheck, Settings,
   MessageSquare, Phone, Bell, BarChart3, Lock, Layers, AlertTriangle,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";

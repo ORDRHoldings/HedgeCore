@@ -1,7 +1,6 @@
 "use client";
 
 import { JsonViewer } from "../ui/XRayDrawer";
-import EmptyState from "../ui/EmptyState";
 import KpiTile from "../ui/KpiTile";
 
 interface AllocatorSummaryProps {

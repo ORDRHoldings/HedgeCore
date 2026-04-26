@@ -575,7 +575,7 @@ export default function OverviewTab({ summary, totals, buckets, policy, runId, a
               <thead>
                 <tr className="border-b border-[var(--border-soft)]">
                   {['Bucket', 'Fwd Rate', 'Carry vs Spot', 'Action MXN', 'Action USD', 'Direction', 'Friction (bps)'].map(h => (
-                    <th key={h} className="text-left pb-2 pr-4 text-[9px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
+                    <th scope="col" key={h} className="text-left pb-2 pr-4 text-[9px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
                       {h}
                     </th>
                   ))}

@@ -17,6 +17,8 @@ const S = {
   accent: "var(--accent-cyan)",
   text: "var(--text-primary)",
   textSub: "var(--text-secondary)",
+  okGreen: "#7ed321",
+  errRed: "#d0021b",
 } as const;
 
 interface ConfirmState {
@@ -77,12 +79,12 @@ export default function SettlementPage() {
       <div style={{ padding: isMobile ? "12px 16px" : "24px 32px", fontFamily: S.fontUI }}>
 
         {success && (
-          <div style={{ background: "rgba(126,211,33,0.1)", border: "1px solid rgba(126,211,33,0.3)", borderRadius: 4, padding: "10px 16px", color: "#7ed321", fontSize: 13, marginBottom: 16 }}>
+          <div style={{ background: "rgba(126,211,33,0.1)", border: "1px solid rgba(126,211,33,0.3)", borderRadius: 4, padding: "10px 16px", color: S.okGreen, fontSize: 13, marginBottom: 16 }}>
             {success}
           </div>
         )}
         {error && (
-          <div style={{ background: "rgba(208,2,27,0.1)", border: "1px solid rgba(208,2,27,0.3)", borderRadius: 4, padding: "10px 16px", color: "#d0021b", fontSize: 13, marginBottom: 16, display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ background: "rgba(208,2,27,0.1)", border: "1px solid rgba(208,2,27,0.3)", borderRadius: 4, padding: "10px 16px", color: S.errRed, fontSize: 13, marginBottom: 16, display: "flex", gap: 8, alignItems: "center" }}>
             <AlertCircle size={14} /> {error}
           </div>
         )}
@@ -102,7 +104,7 @@ export default function SettlementPage() {
               <thead>
                 <tr style={{ background: S.bgDeep }}>
                   {["Ledger ID", "Order ID", "Authorized At", "Action"].map((h) => (
-                    <th key={h} style={{ padding: "8px 14px", textAlign: "left", fontFamily: S.fontMono, color: S.textSub, fontSize: 11, letterSpacing: "0.06em", borderBottom: `1px solid ${S.rim}` }}>
+                    <th scope="col" key={h} style={{ padding: "8px 14px", textAlign: "left", fontFamily: S.fontMono, color: S.textSub, fontSize: 11, letterSpacing: "0.06em", borderBottom: `1px solid ${S.rim}` }}>
                       {h.toUpperCase()}
                     </th>
                   ))}

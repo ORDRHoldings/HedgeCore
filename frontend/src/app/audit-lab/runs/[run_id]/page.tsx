@@ -337,7 +337,7 @@ export default function AuditRunDetailPage() {
             <thead>
               <tr style={{ background: S.bgSub }}>
                 {(["Type", "Pair", "Severity", "Amount (USD)", "Narrative", "expand"] as const).map(h => (
-                  <th key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>
+                  <th scope="col" key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>
                     {h === "expand" ? "" : h}
                   </th>
                 ))}
@@ -392,7 +392,7 @@ export default function AuditRunDetailPage() {
         {activeTab === "pairs" && (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead><tr style={{ background: S.bgSub }}>
-              {["Currency Pair", "Markup Cost (USD)"].map(h => <th key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>)}
+              {["Currency Pair", "Markup Cost (USD)"].map(h => <th scope="col" key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>)}
             </tr></thead>
             <tbody>
               {Object.entries(run.markup_by_pair).sort(([, a], [, b]) => b - a).map(([pair, usd]) => (
@@ -410,7 +410,7 @@ export default function AuditRunDetailPage() {
           <div>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr style={{ background: S.bgSub }}>
-                {["Counterparty", "Markup Cost (USD)"].map(h => <th key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>)}
+                {["Counterparty", "Markup Cost (USD)"].map(h => <th scope="col" key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>)}
               </tr></thead>
               <tbody>
                 {Object.entries(run.markup_by_counterparty).sort(([, a], [, b]) => b - a).map(([cp, usd]) => (
@@ -444,7 +444,7 @@ export default function AuditRunDetailPage() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead><tr style={{ background: S.bgSub }}>
                     {["#", "Date", "Pair", "Sold", "Bought", "Rate", "Benchmark", "Markup", "Direction", "Counterparty"].map(h => (
-                      <th key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "8px 12px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>
+                      <th scope="col" key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "8px 12px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>

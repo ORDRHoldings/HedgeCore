@@ -77,7 +77,7 @@ export default function DenseTable<T>({
         <thead>
           <tr className="border-b border-[var(--border-rim)]">
             {columns.map((col) => (
-              <th
+              <th scope="col"
                 key={col.key}
                 className={[
                   cellPad,

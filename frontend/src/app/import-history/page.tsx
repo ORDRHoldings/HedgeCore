@@ -14,7 +14,6 @@ import {
   getConnectorRunDetail,
   type ConnectorRun,
   type ConnectorRunDetail,
-  type ConnectorRunError,
 } from "../../api/connectorClient";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { IMPORT_HISTORY_HELP } from "@/lib/helpContent";
@@ -85,24 +84,6 @@ function computeDuration(started: string, completed: string | null): string {
   return `${(delta / 1000).toFixed(1)}s`;
 }
 
-// ─── Utility: Live UTC Clock ─────────────────────────────────────────────────
-function useUtcClock(): string {
-  const [clock, setClock] = useState("");
-  useEffect(() => {
-    const tick = () => {
-      const now = new Date();
-      const hh = String(now.getUTCHours()).padStart(2, "0");
-      const mm = String(now.getUTCMinutes()).padStart(2, "0");
-      const ss = String(now.getUTCSeconds()).padStart(2, "0");
-      setClock(`${hh}:${mm}:${ss} UTC`);
-    };
-    tick();
-    const interval = setInterval(tick, 1000);
-    return () => clearInterval(interval);
-  }, []);
-  return clock;
-}
-
 // ─── Utility: Copy to Clipboard ──────────────────────────────────────────────
 function copyToClipboard(text: string) {
   if (navigator.clipboard) {
@@ -155,7 +136,7 @@ function KpiCard({
       <span
         style={{
           fontFamily: S.fontMono,
-          fontSize: "0.625rem",
+          fontSize: "0.75rem",
           fontWeight: 500,
           color: S.tertiary,
           letterSpacing: "0.06em",
@@ -205,13 +186,13 @@ function FilterBar({
   status,
   connectorType,
   search,
-  isLoading,
+  isLoading: _isLoading,
   onDateFromChange,
   onDateToChange,
   onStatusChange,
   onConnectorTypeChange,
   onSearchChange,
-  onRefresh,
+  onRefresh: _onRefresh,
   onExport,
 }: FilterBarProps) {
   return (
@@ -255,7 +236,7 @@ function StatusBadge({ status }: { status: string }) {
     <span
       style={{
         fontFamily: S.fontMono,
-        fontSize: "0.625rem",
+        fontSize: "0.75rem",
         fontWeight: 700,
         letterSpacing: "0.06em",
         color,
@@ -280,7 +261,7 @@ function TypeBadge({ type }: { type: string }) {
     <span
       style={{
         fontFamily: S.fontMono,
-        fontSize: "0.625rem",
+        fontSize: "0.75rem",
         fontWeight: 700,
         letterSpacing: "0.06em",
         color,
@@ -468,7 +449,7 @@ function RunRow({ run, expanded, detail, loadingDetail, onToggle }: RunRowProps)
 // Detail Panel
 // ═══════════════════════════════════════════════════════════════════════════════
 function DetailPanel({
-  run,
+  run: _run,
   detail,
   loading,
 }: {
@@ -574,10 +555,10 @@ function DetailPanel({
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
-                  <th
+                  <th scope="col"
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: "0.625rem",
+                      fontSize: "0.75rem",
                       fontWeight: 700,
                       color: S.tertiary,
                       letterSpacing: "0.06em",
@@ -587,10 +568,10 @@ function DetailPanel({
                   >
                     ROW #
                   </th>
-                  <th
+                  <th scope="col"
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: "0.625rem",
+                      fontSize: "0.75rem",
                       fontWeight: 700,
                       color: S.tertiary,
                       letterSpacing: "0.06em",
@@ -600,10 +581,10 @@ function DetailPanel({
                   >
                     FIELD
                   </th>
-                  <th
+                  <th scope="col"
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: "0.625rem",
+                      fontSize: "0.75rem",
                       fontWeight: 700,
                       color: S.tertiary,
                       letterSpacing: "0.06em",
@@ -732,7 +713,7 @@ function MetaField({
       <span
         style={{
           fontFamily: S.fontMono,
-          fontSize: "0.625rem",
+          fontSize: "0.75rem",
           color: S.tertiary,
           letterSpacing: "0.06em",
           textTransform: "uppercase",
@@ -848,7 +829,7 @@ function EmptyStateView({ onUploadClick }: { onUploadClick: () => void }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Skeleton Loading
 // ═══════════════════════════════════════════════════════════════════════════════
-function SkeletonRow() {
+function _SkeletonRow() {
   return (
     <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
       <td colSpan={12} style={{ padding: "12px 20px" }}>
@@ -1166,7 +1147,7 @@ export default function ImportHistoryPage() {
             <span
               style={{
                 fontFamily: S.fontMono,
-                fontSize: "0.625rem",
+                fontSize: "0.75rem",
                 color: S.cyan,
                 fontWeight: 700,
                 letterSpacing: "0.06em",

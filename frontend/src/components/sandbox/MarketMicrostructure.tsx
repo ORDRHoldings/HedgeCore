@@ -184,7 +184,7 @@ interface MarketMicrostructureProps {
 export default function MarketMicrostructure({
   notionalUSD = 500_000,
   primaryCurrency = "MXN",
-  spot = 18.97,
+  spot: _spot = 18.97,
 }: MarketMicrostructureProps) {
   const [activeTab, setActiveTab] = useState<"spreads" | "impact" | "almgren">("spreads");
   const [selectedCcy, setSelectedCcy] = useState(primaryCurrency);

@@ -183,7 +183,7 @@ export default function PolicyForm({
               readOnly={isReadOnly}
               tabIndex={isReadOnly ? -1 : undefined}
             />
-            <p className="mt-1 text-xs text-[var(--text-tertiary)]" style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '0.6875rem' }}>
+            <p className="mt-1 text-xs text-[var(--text-tertiary)]" style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '0.75rem' }}>
               {policy.min_trade_size_usd === 0
                 ? '✓ No minimum — all buckets execute'
                 : `Buckets < $${policy.min_trade_size_usd.toLocaleString()} USD will be suppressed`}

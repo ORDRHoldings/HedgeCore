@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {
-  ChevronLeft, ArrowRight, Users, Lock, BarChart3, FileText,
+  ChevronLeft, Users, Lock, BarChart3, FileText,
   DollarSign, TrendingUp, CheckCircle, ShieldCheck, ExternalLink,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";

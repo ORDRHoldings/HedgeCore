@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   ChevronLeft, ArrowRight, LayoutDashboard, CalendarDays, Building2, Star, Signal, Rss,
-  Brain, Filter, Bell, Layers,
+  Brain, Filter, Bell,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";

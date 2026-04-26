@@ -58,4 +58,5 @@ export const S = {
   green:     "var(--accent-green,#059669)",
   red:       "var(--accent-red,#DC2626)",
   amber:     "var(--accent-amber,#D97706)",
+  black:     "#000",
 } as const;

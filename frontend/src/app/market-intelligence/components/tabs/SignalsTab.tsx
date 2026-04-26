@@ -258,7 +258,7 @@ function AlertRulesEngine() {
               </select>
               <button onClick={addRule} style={{
                 fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
-                color: "#000", background: S.cyan, border: "none", borderRadius: 2,
+                color: S.black, background: S.cyan, border: "none", borderRadius: 2,
                 padding: "5px 14px", cursor: "pointer", marginLeft: "auto",
               }}>
                 ADD RULE
@@ -312,11 +312,11 @@ function AlertRulesEngine() {
                   </span>
                 )}
                 {!rule.active && (
-                  <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, padding: "1px 5px", border: `1px solid ${S.rim}`, borderRadius: 2 }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, padding: "1px 5px", border: `1px solid ${S.rim}`, borderRadius: 2 }}>
                     PAUSED
                   </span>
                 )}
-                <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
                   cooldown {COOLDOWN_LABELS[rule.cooldown]}
                 </span>
                 <div style={{ flex: 1 }} />

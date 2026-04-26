@@ -349,7 +349,7 @@ function CompareBar({
   );
 }
 
-export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
+export default function CurrencyIntelWidget({ token, user: _user, onRemove }: Props) {
   const [exposureCurrencies, setExposureCurrencies] = useState<string[]>([]);
   const [selectedCcy, setSelectedCcy] = useState<string>("USD");
   const [loading, setLoading] = useState(true);
@@ -886,7 +886,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
                   <div
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: 7.5,
+                      fontSize: 10.5,
                       color: S.tertiary,
                       letterSpacing: "0.1em",
                       marginBottom: 3,
@@ -918,7 +918,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
                     <span
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 7.5,
+                        fontSize: 10.5,
                         color: S.tertiary,
                         letterSpacing: "0.06em",
                       }}
@@ -981,7 +981,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 7,
+                    fontSize: 10,
                     color: newsLoaded ? S.green : S.amber,
                     letterSpacing: "0.08em",
                   }}
@@ -1032,10 +1032,10 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
                         >
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
-                              <span style={{ fontFamily: S.fontMono, fontSize: 7.5, color: S.cyan, fontWeight: 700, letterSpacing: "0.05em" }}>
+                              <span style={{ fontFamily: S.fontMono, fontSize: 10.5, color: S.cyan, fontWeight: 700, letterSpacing: "0.05em" }}>
                                 {a.source}
                               </span>
-                              <span style={{ fontFamily: S.fontMono, fontSize: 7.5, color: S.tertiary }}>
+                              <span style={{ fontFamily: S.fontMono, fontSize: 10.5, color: S.tertiary }}>
                                 · {relativeTime(a.datetime)}
                               </span>
                               <ExternalLink size={7} color={S.tertiary} style={{ marginLeft: "auto" }} />

@@ -50,9 +50,9 @@ function Divider() {
 
 function TH({ children, right }: { children: React.ReactNode; right?: boolean }) {
   return (
-    <th style={{
+    <th scope="col" style={{
       padding: '5px 10px 5px 0',
-      fontFamily: S.fontMono, fontSize: '0.6875rem', fontWeight: 500,
+      fontFamily: S.fontMono, fontSize: '0.75rem', fontWeight: 500,
       letterSpacing: '0.07em', textTransform: 'uppercase', color: S.textTertiary,
       textAlign: right ? 'right' : 'left', whiteSpace: 'nowrap',
       borderBottom: `1px solid ${S.borderRim}`,
@@ -72,7 +72,7 @@ function TD({ children, mono, right, muted, style: extraStyle, colSpan }: {
     <td colSpan={colSpan} style={{
       padding: '7px 10px 7px 0',
       fontFamily: mono ? S.fontMono : S.fontUI,
-      fontSize: '0.6875rem',
+      fontSize: '0.75rem',
       color: muted ? S.textTertiary : S.textSecondary,
       textAlign: right ? 'right' : 'left',
       borderBottom: `1px solid ${S.borderSoft}`,
@@ -167,7 +167,7 @@ export default function SnapshotSummary({
           <button
             onClick={onEditInputs}
             style={{
-              fontFamily: S.fontUI, fontSize: '0.625rem', fontWeight: 500,
+              fontFamily: S.fontUI, fontSize: '0.75rem', fontWeight: 500,
               padding: '3px 10px', border: `1px solid ${S.borderRim}`,
               color: S.textSecondary, background: 'transparent', cursor: 'pointer',
             }}
@@ -178,7 +178,7 @@ export default function SnapshotSummary({
             onClick={onGeneratePlan}
             disabled={!canGenerate || loading}
             style={{
-              fontFamily: S.fontUI, fontSize: '0.625rem', fontWeight: 600,
+              fontFamily: S.fontUI, fontSize: '0.75rem', fontWeight: 600,
               padding: '3px 12px',
               border: `1px solid ${canGenerate && !loading ? S.accentCyan : S.borderRim}`,
               color: canGenerate && !loading ? S.accentCyan : S.textTertiary,
@@ -293,7 +293,7 @@ export default function SnapshotSummary({
                       <button
                         onClick={() => router.push(`/execution?bucket=${bk}`)}
                         style={{
-                          fontFamily: S.fontMono, fontSize: '0.6875rem', fontWeight: 500,
+                          fontFamily: S.fontMono, fontSize: '0.75rem', fontWeight: 500,
                           padding: '1px 6px', border: `1px solid ${S.borderRim}`,
                           color: S.textTertiary, background: 'transparent', cursor: 'pointer',
                           letterSpacing: '0.04em',
@@ -402,7 +402,7 @@ export default function SnapshotSummary({
                   alignItems: 'start', gap: 8, padding: '6px 0',
                   borderBottom: i < arr.length - 1 ? `1px solid ${S.borderSoft}` : 'none',
                 }}>
-                  <dt style={{ fontFamily: S.fontUI, fontSize: '0.625rem', color: S.textTertiary, fontWeight: 400 }}>{dt}</dt>
+                  <dt style={{ fontFamily: S.fontUI, fontSize: '0.75rem', color: S.textTertiary, fontWeight: 400 }}>{dt}</dt>
                   <dd style={{ margin: 0, fontFamily: mono ? S.fontMono : S.fontUI, fontSize: '0.75rem', color: S.textSecondary, wordBreak: 'break-all', maxWidth: 120, textAlign: 'right' }}>{dd}</dd>
                 </div>
               ))}
@@ -411,7 +411,7 @@ export default function SnapshotSummary({
               <button
                 onClick={() => router.push('/ledger')}
                 style={{
-                  fontFamily: S.fontMono, fontSize: '0.6875rem', fontWeight: 500,
+                  fontFamily: S.fontMono, fontSize: '0.75rem', fontWeight: 500,
                   padding: '3px 8px', border: `1px solid ${S.borderRim}`,
                   color: S.textTertiary, background: 'transparent', cursor: 'pointer',
                   letterSpacing: '0.04em', width: '100%', textAlign: 'center',

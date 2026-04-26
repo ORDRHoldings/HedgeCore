@@ -597,7 +597,7 @@ export default function ChartSymbolSearch({
                     <span
                       style={{
                         fontFamily: FONT_MONO,
-                        fontSize: 9,
+                        fontSize: 10,
                         fontWeight: 600,
                         color: CATEGORY_COLORS[asset.category] ?? "#787B86",
                         background: `${CATEGORY_COLORS[asset.category] ?? "#787B86"}15`,
@@ -704,7 +704,7 @@ export default function ChartSymbolSearch({
                 <span
                   style={{
                     fontFamily: FONT_MONO,
-                    fontSize: 9,
+                    fontSize: 10,
                     fontWeight: 600,
                     color: CATEGORY_COLORS[match.asset.category] ?? "#787B86",
                     background: `${CATEGORY_COLORS[match.asset.category] ?? "#787B86"}15`,
@@ -754,19 +754,19 @@ export default function ChartSymbolSearch({
           }}
         >
           <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: "#545B69" }}>
-            <kbd style={{ background: "#2A2E39", padding: "1px 4px", borderRadius: 3, fontSize: 9 }}>
+            <kbd style={{ background: "#2A2E39", padding: "1px 4px", borderRadius: 3, fontSize: 10 }}>
               ↑↓
             </kbd>{" "}
             navigate
           </span>
           <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: "#545B69" }}>
-            <kbd style={{ background: "#2A2E39", padding: "1px 4px", borderRadius: 3, fontSize: 9 }}>
+            <kbd style={{ background: "#2A2E39", padding: "1px 4px", borderRadius: 3, fontSize: 10 }}>
               Enter
             </kbd>{" "}
             select
           </span>
           <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: "#545B69" }}>
-            <kbd style={{ background: "#2A2E39", padding: "1px 4px", borderRadius: 3, fontSize: 9 }}>
+            <kbd style={{ background: "#2A2E39", padding: "1px 4px", borderRadius: 3, fontSize: 10 }}>
               Esc
             </kbd>{" "}
             close

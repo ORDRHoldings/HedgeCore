@@ -286,7 +286,7 @@ export default function SolutionsPage() {
                           color: C.accent,
                         }}>{st.val}</div>
                         <div style={{
-                          fontFamily: F.ui, fontSize: 9, color: C.textMuted,
+                          fontFamily: F.ui, fontSize: 10, color: C.textMuted,
                           textTransform: "uppercase", letterSpacing: "0.04em",
                         }}>{st.label}</div>
                       </div>
@@ -301,7 +301,7 @@ export default function SolutionsPage() {
                   borderTop: `1px solid ${C.border}`,
                 }}>
                   <div style={{
-                    fontFamily: F.mono, fontSize: 9, fontWeight: 600,
+                    fontFamily: F.mono, fontSize: 10, fontWeight: 600,
                     color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em",
                     textTransform: "uppercase", marginBottom: 8,
                   }}>
@@ -334,7 +334,7 @@ export default function SolutionsPage() {
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {s.products.map((p) => (
                       <span key={p} style={{
-                        fontFamily: F.mono, fontSize: 9, fontWeight: 600,
+                        fontFamily: F.mono, fontSize: 10, fontWeight: 600,
                         color: C.accent, background: C.accentLight,
                         border: `1px solid rgba(30,58,95,0.15)`,
                         borderRadius: 3, padding: "2px 7px",
@@ -499,7 +499,7 @@ export default function SolutionsPage() {
               }}>
                 <div style={{ padding: "24px 24px 0" }}>
                   <div style={{
-                    fontFamily: F.mono, fontSize: 9, fontWeight: 600,
+                    fontFamily: F.mono, fontSize: 10, fontWeight: 600,
                     color: C.accent, letterSpacing: "0.1em",
                     textTransform: "uppercase", marginBottom: 8,
                   }}>{p.label}</div>

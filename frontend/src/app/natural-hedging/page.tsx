@@ -25,6 +25,7 @@ const S = {
   rim: "var(--border-rim)",
   textPri: "var(--text-primary)",
   textSec: "var(--text-secondary)",
+  white: "#fff",
 } as const;
 
 const fmtNum = (n: number, digits = 0) =>
@@ -128,7 +129,7 @@ export default function NaturalHedgingPage() {
           disabled={loading}
           style={{
             background: "var(--accent-cyan, #3b82f6)",
-            color: "#fff",
+            color: S.white,
             border: "none",
             padding: "8px 20px",
             fontFamily: S.fontMono,
@@ -199,13 +200,13 @@ export default function NaturalHedgingPage() {
               <table style={tableStyle}>
                 <thead>
                   <tr style={{ background: S.bgDeep, color: S.textSec }}>
-                    <th style={thStyle}>Pair 1</th>
-                    <th style={thStyle}>Pair 2</th>
-                    <th style={thStyle}>Synthetic</th>
-                    <th style={thStyleRight}>Notional 1</th>
-                    <th style={thStyleRight}>Notional 2</th>
-                    <th style={thStyleRight}>Netted</th>
-                    <th style={thStyleRight}>Savings (est.)</th>
+                    <th scope="col" style={thStyle}>Pair 1</th>
+                    <th scope="col" style={thStyle}>Pair 2</th>
+                    <th scope="col" style={thStyle}>Synthetic</th>
+                    <th scope="col" style={thStyleRight}>Notional 1</th>
+                    <th scope="col" style={thStyleRight}>Notional 2</th>
+                    <th scope="col" style={thStyleRight}>Netted</th>
+                    <th scope="col" style={thStyleRight}>Savings (est.)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -231,11 +232,11 @@ export default function NaturalHedgingPage() {
               <table style={tableStyle}>
                 <thead>
                   <tr style={{ background: S.bgDeep, color: S.textSec }}>
-                    <th style={thStyle}>Currency</th>
-                    <th style={thStyleRight}>AR (receivable)</th>
-                    <th style={thStyleRight}>AP (payable)</th>
-                    <th style={thStyleRight}>Net exposure</th>
-                    <th style={thStyle}>Direction</th>
+                    <th scope="col" style={thStyle}>Currency</th>
+                    <th scope="col" style={thStyleRight}>AR (receivable)</th>
+                    <th scope="col" style={thStyleRight}>AP (payable)</th>
+                    <th scope="col" style={thStyleRight}>Net exposure</th>
+                    <th scope="col" style={thStyle}>Direction</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -269,11 +270,11 @@ export default function NaturalHedgingPage() {
               <table style={tableStyle}>
                 <thead>
                   <tr style={{ background: S.bgDeep, color: S.textSec }}>
-                    <th style={thStyle}>Currency</th>
-                    <th style={thStyleRight}>Gross</th>
-                    <th style={thStyleRight}>Net</th>
-                    <th style={thStyleRight}>Offset amount</th>
-                    <th style={thStyleRight}>Offset %</th>
+                    <th scope="col" style={thStyle}>Currency</th>
+                    <th scope="col" style={thStyleRight}>Gross</th>
+                    <th scope="col" style={thStyleRight}>Net</th>
+                    <th scope="col" style={thStyleRight}>Offset amount</th>
+                    <th scope="col" style={thStyleRight}>Offset %</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -211,12 +211,12 @@ function FieldTable({ fields }: { fields: FieldRef[] }) {
         width: "100%",
         borderCollapse: "collapse",
         fontFamily: S.fontMono,
-        fontSize: "0.625rem",
+        fontSize: "0.75rem",
       }}>
         <thead>
           <tr>
             {["FIELD", "DESCRIPTION", "VALID VALUES", "REGULATORY NOTE"].map(h => (
-              <th key={h} style={{
+              <th scope="col" key={h} style={{
                 textAlign: "left",
                 padding: "5px 8px",
                 background: S.bgSub,
@@ -262,7 +262,7 @@ function FieldTable({ fields }: { fields: FieldRef[] }) {
                 borderBottom: `1px solid ${S.borderSoft}`,
                 lineHeight: 1.5,
                 verticalAlign: "top",
-                fontSize: "0.5625rem",
+                fontSize: "0.75rem",
               }}>{row.regulatoryNote}</td>
             </tr>
           ))}
@@ -277,7 +277,7 @@ function TipsBlock({ tips }: { tips: { tip: string; isError: boolean }[] }) {
     <div style={{ marginBottom: 16 }}>
       <div style={{
         fontFamily: S.fontMono,
-        fontSize: "0.5625rem",
+        fontSize: "0.75rem",
         color: S.textTertiary,
         letterSpacing: "0.1em",
         marginBottom: 8,
@@ -296,14 +296,14 @@ function TipsBlock({ tips }: { tips: { tip: string; isError: boolean }[] }) {
         }}>
           <span style={{
             fontFamily: S.fontMono,
-            fontSize: "0.5625rem",
+            fontSize: "0.75rem",
             color: t.isError ? S.red : S.green,
             flexShrink: 0,
             paddingTop: 1,
           }}>{t.isError ? "ERR" : "TIP"}</span>
           <span style={{
             fontFamily: S.fontUI,
-            fontSize: "0.6875rem",
+            fontSize: "0.75rem",
             color: S.textSecondary,
             lineHeight: 1.5,
           }}>{t.tip}</span>
@@ -476,14 +476,14 @@ function FieldDiagram({ diagram }: { diagram: string }) {
     }}>
       <div style={{
         fontFamily:    "'IBM Plex Mono', monospace",
-        fontSize:      "0.5625rem",
+        fontSize:      "0.75rem",
         color:         "var(--text-tertiary)",
         letterSpacing: "0.1em",
         marginBottom:  6,
       }}>FIELD MAP — VISUAL REFERENCE</div>
       <pre style={{
         fontFamily:  "'IBM Plex Mono', monospace",
-        fontSize:    "0.5rem",
+        fontSize:    "0.75rem",
         color:       "var(--text-secondary)",
         lineHeight:  1.55,
         margin:      0,
@@ -522,7 +522,7 @@ function SectionContent({ section }: { section: HelpSection }) {
     <div>
       <div style={{
         fontFamily:    S.fontMono,
-        fontSize:      "0.5625rem",
+        fontSize:      "0.75rem",
         color:         S.textTertiary,
         letterSpacing: "0.12em",
         marginBottom:  12,
@@ -594,14 +594,14 @@ export default function HelpPanel({ open, onClose }: HelpPanelProps) {
           <div>
             <div style={{
               fontFamily:    S.fontMono,
-              fontSize:      "0.6875rem",
+              fontSize:      "0.75rem",
               color:         S.cyan,
               letterSpacing: "0.1em",
               fontWeight:    600,
             }}>FIELD REFERENCE</div>
             <div style={{
               fontFamily: S.fontUI,
-              fontSize:   "0.625rem",
+              fontSize:   "0.75rem",
               color:      S.textTertiary,
               marginTop:  2,
             }}>Bloomberg/BlackRock Institutional Grade</div>
@@ -643,7 +643,7 @@ export default function HelpPanel({ open, onClose }: HelpPanelProps) {
                 onClick={() => setActiveSection(tab.key)}
                 style={{
                   fontFamily:    S.fontMono,
-                  fontSize:      "0.5625rem",
+                  fontSize:      "0.75rem",
                   letterSpacing: "0.08em",
                   padding:       "7px 12px",
                   border:        "none",
@@ -674,13 +674,13 @@ export default function HelpPanel({ open, onClose }: HelpPanelProps) {
             paddingTop: 12,
             borderTop:  `1px solid ${S.border}`,
             fontFamily: S.fontUI,
-            fontSize:   "0.5625rem",
+            fontSize:   "0.75rem",
             color:      S.textTertiary,
             lineHeight: 1.6,
           }}>
             <div style={{
               fontFamily:    S.fontMono,
-              fontSize:      "0.5rem",
+              fontSize:      "0.75rem",
               letterSpacing: "0.1em",
               marginBottom:  4,
             }}>

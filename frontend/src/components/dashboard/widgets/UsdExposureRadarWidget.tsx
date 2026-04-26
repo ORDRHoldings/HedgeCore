@@ -23,6 +23,7 @@ const S = {
   amber: "var(--accent-amber)",
   green: "var(--status-pass,#15803D)",
   red: "var(--accent-red,#B91C1C)",
+  radarCyan: "#22D3EE",
 } as const;
 
 interface UsdMetric {
@@ -181,14 +182,14 @@ function RadarChart({
           <text x={lx} y={ly + 3} textAnchor={ta} style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, fill: color, fontWeight: 700, letterSpacing: "0.05em" }}>
             {b.label}
           </text>
-          <text x={lx} y={ly + 13} textAnchor={ta} style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 7.5, fill: color, opacity: 0.8 }}>
+          <text x={lx} y={ly + 13} textAnchor={ta} style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10.5, fill: color, opacity: 0.8 }}>
             {b.strength > 0 ? "+" : ""}{b.strength}
           </text>
         </g>
       ))}
 
-      <text x={cx} y={cy - 6} textAnchor="middle" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, fill: "#22D3EE", fontWeight: 700, letterSpacing: "0.08em" }}>USD</text>
-      <text x={cx} y={cy + 6} textAnchor="middle" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 7, fill: "rgba(255,255,255,0.3)" }}>STRENGTH</text>
+      <text x={cx} y={cy - 6} textAnchor="middle" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, fill: S.radarCyan, fontWeight: 700, letterSpacing: "0.08em" }}>USD</text>
+      <text x={cx} y={cy + 6} textAnchor="middle" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, fill: "rgba(255,255,255,0.3)" }}>STRENGTH</text>
     </svg>
   );
 }

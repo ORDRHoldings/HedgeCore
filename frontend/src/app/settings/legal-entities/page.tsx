@@ -44,7 +44,7 @@ export default function LegalEntitiesPage() {
 
       {error && (
         <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)",
-          borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#ef4444" }}>
+          borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "var(--accent-red,#ef4444)" }}>
           {error}
         </div>
       )}

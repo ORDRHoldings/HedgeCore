@@ -16,7 +16,7 @@
 
 import { useMemo, useState, useCallback } from "react";
 import type { SandboxCalculateResponse } from "../../api/pipelineTypes";
-import { cornishFisherVaR, saCCREAD, ifrs9EffectivenessTest, frtbFXDeltaCharge } from "../../lib/mathEngine";
+import { cornishFisherVaR, saCCREAD, ifrs9EffectivenessTest } from "../../lib/mathEngine";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const S = {
@@ -489,7 +489,7 @@ ${["PRE_RUN", "CALCULATION", "POST_RUN", "GOVERNANCE"].map(cat => {
   const catName = { PRE_RUN: "Pre-Run Validation", CALCULATION: "Calculation Audit", POST_RUN: "Post-Run Capital", GOVERNANCE: "Governance Chain" }[cat];
   return `<h2>${catName}</h2>
 <table>
-<thead><tr><th>Rule ID</th><th>Name</th><th>Status</th><th>Severity</th><th>Evidence</th><th>Value</th><th>Threshold</th><th>Regulatory Ref</th></tr></thead>
+<thead><tr><th scope="col">Rule ID</th><th scope="col">Name</th><th scope="col">Status</th><th scope="col">Severity</th><th scope="col">Evidence</th><th scope="col">Value</th><th scope="col">Threshold</th><th scope="col">Regulatory Ref</th></tr></thead>
 <tbody>
 ${catRules.map(r => `<tr>
 <td style="font-family:'Courier New',monospace;font-weight:700">${r.id}</td>
@@ -547,7 +547,7 @@ function SeverityBadge({ severity }: { severity: RuleSeverity }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function AuditEngine({ sandboxResult, spot, notionalUSD, liveSpotFetched, onComplete }: AuditEngineProps) {
+export default function AuditEngine({ sandboxResult, spot, notionalUSD, liveSpotFetched, onComplete: _onComplete }: AuditEngineProps) {
   const [expandedRule, setExpandedRule] = useState<string | null>(null);
   const [showFormulas, setShowFormulas] = useState(false);
 
@@ -682,7 +682,7 @@ export default function AuditEngine({ sandboxResult, spot, notionalUSD, liveSpot
                 <thead>
                   <tr style={{ background: `color-mix(in srgb, ${S.panel} 60%, transparent)` }}>
                     {["Rule", "Name", "Status", "Sev.", "Evidence", "Value", "Threshold", "Reg. Ref"].map(h => (
-                      <th key={h} style={{
+                      <th scope="col" key={h} style={{
                         fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                         color: S.tertiary, textTransform: "uppercase",
                         padding: "8px 14px", textAlign: "left",

@@ -80,7 +80,7 @@ export default function StepProgress({
                   color: 'var(--text-secondary)',
                   opacity: 0.2,
                   fontFamily: mono,
-                  fontSize: '0.625rem',
+                  fontSize: '0.75rem',
                   userSelect: 'none',
                 }}>—</span>
               )}
@@ -110,7 +110,7 @@ export default function StepProgress({
                 }}
               >
                 {step.status === 'complete' ? (
-                  <span style={{ color: statusColor.complete, fontSize: '0.625rem' }}>✓</span>
+                  <span style={{ color: statusColor.complete, fontSize: '0.75rem' }}>✓</span>
                 ) : (
                   <span style={{
                     width: 6, height: 6, borderRadius: '50%',
@@ -129,7 +129,7 @@ export default function StepProgress({
                     color: 'var(--text-secondary)',
                     opacity: 0.2,
                     fontFamily: mono,
-                    fontSize: '0.625rem',
+                    fontSize: '0.75rem',
                     userSelect: 'none',
                   }}>—</span>
 
@@ -139,7 +139,7 @@ export default function StepProgress({
                     disabled={!canGenerate || generateLoading}
                     style={{
                       fontFamily: mono,
-                      fontSize: '0.6875rem',
+                      fontSize: '0.75rem',
                       fontWeight: 700,
                       letterSpacing: '0.1em',
                       padding: '4px 14px',

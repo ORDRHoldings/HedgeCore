@@ -50,12 +50,13 @@ const C = {
   text3:   "#8A94A0",
   border:  "#2A3545",
   bgPanel: "#152238",
+  tooltipBg: "#1A2535EE",
 } as const;
 
 const AXIS_LABEL = { color: C.text3, fontSize: 12, fontFamily: "monospace" };
 const SPLIT_LINE = { lineStyle: { color: C.border, type: "dashed" as const, opacity: 0.5 } };
 const TOOLTIP_STYLE = {
-  backgroundColor: "#1A2535EE",
+  backgroundColor: C.tooltipBg,
   borderColor: C.border,
   borderWidth: 1,
   textStyle: { color: C.text1, fontSize: 12, fontFamily: "monospace" },

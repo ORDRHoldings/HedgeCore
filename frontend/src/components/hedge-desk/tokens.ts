@@ -51,6 +51,8 @@ export const T = {
   royal:      "#1C62F2",
   emerald:    "#2ECC71",
   slate:      "#8A9AB5",
+  white:      "#fff",
+  black:      "#000",
   // Fonts
   fontUI:     "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   fontMono:   "var(--font-terminal-mono,'IBM Plex Mono',monospace)",

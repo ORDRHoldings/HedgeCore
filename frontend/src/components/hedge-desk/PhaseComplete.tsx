@@ -684,7 +684,7 @@ export default function PhaseComplete({
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 6,
                   fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
-                  color: "#000",
+                  color: T.black,
                   background: T.green,
                   border: "none",
                   padding: "8px 14px", borderRadius: 3, cursor: "pointer",

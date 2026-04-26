@@ -51,15 +51,15 @@ export default function TradeTable({ trades, onEdit, onRemove, baseCcy }: Props)
         <table className="table-enterprise">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Entity</th>
-              <th>Type</th>
-              <th>CCY</th>
-              <th className="numeric">Amount</th>
-              <th>Value Date</th>
-              <th>Status</th>
-              <th>Description</th>
-              <th style={{ width: 32 }}></th>
+              <th scope="col">ID</th>
+              <th scope="col">Entity</th>
+              <th scope="col">Type</th>
+              <th scope="col">CCY</th>
+              <th scope="col" className="numeric">Amount</th>
+              <th scope="col">Value Date</th>
+              <th scope="col">Status</th>
+              <th scope="col">Description</th>
+              <th scope="col" style={{ width: 32 }}></th>
             </tr>
           </thead>
           <tbody>

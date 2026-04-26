@@ -226,7 +226,7 @@ export default function WhatIfBuilder({ sandboxResult, defaultPolicy = DEFAULT_P
   });
 
   const [compareMode, setCompareMode] = useState(false);
-  const [compareScenario, setCompareScenario] = useState<TradeScenario>({
+  const [compareScenario, _setCompareScenario] = useState<TradeScenario>({
     id: "B",
     label: "Scenario B — Aggressive",
     notional: initNotional,

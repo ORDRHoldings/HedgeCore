@@ -7,7 +7,7 @@ import HelpPanel from "@/components/layout/HelpPanel";
 import { POLISOPHIC_HELP } from "@/lib/helpContent";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import { PageShell } from "@/components/layout/PageShell";
-import { Shield, Activity, AlertTriangle, Globe, TrendingUp, ChevronRight, Zap, Radio } from "lucide-react";
+import { Shield, Activity, Globe, TrendingUp, ChevronRight, Zap, Radio } from "lucide-react";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 function useRenderTs(): string {
@@ -50,6 +50,14 @@ const C = {
   shadow: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
   shadowLift: "0 8px 25px rgba(0,0,0,0.08), 0 4px 10px rgba(0,0,0,0.04)",
   radius: 10,
+  white: "#fff",
+  redDeep: "#dc2626",
+  amberDeep: "#d97706",
+  greenDeep: "#16a34a",
+  redLite: "#fca5a5",
+  amberLite: "#fcd34d",
+  blueLite: "#93c5fd",
+  navyLite: "#0c1e3f",
 } as const;
 
 /* ═══════════════════════════════════════════════════════
@@ -124,10 +132,10 @@ const HEATMAP_REGIONS = [
 
 function RegimeBadge({ regime }: { regime: string }) {
   const cfg: Record<string, { color: string; bg: string; glow: string }> = {
-    HIGH: { color: "#fff", bg: "linear-gradient(135deg, #dc2626, #ef4444)", glow: "0 2px 8px rgba(239,68,68,0.3)" },
-    ELEVATED: { color: "#fff", bg: "linear-gradient(135deg, #d97706, #f59e0b)", glow: "0 2px 8px rgba(245,158,11,0.3)" },
+    HIGH: { color: C.white, bg: `linear-gradient(135deg, ${C.redDeep}, ${C.red})`, glow: "0 2px 8px rgba(239,68,68,0.3)" },
+    ELEVATED: { color: C.white, bg: `linear-gradient(135deg, ${C.amberDeep}, ${C.amber})`, glow: "0 2px 8px rgba(245,158,11,0.3)" },
     MODERATE: { color: C.textSecondary, bg: C.borderLight, glow: "none" },
-    LOW: { color: "#fff", bg: "linear-gradient(135deg, #16a34a, #22c55e)", glow: "0 2px 8px rgba(34,197,94,0.3)" },
+    LOW: { color: C.white, bg: `linear-gradient(135deg, ${C.greenDeep}, ${C.green})`, glow: "0 2px 8px rgba(34,197,94,0.3)" },
   };
   const { color, bg, glow } = cfg[regime] ?? cfg.MODERATE;
   return (
@@ -226,7 +234,7 @@ export default function Polisophic() {
         }}>HOME</button>
         <div style={{ width: 1, height: 32, background: "rgba(255,255,255,0.1)" }} />
         <div>
-          <div style={{ fontFamily: C.fontHead, fontSize: 16, fontWeight: 800, color: "#fff" }}>Polisophic</div>
+          <div style={{ fontFamily: C.fontHead, fontSize: 16, fontWeight: 800, color: C.white }}>Polisophic</div>
           <div style={{ fontFamily: C.fontMono, fontSize: 11, color: "rgba(255,255,255,0.4)", letterSpacing: "0.06em" }}>
             POLITICAL & MACRO RISK INTELLIGENCE
           </div>
@@ -236,11 +244,11 @@ export default function Polisophic() {
         {/* Header KPIs */}
         <div style={{ display: "flex", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap" }}>
         {[
-          { label: "COMPOSITE", value: `${compositeScore}`, color: compositeScore >= 70 ? "#fca5a5" : "#fcd34d" },
-          { label: "HIGH DIMS", value: `${highCount}`, color: "#fca5a5" },
-          { label: "ELEVATED", value: `${elevatedCount}`, color: "#fcd34d" },
-          { label: "ALERTS", value: `${firedAlerts} FIRED`, color: "#fca5a5" },
-          { label: "EVENTS", value: `${RISK_EVENTS.length}`, color: "#93c5fd" },
+          { label: "COMPOSITE", value: `${compositeScore}`, color: compositeScore >= 70 ? C.redLite : C.amberLite },
+          { label: "HIGH DIMS", value: `${highCount}`, color: C.redLite },
+          { label: "ELEVATED", value: `${elevatedCount}`, color: C.amberLite },
+          { label: "ALERTS", value: `${firedAlerts} FIRED`, color: C.redLite },
+          { label: "EVENTS", value: `${RISK_EVENTS.length}`, color: C.blueLite },
         ].map(({ label, value, color }) => (
           <div key={label} style={{
             padding: "8px 14px", background: "rgba(255,255,255,0.04)", borderRadius: 10,
@@ -279,7 +287,7 @@ export default function Polisophic() {
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <span style={{
             fontFamily: C.fontMono, fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 20,
-            color: "#fff", background: "linear-gradient(135deg, #dc2626, #ef4444)",
+            color: C.white, background: `linear-gradient(135deg, ${C.redDeep}, ${C.red})`,
             boxShadow: "0 2px 8px rgba(239,68,68,0.3)",
           }}>{firedAlerts} ACTIVE ALERTS</span>
           <span style={{ fontFamily: C.fontMono, fontSize: 10, fontWeight: 600, padding: "4px 12px", borderRadius: 20, color: C.blueMid, background: C.blueGlow }}>STATIC DATA</span>
@@ -300,7 +308,7 @@ export default function Polisophic() {
                 <span style={{ fontFamily: C.fontMono, fontSize: 11, color: C.textTertiary }}>{RISK_EVENTS.length} events · last 12 days</span>
               </div>
 
-              {RISK_EVENTS.map((ev, i) => {
+              {RISK_EVENTS.map((ev, _i) => {
                 const sevColor = ev.severity >= 75 ? C.red : ev.severity >= 55 ? C.amber : C.green;
                 return (
                   <Card key={ev.id} style={{ marginBottom: 10, borderLeft: `4px solid ${sevColor}` }}>
@@ -310,7 +318,7 @@ export default function Polisophic() {
                         <span style={{ fontFamily: C.fontMono, fontSize: 10, padding: "2px 8px", borderRadius: 20, color: C.blueMid, background: C.blueGlow, fontWeight: 600 }}>{ev.region}</span>
                         <span style={{ fontFamily: C.fontMono, fontSize: 10, padding: "2px 8px", borderRadius: 20, color: C.blueSky, background: `${C.blueSky}12`, fontWeight: 600 }}>{ev.category}</span>
                         {ev.alertTriggered && (
-                          <span style={{ fontFamily: C.fontMono, fontSize: 10, padding: "2px 8px", borderRadius: 20, color: "#fff", background: "linear-gradient(135deg, #dc2626, #ef4444)", fontWeight: 700 }}>
+                          <span style={{ fontFamily: C.fontMono, fontSize: 10, padding: "2px 8px", borderRadius: 20, color: C.white, background: `linear-gradient(135deg, ${C.redDeep}, ${C.red})`, fontWeight: 700 }}>
                             ALERT
                           </span>
                         )}
@@ -420,7 +428,7 @@ export default function Polisophic() {
                   <thead>
                     <tr style={{ background: C.headerGradient }}>
                       {["RISK DIMENSION", "SCORE", "", "7D DELTA", "REGIME", "PRIMARY DRIVER"].map(h => (
-                        <th key={h} style={{ padding: "10px 12px", fontFamily: C.fontMono, fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left" }}>{h}</th>
+                        <th scope="col" key={h} style={{ padding: "10px 12px", fontFamily: C.fontMono, fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -488,7 +496,7 @@ export default function Polisophic() {
                       display: "flex", alignItems: "center", justifyContent: "center",
                       minWidth: sc.probability >= 5 ? 30 : 0,
                     }}>
-                      {sc.probability >= 5 && <span style={{ fontFamily: C.fontMono, fontSize: 10, color: "#fff", fontWeight: 800 }}>{sc.probability}%</span>}
+                      {sc.probability >= 5 && <span style={{ fontFamily: C.fontMono, fontSize: 10, color: C.white, fontWeight: 800 }}>{sc.probability}%</span>}
                     </div>
                   );
                 })}
@@ -562,7 +570,7 @@ export default function Polisophic() {
                 <thead>
                   <tr style={{ background: C.headerGradient }}>
                     {["RULE ID", "TRIGGER CONDITION", "AUTOMATED ACTION", "STATUS", "LAST FIRED"].map(h => (
-                      <th key={h} style={{ padding: "10px 14px", fontFamily: C.fontMono, fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left" }}>{h}</th>
+                      <th scope="col" key={h} style={{ padding: "10px 14px", fontFamily: C.fontMono, fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -575,8 +583,8 @@ export default function Polisophic() {
                       <td style={{ padding: "12px 14px" }}>
                         <span style={{
                           fontFamily: C.fontMono, fontSize: 10, fontWeight: 700, padding: "3px 12px", borderRadius: 20,
-                          color: "#fff",
-                          background: rule.status === "FIRED" ? "linear-gradient(135deg, #dc2626, #ef4444)" : "linear-gradient(135deg, #16a34a, #22c55e)",
+                          color: C.white,
+                          background: rule.status === "FIRED" ? `linear-gradient(135deg, ${C.redDeep}, ${C.red})` : `linear-gradient(135deg, ${C.greenDeep}, ${C.green})`,
                           boxShadow: rule.status === "FIRED" ? "0 2px 6px rgba(239,68,68,0.3)" : "0 2px 6px rgba(34,197,94,0.3)",
                         }}>{rule.status}</span>
                       </td>
@@ -687,7 +695,7 @@ export default function Polisophic() {
                 <thead>
                   <tr style={{ background: C.headerGradient }}>
                     {["REGION", "SCORE", "", "REGIME", "DRIVER", "TREND"].map(h => (
-                      <th key={h} style={{ padding: "10px 12px", fontFamily: C.fontMono, fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left" }}>{h}</th>
+                      <th scope="col" key={h} style={{ padding: "10px 12px", fontFamily: C.fontMono, fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)", fontWeight: 600, textAlign: "left" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -788,7 +796,7 @@ export default function Polisophic() {
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" as const }}>
                       <span style={{ fontFamily: C.fontMono, fontSize: 11, color: C.textTertiary }}>{ev.ts}</span>
                       <span style={{ fontFamily: C.fontMono, fontSize: 10, padding: "2px 8px", borderRadius: 20, color: C.blueSky, background: `${C.blueSky}12`, fontWeight: 600 }}>{ev.category}</span>
-                      {ev.alertTriggered && <span style={{ fontFamily: C.fontMono, fontSize: 10, padding: "2px 8px", borderRadius: 20, color: "#fff", background: "linear-gradient(135deg, #dc2626, #ef4444)", fontWeight: 700 }}>ALERT</span>}
+                      {ev.alertTriggered && <span style={{ fontFamily: C.fontMono, fontSize: 10, padding: "2px 8px", borderRadius: 20, color: C.white, background: `linear-gradient(135deg, ${C.redDeep}, ${C.red})`, fontWeight: 700 }}>ALERT</span>}
                       <span style={{ marginLeft: "auto", fontFamily: C.fontMono, fontSize: 12, color: sev, fontWeight: 700 }}>SEV {ev.severity}</span>
                     </div>
                     <div style={{ fontFamily: C.fontUI, fontSize: 13, color: C.textPrimary, lineHeight: 1.5 }}>{ev.headline}</div>
@@ -817,7 +825,7 @@ export default function Polisophic() {
         background: C.headerGradient, flexShrink: 0,
         fontFamily: C.fontMono, fontSize: 11, color: "rgba(255,255,255,0.5)",
       }}>
-        <span style={{ color: "#fff", fontWeight: 700, letterSpacing: "0.04em" }}>ORDR-TERMINAL</span>
+        <span style={{ color: C.white, fontWeight: 700, letterSpacing: "0.04em" }}>ORDR-TERMINAL</span>
         <span style={{ color: "rgba(255,255,255,0.2)" }}>|</span>
         <span>Polisophic Risk Intelligence</span>
         <span style={{ color: "rgba(255,255,255,0.2)" }}>|</span>

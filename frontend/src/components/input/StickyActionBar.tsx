@@ -27,7 +27,7 @@ export default function StickyActionBar({ loading, onCalculate, canCalculate, ga
         <div className="flex items-center gap-4 flex-1 min-w-0">
           {unmet.length > 0 ? (
             <div className="flex items-center gap-3 flex-wrap">
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.6875rem', letterSpacing: '0.07em', color: 'var(--text-tertiary)' }}>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.75rem', letterSpacing: '0.07em', color: 'var(--text-tertiary)' }}>
                 GATE CHECK
               </span>
               {unmet.map((g, i) => (
@@ -43,7 +43,7 @@ export default function StickyActionBar({ loading, onCalculate, canCalculate, ga
                 >
                   <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent-red)', display: 'inline-block' }} />
                   {g.label}
-                  {g.message && <span style={{ color: 'var(--text-tertiary)', fontSize: '0.6875rem' }}> — {g.message}</span>}
+                  {g.message && <span style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}> — {g.message}</span>}
                 </span>
               ))}
             </div>
@@ -71,7 +71,7 @@ export default function StickyActionBar({ loading, onCalculate, canCalculate, ga
             disabled={!canCalculate || loading}
             style={{
               fontFamily: "'IBM Plex Sans',sans-serif",
-              fontSize: '0.6875rem',
+              fontSize: '0.75rem',
               fontWeight: 600,
               letterSpacing: '0.04em',
               padding: '6px 20px',

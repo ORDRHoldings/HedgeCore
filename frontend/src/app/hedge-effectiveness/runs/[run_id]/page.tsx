@@ -63,6 +63,8 @@ const HEX = {
   bgDeep: "#F8FAFC",
   bgPanel: "#FFFFFF",
   bgSub: "#F1F5F9",
+  white: "#fff",
+  tooltipBg: "#FFFFFFEE",
   bandGreen: "rgba(5,150,105,0.08)",
   bandGreenStroke: "rgba(5,150,105,0.25)",
 } as const;
@@ -502,7 +504,7 @@ export default function HedgeEffectivenessRunPage() {
                 }}
               />
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => saveRunNote(noteDraft)} style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 3, background: HEX.cyan, color: "#fff", border: "none", cursor: "pointer" }}>SAVE</button>
+                <button onClick={() => saveRunNote(noteDraft)} style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 3, background: HEX.cyan, color: HEX.white, border: "none", cursor: "pointer" }}>SAVE</button>
                 <button onClick={() => setEditingNote(false)} style={{ fontFamily: S.mono, fontSize: 11, padding: "4px 10px", borderRadius: 3, background: "transparent", color: S.text3, border: `1px solid ${S.rim}`, cursor: "pointer" }}>Cancel</button>
               </div>
             </div>
@@ -1010,7 +1012,7 @@ function CumulativeRatioChart({ periods }: { periods: PeriodData[] }) {
     backgroundColor: "transparent",
     tooltip: {
       trigger: "axis" as const,
-      backgroundColor: "#FFFFFFEE",
+      backgroundColor: HEX.tooltipBg,
       borderColor: HEX.border,
       borderWidth: 1,
       textStyle: { color: HEX.text1, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
@@ -1069,7 +1071,7 @@ function CumulativeRatioChart({ periods }: { periods: PeriodData[] }) {
         itemStyle: {
           color: HEX.cyan,
           borderWidth: 2,
-          borderColor: "#fff",
+          borderColor: HEX.white,
           shadowBlur: 4,
           shadowColor: "rgba(28,98,242,0.3)",
         },
@@ -1154,7 +1156,7 @@ function CumulativeRatioChart({ periods }: { periods: PeriodData[] }) {
       coord: [i, v],
       symbol: "diamond",
       symbolSize: 12,
-      itemStyle: { color: HEX.red, borderColor: "#fff", borderWidth: 1.5 },
+      itemStyle: { color: HEX.red, borderColor: HEX.white, borderWidth: 1.5 },
       label: { show: false },
     }));
   if (outOfBandPoints.length > 0) {
@@ -1421,7 +1423,7 @@ function RegressionScatter({ periods, slope }: { periods: PeriodData[]; slope: n
     backgroundColor: "transparent",
     tooltip: {
       trigger: "item" as const,
-      backgroundColor: "#FFFFFFEE",
+      backgroundColor: HEX.tooltipBg,
       borderColor: HEX.border,
       borderWidth: 1,
       textStyle: { color: HEX.text1, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
@@ -1459,7 +1461,7 @@ function RegressionScatter({ periods, slope }: { periods: PeriodData[]; slope: n
           shadowBlur: 6,
           shadowColor: "rgba(28,98,242,0.2)",
           borderWidth: 1.5,
-          borderColor: "#fff",
+          borderColor: HEX.white,
         },
         emphasis: {
           itemStyle: { shadowBlur: 14, shadowColor: "rgba(28,98,242,0.4)", borderWidth: 2 },
@@ -1489,7 +1491,7 @@ function RegressionScatter({ periods, slope }: { periods: PeriodData[]; slope: n
             show: true, position: "top" as const,
             formatter: "Perfect (β=−1)",
             fontFamily: "'IBM Plex Mono', monospace",
-            fontSize: 9, color: HEX.green, opacity: 0.7,
+            fontSize: 10, color: HEX.green, opacity: 0.7,
           },
         },
       },
@@ -1516,7 +1518,7 @@ function PeriodBarChart({ periods }: { periods: PeriodData[] }) {
     backgroundColor: "transparent",
     tooltip: {
       trigger: "axis" as const,
-      backgroundColor: "#FFFFFFEE",
+      backgroundColor: HEX.tooltipBg,
       borderColor: HEX.border,
       borderWidth: 1,
       textStyle: { color: HEX.text1, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
@@ -1674,7 +1676,7 @@ function PeriodsSection({ periods }: { periods: PeriodData[] }) {
               {p.cumulative_ratio != null ? p.cumulative_ratio.toFixed(4) : "\u2014"}
               {p.cumulative_ratio != null && (
                 <span style={{
-                  fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                  fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
                   padding: "1px 4px", borderRadius: 2, flexShrink: 0,
                   background: inBand ? HEX.greenBg : HEX.redBg,
                   color: inBand ? HEX.green : HEX.red,
@@ -1919,11 +1921,11 @@ function ComplianceSection({ compliance, run }: { compliance: string[]; run: Run
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={node.color} strokeWidth="2">
                       <path d={node.icon}/>
                     </svg>
-                    <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: node.color, letterSpacing: "0.1em" }}>
+                    <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: node.color, letterSpacing: "0.1em" }}>
                       {node.label}
                     </span>
                   </div>
-                  <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, wordBreak: "break-all", lineHeight: 1.3 }}>
+                  <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, wordBreak: "break-all", lineHeight: 1.3 }}>
                     {(node as { isProcess?: boolean }).isProcess ? node.hash : node.hash?.slice(0, 16) + "…"}
                   </div>
                 </div>

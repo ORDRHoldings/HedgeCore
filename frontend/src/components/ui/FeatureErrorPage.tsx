@@ -83,7 +83,7 @@ export default function FeatureErrorPage({ feature, error, reset }: Props) {
       {error?.message && (
         <div
           style={{
-            fontSize: "0.65rem",
+            fontSize: "0.75rem",
             color: "var(--text-tertiary)",
             fontFamily: "'JetBrains Mono',monospace",
             maxWidth: 600,

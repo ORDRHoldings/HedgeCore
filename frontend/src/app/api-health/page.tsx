@@ -5,7 +5,7 @@ import api from "../../lib/api";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 export default function ApiHealthPage() {
-  const isMobile = useIsMobile();
+  const _isMobile = useIsMobile();
   const [status, setStatus] = useState<string>("unknown");
   const [loading, setLoading] = useState<boolean>(false);
 

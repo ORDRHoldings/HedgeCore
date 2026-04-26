@@ -28,7 +28,7 @@ function fmt(n: number, dp = 0): string {
   return sign + "$" + abs.toFixed(dp);
 }
 
-function fmtBps(n: number): string {
+function _fmtBps(n: number): string {
   return n.toFixed(1) + " bps";
 }
 

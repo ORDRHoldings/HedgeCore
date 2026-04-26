@@ -11,7 +11,7 @@ import { useChartData } from "@/hooks/useChartData";
 import ChartEngine from "@/components/chart/ChartEngine";
 import TradingPanel from "@/components/chart/TradingPanel";
 import StrategyPanel, { StrategyPanelToggle } from "@/components/chart/StrategyPanel";
-import { RefreshCw, Layers } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 const S = {
@@ -350,7 +350,7 @@ function ChartPageInner() {
 
 export default function ChartPage() {
   return (
-    <Suspense fallback={<div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "monospace", color: "#94A3B8" }}>Loading chart...</div>}>
+    <Suspense fallback={<div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "monospace", color: "var(--text-secondary)" }}>Loading chart...</div>}>
       <ChartPageInner />
     </Suspense>
   );

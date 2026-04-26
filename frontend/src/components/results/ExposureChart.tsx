@@ -5,11 +5,20 @@ import type { BucketResult } from '../../api/types';
 
 interface Props { buckets: BucketResult[] }
 
+// Recharts chart palette: deliberately distinct stack hues (cyan/indigo/gray/
+// amber). Outside the T scale because chart series need higher-saturation,
+// non-overlapping colors than the chrome tokens provide.
+const C = {
+  tooltipBg: '#070B14',
+  tooltipFg: '#F3F4F6',
+  axisFg:    '#9CA3AF',
+} as const;
+
 const TOOLTIP_STYLE = {
-  backgroundColor: '#070B14',
+  backgroundColor: C.tooltipBg,
   border: '1px solid rgba(255,255,255,0.06)',
   borderRadius: '8px',
-  color: '#F3F4F6',
+  color: C.tooltipFg,
 };
 
 export default function ExposureChart({ buckets }: Props) {
@@ -25,12 +34,12 @@ export default function ExposureChart({ buckets }: Props) {
     <ResponsiveContainer width="100%" height={300}>
       <BarChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-        <XAxis dataKey="bucket" fontSize={12} tick={{ fill: '#9CA3AF' }} />
-        <YAxis fontSize={12} tickFormatter={v => `${v}M`} tick={{ fill: '#9CA3AF' }} />
+        <XAxis dataKey="bucket" fontSize={12} tick={{ fill: C.axisFg }} />
+        <YAxis fontSize={12} tickFormatter={v => `${v}M`} tick={{ fill: C.axisFg }} />
         <Tooltip
           formatter={(v: number) => `${v.toFixed(1)}M MXN`}
           contentStyle={TOOLTIP_STYLE}
-          labelStyle={{ color: '#9CA3AF' }}
+          labelStyle={{ color: C.axisFg }}
         />
         <Legend />
         <Bar dataKey="Confirmed" fill="#00E5FF" stackId="exposure" />

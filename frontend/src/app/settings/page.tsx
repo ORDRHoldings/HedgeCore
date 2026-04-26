@@ -15,14 +15,14 @@
  *   components/tabs/             — 10 tab files
  */
 
-import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { useAuth } from "../../lib/authContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { SETTINGS_HELP } from "@/lib/help";
 
-import { S, DEFAULT_SETTINGS, STORAGE_KEY, HASH_MAP, SettingsTab, AllSettings, Toast, ChangeEntry } from "./types/settings";
+import { S, DEFAULT_SETTINGS, HASH_MAP, SettingsTab, Toast, ChangeEntry } from "./types/settings";
 
 // Canonical param value for each tab (reverse of HASH_MAP)
 const TAB_TO_PARAM: Partial<Record<SettingsTab, string>> = {

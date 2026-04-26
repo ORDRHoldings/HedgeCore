@@ -125,7 +125,7 @@ function RateBarChart({ banks }: { banks: CentralBankEntry[] }) {
               <div style={{ height: 8, background: S.bgDeep, border: `1px solid ${S.soft}`, borderRadius: 4, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${color}, color-mix(in srgb, ${color} 55%, transparent))`, borderRadius: 4, transition: "width 700ms ease" }} />
               </div>
-              <div style={{ fontFamily: S.fontMono, fontSize: 7.5, color: S.tertiary, marginTop: 2, display: "flex", justifyContent: "space-between" }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 10.5, color: S.tertiary, marginTop: 2, display: "flex", justifyContent: "space-between" }}>
                 <span>Next: {cb.nextMeeting}</span>
                 <span style={{ color: daysUntilMeeting(cb.nextMeeting) <= 15 ? S.amber : S.tertiary }}>{daysUntilMeeting(cb.nextMeeting)}d</span>
               </div>
@@ -425,7 +425,7 @@ export default function GeoPoliticalWidget({ token: _token, user: _user, onRemov
                     <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 3 }}>{m.label}</div>
                     <div style={{ fontFamily: S.fontMono, fontSize: 19, fontWeight: 700, color: S.primary, lineHeight: 1, letterSpacing: "-0.01em" }}>{m.display}</div>
                     {m.note && (
-                      <div style={{ fontFamily: S.fontMono, fontSize: 7, color: macroSrc === "live" ? S.green : S.tertiary, marginTop: 2, opacity: 0.8 }}>
+                      <div style={{ fontFamily: S.fontMono, fontSize: 10, color: macroSrc === "live" ? S.green : S.tertiary, marginTop: 2, opacity: 0.8 }}>
                         {macroSrc === "live" ? "●" : "○"} {m.note.split(" as of")[0]}
                       </div>
                     )}
@@ -438,7 +438,7 @@ export default function GeoPoliticalWidget({ token: _token, user: _user, onRemov
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3 }}>
                     <TIcon size={15} color={tColor} />
-                    <span style={{ fontFamily: S.fontMono, fontSize: 7.5, color: tColor, letterSpacing: "0.06em", textTransform: "uppercase" }}>{m.trend}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 10.5, color: tColor, letterSpacing: "0.06em", textTransform: "uppercase" }}>{m.trend}</span>
                   </div>
                 </div>
               );

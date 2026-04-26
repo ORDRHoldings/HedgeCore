@@ -84,7 +84,7 @@ function ErrorRow({
 
         {/* Severity label */}
         <span style={{
-          fontSize: '0.6875rem',
+          fontSize: '0.75rem',
           fontWeight: 700,
           color: severityColor,
           opacity: 0.8,
@@ -100,7 +100,7 @@ function ErrorRow({
           {/* Error title from knowledge base */}
           {knowledge && (
             <span style={{
-              fontSize: '0.6875rem',
+              fontSize: '0.75rem',
               fontWeight: 600,
               color: 'var(--text-primary)',
               fontFamily: mono,
@@ -110,7 +110,7 @@ function ErrorRow({
           )}
           {/* Field + original message */}
           <span style={{
-            fontSize: '0.625rem',
+            fontSize: '0.75rem',
             color: 'var(--text-secondary)',
             fontFamily: mono,
           }}>
@@ -126,7 +126,7 @@ function ErrorRow({
             type="button"
             onClick={(e) => { e.stopPropagation(); onResolve(error); }}
             style={{
-              fontSize: '0.6875rem',
+              fontSize: '0.75rem',
               fontWeight: 600,
               padding: '2px 6px',
               borderRadius: 2,
@@ -156,7 +156,7 @@ function ErrorRow({
 
         {/* Expand chevron */}
         <span style={{
-          fontSize: '0.6875rem',
+          fontSize: '0.75rem',
           color: 'var(--text-secondary)',
           opacity: 0.5,
           flexShrink: 0,
@@ -180,7 +180,7 @@ function ErrorRow({
           {/* WHY section */}
           <div>
             <div style={{
-              fontSize: '0.6875rem',
+              fontSize: '0.75rem',
               fontWeight: 700,
               fontFamily: mono,
               color: 'var(--text-secondary)',
@@ -191,7 +191,7 @@ function ErrorRow({
               WHY THIS MATTERS
             </div>
             <p style={{
-              fontSize: '0.6875rem',
+              fontSize: '0.75rem',
               fontFamily: mono,
               color: 'var(--text-secondary)',
               lineHeight: 1.7,
@@ -204,7 +204,7 @@ function ErrorRow({
           {/* HOW TO FIX section */}
           <div>
             <div style={{
-              fontSize: '0.6875rem',
+              fontSize: '0.75rem',
               fontWeight: 700,
               fontFamily: mono,
               color: 'var(--text-secondary)',
@@ -215,7 +215,7 @@ function ErrorRow({
               HOW TO FIX
             </div>
             <p style={{
-              fontSize: '0.6875rem',
+              fontSize: '0.75rem',
               fontFamily: mono,
               color: 'var(--text-primary)',
               lineHeight: 1.7,
@@ -228,7 +228,7 @@ function ErrorRow({
           {/* Resolution action panel — shown for ALL errors */}
           {knowledge.resolveAction && onResolve && (
             <div style={{
-              fontSize: '0.625rem',
+              fontSize: '0.75rem',
               fontFamily: mono,
               color: actionColor,
               padding: '6px 10px',
@@ -368,7 +368,7 @@ export default function BackendErrorBanner({ headerMessage, errors, onDismiss, o
             flexShrink: 0,
           }} />
           <span style={{
-            fontSize: '0.6875rem',
+            fontSize: '0.75rem',
             fontWeight: 600,
             color: 'var(--accent-red)',
           }}>
@@ -379,7 +379,7 @@ export default function BackendErrorBanner({ headerMessage, errors, onDismiss, o
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {totalCritical > 0 && (
             <span style={{
-              fontSize: '0.6875rem',
+              fontSize: '0.75rem',
               fontWeight: 700,
               padding: '2px 6px',
               color: 'var(--accent-red)',
@@ -392,7 +392,7 @@ export default function BackendErrorBanner({ headerMessage, errors, onDismiss, o
           )}
           {totalWarning > 0 && (
             <span style={{
-              fontSize: '0.6875rem',
+              fontSize: '0.75rem',
               fontWeight: 700,
               padding: '2px 6px',
               color: 'var(--accent-amber)',
@@ -456,7 +456,7 @@ export default function BackendErrorBanner({ headerMessage, errors, onDismiss, o
                   marginBottom: 4,
                 }}>
                   <span style={{
-                    fontSize: '0.625rem',
+                    fontSize: '0.75rem',
                     fontWeight: 600,
                     color: 'var(--text-primary)',
                     letterSpacing: '0.02em',
@@ -465,7 +465,7 @@ export default function BackendErrorBanner({ headerMessage, errors, onDismiss, o
                   </span>
                   {catCritical > 0 && (
                     <span style={{
-                      fontSize: '0.6875rem',
+                      fontSize: '0.75rem',
                       padding: '1px 5px',
                       borderRadius: 2,
                       color: 'var(--accent-red)',
@@ -477,7 +477,7 @@ export default function BackendErrorBanner({ headerMessage, errors, onDismiss, o
                   )}
                   {catWarning > 0 && (
                     <span style={{
-                      fontSize: '0.6875rem',
+                      fontSize: '0.75rem',
                       padding: '1px 5px',
                       borderRadius: 2,
                       color: 'var(--accent-amber)',

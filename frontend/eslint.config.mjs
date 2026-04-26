@@ -51,6 +51,61 @@ export default [
     },
   },
 
+  // Design system guardrails (frontend rule: 12px floor; tokens > hex literals).
+  // Warn-level — existing code has prior violations; goal is to prevent new ones.
+  // ADR-0017 names @/lib/design/tokens (T) as the canonical token surface.
+  {
+    files: ["src/**/*.tsx", "src/**/*.ts"],
+    ignores: [
+      "src/lib/design/**",          // tokens module itself
+      "src/lib/theme/**",           // theme presets need raw hex
+      "src/app/globals.css.ts",     // n/a, but defensive
+      "src/components/chart/**",    // chart engine packs micro-typography
+      "src/components/reports/EChartsWrapper.tsx",
+      // Public marketing site — distinct design system from institutional
+      // terminal. ADR-0017 governs the in-app surface only. Marketing pages
+      // use @/components/marketing/theme (10–11px overlines, 52px+ heroes,
+      // bespoke palette) and render outside terminal chrome.
+      "src/app/page.tsx",
+      "src/app/about/**",
+      "src/app/contact/**",
+      "src/app/security/**",
+      "src/app/privacy/**",
+      "src/app/terms/**",
+      "src/app/solutions/**",
+      "src/app/products/**",
+      "src/components/marketing/**",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "warn",
+        {
+          // fontSize below 0.625rem (10px). 10–11px is acceptable for mono
+          // micro-typography (column headers, overlines, status pills); below
+          // 10px is unreadable on institutional displays. See ADR-0019.
+          selector: "Property[key.name='fontSize'] > Literal[value=/^0\\.([0-5]\\d*|6[01]\\d*)rem$/]",
+          message:
+            "fontSize below 10px (0.625rem) is unreadable on institutional displays. Use 0.625rem or larger; for body text prefer 0.875rem+ via T from @/lib/design/tokens.",
+        },
+        {
+          // fontSize: 9 or below as plain numeric literal (px). 10px is the
+          // institutional micro-mono floor (matches Bloomberg/Refinitiv).
+          selector: "Property[key.name='fontSize'] > Literal[value<10][raw=/^\\d+$/]",
+          message:
+            "fontSize below 10px is unreadable on institutional displays. Use 10 or larger; for body text prefer 14+. See ADR-0019.",
+        },
+        {
+          // Hex literals on color-typed props inside inline styles.
+          // Catches: color, background, backgroundColor, borderColor, fill, stroke.
+          selector:
+            "Property[key.name=/^(color|background|backgroundColor|borderColor|fill|stroke)$/] > Literal[value=/^#[0-9a-fA-F]{3,8}$/]",
+          message:
+            "Hex literal in inline style. Use a token from @/lib/design/tokens (T.*) or a CSS variable from globals.css instead.",
+        },
+      ],
+    },
+  },
+
   // Ignore patterns
   {
     ignores: [

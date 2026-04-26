@@ -56,7 +56,7 @@ export default function DiffPreviewModal({ open, fields, onConfirm, onCancel, sa
             disabled={saving || changed.length === 0}
             style={{
               fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em",
-              color: "#000", background: saving || changed.length === 0 ? S.tertiary : S.cyan,
+              color: S.black, background: saving || changed.length === 0 ? S.tertiary : S.cyan,
               border: "none", borderRadius: 2, padding: "8px 22px",
               cursor: saving || changed.length === 0 ? "not-allowed" : "pointer",
             }}

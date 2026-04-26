@@ -48,7 +48,7 @@ export default function SystemBar() {
         className="px-2 py-0.5 rounded text-xs font-mono font-semibold transition-colors border"
         style={{
           letterSpacing: "0.08em",
-          fontSize: "0.6875rem",
+          fontSize: "0.75rem",
           color: "var(--accent-cyan)",
           borderColor: "rgba(0,255,255,0.3)",
           background: "rgba(0,255,255,0.08)",

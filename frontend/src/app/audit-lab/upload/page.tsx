@@ -170,7 +170,7 @@ function AuditLabUploadPageInner() {
       setUploadResult(data as Record<string, unknown>);
       setDatasetId((data as Record<string,string>).dataset_id);
       setPhase("run");
-    } catch (err) {
+    } catch {
       setError("Network error during upload.");
     } finally {
       setUploading(false);

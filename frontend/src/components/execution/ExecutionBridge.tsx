@@ -160,7 +160,7 @@ export default function ExecutionBridge({
   ];
 
   const allChecked = checkItems.every(c => c.checked);
-  const autosPassed = checkItems.filter(c => c.autoChecked).every(c => c.checked);
+  const _autosPassed = checkItems.filter(c => c.autoChecked).every(c => c.checked);
 
   const authStatus: 'READY' | 'PENDING' | 'BLOCKED' = !validationPassed
     ? 'BLOCKED'
@@ -293,7 +293,7 @@ export default function ExecutionBridge({
                   <thead>
                     <tr className="border-b border-[var(--border-soft)]">
                       {['Bucket', 'Net Exposure', 'Action', 'Action USD', 'Reason'].map(h => (
-                        <th key={h} className="px-4 py-2 text-left text-[var(--text-tertiary)] font-normal text-[10px] uppercase tracking-wider">{h}</th>
+                        <th scope="col" key={h} className="px-4 py-2 text-left text-[var(--text-tertiary)] font-normal text-[10px] uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -680,14 +680,14 @@ export default function ExecutionBridge({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.06em', color: S.tertiary }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em', color: S.tertiary }}>
               ED-00C
             </span>
             <span style={{ fontFamily: S.fontUI, fontSize: '0.875rem', fontWeight: 600, color: S.primary }}>
               Order Submission & Tracking
             </span>
             <span style={{
-              fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.06em',
+              fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em',
               color: authStatus === 'READY' ? S.pass : S.amber,
               border: `1px solid ${authStatus === 'READY' ? S.pass : S.amber}`,
               padding: '1px 5px',

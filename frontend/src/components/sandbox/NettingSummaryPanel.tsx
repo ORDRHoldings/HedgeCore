@@ -64,7 +64,7 @@ export default function NettingSummaryPanel({ currencyNetting }: Props) {
           <thead>
             <tr style={{ background: S.sub }}>
               {["Pair", "Gross", "Net", "Netting Ratio"].map(h => (
-                <th key={h} style={{ padding: "7px 14px", fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}` }}>{h}</th>
+                <th scope="col" key={h} style={{ padding: "7px 14px", fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}` }}>{h}</th>
               ))}
             </tr>
           </thead>

@@ -3,8 +3,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   X, ChevronDown, ChevronRight, BookOpen, Zap, BarChart2, GitMerge,
-  Shield, Terminal, ExternalLink, Info, FlaskConical, Globe2, DollarSign,
-  Activity, LayoutDashboard, Radio, Landmark, FileInput, Rocket, FileBarChart,
+  Shield, ExternalLink, Info, FlaskConical, Globe2,
+  Landmark, FileInput, Rocket, FileBarChart,
   Settings, Cpu, Wallet,
 } from "lucide-react";
 
@@ -106,9 +106,9 @@ export default function DashboardHelpPanel({ onClose, role }: Props) {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px 10px", borderBottom: `1px solid ${S.rim}`, background: S.bgDeep, flexShrink: 0 }}>
         <div>
-          <div style={{ fontFamily: S.fontMono, fontSize: "0.6rem", color: S.cyan, letterSpacing: "0.12em", marginBottom: 2 }}>? HELP · ORDR PLATFORM</div>
+          <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan, letterSpacing: "0.12em", marginBottom: 2 }}>? HELP · ORDR PLATFORM</div>
           <div style={{ fontFamily: S.fontMono, fontSize: "0.8125rem", fontWeight: 700, color: S.primary, letterSpacing: "0.02em" }}>Dashboard</div>
-          <div style={{ fontFamily: S.fontMono, fontSize: "0.55rem", color: S.tertiary, letterSpacing: "0.1em", marginTop: 1 }}>COMMAND CENTRE · {roleLabel.toUpperCase()}</div>
+          <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.1em", marginTop: 1 }}>COMMAND CENTRE · {roleLabel.toUpperCase()}</div>
         </div>
         <button onClick={onClose} style={{ background: "none", border: `1px solid ${S.rim}`, cursor: "pointer", padding: 4, color: S.tertiary, display: "flex", alignItems: "center", lineHeight: 1 }}><X size={13} /></button>
       </div>
@@ -117,10 +117,10 @@ export default function DashboardHelpPanel({ onClose, role }: Props) {
       <div style={{ flex: 1, overflow: "auto" }}>
         {/* Overview */}
         <Sec id="overview" label="What this page does" icon={<Info size={12} color={S.cyan} />} isOpen={isOpen("overview")} onToggle={toggle}>
-          <p style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.secondary, lineHeight: 1.55, margin: 0 }}>
+          <p style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, lineHeight: 1.55, margin: 0 }}>
             The <strong style={{ color: S.cyan }}>Dashboard</strong> is your institutional command centre — a role-based, drag-and-resize widget grid showing live metrics, market intelligence, and system health.
           </p>
-          <p style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.secondary, lineHeight: 1.55, margin: "8px 0 0" }}>
+          <p style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, lineHeight: 1.55, margin: "8px 0 0" }}>
             Your layout saves automatically per user. Widgets are filtered by your <strong style={{ color: S.amber }}>{roleLabel}</strong> permissions. Click <strong>Reset</strong> to restore the default layout for your role.
           </p>
           <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
@@ -132,7 +132,7 @@ export default function DashboardHelpPanel({ onClose, role }: Props) {
             ].map((tip) => (
               <div key={tip.text} style={{
                 display: "flex", alignItems: "flex-start", gap: 8,
-                fontFamily: S.fontMono, fontSize: "0.6rem", color: S.secondary, lineHeight: 1.4,
+                fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary, lineHeight: 1.4,
               }}>
                 <span style={{ color: S.cyan, fontWeight: 700, flexShrink: 0, width: 14, textAlign: "center" }}>{tip.icon}</span>
                 <span>{tip.text}</span>
@@ -155,11 +155,11 @@ export default function DashboardHelpPanel({ onClose, role }: Props) {
                   background: `color-mix(in srgb, ${step.color} 20%, transparent)`,
                   border: `1px solid ${step.color}`,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontFamily: S.fontMono, fontSize: "0.55rem", color: step.color, fontWeight: 700, flexShrink: 0,
+                  fontFamily: S.fontMono, fontSize: "0.75rem", color: step.color, fontWeight: 700, flexShrink: 0,
                 }}>{step.n}</div>
                 <div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.primary, fontWeight: 600 }}>{step.label}</div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: "0.55rem", color: S.tertiary, letterSpacing: "0.06em", marginTop: 1 }}>{step.sub}</div>
+                  <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.primary, fontWeight: 600 }}>{step.label}</div>
+                  <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.06em", marginTop: 1 }}>{step.sub}</div>
                 </div>
                 <ExternalLink size={9} style={{ color: S.tertiary, flexShrink: 0, marginTop: 5, marginLeft: "auto" }} />
               </div>
@@ -170,7 +170,7 @@ export default function DashboardHelpPanel({ onClose, role }: Props) {
         {/* Widget Gallery */}
         <Sec id="widgets" label={`Widget Gallery · ${WIDGETS.length}`} icon={<BarChart2 size={12} color={S.cyan} />} isOpen={isOpen("widgets")} onToggle={toggle}>
           <div style={{
-            fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.secondary, lineHeight: 1.5,
+            fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, lineHeight: 1.5,
             marginBottom: 10,
           }}>
             All available widgets organized by function. Add any from the catalog.
@@ -192,13 +192,13 @@ export default function DashboardHelpPanel({ onClose, role }: Props) {
                     background: meta.color,
                   }} />
                   <span style={{
-                    fontFamily: S.fontMono, fontSize: "0.55rem", fontWeight: 700,
+                    fontFamily: S.fontMono, fontSize: "0.75rem", fontWeight: 700,
                     color: meta.color, letterSpacing: "0.1em",
                   }}>
                     {meta.label}
                   </span>
                   <span style={{
-                    fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary,
+                    fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
                     background: `color-mix(in srgb, ${S.tertiary} 10%, transparent)`,
                     padding: "0 4px", borderRadius: 2,
                   }}>
@@ -213,13 +213,13 @@ export default function DashboardHelpPanel({ onClose, role }: Props) {
                     borderLeft: `2px solid ${w.color}22`,
                   }}>
                     <div style={{
-                      fontFamily: S.fontMono, fontSize: "0.625rem", color: S.primary,
+                      fontFamily: S.fontMono, fontSize: "0.75rem", color: S.primary,
                       fontWeight: 600, letterSpacing: "0.02em",
                     }}>
                       {w.label}
                     </div>
                     <div style={{
-                      fontFamily: S.fontUI, fontSize: "0.625rem", color: S.tertiary,
+                      fontFamily: S.fontUI, fontSize: "0.75rem", color: S.tertiary,
                       marginTop: 2, lineHeight: 1.4,
                     }}>
                       {w.desc}
@@ -235,10 +235,10 @@ export default function DashboardHelpPanel({ onClose, role }: Props) {
         <Sec id="formulas" label="Key Formulas" icon={<Zap size={12} color={S.amber} />} isOpen={isOpen("formulas")} onToggle={toggle}>
           {FORMULAS.map(f => (
             <div key={f.label} style={{ marginBottom: 12, padding: "8px 10px", background: S.bgDeep, border: `1px solid ${S.rim}` }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.6rem", color: S.cyan, letterSpacing: "0.08em", marginBottom: 4, textTransform: "uppercase" }}>{f.label}</div>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan, letterSpacing: "0.08em", marginBottom: 4, textTransform: "uppercase" }}>{f.label}</div>
               <div style={{ fontFamily: "'Times New Roman', serif", fontSize: "0.875rem", color: S.primary, padding: "4px 0", fontStyle: "italic" }}>{f.latex}</div>
-              <div style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.secondary, marginTop: 4, lineHeight: 1.4 }}>{f.desc}</div>
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.55rem", color: S.tertiary, marginTop: 4, letterSpacing: "0.06em" }}>Source: {f.source}</div>
+              <div style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, marginTop: 4, lineHeight: 1.4 }}>{f.desc}</div>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, marginTop: 4, letterSpacing: "0.06em" }}>Source: {f.source}</div>
             </div>
           ))}
         </Sec>
@@ -254,7 +254,7 @@ export default function DashboardHelpPanel({ onClose, role }: Props) {
                   display: "flex", alignItems: "center", gap: 6,
                   background: "transparent", border: `1px solid ${S.rim}`,
                   padding: "7px 8px", cursor: "pointer", color: S.secondary,
-                  fontFamily: S.fontMono, fontSize: "0.6rem", letterSpacing: "0.03em",
+                  fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.03em",
                   textAlign: "left", borderRadius: 3,
                   transition: "all 150ms",
                 }}
@@ -271,9 +271,9 @@ export default function DashboardHelpPanel({ onClose, role }: Props) {
       {/* Footer */}
       <div style={{ padding: "8px 14px", borderTop: `1px solid ${S.rim}`, background: S.bgDeep, flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
         <BookOpen size={10} style={{ color: S.tertiary }} />
-        <button onClick={() => router.push("/hedgewiki")} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: S.fontMono, fontSize: "0.55rem", color: S.cyan, letterSpacing: "0.06em", textDecoration: "underline", padding: 0 }}>Full Documentation → HedgeWiki</button>
+        <button onClick={() => router.push("/hedgewiki")} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan, letterSpacing: "0.06em", textDecoration: "underline", padding: 0 }}>Full Documentation → HedgeWiki</button>
         <div style={{ flex: 1 }} />
-        <button onClick={() => router.push("/help")} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: S.fontMono, fontSize: "0.55rem", color: S.tertiary, letterSpacing: "0.06em", padding: 0 }}>Help Centre</button>
+        <button onClick={() => router.push("/help")} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.06em", padding: 0 }}>Help Centre</button>
       </div>
     </div>
   );
@@ -290,7 +290,7 @@ function Sec({ id, label, icon, isOpen, onToggle, children }: {
         padding: "10px 14px",
         background: isOpen ? `color-mix(in srgb, ${S.cyan} 4%, transparent)` : "transparent",
         border: "none", cursor: "pointer",
-        fontFamily: S.fontMono, fontSize: "0.6875rem",
+        fontFamily: S.fontMono, fontSize: "0.75rem",
         color: isOpen ? S.primary : S.secondary,
         fontWeight: 600, letterSpacing: "0.04em", textAlign: "left",
         transition: "background 120ms",

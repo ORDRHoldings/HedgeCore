@@ -282,7 +282,7 @@ function InstrumentBar({ instruments }: { instruments: InstrumentAlloc[] }) {
         {instruments.map((inst) => (
           <div key={inst.name} style={{ display: "flex", alignItems: "center", gap: 3 }}>
             <div style={{ width: 6, height: 6, borderRadius: 1, background: inst.color, flexShrink: 0 }} />
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary, letterSpacing: "0.03em" }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.03em" }}>
               {inst.name} {inst.pct}%
             </span>
           </div>
@@ -318,7 +318,7 @@ function ToastStack({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: nu
             boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
             animation: "slideIn 0.15s ease-out",
           }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color }}>{
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color }}>{
               t.type === "success" ? "✓" : t.type === "error" ? "✗" : "i"
             }</span>
             <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.primary, flex: 1 }}>{t.message}</span>
@@ -412,7 +412,7 @@ function EditPolicyModal({ policy, loading, onSave, onCancel }: EditModalProps) 
     outline: "none", boxSizing: "border-box",
   };
   const labelStyle: React.CSSProperties = {
-    fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.08em",
+    fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em",
     color: S.tertiary, textTransform: "uppercase", display: "block", marginBottom: 4,
   };
 
@@ -457,7 +457,7 @@ function EditPolicyModal({ policy, loading, onSave, onCancel }: EditModalProps) 
               </span>
               {/* UX-POLICY-1: explicit scope label so analysts know config changes require re-activation */}
               <span style={{
-                fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.08em",
+                fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em",
                 padding: "2px 6px",
                 border: `1px solid color-mix(in srgb, var(--accent-amber,#fbbf24) 35%, var(--border-rim))`,
                 color: "var(--accent-amber,#fbbf24)", background: "transparent",
@@ -465,7 +465,7 @@ function EditPolicyModal({ policy, loading, onSave, onCancel }: EditModalProps) 
                 METADATA ONLY
               </span>
             </div>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary, letterSpacing: "0.06em", marginTop: 2 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.06em", marginTop: 2 }}>
               {policy.code} · {policy.id.slice(0, 8).toUpperCase()} · Config changes require creating a new version
             </div>
           </div>
@@ -531,9 +531,9 @@ function EditPolicyModal({ policy, loading, onSave, onCancel }: EditModalProps) 
           <div style={{
             padding: "8px 12px", background: `color-mix(in srgb, ${S.amber} 6%, transparent)`,
             border: `1px solid color-mix(in srgb, ${S.amber} 20%, transparent)`, borderRadius: 2,
-            fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.secondary, lineHeight: 1.5,
+            fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, lineHeight: 1.5,
           }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.amber, fontWeight: 700, letterSpacing: "0.07em", marginRight: 6 }}>NOTE</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.amber, fontWeight: 700, letterSpacing: "0.07em", marginRight: 6 }}>NOTE</span>
             Editing a policy template creates a new version. Active instances referencing this template will not be retroactively changed.
           </div>
         </div>
@@ -625,7 +625,7 @@ function PolicyCard({
           background: "rgba(0,0,0,0.15)",
           pointerEvents: "none",
         }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.cyan, letterSpacing: "0.1em" }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan, letterSpacing: "0.1em" }}>
             WORKING…
           </span>
         </div>
@@ -662,7 +662,7 @@ function PolicyCard({
           {policy.name}
         </div>
         {policy.description && (
-          <div style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.tertiary, marginTop: 3, lineHeight: 1.4 }}>
+          <div style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.tertiary, marginTop: 3, lineHeight: 1.4 }}>
             {policy.description.slice(0, 80)}{policy.description.length > 80 ? "…" : ""}
           </div>
         )}
@@ -679,10 +679,10 @@ function PolicyCard({
             { label: "CREATED",        value: policy.created },
           ].map(({ label, value }) => (
             <div key={label}>
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.08em", marginBottom: 1, textTransform: "uppercase" as const }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.08em", marginBottom: 1, textTransform: "uppercase" as const }}>
                 {label}
               </div>
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary, fontWeight: 500 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary, fontWeight: 500 }}>
                 {value}
               </div>
             </div>
@@ -693,13 +693,13 @@ function PolicyCard({
         {showMeta && policy.publishedBy && (
           <div style={{ display: "flex", gap: 12 }}>
             <div>
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.08em" }}>PUBLISHED BY </span>
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary }}>{policy.publishedBy}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.08em" }}>PUBLISHED BY </span>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>{policy.publishedBy}</span>
             </div>
             {policy.branch && (
               <div>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.08em" }}>BRANCH </span>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary }}>{policy.branch}</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.08em" }}>BRANCH </span>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>{policy.branch}</span>
               </div>
             )}
           </div>
@@ -729,7 +729,7 @@ function PolicyCard({
           </>
         )}
         {policy.isSystem && (
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary, letterSpacing: "0.06em", marginLeft: 4 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.06em", marginLeft: 4 }}>
             READ-ONLY
           </span>
         )}
@@ -738,7 +738,7 @@ function PolicyCard({
             type="button"
             onClick={onExport}
             style={{
-              fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.06em",
+              fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em",
               padding: "3px 8px", border: `1px solid ${S.rim}`,
               color: S.tertiary, background: "transparent", cursor: "pointer",
               display: "flex", alignItems: "center", gap: 4,
@@ -754,7 +754,7 @@ function PolicyCard({
             onClick={onHistory}
             title="View audit history"
             style={{
-              fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.06em",
+              fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em",
               padding: "3px 8px", border: `1px solid ${S.rim}`,
               color: S.tertiary, background: "transparent", cursor: "pointer",
             }}
@@ -768,7 +768,7 @@ function PolicyCard({
             onClick={onInspect}
             title="Inspect policy detail"
             style={{
-              fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.06em",
+              fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em",
               padding: "3px 8px", border: `1px solid ${S.cyan}`,
               color: S.cyan, background: "transparent", cursor: "pointer",
             }}
@@ -804,7 +804,7 @@ function ActionBtn({ label, accent, danger, onClick, disabled }: {
       onMouseLeave={() => setHovered(false)}
       style={{
         fontFamily: S.fontMono,
-        fontSize: "0.625rem",
+        fontSize: "0.75rem",
         letterSpacing: "0.06em",
         fontWeight: 600,
         padding: "2px 8px",
@@ -825,7 +825,7 @@ function ActionBtn({ label, accent, danger, onClick, disabled }: {
 // -- Main page component ----------------------------------------------------------
 export default function SavedPoliciesTab() {
   const _planAllowed = usePlanRedirect("professional");
-  const { isAuthenticated, token, user } = useAuth();
+  const { isAuthenticated, token, user: _user } = useAuth();
   const router = useRouter();
   const renderTs = useRenderTs();
   const toastSeqRef = useRef(0);
@@ -1089,14 +1089,14 @@ export default function SavedPoliciesTab() {
           My Saved Policies
         </span>
         <span style={{
-          fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.08em",
+          fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em",
           color: S.secondary, padding: "1px 5px", border: `1px solid ${S.rim}`,
         }}>
           POLICY ENGINE
         </span>
         {activeInstance && (
           <span style={{
-            fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px",
+            fontFamily: S.fontMono, fontSize: "0.75rem", padding: "1px 6px",
             border: `1px solid ${S.cyan}`, color: S.cyan,
             background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`,
           }}>
@@ -1104,7 +1104,7 @@ export default function SavedPoliciesTab() {
           </span>
         )}
         <div style={{ flex: 1 }} />
-        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.04em" }}>
           AS OF {renderTs}
         </span>
       </header>
@@ -1138,7 +1138,7 @@ export default function SavedPoliciesTab() {
         <div style={{ flex: 1 }} />
         {!loading && (
           <span style={{
-            fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em",
+            fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em",
             color: S.tertiary, padding: "1px 6px", border: `1px solid ${S.rim}`,
           }}>
             {filteredPolicies.length} {filteredPolicies.length === 1 ? "policy" : "policies"}
@@ -1235,12 +1235,12 @@ export default function SavedPoliciesTab() {
           </div>
           {/* Sort */}
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary, letterSpacing: "0.06em" }}>SORT:</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.06em" }}>SORT:</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortKey)}
               style={{
-                fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.04em",
+                fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.04em",
                 color: S.secondary, background: S.bgPanel,
                 border: `1px solid ${S.rim}`, padding: "3px 8px",
                 cursor: "pointer", outline: "none", borderRadius: 2,
@@ -1350,7 +1350,7 @@ export default function SavedPoliciesTab() {
       <footer style={{
         height: 32, display: "flex", alignItems: "center", gap: 8, padding: "0 20px",
         borderTop: `1px solid ${S.rim}`, background: S.bgPanel,
-        fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
+        fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
         letterSpacing: "0.04em", flexShrink: 0,
       }}>
         <span>{renderTs}</span>

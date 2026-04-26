@@ -68,7 +68,7 @@ function getStepMeta(step: string): StepMeta {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-function shortHash(h: string, n = 16): string {
+function _shortHash(h: string, n = 16): string {
   return h ? `${h.slice(0, n)}…` : "—";
 }
 
@@ -882,7 +882,7 @@ export default function RunViewerPage() {
               padding:    isMobile ? "60px 12px" : "60px 24px",
               textAlign:  "center",
               fontFamily: "'IBM Plex Mono', monospace",
-              fontSize:   "0.625rem",
+              fontSize:   "0.75rem",
               color:      "var(--text-tertiary)",
               letterSpacing: "0.08em",
             }}>

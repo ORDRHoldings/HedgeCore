@@ -12,9 +12,8 @@ import {
 
 import type {
   AppearanceSettings, ThemeId, AccentId, Density,
-  UIFont, NumericFont, BaseFontSize, TemplateId,
+  UIFont, NumericFont, BaseFontSize,
 } from "@/lib/theme/types";
-import { DEFAULT_APPEARANCE } from "@/lib/theme/types";
 import { THEME_PRESETS, CURATED_ACCENTS } from "@/lib/theme/presets";
 import { TEMPLATES } from "@/lib/theme/templates";
 import { validateThemeContrast, validateAccentContrast } from "@/lib/theme/contrast";
@@ -92,7 +91,7 @@ function ToggleRow({
         <div style={{
           position: "absolute", top: 2, left: checked ? 18 : 2,
           width: 14, height: 14, borderRadius: 7,
-          background: "#FFF", transition: "left 0.15s",
+          background: S.white, transition: "left 0.15s",
         }} />
       </div>
       <div style={{ flex: 1 }}>
@@ -718,7 +717,7 @@ function PreviewPane({ appearance }: { appearance: AppearanceSettings }) {
             <thead>
               <tr style={{ borderBottom: `1px solid ${c.borderRim}` }}>
                 {["Pair", "Notional", "PnL"].map(h => (
-                  <th key={h} style={{
+                  <th scope="col" key={h} style={{
                     textAlign: h === "Pair" ? "left" : "right",
                     padding: `${densityPad - 2}px 10px`,
                     fontFamily: "'IBM Plex Mono', monospace", fontSize: 12,

@@ -162,7 +162,7 @@ export default function SavedTab({ token }: Props) {
         <thead>
           <tr>
             {["Name", "Run ID", "Date", "Version", "Actions"].map((col) => (
-              <th
+              <th scope="col"
                 key={col}
                 style={{
                   textAlign: "left",

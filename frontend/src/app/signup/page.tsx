@@ -3,8 +3,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Mail, Lock, ArrowRight, CheckCircle } from "lucide-react";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
+import { publicFetch } from "@/lib/api/apiBase";
 
 type Step = 1 | 2 | 3;
+
+// Strong password: ≥12 chars, ≥1 upper, ≥1 lower, ≥1 digit, ≥1 symbol.
+// Mirrors the backend bcrypt 12-char floor + complexity expectation.
+const STRONG_PASSWORD = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/;
 
 export default function SignupPage() {
   const router = useRouter();
@@ -36,17 +41,15 @@ export default function SignupPage() {
       setError("Passwords do not match");
       return;
     }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+    if (!STRONG_PASSWORD.test(password)) {
+      setError("Password must be ≥12 characters and include upper, lower, digit, and symbol.");
       return;
     }
     setError(null);
     setLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-      const resp = await fetch(`${apiUrl}/api/v1/signup`, {
+      const resp = await publicFetch(`/v1/signup`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           company_name: companyName,
           admin_email: email,
@@ -300,7 +303,8 @@ export default function SignupPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min. 8 characters"
+                  placeholder="Min. 12 chars + upper/lower/digit/symbol"
+                  autoComplete="new-password"
                   style={{
                     width: "100%",
                     padding: "9px 12px 9px 32px",
@@ -345,6 +349,7 @@ export default function SignupPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repeat password"
+                  autoComplete="new-password"
                   style={{
                     width: "100%",
                     padding: "9px 12px 9px 32px",

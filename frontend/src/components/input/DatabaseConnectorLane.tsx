@@ -36,7 +36,7 @@ export default function DatabaseConnectorLane() {
           background:   S.bgSub,
           borderBottom: `1px solid ${S.border}`,
           fontFamily:   S.fontMono,
-          fontSize:     "0.5rem",
+          fontSize:     "0.75rem",
           letterSpacing:"0.08em",
           color:        S.tertiary,
         }}>
@@ -54,7 +54,7 @@ export default function DatabaseConnectorLane() {
               key={f.key}
               style={{ background: S.bgPanel, padding: "10px 14px", display: "flex", flexDirection: "column", gap: 4 }}
             >
-              <label style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.08em", color: S.tertiary }}>
+              <label style={{ fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em", color: S.tertiary }}>
                 {f.label}
               </label>
               <input
@@ -63,7 +63,7 @@ export default function DatabaseConnectorLane() {
                 disabled
                 style={{
                   fontFamily:   S.fontMono,
-                  fontSize:     "0.6875rem",
+                  fontSize:     "0.75rem",
                   background:   "transparent",
                   border:       "none",
                   borderBottom: `1px solid ${S.border}`,

@@ -20,7 +20,7 @@ const S = {
   red:      "var(--accent-red, #f87171)",
 } as const;
 
-function fmt(n: number): string {
+function _fmt(n: number): string {
   if (!isFinite(n)) return "—";
   const abs = Math.abs(n);
   const sign = n < 0 ? "−" : "";
@@ -39,7 +39,7 @@ function generateWhitepaperHTML(result: SandboxCalculateResponse | null): string
 
   const totalExposure = summary?.total_commercial_exposure_mxn ?? 47_600_000;
   const hedgeNotional = summary?.total_hedge_notional_mxn ?? 38_080_000;
-  const hedgeCost = summary?.total_hedge_cost_mxn ?? 312_000;
+  const _hedgeCost = summary?.total_hedge_cost_mxn ?? 312_000;
   const integrityScore = waterfall?.integrity_score ?? 94;
 
   const crisisRows = CRISIS_SCENARIOS.slice(0, 10).map(c => `
@@ -273,7 +273,7 @@ function generateWhitepaperHTML(result: SandboxCalculateResponse | null): string
   </p>
   <table>
     <thead>
-      <tr><th>Requirement</th><th>EU (EMIR)</th><th>US (Dodd-Frank)</th><th>Deadline</th></tr>
+      <tr><th scope="col">Requirement</th><th scope="col">EU (EMIR)</th><th scope="col">US (Dodd-Frank)</th><th scope="col">Deadline</th></tr>
     </thead>
     <tbody>
       <tr><td>Trade Reporting</td><td>DTCC / REGIS-TR</td><td>SDR (CFTC)</td><td>T+1</td></tr>
@@ -295,13 +295,13 @@ function generateWhitepaperHTML(result: SandboxCalculateResponse | null): string
   <table>
     <thead>
       <tr>
-        <th>Crisis</th>
-        <th>Period</th>
-        <th>FX Shock</th>
-        <th>Spread Widen</th>
-        <th>VIX Peak</th>
-        <th>NDF Hedge Eff.</th>
-        <th>Region</th>
+        <th scope="col">Crisis</th>
+        <th scope="col">Period</th>
+        <th scope="col">FX Shock</th>
+        <th scope="col">Spread Widen</th>
+        <th scope="col">VIX Peak</th>
+        <th scope="col">NDF Hedge Eff.</th>
+        <th scope="col">Region</th>
       </tr>
     </thead>
     <tbody>${crisisRows}</tbody>
@@ -331,7 +331,7 @@ function generateWhitepaperHTML(result: SandboxCalculateResponse | null): string
   </p>
   <table>
     <thead>
-      <tr><th>Crisis</th><th>Normal Spread</th><th>Crisis Spread</th><th>Multiplier</th><th>Notes</th></tr>
+      <tr><th scope="col">Crisis</th><th scope="col">Normal Spread</th><th scope="col">Crisis Spread</th><th scope="col">Multiplier</th><th scope="col">Notes</th></tr>
     </thead>
     <tbody>
       <tr><td>GFC Sept 2008</td><td>6 bps (USD/MXN 3M)</td><td>80–120 bps</td><td>13–20×</td><td>NDF pricing suspended briefly</td></tr>
@@ -363,7 +363,7 @@ function generateWhitepaperHTML(result: SandboxCalculateResponse | null): string
   </p>
   <table>
     <thead>
-      <tr><th>Rule ID</th><th>Rule Name</th><th>Threshold</th><th>Failure Type</th></tr>
+      <tr><th scope="col">Rule ID</th><th scope="col">Rule Name</th><th scope="col">Threshold</th><th scope="col">Failure Type</th></tr>
     </thead>
     <tbody>
       <tr><td>W-001</td><td>Input Completeness</td><td>All required fields</td><td>CRITICAL</td></tr>

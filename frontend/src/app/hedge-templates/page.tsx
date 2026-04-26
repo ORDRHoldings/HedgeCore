@@ -34,6 +34,7 @@ const S = {
   textSec: "var(--text-secondary)",
   accent: "var(--accent-cyan, #22d3ee)",
   accentAmber: "var(--accent-amber, #f59e0b)",
+  black: "#000",
 } as const;
 
 const CATEGORY_LABEL: Record<TemplateCategory, string> = {
@@ -274,7 +275,7 @@ function TemplateCard(props: {
           onClick={props.onApply}
           style={{
             flex: 1, padding: "8px 10px",
-            background: S.accent, color: "#000",
+            background: S.accent, color: S.black,
             border: "none", borderRadius: 3, cursor: "pointer",
             fontFamily: S.fontMono, fontSize: 11, fontWeight: 600,
             letterSpacing: 0.5, textTransform: "uppercase",
@@ -403,7 +404,7 @@ function ApplyModal({
           disabled={loading}
           style={{
             padding: "10px 14px",
-            background: S.accent, color: "#000",
+            background: S.accent, color: S.black,
             border: "none", borderRadius: 3,
             cursor: loading ? "wait" : "pointer",
             fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
@@ -507,7 +508,7 @@ function ModalShell({
 }
 
 function Th({ children }: { children: React.ReactNode }) {
-  return <th style={{
+  return <th scope="col" style={{
     padding: "6px 8px",
     fontFamily: S.fontMono, fontSize: 10, letterSpacing: 0.5,
     textTransform: "uppercase", fontWeight: 500,

@@ -11,6 +11,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
+import { dashboardFetch } from "@/lib/api/dashboardClient";
+import { generateOauthState, oauthStateKey } from "@/lib/oauth/sanitize";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { ERP_INTEGRATION_HELP } from "@/lib/helpContent";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
@@ -371,8 +373,20 @@ export default function ERPIntegrationPage() {
 
   function handleAuthorize(system: ERPTab) {
     setOAuthErrors(prev => ({ ...prev, [system]: null }));
+
+    // CSRF protection: generate state, persist, pass to start endpoint.
+    let state: string;
+    try {
+      state = generateOauthState();
+      sessionStorage.setItem(oauthStateKey("erp", system), state);
+    } catch {
+      setOAuthErrors(prev => ({ ...prev, [system]: "Browser secure storage unavailable. Cannot start OAuth flow." }));
+      updateStatus(system, "ERROR");
+      return;
+    }
+
     const popup = window.open(
-      `/api/erp-oauth-start?system=${encodeURIComponent(system)}`,
+      `/api/erp-oauth-start?system=${encodeURIComponent(system)}&state=${encodeURIComponent(state)}`,
       "erp-oauth",
       "width=600,height=700,scrollbars=yes"
     );
@@ -410,13 +424,8 @@ export default function ERPIntegrationPage() {
     setSyncState("syncing");
     setSyncError(null);
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
-      const res = await fetch(`${apiBase}/v1/connectors/erp/sync`, {
-        method:  "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type":  "application/json",
-        },
+      const res = await dashboardFetch("/v1/connectors/erp/sync", token ?? "", {
+        method: "POST",
         body: JSON.stringify({ system: activeTab, config: currentConfig }),
       });
       if (res.ok) {
@@ -837,7 +846,7 @@ export default function ERPIntegrationPage() {
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                     {["SOURCE FIELD", "ORDR FIELD", "TRANSFORM", "STATUS", ""].map((h, i) => (
-                      <th
+                      <th scope="col"
                         key={`${h}-${i}`}
                         style={{
                           padding:       "7px 12px",

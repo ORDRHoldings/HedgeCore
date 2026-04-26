@@ -137,7 +137,7 @@ export default function EconCalendarWidget({ onRemove }: Props) {
             <thead>
               <tr style={{ background: S.bgSub }}>
                 {["Time", "Country", "Event", "Impact", "Actual", "Est", "Prev"].map((h) => (
-                  <th key={h} style={{
+                  <th scope="col" key={h} style={{
                     fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
                     color: S.tertiary, textTransform: "uppercase", textAlign: "left",
                     padding: "5px 8px", borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap",

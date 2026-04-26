@@ -743,14 +743,14 @@ export default function UsersTab({ token }: { token: string }) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: S.bgSub }}>
-                <th style={thStyle}>EMAIL</th>
-                <th style={thStyle}>COMPANY</th>
-                <th style={thStyle}>STATUS</th>
-                <th style={thStyle}>PLAN</th>
-                <th style={thStyle}>MFA</th>
-                <th style={thStyle}>SUPERUSER</th>
-                <th style={thStyle}>ROLES</th>
-                <th style={thStyle}>CREATED</th>
+                <th scope="col" style={thStyle}>EMAIL</th>
+                <th scope="col" style={thStyle}>COMPANY</th>
+                <th scope="col" style={thStyle}>STATUS</th>
+                <th scope="col" style={thStyle}>PLAN</th>
+                <th scope="col" style={thStyle}>MFA</th>
+                <th scope="col" style={thStyle}>SUPERUSER</th>
+                <th scope="col" style={thStyle}>ROLES</th>
+                <th scope="col" style={thStyle}>CREATED</th>
               </tr>
             </thead>
             <tbody>
@@ -874,7 +874,7 @@ export default function UsersTab({ token }: { token: string }) {
                               key={r}
                               style={{
                                 fontFamily: S.fontMono,
-                                fontSize: 9,
+                                fontSize: 10,
                                 fontWeight: 700,
                                 letterSpacing: "0.05em",
                                 padding: "1px 6px",
@@ -890,7 +890,7 @@ export default function UsersTab({ token }: { token: string }) {
                             <span
                               style={{
                                 fontFamily: S.fontMono,
-                                fontSize: 9,
+                                fontSize: 10,
                                 color: S.tertiary,
                                 padding: "1px 4px",
                               }}

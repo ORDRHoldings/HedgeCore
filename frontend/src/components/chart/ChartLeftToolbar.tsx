@@ -561,7 +561,8 @@ function ArcIcon({ color }: { color: string }) {
 
 /* --- Measurement --- */
 
-function LongPositionIcon({ color }: { color: string }) {
+function LongPositionIcon({ color: _color }: { color: string }) {
+  // Long-position icon uses fixed green (#26A69A) — domain semantic, not themed.
   return (
     <Svg>
       <rect x="3" y="2" width="10" height="12" rx="1" stroke="#26A69A" strokeWidth="1.2" />
@@ -571,7 +572,8 @@ function LongPositionIcon({ color }: { color: string }) {
   );
 }
 
-function ShortPositionIcon({ color }: { color: string }) {
+function ShortPositionIcon({ color: _color }: { color: string }) {
+  // Short-position icon uses fixed red (#EF5350) — domain semantic, not themed.
   return (
     <Svg>
       <rect x="3" y="2" width="10" height="12" rx="1" stroke="#EF5350" strokeWidth="1.2" />
@@ -664,7 +666,8 @@ function PriceLabelIcon({ color }: { color: string }) {
   );
 }
 
-function ArrowMarkerUpIcon({ color }: { color: string }) {
+function ArrowMarkerUpIcon({ color: _color }: { color: string }) {
+  // Up-arrow uses fixed green — semantic, matches LongPositionIcon convention.
   return (
     <Svg>
       <path d="M8 2L8 14" stroke="#26A69A" strokeWidth="1.5" strokeLinecap="round" />
@@ -673,7 +676,8 @@ function ArrowMarkerUpIcon({ color }: { color: string }) {
   );
 }
 
-function ArrowMarkerDownIcon({ color }: { color: string }) {
+function ArrowMarkerDownIcon({ color: _color }: { color: string }) {
+  // Down-arrow uses fixed red — semantic, matches ShortPositionIcon convention.
   return (
     <Svg>
       <path d="M8 14L8 2" stroke="#EF5350" strokeWidth="1.5" strokeLinecap="round" />
@@ -967,19 +971,6 @@ const FLYOUT_CATEGORIES: ToolCategory[] = [
   CATEGORY_ANNOTATIONS,
 ];
 
-/** All tool keys in all categories (for lookup) */
-const ALL_CATEGORY_TOOL_KEYS: Set<string> = new Set(
-  [CATEGORY_CURSORS, ...FLYOUT_CATEGORIES].flatMap((c) => c.tools.map((t) => t.key))
-);
-
-/** Find which category a tool belongs to */
-function findCategoryForTool(toolKey: string): string | null {
-  for (const cat of [CATEGORY_CURSORS, ...FLYOUT_CATEGORIES]) {
-    if (cat.tools.some((t) => t.key === toolKey)) return cat.id;
-  }
-  return null;
-}
-
 /* =======================================================================
    Flyout Menu Item
    ======================================================================= */
@@ -1040,7 +1031,6 @@ function CategoryButton({
   lastUsed,
   isOpen,
   onToggle,
-  onSelectTool,
   buttonRef,
 }: {
   category: ToolCategory;
@@ -1048,7 +1038,6 @@ function CategoryButton({
   lastUsed: string;
   isOpen: boolean;
   onToggle: () => void;
-  onSelectTool: (key: string) => void;
   buttonRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -1448,7 +1437,6 @@ export default function ChartLeftToolbar({
             lastUsed={lastUsed[cat.id]}
             isOpen={openFlyout === cat.id}
             onToggle={() => handleToggleFlyout(cat.id)}
-            onSelectTool={(key) => handleSelectFromFlyout(cat.id, key)}
             buttonRef={buttonRefs.current[cat.id]}
           />
           {/* Render flyout via portal-like fixed positioning */}

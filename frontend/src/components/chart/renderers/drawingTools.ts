@@ -9,7 +9,7 @@
 import type { Drawing, LineStyle, HitTestResult } from "./drawings";
 import type { ChartLayout, Viewport, PriceScale } from "../core/data";
 import type { Bar } from "../indicators/types";
-import { priceToY, indexToX, yToPrice, xToIndex, formatPrice } from "../core/data";
+import { priceToY, indexToX, formatPrice } from "../core/data";
 import { THEME } from "../core/theme";
 
 // ══════════════════════════════════════════════════════
@@ -56,7 +56,7 @@ function drawHandle(ctx: CanvasRenderingContext2D, x: number, y: number, r: numb
   }
 }
 
-function drawDiamondHandle(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string): void {
+function _drawDiamondHandle(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string): void {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(Math.PI / 4);
@@ -1050,7 +1050,7 @@ function drawFibSpeedFan(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, i
   if (d.points.length < 2) return;
   const ratios = [0.236, 0.382, 0.5, 0.618, 0.786];
   const x1 = ix(d.points[0].index, c), y1 = py(d.points[0].price, c);
-  const x2 = ix(d.points[1].index, c), y2 = py(d.points[1].price, c);
+  const x2 = ix(d.points[1].index, c), _y2 = py(d.points[1].price, c);
   const priceRange = d.points[1].price - d.points[0].price;
 
   ctx.save();
@@ -1659,7 +1659,7 @@ function drawElliottTriangle(ctx: CanvasRenderingContext2D, d: Drawing, c: Coord
   if (d.points.length >= 6) {
     const pts_ = d.points;
     const aHeight = Math.abs(pts_[2].price - pts_[1].price);
-    const eX = ix(pts_[5].index, c), eY = py(pts_[5].price, c);
+    const eX = ix(pts_[5].index, c), _eY = py(pts_[5].price, c);
     const thrustMinY = py(pts_[5].price + aHeight * 0.75, c);
     const thrustMaxY = py(pts_[5].price + aHeight, c);
     const zoneW = 30;

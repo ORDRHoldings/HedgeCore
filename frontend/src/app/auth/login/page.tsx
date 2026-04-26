@@ -6,6 +6,7 @@ import { useAuth } from "../../../lib/authContext";
 import { classifyError, type ErrKind } from "@/lib/auth/loginClassifier";
 import { useParticleField } from "@/lib/hooks/useParticleField";
 import { useTheme } from "@/lib/theme/ThemeProvider";
+import { publicFetch } from "@/lib/api/apiBase";
 
 // ─── Design tokens — CSS variable references, inherits app theme ─────────────
 const C = {
@@ -161,18 +162,19 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result.success) {
-      try {
-        const cookieToken = document.cookie
-          .split("; ")
-          .find(r => r.startsWith("access_token="))
-          ?.split("=")[1] ?? null;
-        if (cookieToken) {
-          const BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://hedgecore.onrender.com/api";
-          const mfaRes = await fetch(`${BASE}/v1/mfa/status`, {
+      const cookieToken = document.cookie
+        .split("; ")
+        .find(r => r.startsWith("access_token="))
+        ?.split("=")[1] ?? null;
+      let mfaCheckOk = false;
+      if (cookieToken) {
+        try {
+          const mfaRes = await publicFetch(`/v1/mfa/status`, {
             headers: { Authorization: `Bearer ${cookieToken}` },
             signal: AbortSignal.timeout(5000),
           });
           if (mfaRes.ok) {
+            mfaCheckOk = true;
             const mfaData = await mfaRes.json();
             if (mfaData.is_enabled) {
               setMfaToken(cookieToken);
@@ -181,8 +183,17 @@ export default function LoginPage() {
               return;
             }
           }
+        } catch (err) {
+          // Surface — do NOT silently bypass MFA. If status endpoint is
+          // unreachable we can't safely assume MFA is disabled.
+          console.error("[login] MFA status check failed", err);
         }
-      } catch { /* fail-open */ }
+      }
+      if (cookieToken && !mfaCheckOk) {
+        setError("Could not verify MFA status. Please retry in a moment.");
+        setErrKind("server");
+        return;
+      }
       router.push("/dashboard");
     } else {
       const msg = result.error ?? "Authentication failed";
@@ -196,11 +207,9 @@ export default function LoginPage() {
     setMfaLoading(true);
     setMfaError(null);
     try {
-      const BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://hedgecore.onrender.com/api";
-      const res = await fetch(`${BASE}/v1/mfa/verify`, {
+      const res = await publicFetch(`/v1/mfa/verify`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${mfaToken}`,
         },
         body: JSON.stringify({ totp_code: mfaCode }),

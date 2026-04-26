@@ -123,7 +123,7 @@ function SeverityBadge({ severity }: { severity: string }) {
 
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: 9, padding: "2px 6px",
+      fontFamily: S.fontMono, fontSize: 10, padding: "2px 6px",
       borderRadius: 3, border: `1px solid ${color}`, color,
       letterSpacing: "0.08em", flexShrink: 0,
     }}>
@@ -142,7 +142,7 @@ function StatusBadge({ status }: { status: string }) {
 
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: 9, padding: "2px 6px",
+      fontFamily: S.fontMono, fontSize: 10, padding: "2px 6px",
       borderRadius: 3, border: `1px solid ${color}`, color,
       letterSpacing: "0.08em", flexShrink: 0,
     }}>
@@ -247,7 +247,7 @@ export default function DevOpsTab({ token }: { token: string }) {
           </span>
           {!data.memory_db_available && (
             <span style={{
-              fontFamily: S.fontMono, fontSize: 9, padding: "2px 8px",
+              fontFamily: S.fontMono, fontSize: 10, padding: "2px 8px",
               background: S.bgSub, border: `1px solid ${S.amber}`, borderRadius: 3,
               color: S.amber,
             }}>
@@ -294,7 +294,7 @@ export default function DevOpsTab({ token }: { token: string }) {
                 background: S.bgSub, border: `1px solid ${S.rim}`, borderRadius: 4,
                 padding: "6px 12px", textAlign: "center",
               }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>
                   {c.label}
                 </div>
                 <div style={{ fontFamily: S.fontMono, fontSize: 18, color: c.color, fontWeight: 700 }}>
@@ -333,7 +333,7 @@ export default function DevOpsTab({ token }: { token: string }) {
                   {item.title}
                 </span>
                 {item.priority && (
-                  <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
                     {item.priority.toUpperCase()}
                   </span>
                 )}
@@ -450,7 +450,7 @@ export default function DevOpsTab({ token }: { token: string }) {
                         {v.label ?? `Run ${i + 1}`}
                       </div>
                       {v.run_at && (
-                        <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
                           {v.run_at}
                         </div>
                       )}

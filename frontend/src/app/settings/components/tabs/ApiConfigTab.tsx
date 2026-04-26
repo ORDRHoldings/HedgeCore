@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { S, ApiKeySettings, monoInputStyle, inputStyle } from "../../types/settings";
+import { S, ApiKeySettings, monoInputStyle } from "../../types/settings";
 import SectionHeader from "../shared/SectionHeader";
 import Field from "../shared/Field";
 import SecretField from "../shared/SecretField";
@@ -32,7 +32,7 @@ function ConnectivityChecker({ apiUrl }: { apiUrl: string }) {
     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
       <button onClick={check} disabled={status === "checking"} style={{
         fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
-        color: "#000", background: status === "checking" ? S.tertiary : S.cyan,
+        color: S.black, background: status === "checking" ? S.tertiary : S.cyan,
         border: "none", borderRadius: 2, padding: "7px 16px",
         cursor: status === "checking" ? "wait" : "pointer",
       }}>

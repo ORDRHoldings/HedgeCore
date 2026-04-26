@@ -35,6 +35,7 @@ const HEX = {
   text2: "#334155",
   text3: "#94A3B8",
   border: "#E2E8F0",
+  white: "#fff",
 } as const;
 
 type Tab = "POOLS" | "ENTITIES" | "SWEEPS";
@@ -283,7 +284,7 @@ function CashManagementInner() {
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
               <button onClick={() => setShowPoolForm(!showPoolForm)} style={{
                 display: "flex", alignItems: "center", gap: 6, padding: "8px 16px",
-                background: HEX.cyan, color: "#fff", border: "none", borderRadius: 4,
+                background: HEX.cyan, color: HEX.white, border: "none", borderRadius: 4,
                 fontSize: 11, fontFamily: S.mono, fontWeight: 700, letterSpacing: "0.06em", cursor: "pointer",
               }}>
                 <Plus size={13} />CREATE POOL
@@ -321,7 +322,7 @@ function CashManagementInner() {
                   </label>
                 </div>
                 <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                  <button onClick={handleCreatePool} style={{ padding: "8px 18px", background: HEX.cyan, color: "#fff", border: "none", borderRadius: 4, fontSize: 11, fontFamily: S.mono, fontWeight: 700, cursor: "pointer", letterSpacing: "0.06em" }}>CREATE</button>
+                  <button onClick={handleCreatePool} style={{ padding: "8px 18px", background: HEX.cyan, color: HEX.white, border: "none", borderRadius: 4, fontSize: 11, fontFamily: S.mono, fontWeight: 700, cursor: "pointer", letterSpacing: "0.06em" }}>CREATE</button>
                   <button onClick={() => setShowPoolForm(false)} style={{ padding: "8px 18px", background: "transparent", color: S.text3, border: `1px solid ${S.rim}`, borderRadius: 4, fontSize: 11, fontFamily: S.mono, fontWeight: 700, cursor: "pointer" }}>CANCEL</button>
                 </div>
               </div>
@@ -332,7 +333,7 @@ function CashManagementInner() {
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                     {["NAME", "TYPE", "CURRENCY", "MEMBERS", "STATUS"].map(h => (
-                      <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>{h}</th>
+                      <th scope="col" key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -384,7 +385,7 @@ function CashManagementInner() {
                                   <thead>
                                     <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                                       {["ACCOUNT", "ENTITY", "LEDGER", "TARGET", "EXCESS", ""].map(h => (
-                                        <th key={h} style={{ padding: "8px 12px", textAlign: h === "LEDGER" || h === "TARGET" || h === "EXCESS" ? "right" : "left", fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>{h}</th>
+                                        <th scope="col" key={h} style={{ padding: "8px 12px", textAlign: h === "LEDGER" || h === "TARGET" || h === "EXCESS" ? "right" : "left", fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>{h}</th>
                                       ))}
                                     </tr>
                                   </thead>
@@ -420,7 +421,7 @@ function CashManagementInner() {
                                   <button onClick={() => handleExecuteSweeps(p.id)} style={{
                                     display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
                                     background: HEX.cyan, border: "none", borderRadius: 4,
-                                    fontSize: 11, fontFamily: S.mono, fontWeight: 700, color: "#fff", cursor: "pointer", letterSpacing: "0.04em",
+                                    fontSize: 11, fontFamily: S.mono, fontWeight: 700, color: HEX.white, cursor: "pointer", letterSpacing: "0.04em",
                                   }}>
                                     <Play size={12} />EXECUTE {sweepPreview.length} SWEEP{sweepPreview.length !== 1 ? "S" : ""}
                                   </button>
@@ -459,7 +460,7 @@ function CashManagementInner() {
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
               <button onClick={() => setShowEntityForm(!showEntityForm)} style={{
                 display: "flex", alignItems: "center", gap: 6, padding: "8px 16px",
-                background: HEX.cyan, color: "#fff", border: "none", borderRadius: 4,
+                background: HEX.cyan, color: HEX.white, border: "none", borderRadius: 4,
                 fontSize: 11, fontFamily: S.mono, fontWeight: 700, letterSpacing: "0.06em", cursor: "pointer",
               }}>
                 <Plus size={13} />CREATE ENTITY
@@ -490,7 +491,7 @@ function CashManagementInner() {
                   </label>
                 </div>
                 <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                  <button onClick={handleCreateEntity} style={{ padding: "8px 18px", background: HEX.cyan, color: "#fff", border: "none", borderRadius: 4, fontSize: 11, fontFamily: S.mono, fontWeight: 700, cursor: "pointer", letterSpacing: "0.06em" }}>CREATE</button>
+                  <button onClick={handleCreateEntity} style={{ padding: "8px 18px", background: HEX.cyan, color: HEX.white, border: "none", borderRadius: 4, fontSize: 11, fontFamily: S.mono, fontWeight: 700, cursor: "pointer", letterSpacing: "0.06em" }}>CREATE</button>
                   <button onClick={() => setShowEntityForm(false)} style={{ padding: "8px 18px", background: "transparent", color: S.text3, border: `1px solid ${S.rim}`, borderRadius: 4, fontSize: 11, fontFamily: S.mono, fontWeight: 700, cursor: "pointer" }}>CANCEL</button>
                 </div>
               </div>
@@ -501,7 +502,7 @@ function CashManagementInner() {
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                     {["NAME", "TYPE", "CURRENCY", "COUNTRY", "PARENT", "STATUS"].map(h => (
-                      <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>{h}</th>
+                      <th scope="col" key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -550,7 +551,7 @@ function CashManagementInner() {
                   <thead>
                     <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                       {["DATE", "SOURCE \u2192 DEST", "AMOUNT", "CCY", "DIRECTION", "STATUS"].map(h => (
-                        <th key={h} style={{ padding: "10px 14px", textAlign: h === "AMOUNT" ? "right" : "left", fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>{h}</th>
+                        <th scope="col" key={h} style={{ padding: "10px 14px", textAlign: h === "AMOUNT" ? "right" : "left", fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -578,7 +579,6 @@ function CashManagementInner() {
 }
 
 export default function CashManagementPage() {
-  const isMobile = useIsMobile();
   return (
     <Suspense fallback={
       <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-deep)" }}>

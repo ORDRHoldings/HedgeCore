@@ -57,6 +57,8 @@ const C = {
   indigo:     "var(--accent-indigo)",
   border:     "var(--border-rim)",
   bgSub:      "var(--bg-sub)",
+  // ECharts tooltip background — 93%-opaque white panel-on-dark.
+  tooltipBg:  "#FFFFFFEE",
 } as const;
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -220,7 +222,7 @@ function GaugeArc({ value, max = 100, label, color, size = 100 }: { value: numbe
         <text x={size / 2} y={size / 2 - 2} textAnchor="middle" style={{ fontFamily: C.mono, fontSize: 18, fontWeight: 800, fill: color }}>
           {typeof value === "number" && value % 1 === 0 ? value : value.toFixed(1)}
         </text>
-        <text x={size / 2} y={size / 2 + 14} textAnchor="middle" style={{ fontFamily: C.mono, fontSize: 9, fontWeight: 600, fill: C.text4, letterSpacing: "0.12em" }}>
+        <text x={size / 2} y={size / 2 + 14} textAnchor="middle" style={{ fontFamily: C.mono, fontSize: 10, fontWeight: 600, fill: C.text4, letterSpacing: "0.12em" }}>
           {label}
         </text>
       </svg>
@@ -785,7 +787,7 @@ function PercentileChart({ hedged, unhedged, labels }: { hedged: number[]; unhed
     backgroundColor: "transparent",
     tooltip: {
       trigger: "axis" as const,
-      backgroundColor: "#FFFFFFEE",
+      backgroundColor: C.tooltipBg,
       borderColor: C.border,
       borderWidth: 1,
       textStyle: { color: C.text1, fontSize: 12, fontFamily: C.mono },
@@ -960,7 +962,7 @@ function StressWaterfallChart({ scenarios }: { scenarios: StressScenarioImpact[]
     backgroundColor: "transparent",
     tooltip: {
       trigger: "axis" as const,
-      backgroundColor: "#FFFFFFEE",
+      backgroundColor: C.tooltipBg,
       borderColor: C.border,
       borderWidth: 1,
       textStyle: { color: C.text1, fontSize: 12, fontFamily: C.mono },
@@ -1017,7 +1019,6 @@ function StressWaterfallChart({ scenarios }: { scenarios: StressScenarioImpact[]
 // ═══════════════════════════════════════════════════════════════════════
 
 function VaRTab({ mc }: { mc: MonteCarloResult | null }) {
-  const isMobile = useIsMobile();
   if (!mc) return <NoData label="VaR/CVaR data not available" />;
 
   const pctKeys = [1, 5, 10, 25, 50, 75, 90, 95, 99];
@@ -1124,7 +1125,7 @@ function VaRConfidenceChart({ varResults }: { varResults: VaRResult[] }) {
     backgroundColor: "transparent",
     tooltip: {
       trigger: "axis" as const,
-      backgroundColor: "#FFFFFFEE",
+      backgroundColor: C.tooltipBg,
       borderColor: C.border,
       borderWidth: 1,
       textStyle: { color: C.text1, fontSize: 12, fontFamily: C.mono },
@@ -1300,7 +1301,7 @@ function RiskContributionChart({ contributions }: { contributions: RiskContribut
     backgroundColor: "transparent",
     tooltip: {
       trigger: "axis" as const,
-      backgroundColor: "#FFFFFFEE",
+      backgroundColor: C.tooltipBg,
       borderColor: C.border,
       borderWidth: 1,
       textStyle: { color: C.text1, fontSize: 12, fontFamily: C.mono },

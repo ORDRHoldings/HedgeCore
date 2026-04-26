@@ -6,7 +6,7 @@
  * ALERTS (placeholder). Resizable via drag handle.
  * All logic is UI-only — no execution engine yet.
  */
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   ChevronUp, ChevronDown, Plus, Play, Bell, Trash2, FlaskConical,
 } from "lucide-react";
@@ -17,7 +17,6 @@ import {
 
 const MIN_HEIGHT = 100;
 const HANDLE_HEIGHT = 6;
-const TRANSITION_MS = 200;
 
 const C = {
   bg: "#0F1319",
@@ -75,16 +74,6 @@ const SAMPLE_CONDITIONS: Condition[] = [
     comparison: "crosses below",
     value: "70",
   },
-];
-
-const INDICATOR_OPTIONS = [
-  "Price", "RSI(14)", "SMA(20)", "SMA(50)", "EMA(20)", "MACD",
-  "Stochastic", "Volume", "ATR(14)", "CCI(20)",
-];
-
-const COMPARISON_OPTIONS = [
-  "crosses above", "crosses below", "is above", "is below",
-  "equals", "increases by", "decreases by",
 ];
 
 /* ===================================================================
@@ -479,7 +468,7 @@ function BuilderTab({
           RUN BACKTEST
           <span
             style={{
-              fontSize: 9,
+              fontSize: 10,
               padding: "1px 5px",
               borderRadius: 3,
               background: "rgba(255,152,0,0.15)",
@@ -527,7 +516,7 @@ function ConditionCard({
       <span
         style={{
           fontFamily: C.fontMono,
-          fontSize: 9,
+          fontSize: 10,
           fontWeight: 700,
           color: typeColor,
           textTransform: "uppercase",
@@ -643,7 +632,7 @@ function BacktestTab() {
       <span
         style={{
           fontFamily: C.fontMono,
-          fontSize: 9,
+          fontSize: 10,
           padding: "2px 8px",
           borderRadius: 3,
           background: "rgba(255,152,0,0.12)",
@@ -706,7 +695,7 @@ function AlertsTab() {
         CREATE ALERT
         <span
           style={{
-            fontSize: 9,
+            fontSize: 10,
             padding: "1px 5px",
             borderRadius: 3,
             background: "rgba(255,152,0,0.15)",

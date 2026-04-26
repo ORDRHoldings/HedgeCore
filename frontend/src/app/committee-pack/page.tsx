@@ -239,7 +239,7 @@ function ScenarioBadge({ scenario }: { scenario: CommitteePackScenario }) {
 // ── Main page inner (requires useSearchParams → must be in Suspense) ───────────
 function CommitteePackInner() {
   const params   = useSearchParams();
-  const router   = useRouter();
+  const _router  = useRouter();
   const { token } = useAuth();
 
   const runId = params.get("id") ?? "";
@@ -736,7 +736,7 @@ function CommitteePackInner() {
               <thead>
                 <tr style={{ background: S.bgSub }}>
                   {["BUCKET", "DIRECTION", "NOTIONAL (USD)", "COVERAGE", "INSTRUMENT"].map(h => (
-                    <th key={h} scope="col" style={{
+                    <th scope="col" key={h} style={{
                       padding: "8px 12px", fontFamily: S.fontMono, fontSize: 12,
                       fontWeight: 700, letterSpacing: "0.08em", color: S.secondary,
                       textAlign: "left" as const, borderBottom: `1px solid ${S.rim}`,
@@ -955,7 +955,7 @@ function CommitteePackInner() {
 // ── Page wrapper with Suspense (required by useSearchParams) ───────────────────
 export default function CommitteePackPage() {
   const _planAllowed = usePlanRedirect("professional");
-  const isMobile = useIsMobile();
+  const _isMobile = useIsMobile();
   if (!_planAllowed) return null;
   return (
 

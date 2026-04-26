@@ -278,7 +278,7 @@ export async function exportCommitteePackPdf(
     styles: {
       fillColor: [21, 33, 56],
       textColor: [229, 234, 242],
-      fontSize: 7.5,
+      fontSize: 10.5,
       lineColor: [42, 53, 69],
       lineWidth: 0.1,
     },
@@ -315,7 +315,7 @@ export async function exportCommitteePackPdf(
     styles: {
       fillColor: [21, 33, 56],
       textColor: [229, 234, 242],
-      fontSize: 7.5,
+      fontSize: 10.5,
       lineColor: [42, 53, 69],
       lineWidth: 0.1,
     },
@@ -358,7 +358,7 @@ export async function exportCommitteePackPdf(
     styles: {
       fillColor: [21, 33, 56],
       textColor: [229, 234, 242],
-      fontSize: 7.5,
+      fontSize: 10.5,
       lineColor: [42, 53, 69],
       lineWidth: 0.1,
     },
@@ -654,7 +654,7 @@ export async function exportAlertsPdf(
     styles: {
       fillColor: [21, 33, 56],
       textColor: [229, 234, 242],
-      fontSize: 6.5,
+      fontSize: 10.5,
       lineColor: [42, 53, 69],
       lineWidth: 0.1,
       overflow: 'linebreak',

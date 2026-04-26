@@ -232,7 +232,6 @@ ${suggestedSections}
 Return the JSON plan object. All AI-generated narrative must use [PLACEHOLDER] tokens, not real numbers.`;
 
     // Dynamic import to avoid build-time module resolution issues
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Anthropic = require("@anthropic-ai/sdk").default;
     const client = new Anthropic({ apiKey });
     const message = await client.messages.create({

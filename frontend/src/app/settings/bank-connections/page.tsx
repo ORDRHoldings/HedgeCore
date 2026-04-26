@@ -10,6 +10,8 @@ const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
   fontUI: "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   bgPanel: "var(--bg-panel)", rim: "var(--border-rim)",
+  // Status-error red text on the revoke / connection-error chips.
+  errorFg: "#ef4444",
 } as const;
 
 const STATUS_ICON: Record<string, React.ReactElement> = {
@@ -78,7 +80,7 @@ export default function BankConnectionsPage() {
 
       {error && (
         <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)",
-          borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#ef4444" }}>
+          borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: S.errorFg }}>
           {error}
         </div>
       )}
@@ -110,7 +112,7 @@ export default function BankConnectionsPage() {
                     {c.consecutive_failure_count > 0 ? ` · ${c.consecutive_failure_count} failure(s)` : ""}
                   </div>
                   {c.last_error_message && c.status === "ERROR" && (
-                    <div style={{ fontSize: 10, color: "#ef4444", marginTop: 3 }}>{c.last_error_message}</div>
+                    <div style={{ fontSize: 10, color: S.errorFg, marginTop: 3 }}>{c.last_error_message}</div>
                   )}
                 </div>
               </div>
@@ -127,7 +129,7 @@ export default function BankConnectionsPage() {
                       style={{
                         padding: "4px 10px", fontSize: 11, borderRadius: 3, cursor: "pointer",
                         background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.4)",
-                        color: "#ef4444", fontFamily: S.fontMono, opacity: revoking === c.id ? 0.5 : 1,
+                        color: S.errorFg, fontFamily: S.fontMono, opacity: revoking === c.id ? 0.5 : 1,
                       }}
                     >
                       Confirm
@@ -150,7 +152,7 @@ export default function BankConnectionsPage() {
                     style={{
                       padding: "5px 12px", fontSize: 11, borderRadius: 3, cursor: "pointer",
                       background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)",
-                      color: "#ef4444", fontFamily: S.fontMono, opacity: revoking === c.id ? 0.5 : 1,
+                      color: S.errorFg, fontFamily: S.fontMono, opacity: revoking === c.id ? 0.5 : 1,
                     }}
                   >
                     Revoke

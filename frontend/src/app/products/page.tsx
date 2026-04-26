@@ -3,10 +3,9 @@
 import Link from "next/link";
 import {
   Shield, BarChart2, Layers, Zap, Globe, BookOpen, Activity, TrendingUp,
-  ArrowRight, BrainCircuit, NotebookPen, Coins, Network,
+  BrainCircuit, NotebookPen, Coins, Network,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
-import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 const products = [
   { id: "treasury", name: "ORDR Treasury", desc: "Deterministic FX hedge calculation with 60 policy presets, 41 engine modules, 4-eyes governance, and WORM audit trail.", ai: "AI serves as communication layer -- chat, phone, voice. AI does not evaluate calculations.", icon: Shield },
@@ -23,7 +22,6 @@ const products = [
 ];
 
 export default function ProductsPage() {
-  const isMobile = useIsMobile();
   return (
     <MarketingLayout>
       <div className="bg-[#F4F5F7] pt-[84px] pb-12 md:pb-24 min-h-screen">

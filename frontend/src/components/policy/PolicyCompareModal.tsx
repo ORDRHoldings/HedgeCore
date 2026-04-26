@@ -144,7 +144,7 @@ export default function PolicyCompareModal({ presets, onClose }: PolicyCompareMo
           justifyContent: 'space-between',
         }}>
           <div>
-            <div style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.cyan, letterSpacing: '0.1em', marginBottom: 2 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.cyan, letterSpacing: '0.1em', marginBottom: 2 }}>
               POLICY ENGINE · COMPARE
             </div>
             <div style={{ fontFamily: S.fontUI, fontSize: '0.875rem', fontWeight: 600, color: S.primary }}>
@@ -166,13 +166,13 @@ export default function PolicyCompareModal({ presets, onClose }: PolicyCompareMo
           display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
         }}>
           <span style={{
-            fontFamily: S.fontMono, fontSize: '0.5rem', color: S.tertiary,
+            fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary,
             letterSpacing: '0.1em', userSelect: 'none',
           }}>
             IMPACT ANALYSIS — OPTIONAL
           </span>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: '0.625rem', color: S.secondary }}>Exposure:</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.secondary }}>Exposure:</span>
             <input
               type="number"
               min={0}
@@ -186,10 +186,10 @@ export default function PolicyCompareModal({ presets, onClose }: PolicyCompareMo
                 padding: '4px 8px', width: 130, outline: 'none',
               }}
             />
-            <span style={{ fontFamily: S.fontMono, fontSize: '0.625rem', color: S.tertiary }}>USD</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary }}>USD</span>
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: '0.625rem', color: S.secondary }}>Type:</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.secondary }}>Type:</span>
             <select
               value={exposureType}
               onChange={e => setExposureType(e.target.value as 'confirmed' | 'forecast')}
@@ -211,19 +211,19 @@ export default function PolicyCompareModal({ presets, onClose }: PolicyCompareMo
             {/* Column headers */}
             <thead>
               <tr style={{ background: S.bgSub }}>
-                <th style={{
+                <th scope="col" style={{
                   width: 140, padding: '10px 14px', textAlign: 'left',
-                  fontFamily: S.fontMono, fontSize: '0.5rem', color: S.tertiary,
+                  fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary,
                   letterSpacing: '0.08em', borderBottom: `1px solid ${S.rim}`,
                   borderRight: `1px solid ${S.soft}`,
                 }}>FIELD</th>
                 {presets.map(p => (
-                  <th key={p.id} style={{
+                  <th scope="col" key={p.id} style={{
                     padding: '10px 14px', textAlign: 'left',
                     borderBottom: `1px solid ${S.rim}`,
                     borderRight: `1px solid ${S.soft}`,
                   }}>
-                    <div style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.cyan, letterSpacing: '0.06em' }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.cyan, letterSpacing: '0.06em' }}>
                       {p.shortName}
                     </div>
                     <div style={{ fontFamily: S.fontUI, fontSize: '0.75rem', color: S.primary, fontWeight: 600, marginTop: 2 }}>
@@ -249,7 +249,7 @@ export default function PolicyCompareModal({ presets, onClose }: PolicyCompareMo
                       <tr>
                         <td colSpan={presets.length + 1} style={{
                           padding: '6px 14px 3px',
-                          fontFamily: S.fontMono, fontSize: '0.4375rem',
+                          fontFamily: S.fontMono, fontSize: '0.75rem',
                           color: sectionColor,
                           letterSpacing: '0.1em', fontWeight: 700,
                           background: S.bgDeep,
@@ -263,7 +263,7 @@ export default function PolicyCompareModal({ presets, onClose }: PolicyCompareMo
                     <tr style={{ background: ri % 2 === 0 ? S.bgPanel : S.bgSub }}>
                       <td style={{
                         padding: '8px 14px',
-                        fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.tertiary,
+                        fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary,
                         letterSpacing: '0.06em',
                         borderBottom: `1px solid ${S.soft}`,
                         borderRight: `1px solid ${S.soft}`,
@@ -290,7 +290,7 @@ export default function PolicyCompareModal({ presets, onClose }: PolicyCompareMo
                 <tr>
                   <td colSpan={presets.length + 1} style={{
                     padding: '6px 14px',
-                    fontFamily: S.fontMono, fontSize: '0.5rem', color: S.tertiary,
+                    fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary,
                     letterSpacing: '0.04em', fontStyle: 'italic',
                     background: S.bgDeep,
                     borderTop: `1px solid ${S.soft}`,
@@ -308,13 +308,13 @@ export default function PolicyCompareModal({ presets, onClose }: PolicyCompareMo
           padding: '10px 20px', borderTop: `1px solid ${S.rim}`,
           background: S.bgSub, display: 'flex', alignItems: 'center', gap: 8,
         }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.amber, letterSpacing: '0.06em' }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.amber, letterSpacing: '0.06em' }}>
             &#x25CF; HIGHLIGHTED CELLS = VALUES DIFFER ACROSS SELECTED POLICIES
           </span>
           <button
             onClick={onClose}
             style={{
-              marginLeft: 'auto', fontFamily: S.fontMono, fontSize: '0.6875rem',
+              marginLeft: 'auto', fontFamily: S.fontMono, fontSize: '0.75rem',
               letterSpacing: '0.08em', padding: '5px 16px',
               border: `1px solid ${S.rim}`, color: S.tertiary,
               background: 'transparent', cursor: 'pointer',

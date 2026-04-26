@@ -22,6 +22,7 @@ const S = {
   amber:     "var(--accent-amber)",
   pass:      "var(--status-pass)",
   fail:      "var(--accent-red,#B91C1C)",
+  white:     "#fff",
 } as const;
 
 import { dashboardFetch } from "@/lib/api/dashboardClient";
@@ -70,7 +71,7 @@ function UrgencyChip({ urgency }: { urgency: ApprovalItem["urgency"] }) {
   );
 }
 
-export default function PendingApprovalsWidget({ token, user, onRemove }: Props) {
+export default function PendingApprovalsWidget({ token, user: _user, onRemove }: Props) {
   const router = useRouter();
   const [items, setItems]         = useState<ApprovalItem[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -97,13 +98,6 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
   useEffect(() => { fetchApprovals(); }, [fetchApprovals]);
 
   const count = items.length;
-
-  const monoNote = (color: string): React.CSSProperties => ({
-    padding: "18px 14px",
-    fontFamily: S.fontMono,
-    fontSize: 12,
-    color,
-  });
 
   return (
     <div
@@ -154,7 +148,7 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
           <span
             style={{
               background: S.fail,
-              color: "#fff",
+              color: S.white,
               fontFamily: S.fontMono,
               fontSize: 12,
               fontWeight: 700,
@@ -228,7 +222,7 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
             <thead>
               <tr style={{ background: S.bgDeep, borderBottom: `1px solid ${S.soft}` }}>
                 {["Ref", "Branch", "Submitted By", "Notional", "Urgency", ""].map((h) => (
-                  <th
+                  <th scope="col"
                     key={h}
                     style={{
                       padding: "6px 12px",

@@ -11,6 +11,9 @@ import {
 import { generateExposureNarrative } from '../../utils/reportNarratives';
 import NarrativeSection from './NarrativeSection';
 
+const FLOW_BAR_TEXT_DARK = '#000';
+const FLOW_BAR_TEXT_LIGHT = '#fff';
+
 interface ExposureInsightsPanelProps {
   buckets: BucketResult[];
 }
@@ -91,10 +94,10 @@ const ExposureInsightsPanel: React.FC<ExposureInsightsPanelProps> = ({ buckets }
           Flow Composition
         </div>
         <div style={{ display: 'flex', height: '24px', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-soft)' }}>
-          <div style={{ width: confirmedWidthStr, background: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 600, color: '#000', minWidth: confirmedTotal > 0 ? '40px' : 0 }}>
+          <div style={{ width: confirmedWidthStr, background: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 600, color: FLOW_BAR_TEXT_DARK, minWidth: confirmedTotal > 0 ? '40px' : 0 }}>
             {confirmedTotal > 0 && confirmedPctStr}
           </div>
-          <div style={{ width: forecastWidthStr, background: 'var(--accent-indigo)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 600, color: '#fff', minWidth: forecastTotal > 0 ? '40px' : 0 }}>
+          <div style={{ width: forecastWidthStr, background: 'var(--accent-indigo)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 600, color: FLOW_BAR_TEXT_LIGHT, minWidth: forecastTotal > 0 ? '40px' : 0 }}>
             {forecastTotal > 0 && forecastPctStr}
           </div>
         </div>

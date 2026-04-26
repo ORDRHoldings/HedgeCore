@@ -86,7 +86,7 @@ function ModalDatePicker({
         }}
       >
         <span>{value || 'YYYY-MM-DD'}</span>
-        <span style={{ fontSize: '0.625rem', color: 'var(--text-tertiary)' }}>{open ? '▲' : '▼'}</span>
+        <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{open ? '▲' : '▼'}</span>
       </div>
 
       {open && (
@@ -97,18 +97,18 @@ function ModalDatePicker({
           padding: '10px 10px 8px', fontFamily: "'IBM Plex Mono', monospace",
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <button onClick={prevMonth} style={{ background:'none', border:'1px solid var(--border-rim)', color:'var(--text-secondary)', cursor:'pointer', padding:'2px 7px', fontFamily:'inherit', fontSize:'0.6875rem' }}>◄</button>
+            <button onClick={prevMonth} style={{ background:'none', border:'1px solid var(--border-rim)', color:'var(--text-secondary)', cursor:'pointer', padding:'2px 7px', fontFamily:'inherit', fontSize:'0.75rem' }}>◄</button>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.06em' }}>{MONTHS[viewMonth]} {viewYear}</span>
-            <button onClick={nextMonth} style={{ background:'none', border:'1px solid var(--border-rim)', color:'var(--text-secondary)', cursor:'pointer', padding:'2px 7px', fontFamily:'inherit', fontSize:'0.6875rem' }}>►</button>
+            <button onClick={nextMonth} style={{ background:'none', border:'1px solid var(--border-rim)', color:'var(--text-secondary)', cursor:'pointer', padding:'2px 7px', fontFamily:'inherit', fontSize:'0.75rem' }}>►</button>
           </div>
           <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
             {[1,2,3,4].map(qi => (
-              <button key={qi} onClick={() => jumpToQuarter(qi)} style={{ flex:1, background:'none', border:'1px solid var(--border-rim)', color:'var(--text-tertiary)', cursor:'pointer', fontFamily:'inherit', fontSize:'0.5625rem', letterSpacing:'0.06em', padding:'2px 0' }}>Q{qi}</button>
+              <button key={qi} onClick={() => jumpToQuarter(qi)} style={{ flex:1, background:'none', border:'1px solid var(--border-rim)', color:'var(--text-tertiary)', cursor:'pointer', fontFamily:'inherit', fontSize:'0.75rem', letterSpacing:'0.06em', padding:'2px 0' }}>Q{qi}</button>
             ))}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
             {DAYS.map(d => (
-              <div key={d} style={{ textAlign:'center', fontSize:'0.5625rem', color:'var(--text-tertiary)', letterSpacing:'0.04em', padding:'2px 0' }}>{d}</div>
+              <div key={d} style={{ textAlign:'center', fontSize:'0.75rem', color:'var(--text-tertiary)', letterSpacing:'0.04em', padding:'2px 0' }}>{d}</div>
             ))}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
@@ -124,7 +124,7 @@ function ModalDatePicker({
               const isPast = cellDate < new Date(today.getFullYear(), today.getMonth(), today.getDate());
               return (
                 <button key={i} onClick={() => !isPast && selectDay(day)} style={{
-                  textAlign:'center', padding:'3px 0', fontSize:'0.6875rem', fontFamily:'inherit',
+                  textAlign:'center', padding:'3px 0', fontSize:'0.75rem', fontFamily:'inherit',
                   cursor: isPast ? 'not-allowed' : 'pointer', borderRadius: 2,
                   border: isToday ? '1px solid var(--accent-amber)' : '1px solid transparent',
                   background: isSelected ? 'var(--accent-cyan)' : 'transparent',
@@ -135,7 +135,7 @@ function ModalDatePicker({
             })}
           </div>
           <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-soft)' }}>
-            <div style={{ fontSize:'0.5625rem', color:'var(--text-tertiary)', letterSpacing:'0.08em', marginBottom:4 }}>TYPE DATE</div>
+            <div style={{ fontSize:'0.75rem', color:'var(--text-tertiary)', letterSpacing:'0.08em', marginBottom:4 }}>TYPE DATE</div>
             <input type="text" value={textInput}
               onChange={e => setTextInput(e.target.value)}
               onBlur={handleTextBlur}
@@ -198,7 +198,7 @@ const labelStyle: React.CSSProperties = {
 
 const hintStyle: React.CSSProperties = {
   fontFamily: S.fontMono,
-  fontSize: '0.6875rem',
+  fontSize: '0.75rem',
   color: S.textTertiary,
   letterSpacing: '0.04em',
 };
@@ -230,7 +230,6 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
         setForm(existingTrade);
       } else if (initialValues) {
         // Duplicate mode: pre-fill with values but always blank record_id
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { record_id: _discard, ...valuesWithoutId } = (initialValues as Partial<TradeRow> & { record_id?: string });
         setForm({
           record_id: '', entity: '', type: 'AP', currency: 'MXN',
@@ -291,7 +290,7 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
             <button
               onClick={onClose}
               style={{
-                fontFamily: S.fontUI, fontSize: '0.6875rem', fontWeight: 500,
+                fontFamily: S.fontUI, fontSize: '0.75rem', fontWeight: 500,
                 padding: '5px 14px', border: `1px solid ${S.border}`,
                 color: S.textSecondary, background: 'transparent', cursor: 'pointer',
               }}
@@ -300,7 +299,7 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
               onClick={handleSave}
               disabled={!canSave}
               style={{
-                fontFamily: S.fontUI, fontSize: '0.6875rem', fontWeight: 600,
+                fontFamily: S.fontUI, fontSize: '0.75rem', fontWeight: 600,
                 padding: '5px 16px', border: `1px solid ${canSave ? S.cyan : S.border}`,
                 color: canSave ? S.cyan : S.textTertiary,
                 background: 'transparent', cursor: canSave ? 'pointer' : 'not-allowed',
@@ -318,7 +317,7 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
           borderBottom: `1px solid ${S.borderSoft}`,
           padding: '12px 0 16px',
         }}>
-          <p style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 10 }}>IDENTIFICATION</p>
+          <p style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 10 }}>IDENTIFICATION</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <LabeledField label="RECORD ID *" hint={isEdit ? "locked — cannot change after creation" : "unique across all positions"}>
               <input
@@ -347,7 +346,7 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
 
         {/* ── Section: Exposure Details ── */}
         <div style={{ borderBottom: `1px solid ${S.borderSoft}`, padding: '12px 0 16px' }}>
-          <p style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 10 }}>EXPOSURE DETAILS</p>
+          <p style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 10 }}>EXPOSURE DETAILS</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
 
             {/* Type */}
@@ -376,7 +375,7 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
                 ))}
               </select>
               {selectedCcy && (
-                <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, marginTop: 3, display: 'block' }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textTertiary, marginTop: 3, display: 'block' }}>
                   {selectedCcy.exchange} · {selectedCcy.name}
                 </span>
               )}
@@ -401,7 +400,7 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
 
         {/* ── Section: Timing & Status ── */}
         <div style={{ padding: '12px 0 4px' }}>
-          <p style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 10 }}>TIMING & CERTAINTY</p>
+          <p style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 10 }}>TIMING & CERTAINTY</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
 
             {/* Value Date */}
@@ -452,7 +451,7 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
             marginTop: 8,
           }}>
             <p style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.amber, letterSpacing: '0.06em', marginBottom: 3 }}>CROSS-CURRENCY ADVISORY</p>
-            <p style={{ fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.textSecondary, lineHeight: 1.5, margin: 0 }}>
+            <p style={{ fontFamily: S.fontUI, fontSize: '0.75rem', color: S.textSecondary, lineHeight: 1.5, margin: 0 }}>
               Exposure in <strong style={{ color: S.textPrimary }}>{form.currency}</strong> will be converted to USD equivalent for engine processing.
               Ensure the Market Conditions step includes a valid {form.currency}/USD spot rate and forward curve.
               The hedge plan will express actions in MXN notional.

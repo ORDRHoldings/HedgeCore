@@ -103,7 +103,7 @@ export default function PolisophicMiniWidget({ token, onRemove }: Props) {
           Active Hedge Policy
         </span>
         {loading && (
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.06em" }}>
             LOADING…
           </span>
         )}
@@ -129,7 +129,7 @@ export default function PolisophicMiniWidget({ token, onRemove }: Props) {
       <div style={{ flex: 1 }}>
         {loadError ? (
           <div style={{ padding: "10px 12px" }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.red }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.red }}>
               {loadError}
             </span>
           </div>
@@ -151,19 +151,19 @@ export default function PolisophicMiniWidget({ token, onRemove }: Props) {
             {/* Name + risk posture */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span style={{
-                fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.1em",
+                fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.1em",
                 color: S.cyan,
                 background: `color-mix(in srgb, ${S.cyan} 10%, transparent)`,
                 padding: "2px 6px",
               }}>
                 {tmpl.short_name}
               </span>
-              <span style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", fontWeight: 600, color: S.primary }}>
+              <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", fontWeight: 600, color: S.primary }}>
                 {tmpl.name}
               </span>
               <span style={{
                 marginLeft: "auto",
-                fontFamily: S.fontMono, fontSize: "0.6875rem",
+                fontFamily: S.fontMono, fontSize: "0.75rem",
                 color: RISK_COLOR[tmpl.risk_posture] ?? S.tertiary,
                 letterSpacing: "0.06em",
               }}>
@@ -185,10 +185,10 @@ export default function PolisophicMiniWidget({ token, onRemove }: Props) {
                   padding: "6px 8px", textAlign: "center",
                   borderRight: i < 2 ? `1px solid ${S.borderSoft}` : "none",
                 }}>
-                  <div style={{ fontFamily: S.fontMono, fontSize: "0.4rem", color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>
                     {label}
                   </div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: "0.625rem", fontWeight: 600, color: S.cyan }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", fontWeight: 600, color: S.cyan }}>
                     {value}
                   </div>
                 </div>
@@ -198,7 +198,7 @@ export default function PolisophicMiniWidget({ token, onRemove }: Props) {
             {/* Product chip + description */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{
-                fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.08em",
+                fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em",
                 color: tmpl.config.execution_product === "NDF" ? S.amber : S.green,
                 background: `color-mix(in srgb, ${tmpl.config.execution_product === "NDF" ? S.amber : S.green} 8%, transparent)`,
                 padding: "1px 5px",
@@ -218,7 +218,7 @@ export default function PolisophicMiniWidget({ token, onRemove }: Props) {
             {/* Activated at */}
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <ShieldCheck size={10} color={S.green} />
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>
                 ACTIVE SINCE {new Date(instance.activated_at).toLocaleDateString()}
               </span>
             </div>

@@ -61,7 +61,7 @@ function protectionRatio(scenarioResults: ScenarioResults): number | null {
 }
 
 /** Color for a P&L value. */
-function pnlColor(v: number): string {
+function _pnlColor(v: number): string {
   if (v > 0)   return 'var(--accent-green)';
   if (v < -500_000) return 'var(--accent-red)';
   if (v < 0)   return 'var(--accent-amber)';
@@ -212,11 +212,11 @@ export default function RiskAnalysisTab({ scenarioResults, summary }: Props) {
             <table className="text-[10px] font-mono w-full">
               <thead>
                 <tr>
-                  <th className="text-left pb-2 pr-4 text-[var(--text-tertiary)] font-medium uppercase text-[9px] tracking-wider">
+                  <th scope="col" className="text-left pb-2 pr-4 text-[var(--text-tertiary)] font-medium uppercase text-[9px] tracking-wider">
                     Bucket
                   </th>
                   {uniqueSigmas.map(s => (
-                    <th key={s} className="text-center pb-2 px-2 text-[var(--text-tertiary)] font-medium whitespace-nowrap text-[9px] tracking-wider">
+                    <th scope="col" key={s} className="text-center pb-2 px-2 text-[var(--text-tertiary)] font-medium whitespace-nowrap text-[9px] tracking-wider">
                       {s > 0 ? '+' : ''}{(s * 100).toFixed(1)}%
                     </th>
                   ))}

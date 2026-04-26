@@ -420,12 +420,12 @@ function LevelSelector({ selected, onChange }: LevelSelectorProps) {
               padding:       "7px 0",
               background:    active ? meta.bg : "transparent",
               border:        "none",
-              borderBottom:  active ? `2px solid ${meta.color}` : "2px solid transparent",
+              borderBottom:  active ? `2px solid ${meta.accentColor}` : "2px solid transparent",
               cursor:        "pointer",
               fontFamily:    S.fontMono,
               fontSize: 12,
               fontWeight:    active ? 700 : 500,
-              color:         active ? meta.color : S.tertiary,
+              color:         active ? meta.accentColor : S.tertiary,
               letterSpacing: "0.06em",
               transition:    "color 120ms, background 120ms, border-color 120ms",
             }}
@@ -530,7 +530,7 @@ function SectionItem({ section, isExpanded, onToggle }: SectionItemProps) {
           fontFamily:    S.fontMono,
           fontSize: 12,
           fontWeight:    700,
-          color:         levelMeta.color,
+          color:         levelMeta.accentColor,
           background:    levelMeta.bg,
           padding:       "1px 4px",
           letterSpacing: "0.06em",
@@ -800,7 +800,7 @@ export default function HelpPanelV2({
               <span style={{
                 fontFamily:    S.fontMono,
                 fontSize: 12,
-                color:         LEVEL_META[level].color,
+                color:         LEVEL_META[level].accentColor,
                 letterSpacing: "0.06em",
               }}>
                 Showing up to {LEVEL_META[level].label} — {LEVEL_META[level].description}

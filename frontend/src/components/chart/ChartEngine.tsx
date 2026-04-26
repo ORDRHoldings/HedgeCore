@@ -60,8 +60,8 @@ import { drawCandlesticks } from "./renderers/candlestick";
 import { drawVolume } from "./renderers/volume";
 import {
   drawIndicatorLine, drawBands, drawRSI, drawMACD,
-  drawVWAP, drawIchimoku, drawHMA, drawTEMA,
-  drawDonchian, drawParabolicSAR, drawPivotPoints,
+  drawVWAP, drawIchimoku,
+  drawParabolicSAR, drawPivotPoints,
   drawSuperTrend, drawChandelierExit, drawChandeKrollStop,
   drawAlligator, drawZigzag, drawAutoFib, drawMARibbon,
 } from "./renderers/indicators";
@@ -110,7 +110,7 @@ import ChartContextMenu from "./ChartContextMenu";
 import ChartIndicatorDialog from "./ChartIndicatorDialog";
 import IndicatorLayers from "./IndicatorLayers";
 import type { OverlayChip, SubPaneChip } from "./IndicatorLayers";
-import { getIndicatorSchema, getDefaultParams, formatIndicatorLabel } from "./core/indicatorSchema";
+import { getIndicatorSchema, formatIndicatorLabel } from "./core/indicatorSchema";
 
 /* ═══════════════════════════════════════════════════════
    Types & Defaults
@@ -309,14 +309,14 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
   const [showIndicatorDialog, setShowIndicatorDialog] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; open: boolean }>({ x: 0, y: 0, open: false });
   const [crosshairMode, setCrosshairMode] = useState<CrosshairMode>("crosshair");
-  const [enabledSessions, setEnabledSessions] = useState<string[]>([]);
+  const [enabledSessions, _setEnabledSessions] = useState<string[]>([]);
 
   // Indicator parameter overrides: { indicatorId: { paramKey: value } }
   const [indicatorParams, setIndicatorParams] = useState<Record<string, Record<string, number>>>({});
 
-  // Undo/redo stack
-  const [undoStack, setUndoStack] = useState<Drawing[][]>([]);
-  const [redoStack, setRedoStack] = useState<Drawing[][]>([]);
+  // Undo/redo stack — local read never needed; functional setters consume `prev` via closure.
+  const [_undoStack, setUndoStack] = useState<Drawing[][]>([]);
+  const [_redoStack, setRedoStack] = useState<Drawing[][]>([]);
 
   // Drawing selection + hover + properties panel
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
@@ -369,8 +369,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     return vp;
   }, [bars]);
 
-  // Layout (left toolbar adds 40px)
-  const LEFT_TOOLBAR_WIDTH = 40;
+  // Layout (left toolbar adds 40px — applied by ChartLeftToolbar's own width).
   const layout = useMemo(
     () => computeLayout(dimensions.w, dimensions.h, activeSubPanes.length),
     [dimensions.w, dimensions.h, activeSubPanes.length],
@@ -497,7 +496,8 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     const trend = config.trendlines ? detectTrendlines(bars) : [];
 
     return { overlayLines, bands: bandsList, vwap, ichimoku, parabolicSAR, pivotPoints, volumeProfile, subPaneData, sr, fvg, trend, supertrend, chandelierExit, chandeKrollStop, alligator, zigzag, autoFib, maRibbon };
-  }, [bars, config, activeSubPanes, indicatorParams, p]);
+    // `p` already closes over `indicatorParams`; listing both is redundant.
+  }, [bars, config, activeSubPanes, p]);
 
   // Load drawings
   useEffect(() => {
@@ -646,6 +646,10 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
+    // `handleUndo`, `handleRedo`, `pushDrawingState` are defined later in the
+    // component body and would TDZ if listed here. They're stable enough that
+    // a key press after first paint will see the latest closure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bars.length, pair, drawings, showSymbolSearch, showIndicatorDialog, selectedDrawingId, drawingMode]);
 
   /* ─── Drawing undo/redo ─── */
@@ -1148,7 +1152,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     // Chart pan — pass Y for vertical panning
     zoomRef.current = handleDragStart(zoomRef.current, x, y);
     setIsDragging(true);
-  }, [contextMenu.open, layout, drawings, bars, dimensions, activeTool, pushDrawingState, priceScale, drawingPropsPanel, getActiveViewport]);
+  }, [contextMenu.open, layout, drawings, bars, dimensions, pushDrawingState, priceScale, drawingPropsPanel, getActiveViewport]);
 
   const handleMouseUp = useCallback(() => {
     // Commit drawing drag
@@ -1224,7 +1228,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
       priceZoomRef.current = 1.0;
       return;
     }
-  }, [bars.length, dimensions, layout]);
+  }, [bars.length, dimensions, layout, pushDrawingState]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
@@ -1530,7 +1534,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
               key={ct}
               onClick={() => setChartType(ct)}
               style={{
-                fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, fontWeight: 600,
+                fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 600,
                 padding: "2px 6px", borderRadius: 3, border: "none",
                 background: chartType === ct ? "#2A2E39" : "transparent",
                 color: chartType === ct ? "#D1D4DC" : "#545B69",
@@ -1555,7 +1559,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
         )}
         {source && source.toLowerCase().includes("twelve") && (
           <span style={{
-            fontFamily: "'IBM Plex Mono', monospace", fontSize: 9,
+            fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
             padding: "1px 5px", borderRadius: 3,
             background: "rgba(255,152,0,0.15)", color: "#FF9800", fontWeight: 600,
           }}>

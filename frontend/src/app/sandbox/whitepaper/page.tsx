@@ -651,7 +651,7 @@ USD/MXN Microstructure (BIS 2022):
             <thead>
               <tr style={{ borderBottom: `2px solid ${TOKEN.rim}` }}>
                 {["Rule ID", "Name", "Severity", "Regulatory Reference", "Pass Criterion"].map(h => (
-                  <th key={h} style={{
+                  <th scope="col" key={h} style={{
                     textAlign: "left", padding: "8px 10px",
                     color: TOKEN.tert, fontWeight: 700, fontSize: 12,
                     letterSpacing: "0.06em", textTransform: "uppercase",
@@ -817,8 +817,8 @@ export default function WhitepaperPage() {
       fallback={
         <div style={{
           fontFamily: "'IBM Plex Mono', monospace",
-          color: "#94a3b8",
-          background: "#0a0f1a",
+          color: "var(--text-secondary)",
+          background: "var(--bg-deep)",
           minHeight: "100vh",
           display: "flex",
           alignItems: "center",

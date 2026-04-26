@@ -10,7 +10,7 @@
  *   RUNS      — Assessment history with visual verdict indicators
  */
 
-import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
@@ -53,6 +53,12 @@ const HEX = {
   text3: "#94A3B8",
   border: "#E2E8F0",
   bgSub: "#F1F5F9",
+  // Added for hex-literal lint sweep — white = button/tooltip foreground,
+  // slate800 = ECharts tooltip background, purple = "DESIGNATED" / "1ST RUN"
+  // accent badge (deliberately distinct from green/red signal hues).
+  white: "#fff",
+  slate800: "#1e293b",
+  purple: "#A78BFA",
 } as const;
 
 type Tab = "overview" | "datasets" | "upload" | "runs";
@@ -91,7 +97,6 @@ interface PeriodRow {
 }
 
 export default function HedgeEffectivenessPage() {
-  const isMobile = useIsMobile();
   return (
     <Suspense fallback={
       <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: S.deep }}>
@@ -114,7 +119,7 @@ export default function HedgeEffectivenessPage() {
 
 function HedgeEffectivenessInner() {
   const isMobile = useIsMobile();
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab") as Tab | null;
@@ -298,13 +303,13 @@ function HedgeEffectivenessInner() {
       formData.append("currency_pair", csvPair.trim());
       formData.append("hedge_type", formHedgeType);
 
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api"}/v1/hedge-effectiveness/datasets/upload`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
-        }
+      // FormData uploads pass through dashboardFetch — it skips Content-Type
+      // injection (the browser must set the multipart boundary) but still
+      // applies the 15s timeout and CSRF header.
+      const res = await dashboardFetch(
+        "/v1/hedge-effectiveness/datasets/upload",
+        token,
+        { method: "POST", body: formData },
       );
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -763,7 +768,7 @@ function OverviewTab({
                     }}
                   >
                     {(seg.count / total) > 0.08 && (
-                      <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: "#fff", userSelect: "none" }}>
+                      <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: HEX.white, userSelect: "none" }}>
                         {seg.count}
                       </span>
                     )}
@@ -772,7 +777,7 @@ function OverviewTab({
               })}
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
-              <span style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>← OLDEST</span>
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>← OLDEST</span>
               <div style={{ display: "flex", gap: 12 }}>
                 {([["Effective", HEX.green], ["Ineffective", HEX.red]] as const).map(([lbl, color]) => (
                   <div key={lbl} style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -781,7 +786,7 @@ function OverviewTab({
                   </div>
                 ))}
               </div>
-              <span style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>LATEST →</span>
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>LATEST →</span>
             </div>
           </div>
         );
@@ -844,7 +849,7 @@ function OverviewTab({
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr 1fr" : "repeat(6, 1fr)", gap: 8 }}>
               {stats.map(({ label, value, color }) => (
                 <div key={label} style={{ textAlign: "center", padding: "8px 4px", borderRadius: 3, background: S.sub, border: `1px solid ${S.rim}` }}>
-                  <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: S.text3, marginBottom: 4 }}>{label}</div>
+                  <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: S.text3, marginBottom: 4 }}>{label}</div>
                   <div style={{ fontFamily: S.mono, fontSize: 15, fontWeight: 800, color }}>{value}</div>
                 </div>
               ))}
@@ -1003,8 +1008,8 @@ function OverviewTab({
               {breakdown.map((b) => (
                 <div key={b.label}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-                    <span style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>{b.label.toUpperCase()}</span>
-                    <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: b.score === b.max ? HEX.green : S.text2 }}>{b.score}/{b.max}</span>
+                    <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>{b.label.toUpperCase()}</span>
+                    <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: b.score === b.max ? HEX.green : S.text2 }}>{b.score}/{b.max}</span>
                   </div>
                   <div style={{ height: 3, borderRadius: 2, background: S.sub }}>
                     <div style={{ height: "100%", width: `${(b.score / b.max) * 100}%`, borderRadius: 2,
@@ -1236,9 +1241,9 @@ function OverviewTab({
                 const h = counts[i] === 0 ? 4 : Math.max(8, Math.round((counts[i] / maxCount) * 52));
                 return (
                   <div key={b.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                    <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: b.color }}>{counts[i]}</span>
+                    <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: b.color }}>{counts[i]}</span>
                     <div style={{ width: "100%", height: h, borderRadius: 2, background: counts[i] === 0 ? S.sub : b.bg, border: `1px solid ${counts[i] === 0 ? S.rim : b.border}` }} />
-                    <span style={{ fontFamily: S.mono, fontSize: 8, color: S.text3, textAlign: "center", letterSpacing: "0.03em", lineHeight: 1.2 }}>{b.label}</span>
+                    <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, textAlign: "center", letterSpacing: "0.03em", lineHeight: 1.2 }}>{b.label}</span>
                   </div>
                 );
               })}
@@ -1271,7 +1276,7 @@ function OverviewTab({
             <div style={{ display: "grid", gridTemplateColumns: `1fr repeat(${STDS.length}, 72px)`, gap: 4, marginBottom: 6 }}>
               <span />
               {STDS.map((std) => (
-                <span key={std} style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.10em", textAlign: "center" }}>
+                <span key={std} style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.10em", textAlign: "center" }}>
                   {std.replace("_", " ")}
                 </span>
               ))}
@@ -1281,7 +1286,7 @@ function OverviewTab({
                 <span style={{ fontFamily: S.ui, fontSize: 11, color: S.text2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.name}</span>
                 {row.coverage.map(({ std, tested, passed }) => (
                   <span key={std} style={{
-                    fontFamily: S.mono, fontSize: 9, fontWeight: 700, textAlign: "center",
+                    fontFamily: S.mono, fontSize: 10, fontWeight: 700, textAlign: "center",
                     padding: "2px 4px", borderRadius: 2,
                     background: !tested ? S.sub : passed ? HEX.greenBg : HEX.redBg,
                     color: !tested ? S.text3 : passed ? HEX.green : HEX.red,
@@ -1365,23 +1370,23 @@ function OverviewTab({
             </div>
             <div style={{ display: "flex", gap: 24, alignItems: "center", flexWrap: "wrap" }}>
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, letterSpacing: "0.10em", marginBottom: 4 }}>AVG DAYS SINCE</div>
+                <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, letterSpacing: "0.10em", marginBottom: 4 }}>AVG DAYS SINCE</div>
                 <div style={{ fontFamily: S.mono, fontSize: 22, fontWeight: 800, color: avgColor, lineHeight: 1 }}>{avg}</div>
-                <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, marginTop: 2 }}>days</div>
+                <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, marginTop: 2 }}>days</div>
               </div>
               <div style={{ width: 1, height: 40, background: S.rim }} />
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, letterSpacing: "0.10em", marginBottom: 4 }}>MEDIAN DAYS SINCE</div>
+                <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, letterSpacing: "0.10em", marginBottom: 4 }}>MEDIAN DAYS SINCE</div>
                 <div style={{ fontFamily: S.mono, fontSize: 22, fontWeight: 800, color: medColor, lineHeight: 1 }}>{median}</div>
-                <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, marginTop: 2 }}>days</div>
+                <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, marginTop: 2 }}>days</div>
               </div>
               {unassessed > 0 && (
                 <>
                   <div style={{ width: 1, height: 40, background: S.rim }} />
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, letterSpacing: "0.10em", marginBottom: 4 }}>UNASSESSED</div>
+                    <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, letterSpacing: "0.10em", marginBottom: 4 }}>UNASSESSED</div>
                     <div style={{ fontFamily: S.mono, fontSize: 22, fontWeight: 800, color: HEX.amber, lineHeight: 1 }}>{unassessed}</div>
-                    <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, marginTop: 2 }}>datasets</div>
+                    <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, marginTop: 2 }}>datasets</div>
                   </div>
                 </>
               )}
@@ -1417,7 +1422,7 @@ function OverviewTab({
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 12, alignItems: "center" }}>
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, letterSpacing: "0.10em", marginBottom: 4 }}>{MONTHS[lastMonthDate.getMonth()]}</div>
+                <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, letterSpacing: "0.10em", marginBottom: 4 }}>{MONTHS[lastMonthDate.getMonth()]}</div>
                 <div style={{ fontFamily: S.mono, fontSize: 22, fontWeight: 700, color: S.text2, lineHeight: 1 }}>{lastMonthRuns.length}</div>
                 <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, marginTop: 2 }}>{lastPass} pass</div>
               </div>
@@ -1433,7 +1438,7 @@ function OverviewTab({
                 </span>
               </div>
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontFamily: S.mono, fontSize: 9, color: HEX.cyan, letterSpacing: "0.10em", marginBottom: 4 }}>{MONTHS[thisMonth]} ◂ NOW</div>
+                <div style={{ fontFamily: S.mono, fontSize: 10, color: HEX.cyan, letterSpacing: "0.10em", marginBottom: 4 }}>{MONTHS[thisMonth]} ◂ NOW</div>
                 <div style={{ fontFamily: S.mono, fontSize: 22, fontWeight: 700, color: S.text1, lineHeight: 1 }}>{thisMonthRuns.length}</div>
                 <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, marginTop: 2 }}>{thisPass} pass</div>
               </div>
@@ -1524,19 +1529,19 @@ function OverviewTab({
               </div>
               <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, letterSpacing: "0.08em", marginBottom: 3 }}>OLDER HALF</div>
+                  <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, letterSpacing: "0.08em", marginBottom: 3 }}>OLDER HALF</div>
                   <div style={{ fontFamily: S.mono, fontSize: 16, fontWeight: 700, color: S.text2 }}>
                     {Math.round(olderRate * 100)}%
                   </div>
-                  <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>{older.length} runs</div>
+                  <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>{older.length} runs</div>
                 </div>
                 <div style={{ width: 1, height: 36, background: trendBorder }} />
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontFamily: S.mono, fontSize: 9, color: trendColor, letterSpacing: "0.08em", marginBottom: 3 }}>NEWER HALF</div>
+                  <div style={{ fontFamily: S.mono, fontSize: 10, color: trendColor, letterSpacing: "0.08em", marginBottom: 3 }}>NEWER HALF</div>
                   <div style={{ fontFamily: S.mono, fontSize: 16, fontWeight: 700, color: trendColor }}>
                     {Math.round(newerRate * 100)}%
                   </div>
-                  <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>{newer.length} runs</div>
+                  <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>{newer.length} runs</div>
                 </div>
               </div>
             </div>
@@ -1546,10 +1551,8 @@ function OverviewTab({
 
       {/* ── 50.1 Assessment calendar heatmap (12-week rolling) ── */}
       {totalRuns >= 1 && (() => {
-        const NOW = Date.now();
         const DAY = 86400000;
         const WEEK_COUNT = 12;
-        const DAY_COUNT = WEEK_COUNT * 7;
         // Build a map: dateStr (YYYY-MM-DD) -> { total, passed }
         const dayMap = new Map<string, { total: number; passed: number }>();
         for (const r of runs) {
@@ -1618,7 +1621,7 @@ function OverviewTab({
               {/* Day-of-week labels */}
               <div style={{ display: "flex", flexDirection: "column", gap: 2, paddingTop: 16 }}>
                 {DOW_LABELS.map((d, i) => (
-                  <div key={i} style={{ height: 11, fontFamily: S.mono, fontSize: 8, color: i % 2 === 1 ? S.text3 : "transparent", lineHeight: "11px", textAlign: "right", minWidth: 8 }}>{d}</div>
+                  <div key={i} style={{ height: 11, fontFamily: S.mono, fontSize: 10, color: i % 2 === 1 ? S.text3 : "transparent", lineHeight: "11px", textAlign: "right", minWidth: 8 }}>{d}</div>
                 ))}
               </div>
               {/* Grid */}
@@ -1628,7 +1631,7 @@ function OverviewTab({
                   {Array.from({ length: WEEK_COUNT }, (_, col) => {
                     const lbl = monthLabels.find((m) => m.col === col);
                     return (
-                      <div key={col} style={{ fontFamily: S.mono, fontSize: 8, color: S.text3, whiteSpace: "nowrap", overflow: "hidden" }}>
+                      <div key={col} style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, whiteSpace: "nowrap", overflow: "hidden" }}>
                         {lbl ? lbl.label : ""}
                       </div>
                     );
@@ -1662,7 +1665,7 @@ function OverviewTab({
             </div>
             {/* Legend */}
             <div style={{ display: "flex", gap: 16, marginTop: 8, alignItems: "center" }}>
-              <span style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>LEGEND:</span>
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>LEGEND:</span>
               {[
                 { bg: S.sub, border: S.rim, label: "No runs" },
                 { bg: `rgba(34,197,94,0.60)`, border: HEX.greenBorder, label: "All pass" },
@@ -1671,10 +1674,10 @@ function OverviewTab({
               ].map((item) => (
                 <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   <div style={{ width: 10, height: 10, borderRadius: 2, background: item.bg, border: `1px solid ${item.border}` }} />
-                  <span style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>{item.label}</span>
+                  <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>{item.label}</span>
                 </div>
               ))}
-              <span style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, marginLeft: "auto" }}>
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, marginLeft: "auto" }}>
                 Darker = more runs
               </span>
             </div>
@@ -1704,7 +1707,7 @@ function OverviewTab({
                 const border = pct === 100 ? HEX.greenBorder : pct >= 50 ? "rgba(217,119,6,0.25)" : HEX.redBorder;
                 return (
                   <div key={key} style={{ borderRadius: 4, background: bg, border: `1px solid ${border}`, padding: "10px 14px" }}>
-                    <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color, letterSpacing: "0.12em", marginBottom: 6 }}>{label}</div>
+                    <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color, letterSpacing: "0.12em", marginBottom: 6 }}>{label}</div>
                     <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
                       <span style={{ fontFamily: S.mono, fontSize: 18, fontWeight: 800, color, lineHeight: 1 }}>{tested}</span>
                       <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>/ {datasets.length}</span>
@@ -1712,7 +1715,7 @@ function OverviewTab({
                     <div style={{ height: 3, borderRadius: 2, background: S.sub, overflow: "hidden", marginBottom: 4 }}>
                       <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 2, transition: "width 0.3s" }} />
                     </div>
-                    <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>
+                    <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>
                       {untested > 0 ? `${untested} untested` : "full coverage"}
                     </div>
                   </div>
@@ -1757,7 +1760,7 @@ function OverviewTab({
                 const deltaColor = delta == null ? S.text3 : delta > 0 ? HEX.green : delta < 0 ? HEX.red : S.text3;
                 return (
                   <div key={kpi.label} style={{ textAlign: "center" }}>
-                    <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, letterSpacing: "0.10em", marginBottom: 4 }}>{kpi.label}</div>
+                    <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, letterSpacing: "0.10em", marginBottom: 4 }}>{kpi.label}</div>
                     <div style={{ fontFamily: S.mono, fontSize: 20, fontWeight: 700, color: S.text1, lineHeight: 1 }}>
                       {ytdVal != null ? kpi.fmt(ytdVal as number) : "—"}
                     </div>
@@ -1847,7 +1850,7 @@ function OverviewTab({
               <div key={kpi.label} style={{ display: "flex", alignItems: "center", gap: 20 }}>
                 {i > 0 && <div style={{ width: 1, height: 36, background: S.rim }} />}
                 <div>
-                  <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.12em", marginBottom: 4 }}>{kpi.label}</div>
+                  <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.12em", marginBottom: 4 }}>{kpi.label}</div>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
                     <span style={{ fontFamily: S.mono, fontSize: 24, fontWeight: 800, color: Number(kpi.value) > 0 ? S.text1 : S.text3, lineHeight: 1 }}>{kpi.value}</span>
                     <span style={{ fontFamily: S.ui, fontSize: 11, color: S.text3 }}>{kpi.suffix}</span>
@@ -1857,7 +1860,7 @@ function OverviewTab({
             ))}
             <div style={{ width: 1, height: 36, background: S.rim }} />
             <div>
-              <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.12em", marginBottom: 6 }}>CADENCE</div>
+              <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.12em", marginBottom: 6 }}>CADENCE</div>
               <span style={{
                 fontFamily: S.mono, fontSize: 11, fontWeight: 800, letterSpacing: "0.08em",
                 padding: "3px 10px", borderRadius: 3,
@@ -1997,7 +2000,7 @@ function OverviewTab({
                       const ok = ds.period_count >= std.min;
                       return (
                         <span key={std.key} title={`${std.label}: requires ≥${std.min} periods`} style={{
-                          fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                          fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
                           padding: "1px 6px", borderRadius: 3, cursor: "default",
                           background: ok ? HEX.greenBg : HEX.redBg,
                           color: ok ? HEX.green : HEX.red,
@@ -2053,7 +2056,7 @@ function OverviewTab({
                 style={{
                   fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
                   padding: "10px 24px", borderRadius: 4, cursor: "pointer",
-                  background: HEX.cyan, color: "#fff", border: "none",
+                  background: HEX.cyan, color: HEX.white, border: "none",
                   boxShadow: "0 2px 8px rgba(28,98,242,0.2)",
                   transition: "all 0.15s",
                 }}
@@ -2115,7 +2118,7 @@ function OverviewTab({
               style={{
                 fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
                 padding: "5px 14px", borderRadius: 3, cursor: "pointer", flexShrink: 0,
-                background: HEX.cyan, color: "#fff", border: "none",
+                background: HEX.cyan, color: HEX.white, border: "none",
                 boxShadow: "0 1px 4px rgba(28,98,242,0.2)",
               }}
             >
@@ -2235,7 +2238,7 @@ function OverviewTab({
           grid: { top: 20, right: 16, bottom: 36, left: 36 },
           xAxis: {
             type: "category", data: labels,
-            axisLabel: { color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace", rotate: 30 },
+            axisLabel: { color: HEX.text3, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace", rotate: 30 },
             axisLine: { lineStyle: { color: HEX.border } },
             axisTick: { show: false },
           },
@@ -2663,7 +2666,7 @@ function OverviewTab({
           ],
           tooltip: {
             trigger: "axis" as const,
-            backgroundColor: "#1e293b", borderColor: HEX.border, textStyle: { color: "#fff", fontSize: 11, fontFamily: "'IBM Plex Mono',monospace" },
+            backgroundColor: HEX.slate800, borderColor: HEX.border, textStyle: { color: HEX.white, fontSize: 11, fontFamily: "'IBM Plex Mono',monospace" },
             formatter: (params: { dataIndex: number }[]) => {
               const idx = params[0].dataIndex;
               const r = sorted[idx];
@@ -2707,8 +2710,8 @@ function OverviewTab({
           backgroundColor: "transparent",
           tooltip: {
             trigger: "axis" as const,
-            backgroundColor: "#1e293b", borderColor: HEX.border,
-            textStyle: { color: "#fff", fontSize: 11, fontFamily: "'IBM Plex Mono',monospace" },
+            backgroundColor: HEX.slate800, borderColor: HEX.border,
+            textStyle: { color: HEX.white, fontSize: 11, fontFamily: "'IBM Plex Mono',monospace" },
             formatter: (params: { seriesName: string; value: number; name: string }[]) => {
               const mo = params[0]?.name ?? "";
               const pass = params.find((p) => p.seriesName === "Effective")?.value ?? 0;
@@ -2838,11 +2841,11 @@ function OverviewTab({
               <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 400 }}>
                 <thead>
                   <tr>
-                    <th style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text3, letterSpacing: "0.1em", padding: "4px 12px 8px 0", textAlign: "left" }}>
+                    <th scope="col" style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text3, letterSpacing: "0.1em", padding: "4px 12px 8px 0", textAlign: "left" }}>
                       DATASET
                     </th>
                     {standards.map((std) => (
-                      <th key={std} style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text3, letterSpacing: "0.1em", padding: "4px 12px 8px", textAlign: "center", whiteSpace: "nowrap" }}>
+                      <th scope="col" key={std} style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text3, letterSpacing: "0.1em", padding: "4px 12px 8px", textAlign: "center", whiteSpace: "nowrap" }}>
                         {std.replace("_", " ")}
                       </th>
                     ))}
@@ -3043,7 +3046,6 @@ function OverviewTab({
               {days.map(({ date, count }) => {
                 const intensity = count === 0 ? 0 : Math.max(0.15, count / maxCount);
                 const bg = count === 0 ? S.sub : `rgba(28,98,242,${intensity.toFixed(2)})`;
-                const d = new Date(date);
                 return (
                   <div
                     key={date}
@@ -3289,8 +3291,8 @@ function OverviewTab({
           backgroundColor: "transparent",
           tooltip: {
             trigger: "item" as const,
-            backgroundColor: "#1e293b", borderColor: HEX.border,
-            textStyle: { color: "#fff", fontSize: 11, fontFamily: "'IBM Plex Mono',monospace" },
+            backgroundColor: HEX.slate800, borderColor: HEX.border,
+            textStyle: { color: HEX.white, fontSize: 11, fontFamily: "'IBM Plex Mono',monospace" },
             formatter: (params: { data: [string, number, boolean, string] }) => {
               const [date, ratio, effective, name] = params.data;
               const d = new Date(date).toLocaleDateString();
@@ -3318,7 +3320,7 @@ function OverviewTab({
               type: "line" as const, silent: true, symbol: "none", lineStyle: { color: HEX.green, type: "dashed" as const, width: 1, opacity: 0.5 },
               markLine: {
                 silent: true, symbol: "none", lineStyle: { color: HEX.green, type: "dashed" as const, width: 1, opacity: 0.5 },
-                data: [{ yAxis: 0.80, label: { formatter: "0.80", color: HEX.green, fontSize: 9 } }, { yAxis: 1.25, label: { formatter: "1.25", color: HEX.green, fontSize: 9 } }],
+                data: [{ yAxis: 0.80, label: { formatter: "0.80", color: HEX.green, fontSize: 10 } }, { yAxis: 1.25, label: { formatter: "1.25", color: HEX.green, fontSize: 10 } }],
               },
               data: [],
             },
@@ -3329,7 +3331,7 @@ function OverviewTab({
               data: sorted.map((r) => [r.created_at, r.dollar_offset_ratio, r.overall_effective, r.dataset_name]),
               itemStyle: {
                 color: (params: { data: [string, number, boolean, string] }) => params.data[2] ? HEX.green : HEX.red,
-                borderColor: "#fff", borderWidth: 1.5,
+                bordercolor: HEX.white, borderWidth: 1.5,
                 shadowBlur: 4, shadowColor: (params: { data: [string, number, boolean, string] }) => params.data[2] ? HEX.green + "60" : HEX.red + "60",
               },
             },
@@ -3383,7 +3385,7 @@ function HighlightMatch({ text, query }: { text: string; query: string }) {
 }
 
 function DatasetsTab({
-  datasets, runs, standard, onRunAssessment, onNavigateRun, submitting, onUpdateDataset, onCloneDataset, token,
+  datasets, runs, standard: _standard, onRunAssessment, onNavigateRun, submitting, onUpdateDataset, onCloneDataset, token,
 }: {
   datasets: Dataset[]; runs: Run[]; standard: string;
   onRunAssessment: (id: string) => void;
@@ -3393,7 +3395,6 @@ function DatasetsTab({
   onCloneDataset: (id: string) => Promise<void>;
   token: string;
 }) {
-  const isMobile = useIsMobile();
   const [dsSearch, setDsSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandAll, setExpandAll] = useState(false);
@@ -3803,7 +3804,7 @@ function DatasetsTab({
                   const isBig = Math.abs(drift) >= 0.15;
                   return (
                     <span style={{
-                      fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                      fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
                       padding: "1px 6px", borderRadius: 3, flexShrink: 0,
                       background: isBig ? (isPos ? HEX.greenBg : HEX.redBg) : "rgba(217,119,6,0.12)",
                       color: isBig ? (isPos ? HEX.green : HEX.red) : HEX.amber,
@@ -3820,7 +3821,7 @@ function DatasetsTab({
                   return (
                     <span title={`${dupeCount} other dataset${dupeCount > 1 ? "s" : ""} share this currency pair`}
                       style={{
-                        fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                        fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
                         padding: "1px 6px", borderRadius: 3, flexShrink: 0, cursor: "default",
                         background: "rgba(217,119,6,0.10)", color: HEX.amber,
                         border: "1px solid rgba(217,119,6,0.30)",
@@ -3836,7 +3837,7 @@ function DatasetsTab({
                   <span
                     onClick={(e) => { e.stopPropagation(); cycleRisk(ds.id); }}
                     title="Click to assign risk level (HIGH → MEDIUM → LOW → clear)"
-                    style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, cursor: "pointer",
+                    style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, cursor: "pointer",
                       padding: "1px 5px", borderRadius: 3, border: `1px dashed ${S.rim}`,
                       opacity: 0.5, flexShrink: 0, letterSpacing: "0.06em",
                     }}
@@ -3855,7 +3856,7 @@ function DatasetsTab({
                   <span
                     onClick={(e) => { e.stopPropagation(); cycleRisk(ds.id); }}
                     title="Click to cycle risk level (HIGH → MEDIUM → LOW → clear)"
-                    style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                    style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
                       padding: "1px 6px", borderRadius: 3, cursor: "pointer", flexShrink: 0,
                       background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`,
                     }}
@@ -3897,7 +3898,7 @@ function DatasetsTab({
                   const isStale = days >= 30;
                   return (
                     <span style={{
-                      fontFamily: S.mono, fontSize: 9, fontWeight: 700,
+                      fontFamily: S.mono, fontSize: 10, fontWeight: 700,
                       padding: "1px 6px", borderRadius: 3,
                       background: isStale ? HEX.redBg : "rgba(217,119,6,0.10)",
                       color: isStale ? HEX.red : HEX.amber,
@@ -3918,7 +3919,7 @@ function DatasetsTab({
                   const tierBorder = score >= 80 ? HEX.greenBorder : score >= 60 ? "rgba(6,182,212,0.30)" : score >= 40 ? "rgba(217,119,6,0.30)" : HEX.redBorder;
                   return (
                     <span title={`Health score: ${score}/100 (pass rate + recency + volume + stability)`} style={{
-                      fontFamily: S.mono, fontSize: 9, fontWeight: 700,
+                      fontFamily: S.mono, fontSize: 10, fontWeight: 700,
                       padding: "1px 6px", borderRadius: 3,
                       background: tierBg, color: tierColor, border: `1px solid ${tierBorder}`,
                       cursor: "default",
@@ -3937,7 +3938,7 @@ function DatasetsTab({
                   const isComplete = testedCount === 3;
                   return (
                     <span title={`Tested under ${testedCount} of 3 standards (IAS 39 / IFRS 9 / ASC 815)`}
-                      style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, cursor: "default",
+                      style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, cursor: "default",
                         padding: "1px 6px", borderRadius: 3,
                         background: isComplete ? HEX.greenBg : "rgba(139,92,246,0.10)",
                         color: isComplete ? HEX.green : "#A78BFA",
@@ -3957,7 +3958,7 @@ function DatasetsTab({
                   const label = perMonth >= 1 ? `${perMonth.toFixed(1)}/MO` : `${(perMonth * 30).toFixed(0)}D CADENCE`;
                   return (
                     <span title={`${dsRuns.length} runs over ${monthsSpan.toFixed(1)} months`}
-                      style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700,
+                      style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700,
                         padding: "1px 6px", borderRadius: 3, cursor: "default",
                         background: "rgba(6,182,212,0.08)", color: HEX.cyan, border: "1px solid rgba(6,182,212,0.25)" }}>
                       {label}
@@ -3968,7 +3969,7 @@ function DatasetsTab({
                 {(() => {
                   const dsRuns = runs.filter((r) => r.dataset_id === ds.id && r.created_at);
                   if (dsRuns.length === 0) return (
-                    <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 3,
+                    <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 3,
                       background: "rgba(100,116,139,0.10)", color: S.text3, border: `1px solid rgba(100,116,139,0.20)` }}>
                       NOT SCHEDULED
                     </span>
@@ -3984,7 +3985,7 @@ function DatasetsTab({
                   return (
                     <span title={`30-day assessment cadence · Last run ${daysSince} day${daysSince !== 1 ? "s" : ""} ago`}
                       style={{
-                        fontFamily: S.mono, fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 3,
+                        fontFamily: S.mono, fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 3,
                         cursor: "default",
                         background: isOverdue ? HEX.redBg : "rgba(217,119,6,0.10)",
                         color: isOverdue ? HEX.red : HEX.amber,
@@ -4027,8 +4028,8 @@ function DatasetsTab({
                     : `${days}D HEDGE`;
                   return (
                     <span title={`Designated: ${ds.designation_date}`}
-                      style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 3,
-                        cursor: "default", background: "rgba(139,92,246,0.10)", color: "#A78BFA",
+                      style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 3,
+                        cursor: "default", background: "rgba(139,92,246,0.10)", color: HEX.purple,
                         border: "1px solid rgba(139,92,246,0.25)" }}>
                       {label}
                     </span>
@@ -4066,7 +4067,7 @@ function DatasetsTab({
                 const days = Math.floor((Date.now() - new Date(ds.created_at).getTime()) / 86400000);
                 const label = days === 0 ? "TODAY" : days === 1 ? "1D AGO" : days < 30 ? `${days}D AGO` : days < 365 ? `${Math.floor(days / 30)}MO AGO` : `${(days / 365).toFixed(1)}YR AGO`;
                 return (
-                  <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 600, color: days === 0 ? HEX.green : S.text3,
+                  <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 600, color: days === 0 ? HEX.green : S.text3,
                     letterSpacing: "0.05em" }}>
                     {label}
                   </span>
@@ -4121,7 +4122,7 @@ function DatasetsTab({
                 style={{
                   fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
                   padding: "7px 16px", borderRadius: 3, cursor: submitting ? "not-allowed" : "pointer",
-                  background: HEX.cyan, color: "#fff", border: "none",
+                  background: HEX.cyan, color: HEX.white, border: "none",
                   opacity: submitting ? 0.5 : 1,
                   boxShadow: "0 1px 4px rgba(28,98,242,0.15)",
                   transition: "all 0.15s",
@@ -4152,7 +4153,7 @@ function DatasetsTab({
                   const cells = allDsRuns.slice(-MAX_CELLS); // last N, oldest→newest
                   return (
                     <div style={{ display: "flex", alignItems: "center", gap: 6, paddingBottom: 8, borderBottom: `1px solid ${S.rim}`, marginBottom: 2 }}>
-                      <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.10em", flexShrink: 0 }}>
+                      <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.10em", flexShrink: 0 }}>
                         RUNS
                       </span>
                       <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
@@ -4174,7 +4175,7 @@ function DatasetsTab({
                           );
                         })}
                       </div>
-                      <span style={{ fontFamily: S.mono, fontSize: 9, color: S.text3 }}>
+                      <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>
                         ({allDsRuns.length} total{allDsRuns.length > MAX_CELLS ? `, last ${MAX_CELLS} shown` : ""})
                       </span>
                     </div>
@@ -4235,7 +4236,7 @@ function DatasetsTab({
                         onClick={() => saveEdit(ds.id)}
                         style={{
                           fontFamily: S.mono, fontSize: 11, fontWeight: 700, padding: "5px 14px", borderRadius: 3,
-                          background: HEX.cyan, color: "#fff", border: "none",
+                          background: HEX.cyan, color: HEX.white, border: "none",
                           cursor: saving || !editName.trim() ? "not-allowed" : "pointer",
                           opacity: saving || !editName.trim() ? 0.6 : 1,
                         }}
@@ -4278,7 +4279,7 @@ function DatasetsTab({
                           background: S.sub, border: `1px solid ${S.rim}`,
                           display: "flex", flexDirection: "column", gap: 2, minWidth: 70,
                         }}>
-                          <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.10em" }}>{label}</span>
+                          <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.10em" }}>{label}</span>
                           <span style={{ fontFamily: S.mono, fontSize: 13, fontWeight: 800, color }}>{value}</span>
                         </div>
                       ))}
@@ -4310,7 +4311,7 @@ function DatasetsTab({
                           const avgDo = g.ratios.length > 0 ? g.ratios.reduce((s, v) => s + v, 0) / g.ratios.length : null;
                           return (
                             <div key={std} style={{ padding: "8px 12px", borderRadius: 4, background: S.sub, border: `1px solid ${S.rim}` }}>
-                              <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.1em", marginBottom: 4 }}>
+                              <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.1em", marginBottom: 4 }}>
                                 {STD_LABELS[std] ?? std}
                               </div>
                               <div style={{ fontFamily: S.mono, fontSize: 18, fontWeight: 800, color: passColor, lineHeight: 1, marginBottom: 2 }}>
@@ -4390,7 +4391,7 @@ function DatasetsTab({
                           grid: { top: 8, bottom: 18, left: 48, right: 12 },
                           xAxis: {
                             type: "category", data: xData,
-                            axisLabel: { fontFamily: S.mono, fontSize: 9, color: HEX.text3 },
+                            axisLabel: { fontFamily: S.mono, fontSize: 10, color: HEX.text3 },
                             axisLine: { lineStyle: { color: HEX.border } },
                             axisTick: { show: false },
                           },
@@ -4398,7 +4399,7 @@ function DatasetsTab({
                             type: "value",
                             min: (v: { min: number }) => +Math.min(v.min * 0.95, 0.75).toFixed(2),
                             max: (v: { max: number }) => +Math.max(v.max * 1.05, 1.30).toFixed(2),
-                            axisLabel: { fontFamily: S.mono, fontSize: 9, color: HEX.text3, formatter: (v: number) => v.toFixed(2) },
+                            axisLabel: { fontFamily: S.mono, fontSize: 10, color: HEX.text3, formatter: (v: number) => v.toFixed(2) },
                             axisLine: { show: false }, axisTick: { show: false },
                             splitLine: { lineStyle: { color: HEX.border, type: "dashed" } },
                           },
@@ -4461,7 +4462,7 @@ function DatasetsTab({
                             <thead>
                               <tr style={{ background: S.sub }}>
                                 {["#", "DATE", "HEDGED FV Δ", "INSTRUMENT FV Δ", "CUM D.O."].map((h) => (
-                                  <th key={h} style={{ padding: "6px 10px", textAlign: "left", fontWeight: 700, color: S.text3, letterSpacing: "0.08em", borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap" }}>{h}</th>
+                                  <th scope="col" key={h} style={{ padding: "6px 10px", textAlign: "left", fontWeight: 700, color: S.text3, letterSpacing: "0.08em", borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap" }}>{h}</th>
                                 ))}
                               </tr>
                             </thead>
@@ -4522,7 +4523,7 @@ function DatasetsTab({
                       <div style={{ display: "flex", gap: 8 }}>
                         <button
                           onClick={(e) => { e.stopPropagation(); saveNote(ds.id); }}
-                          style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 3, background: HEX.cyan, color: "#fff", border: "none", cursor: "pointer" }}
+                          style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 3, background: HEX.cyan, color: HEX.white, border: "none", cursor: "pointer" }}
                         >SAVE</button>
                         <button
                           onClick={(e) => { e.stopPropagation(); setEditingNoteId(null); }}
@@ -4583,7 +4584,6 @@ function UploadTab({
   csvPair: string; setCsvPair: (v: string) => void;
   handleCsvUpload: () => void;
 }) {
-  const isMobile = useIsMobile();
   const [mode, setMode] = useState<"manual" | "csv">("manual");
 
   const inputStyle: React.CSSProperties = {
@@ -4901,7 +4901,7 @@ function UploadTab({
                 <span style={{
                   fontFamily: S.mono, fontSize: 11, fontWeight: 700,
                   padding: "2px 8px", borderRadius: 2,
-                  background: inBand ? HEX.green : HEX.red, color: "#fff",
+                  background: inBand ? HEX.green : HEX.red, color: HEX.white,
                 }}>
                   {inBand ? "IN BAND (0.80–1.25)" : "OUT OF BAND"}
                 </span>
@@ -4920,7 +4920,7 @@ function UploadTab({
               style={{
                 fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
                 padding: "11px 28px", borderRadius: 4,
-                background: HEX.cyan, color: "#fff", border: "none",
+                background: HEX.cyan, color: HEX.white, border: "none",
                 cursor: submitting ? "not-allowed" : "pointer",
                 opacity: submitting ? 0.5 : 1,
                 boxShadow: "0 2px 8px rgba(28,98,242,0.2)",
@@ -4947,7 +4947,6 @@ type SortKey = "dataset" | "do_ratio" | "r2" | "verdict" | "date" | null;
 const STARRED_KEY = "hec_starred_runs";
 
 function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; onNavigateRun: (id: string) => void; onDeleteRuns: (ids: string[]) => Promise<void>; token: string }) {
-  const isMobile = useIsMobile();
   const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [stdFilter, setStdFilter] = useState("ALL");
@@ -4998,7 +4997,6 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
 
   // ── 25.1 Keyboard navigation ──
   const [focusIdx, setFocusIdx] = useState<number>(-1);
-  const listRef = useRef<HTMLDivElement>(null);
 
   // ── 25.2 Quick tags ──
   const TAGS_KEY = "hec_run_tags";
@@ -5217,7 +5215,6 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
   });
 
   // ── 25.1 Keyboard navigation handler (after displayRuns is defined) ──
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -5458,7 +5455,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
                 />
                 <button
                   onClick={savePreset}
-                  style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 3, background: HEX.cyan, color: "#fff", border: "none", cursor: "pointer" }}
+                  style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 3, background: HEX.cyan, color: HEX.white, border: "none", cursor: "pointer" }}
                 >SAVE</button>
               </div>
               {presets.length > 0 && (
@@ -5635,7 +5632,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
             style={{
               fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
               padding: "5px 14px", borderRadius: 3, cursor: "pointer",
-              background: HEX.cyan, color: "#fff", border: "none",
+              background: HEX.cyan, color: HEX.white, border: "none",
               display: "flex", alignItems: "center", gap: 5,
               boxShadow: "0 1px 6px rgba(28,98,242,0.3)",
             }}
@@ -5728,7 +5725,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
               }}
               style={{
                 fontFamily: S.mono, fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 2,
-                background: HEX.red, color: "#fff", border: "none", cursor: deleting ? "not-allowed" : "pointer",
+                background: HEX.red, color: HEX.white, border: "none", cursor: deleting ? "not-allowed" : "pointer",
                 opacity: deleting ? 0.6 : 1,
               }}
             >
@@ -5772,7 +5769,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
             padding: "6px 14px", borderRadius: 4,
             background: "rgba(28,98,242,0.05)", border: "1px solid rgba(28,98,242,0.18)",
           }}>
-            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.12em" }}>
+            <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.12em" }}>
               SELECTION ({selectedIds.size})
             </span>
             <div style={{ width: 1, height: 14, background: "rgba(28,98,242,0.2)" }} />
@@ -5855,7 +5852,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
         if (stdKeys.length < 2) return null; // only show when ≥2 standards in view
         return (
           <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 2px", flexWrap: "wrap" }}>
-            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>BY STD:</span>
+            <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>BY STD:</span>
             {stdKeys.map((std) => {
               const stdRuns = filteredRuns.filter((r) => r.standard === std);
               const pass = stdRuns.filter((r) => r.overall_effective).length;
@@ -5898,12 +5895,12 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
             </div>
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
               {passCount > 0 && (
-                <span style={{ fontFamily: S.mono, fontSize: 9, color: passColor, fontWeight: 700 }}>
+                <span style={{ fontFamily: S.mono, fontSize: 10, color: passColor, fontWeight: 700 }}>
                   ■ {passCount} PASS
                 </span>
               )}
               {failCount > 0 && (
-                <span style={{ fontFamily: S.mono, fontSize: 9, color: HEX.red, fontWeight: 700 }}>
+                <span style={{ fontFamily: S.mono, fontSize: 10, color: HEX.red, fontWeight: 700 }}>
                   ■ {failCount} FAIL
                 </span>
               )}
@@ -5938,7 +5935,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
             padding: "8px 12px", borderRadius: 4, background: S.panel, border: `1px solid ${S.rim}`,
             display: "flex", alignItems: "center", gap: 8,
           }}>
-            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.12em", flexShrink: 0 }}>
+            <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.12em", flexShrink: 0 }}>
               {year}
             </span>
             <div style={{ display: "flex", gap: 2, flex: 1 }}>
@@ -5968,10 +5965,10 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
                       cursor: "default",
                     }}
                   >
-                    <div style={{ fontFamily: S.mono, fontSize: 8, color: isCurrent ? HEX.cyan : S.text3, marginBottom: 1 }}>
+                    <div style={{ fontFamily: S.mono, fontSize: 10, color: isCurrent ? HEX.cyan : S.text3, marginBottom: 1 }}>
                       {label}
                     </div>
-                    <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: textColor, lineHeight: 1 }}>
+                    <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: textColor, lineHeight: 1 }}>
                       {passRate !== null ? `${passRate}%` : "—"}
                     </div>
                   </div>
@@ -5999,7 +5996,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
             padding: "7px 20px", borderRadius: 4, background: "rgba(28,98,242,0.05)",
             border: `1px solid rgba(28,98,242,0.20)`, display: "flex", alignItems: "center", gap: 20,
           }}>
-            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.12em" }}>
+            <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.12em" }}>
               QUICK Δ
             </span>
             <div style={{ width: 1, height: 16, background: S.rim }} />
@@ -6173,7 +6170,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
                       const bg = v >= 0.80 ? HEX.greenBg : v >= 0.60 ? "rgba(217,119,6,0.10)" : HEX.redBg;
                       const border = v >= 0.80 ? HEX.greenBorder : v >= 0.60 ? "rgba(217,119,6,0.30)" : HEX.redBorder;
                       return (
-                        <span style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, letterSpacing: "0.06em",
+                        <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
                           padding: "1px 4px", borderRadius: 2, background: bg, color, border: `1px solid ${border}` }}>
                           {label}
                         </span>
@@ -6199,7 +6196,6 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
         const unpinnedRows = displayRuns.filter((r) => !pinnedIds.has(r.run_id));
         const pageRows = unpinnedRows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
         const allRows = [...pinnedRows, ...pageRows];
-        const pinnedSeparatorIdx = pinnedRows.length;
         // ── 35.3 Dataset-relative rank map ──
         const dsRunGroups = runs.reduce<Record<string, Run[]>>((acc, r) => {
           if (!acc[r.dataset_id]) acc[r.dataset_id] = [];
@@ -6292,7 +6288,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
               {/* ── 35.3 Dataset-relative rank badge ── */}
               {dsRankMap[r.run_id] != null && dsRunGroups[r.dataset_id]?.length >= 2 && (
                 <span style={{
-                  fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.05em",
+                  fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
                   padding: "1px 5px", borderRadius: 2, display: "inline-block", marginTop: 2,
                   background: dsRankMap[r.run_id] === 1 ? HEX.greenBg : dsRankMap[r.run_id] === 2 ? "rgba(28,98,242,0.07)" : "transparent",
                   color: dsRankMap[r.run_id] === 1 ? HEX.green : dsRankMap[r.run_id] === 2 ? HEX.cyan : S.text3,
@@ -6304,9 +6300,9 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
               {/* ── 43.2 First run badge ── */}
               {dsFirstRunMap[r.dataset_id] === r.run_id && (
                 <span style={{
-                  fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.05em",
+                  fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
                   padding: "1px 5px", borderRadius: 2, display: "inline-block", marginTop: 2,
-                  background: "rgba(139,92,246,0.10)", color: "#A78BFA",
+                  background: "rgba(139,92,246,0.10)", color: HEX.purple,
                   border: "1px solid rgba(139,92,246,0.25)",
                 }}>1ST</span>
               )}
@@ -6314,7 +6310,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
               {dsSeqMap[r.run_id] != null && (
                 <span title={`Run ${dsSeqMap[r.run_id].seq} of ${dsSeqMap[r.run_id].total} for this dataset`}
                   style={{
-                    fontFamily: S.mono, fontSize: 9, fontWeight: 600, letterSpacing: "0.04em",
+                    fontFamily: S.mono, fontSize: 10, fontWeight: 600, letterSpacing: "0.04em",
                     padding: "1px 5px", borderRadius: 2, display: "inline-block", marginTop: 2,
                     background: S.sub, color: S.text3, border: `1px solid ${S.rim}`,
                   }}>
@@ -6486,7 +6482,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
                   background: runTag ? TAG_COLORS[runTag].bg : "transparent",
                   border: runTag ? `1px solid ${TAG_COLORS[runTag].border}` : "1px solid transparent",
                   borderRadius: 3, cursor: "pointer", padding: "1px 5px",
-                  fontFamily: S.mono, fontSize: 9, fontWeight: 800, letterSpacing: "0.08em",
+                  fontFamily: S.mono, fontSize: 10, fontWeight: 800, letterSpacing: "0.08em",
                   color: runTag ? TAG_COLORS[runTag].color : S.text3,
                   transition: "all 0.15s",
                 }}
@@ -6560,7 +6556,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
                   const isPos = delta > 0;
                   return (
                     <span title={`vs prior run (${prior.created_at?.slice(0,10)}): ${isPos ? "+" : ""}${delta.toFixed(4)}`}
-                      style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700,
+                      style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700,
                         color: isPos ? HEX.green : HEX.red }}>
                       {isPos ? "▲" : "▼"}{Math.abs(delta).toFixed(4)}
                     </span>
@@ -6595,7 +6591,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
                 return (
                   <span title={`D.O. ratio ${do_.toFixed(4)} is outside the 80–125% effectiveness band — review required`}
                     style={{
-                      fontFamily: S.mono, fontSize: 8, fontWeight: 700, letterSpacing: "0.06em",
+                      fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
                       padding: "1px 4px", borderRadius: 2, cursor: "default",
                       background: HEX.redBg, color: HEX.red, border: `1px solid ${HEX.redBorder}`,
                     }}>
@@ -6614,7 +6610,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
                 const color = score >= 80 ? HEX.green : score >= 55 ? HEX.cyan : score >= 35 ? HEX.amber : HEX.red;
                 return (
                   <span title={`Efficiency score: ${score}/100 (D.O. proximity 70% + R² 30%)`}
-                    style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color, cursor: "default", letterSpacing: "0.04em" }}>
+                    style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color, cursor: "default", letterSpacing: "0.04em" }}>
                     {score}
                   </span>
                 );
@@ -6761,13 +6757,13 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
             padding: "8px 16px", borderRadius: 4,
             background: S.panel, border: `1px solid ${S.rim}`, marginTop: 4,
           }}>
-            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
+            <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
               {isFiltered ? `FILTERED — ${filteredRuns.length} RUNS` : `ALL ${runs.length} RUNS`}
             </span>
             <div style={{ width: 1, height: 18, background: S.rim }} />
             {kpis.map((kpi) => (
               <div key={kpi.label} style={{ display: "flex", gap: 5, alignItems: "baseline" }}>
-                <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.1em" }}>{kpi.label}</span>
+                <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.1em" }}>{kpi.label}</span>
                 <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 800, color: kpi.color }}>{kpi.value}</span>
               </div>
             ))}
@@ -6779,7 +6775,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
                 <>
                   <div style={{ width: 1, height: 18, background: S.rim }} />
                   <div style={{ display: "flex", gap: 5, alignItems: "baseline" }}>
-                    <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.1em" }}>DATASETS</span>
+                    <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.1em" }}>DATASETS</span>
                     <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 800, color: S.text2 }}>{uniqueDs}</span>
                   </div>
                 </>
@@ -6799,7 +6795,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
                       onClick={() => setStdFilter(stdFilter === std ? "ALL" : std)}
                       title={`Filter to ${std.replace("_", " ")} runs`}
                       style={{
-                        fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                        fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
                         padding: "2px 7px", borderRadius: 3, cursor: "pointer", border: "none",
                         background: stdFilter === std ? HEX.cyan : S.sub,
                         color: stdFilter === std ? "#fff" : S.text3,
@@ -6819,7 +6815,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
       {/* ── 38.2 Page size selector ── */}
       {filteredRuns.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 0 0", justifyContent: "flex-end" }}>
-          <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.1em" }}>PER PAGE</span>
+          <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.1em" }}>PER PAGE</span>
           {([25, 50, 0] as const).map((sz) => (
             <button
               key={sz}

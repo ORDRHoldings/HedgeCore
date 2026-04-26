@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { BarChart2, RefreshCw } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
+import { PageShell } from "@/components/layout/PageShell";
 import {
   getConsolidatedPosition, getEntityPosition, getAccountPosition,
 } from "@/lib/api/cashClient";
@@ -19,6 +20,7 @@ const S = {
   bgDeep: "var(--bg-deep)",
   bgSub: "var(--bg-sub)",
   rim: "var(--border-rim)",
+  errRed: "#ef4444",
 } as const;
 
 type Tab = "CONSOLIDATED" | "BY_ENTITY" | "BY_ACCOUNT";
@@ -61,20 +63,10 @@ export default function CashPositionsPage() {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <div style={{ padding: isMobile ? 12 : 24, fontFamily: S.fontUI }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: isMobile ? "wrap" : "nowrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <BarChart2 size={18} color="var(--accent-primary)" />
-          <div>
-            <div style={{ fontFamily: S.fontMono, fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>
-              Cash Positions
-            </div>
-            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
-              Hedge Desk → Cash Positions
-            </div>
-          </div>
-        </div>
+    <PageShell
+      icon={BarChart2}
+      title="Cash Positions"
+      actions={
         <button
           onClick={load}
           style={{
@@ -87,8 +79,8 @@ export default function CashPositionsPage() {
           <RefreshCw size={12} />
           Refresh
         </button>
-      </div>
-
+      }
+    >
       {/* Tabs */}
       <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid var(--border-rim)", flexWrap: isMobile ? "wrap" : "nowrap" }}>
         {(["CONSOLIDATED", "BY_ENTITY", "BY_ACCOUNT"] as Tab[]).map((t) => (
@@ -112,7 +104,7 @@ export default function CashPositionsPage() {
         <div style={{
           background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)",
           borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 12,
-          color: "#ef4444",
+          color: S.errRed,
         }}>
           {error}
         </div>
@@ -173,7 +165,7 @@ export default function CashPositionsPage() {
               <thead>
                 <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                   {["Entity", "Currency", "Ledger Balance", "Available"].map((h) => (
-                    <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "var(--text-muted)", fontSize: 10 }}>
+                    <th scope="col" key={h} style={{ padding: "8px 12px", textAlign: "left", color: "var(--text-muted)", fontSize: 10 }}>
                       {h}
                     </th>
                   ))}
@@ -212,7 +204,7 @@ export default function CashPositionsPage() {
               <thead>
                 <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                   {["Nickname", "Currency", "Ledger Balance", "Available", "Date", "Status"].map((h) => (
-                    <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "var(--text-muted)", fontSize: 10 }}>
+                    <th scope="col" key={h} style={{ padding: "8px 12px", textAlign: "left", color: "var(--text-muted)", fontSize: 10 }}>
                       {h}
                     </th>
                   ))}
@@ -251,6 +243,6 @@ export default function CashPositionsPage() {
           )}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

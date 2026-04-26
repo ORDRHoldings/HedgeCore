@@ -171,6 +171,8 @@ export const S = {
   pass:     "var(--status-pass,#00C896)",
   fail:     "var(--accent-red,#FF4B6A)",
   violet:   "#3B82F6",
+  white:    "#FFF",
+  black:    "#000",
 } as const;
 
 // ── Shared input styles ────────────────────────────────────────────────────────

@@ -16,6 +16,8 @@ const S = {
   accent: "var(--accent-cyan)",
   text: "var(--text-primary)",
   textSub: "var(--text-secondary)",
+  errRed: "#d0021b",
+  okGreen: "#7ed321",
 } as const;
 
 interface PullResult {
@@ -79,7 +81,7 @@ export default function ERPSyncPage() {
             </button>
           </div>
           {error && (
-            <div style={{ marginTop: 12, color: "#d0021b", fontSize: 12, display: "flex", gap: 6, alignItems: "center" }}>
+            <div style={{ marginTop: 12, color: S.errRed, fontSize: 12, display: "flex", gap: 6, alignItems: "center" }}>
               <AlertCircle size={13} /> {error}
             </div>
           )}
@@ -97,7 +99,7 @@ export default function ERPSyncPage() {
                   <div style={{ flex: 1 }}>
                     <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.accent }}>{r.source_system}</span>
                     <span style={{ marginLeft: 16, fontSize: 12, color: S.text }}>{r.invoices_fetched} invoices fetched</span>
-                    <span style={{ marginLeft: 12, fontSize: 12, color: "#7ed321" }}>+{r.positions_created} positions created</span>
+                    <span style={{ marginLeft: 12, fontSize: 12, color: S.okGreen }}>+{r.positions_created} positions created</span>
                     {r.duplicates_skipped > 0 && (
                       <span style={{ marginLeft: 12, fontSize: 12, color: S.textSub }}>{r.duplicates_skipped} duplicates skipped</span>
                     )}

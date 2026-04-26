@@ -134,7 +134,7 @@ export default function TeamActivityWidget({ token, user, onRemove }: Props) {
 
   const scopeLabel = user.branch?.code ?? "BRANCH";
 
-  const monoNote = (color: string): React.CSSProperties => ({
+  const _monoNote = (color: string): React.CSSProperties => ({
     padding: "18px 14px",
     fontFamily: S.fontMono,
     fontSize: 12,

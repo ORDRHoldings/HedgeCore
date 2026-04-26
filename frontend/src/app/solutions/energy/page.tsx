@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   ChevronLeft, ArrowRight, Zap, Globe, BarChart3, Activity,
-  Lock, FlaskConical, Brain, ShieldCheck, TrendingUp, AlertTriangle,
+  Lock, FlaskConical, Brain, ShieldCheck, AlertTriangle,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";

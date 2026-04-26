@@ -31,6 +31,7 @@ const S = {
   pass:     "var(--status-pass,#2ECC71)",
   fail:     "var(--accent-red,#E74C3C)",
   royal:    "var(--accent-cyan)",
+  white:    "#ffffff",
 } as const;
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -98,7 +99,7 @@ function StatusChip({ status }: { status: string }) {
 
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: "0.5625rem", fontWeight: 700,
+      fontFamily: S.fontMono, fontSize: "0.75rem", fontWeight: 700,
       letterSpacing: "0.1em", padding: "2px 8px",
       border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
       background: `color-mix(in srgb, ${color} 10%, transparent)`,
@@ -113,7 +114,7 @@ function StatusChip({ status }: { status: string }) {
 function SectionTitle({ children }: { children: string }) {
   return (
     <div style={{
-      fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.12em",
+      fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.12em",
       color: S.cyan, textTransform: "uppercase" as const,
       paddingBottom: 10, marginBottom: 4, borderBottom: `1px solid ${S.rim}`,
     }}>
@@ -138,14 +139,14 @@ function DetailRow({
       borderBottom: `1px solid ${S.soft}`,
     }}>
       <span style={{
-        fontFamily: S.fontMono, fontSize: "0.5625rem",
+        fontFamily: S.fontMono, fontSize: "0.75rem",
         color: S.tertiary, letterSpacing: "0.08em",
         textTransform: "uppercase" as const, paddingTop: 1,
       }}>
         {label}
       </span>
       <span style={{
-        fontFamily: S.fontMono, fontSize: "0.6875rem",
+        fontFamily: S.fontMono, fontSize: "0.75rem",
         color: email ? S.secondary : S.primary,
         wordBreak: "break-all" as const, lineHeight: 1.4,
       }}>
@@ -196,7 +197,7 @@ function HashChainTimeline({ nodes }: { nodes: ChainNode[] }) {
               paddingBottom: isLast ? 0 : 14, paddingTop: 2, flex: 1,
             }}>
               <span style={{
-                fontFamily: S.fontMono, fontSize: "0.5625rem",
+                fontFamily: S.fontMono, fontSize: "0.75rem",
                 letterSpacing: "0.1em", textTransform: "uppercase" as const,
                 color: exists ? S.primary : S.tertiary,
                 fontWeight: exists ? 700 : 400,
@@ -205,14 +206,14 @@ function HashChainTimeline({ nodes }: { nodes: ChainNode[] }) {
               </span>
               {exists && (
                 <span style={{
-                  fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.cyan,
+                  fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan,
                   letterSpacing: "0.04em", marginTop: 2,
                 }}>
                   {truncHash(node.hash)}
                 </span>
               )}
               {!exists && (
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, opacity: 0.5 }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, opacity: 0.5 }}>
                   not yet recorded
                 </span>
               )}
@@ -255,14 +256,14 @@ function WorkflowGuide({ status }: { status: string }) {
       marginTop: "auto", paddingTop: 16, borderTop: `1px solid ${S.soft}`,
     }}>
       <div style={{
-        fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.1em",
+        fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.1em",
         color: S.tertiary, textTransform: "uppercase" as const, marginBottom: 12,
       }}>
         4-Eyes Workflow
       </div>
       {isTerminal && (
         <div style={{
-          fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.fail,
+          fontFamily: S.fontMono, fontSize: "0.75rem", color: S.fail,
           marginBottom: 10, opacity: 0.8,
         }}>
           Terminal state: {status}
@@ -284,14 +285,14 @@ function WorkflowGuide({ status }: { status: string }) {
             }} />
             <div>
               <div style={{
-                fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.08em",
+                fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em",
                 color: active ? step.color : S.primary,
                 fontWeight: active ? 700 : 400,
               }}>
                 {step.label}
               </div>
               <div style={{
-                fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, marginTop: 1,
+                fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, marginTop: 1,
               }}>
                 {step.desc}
               </div>
@@ -317,7 +318,7 @@ function FeedbackBanner({
       padding: "10px 14px", marginBottom: 12,
       background: `color-mix(in srgb, ${color} 8%, transparent)`,
       border: `1px solid ${color}`, borderLeft: `3px solid ${color}`,
-      fontFamily: S.fontMono, fontSize: "0.6875rem", color,
+      fontFamily: S.fontMono, fontSize: "0.75rem", color,
       display: "flex", alignItems: "center", gap: 8,
     }}>
       <Icon size={12} style={{ flexShrink: 0 }} />
@@ -340,7 +341,7 @@ function InputField({
   return (
     <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
       <label style={{
-        fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.08em",
+        fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em",
         textTransform: "uppercase" as const, color: S.tertiary,
       }}>
         {label}{required && <span style={{ color: S.fail }}> *</span>}
@@ -351,7 +352,7 @@ function InputField({
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         style={{
-          fontFamily: S.fontMono, fontSize: "0.6875rem",
+          fontFamily: S.fontMono, fontSize: "0.75rem",
           background: S.bgSub, border: `1px solid ${S.rim}`,
           color: S.primary, padding: "6px 8px", outline: "none", width: "100%",
         }}
@@ -374,7 +375,7 @@ function TextareaField({
   return (
     <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
       <label style={{
-        fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.08em",
+        fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em",
         textTransform: "uppercase" as const, color: S.tertiary,
       }}>
         {label}{required && <span style={{ color: S.fail }}> *</span>}
@@ -385,7 +386,7 @@ function TextareaField({
         placeholder={placeholder}
         rows={3}
         style={{
-          fontFamily: S.fontMono, fontSize: "0.6875rem",
+          fontFamily: S.fontMono, fontSize: "0.75rem",
           background: S.bgSub,
           border: `1px solid ${borderColor ?? S.rim}`,
           color: S.primary, padding: "6px 8px",
@@ -412,7 +413,7 @@ function ActionButton({
   const styles: Record<string, { bg: string; border: string; color: string }> = {
     approve:   { bg: `color-mix(in srgb, ${S.pass} 15%, transparent)`,  border: S.pass,   color: S.pass   },
     reject:    { bg: "transparent",                                        border: S.fail,   color: S.fail   },
-    execute:   { bg: S.royal,                                             border: S.royal,  color: "#ffffff" },
+    execute:   { bg: S.royal,                                             border: S.royal,  color: S.white },
     secondary: { bg: `color-mix(in srgb, ${S.cyan} 10%, transparent)`,  border: S.cyan,   color: S.cyan   },
     danger:    { bg: `color-mix(in srgb, ${S.fail} 12%, transparent)`,  border: S.fail,   color: S.fail   },
   };
@@ -425,7 +426,7 @@ function ActionButton({
       style={{
         display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
         width: "100%", height,
-        fontFamily: S.fontMono, fontSize: "0.6875rem", fontWeight: 700,
+        fontFamily: S.fontMono, fontSize: "0.75rem", fontWeight: 700,
         letterSpacing: "0.1em", textTransform: "uppercase" as const,
         background: isDisabled ? "transparent" : st.bg,
         border: `1px solid ${isDisabled ? S.rim : st.border}`,
@@ -635,7 +636,7 @@ export default function ProposalDetailPage() {
           onClick={() => router.push("/staging")}
           style={{
             display: "flex", alignItems: "center", gap: 5,
-            fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.06em",
+            fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em",
             color: S.tertiary, background: "transparent",
             border: `1px solid ${S.rim}`, padding: "3px 10px",
             cursor: "pointer", borderRadius: 2,
@@ -659,7 +660,7 @@ export default function ProposalDetailPage() {
         {proposal && (
           <>
             <span style={{
-              fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary,
+              fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
               letterSpacing: "0.06em",
             }}>
               {proposalId.slice(0, 8).toUpperCase()}
@@ -675,7 +676,7 @@ export default function ProposalDetailPage() {
           disabled={loading}
           style={{
             display: "flex", alignItems: "center", gap: 5,
-            fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.06em",
+            fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em",
             color: S.tertiary, background: "transparent",
             border: `1px solid ${S.rim}`, padding: "3px 10px",
             cursor: loading ? "not-allowed" : "pointer",
@@ -694,7 +695,7 @@ export default function ProposalDetailPage() {
         {loading && (
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "center",
-            height: 240, fontFamily: S.fontMono, fontSize: "0.6875rem",
+            height: 240, fontFamily: S.fontMono, fontSize: "0.75rem",
             color: S.tertiary, letterSpacing: "0.1em",
           }}>
             LOADING PROPOSAL…
@@ -751,7 +752,7 @@ export default function ProposalDetailPage() {
                       }}>
                         <AlertTriangle size={11} color={S.amber} style={{ flexShrink: 0 }} />
                         <span style={{
-                          fontFamily: S.fontMono, fontSize: "0.5625rem",
+                          fontFamily: S.fontMono, fontSize: "0.75rem",
                           color: S.amber, letterSpacing: "0.08em",
                           textTransform: "uppercase" as const,
                         }}>
@@ -853,7 +854,7 @@ export default function ProposalDetailPage() {
                         <button
                           onClick={() => { setShowRejectForm(false); setRejectReason(""); }}
                           style={{
-                            fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary,
+                            fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
                             background: "transparent", border: `1px solid ${S.rim}`,
                             padding: "6px 12px", cursor: "pointer", borderRadius: 2,
                           }}
@@ -864,7 +865,7 @@ export default function ProposalDetailPage() {
                     )}
 
                     <div style={{
-                      fontFamily: S.fontMono, fontSize: "0.5625rem",
+                      fontFamily: S.fontMono, fontSize: "0.75rem",
                       color: S.tertiary, lineHeight: 1.6,
                     }}>
                       You are approving as checker. Maker:{" "}
@@ -883,7 +884,7 @@ export default function ProposalDetailPage() {
                         padding: "10px 12px",
                         background: `color-mix(in srgb, ${S.amber} 8%, transparent)`,
                         border: `1px solid ${S.amber}`, borderLeft: `3px solid ${S.amber}`,
-                        fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.amber,
+                        fontFamily: S.fontMono, fontSize: "0.75rem", color: S.amber,
                         display: "flex", alignItems: "flex-start", gap: 8, lineHeight: 1.5,
                       }}>
                         <AlertTriangle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
@@ -924,7 +925,7 @@ export default function ProposalDetailPage() {
                         <button
                           onClick={() => { setShowSecondApproveForm(false); setSecondApprovalNotes(""); }}
                           style={{
-                            fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary,
+                            fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
                             background: "transparent", border: `1px solid ${S.rim}`,
                             padding: "6px 12px", cursor: "pointer", borderRadius: 2,
                           }}
@@ -941,7 +942,7 @@ export default function ProposalDetailPage() {
                         border: `1px solid color-mix(in srgb, ${S.pass} 30%, transparent)`,
                         borderLeft: `3px solid ${S.pass}`,
                         display: "flex", alignItems: "center", gap: 8,
-                        fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.pass,
+                        fontFamily: S.fontMono, fontSize: "0.75rem", color: S.pass,
                       }}>
                         <CheckCircle size={12} style={{ flexShrink: 0 }} />
                         <span>
@@ -964,7 +965,7 @@ export default function ProposalDetailPage() {
                     />
 
                     <div style={{
-                      fontFamily: S.fontMono, fontSize: "0.5625rem",
+                      fontFamily: S.fontMono, fontSize: "0.75rem",
                       color: S.tertiary, lineHeight: 1.6,
                     }}>
                       This action is irreversible and will transition the position to{" "}
@@ -980,7 +981,7 @@ export default function ProposalDetailPage() {
                       padding: "10px 12px",
                       background: `color-mix(in srgb, ${S.cyan} 6%, transparent)`,
                       border: `1px solid color-mix(in srgb, ${S.cyan} 25%, transparent)`,
-                      fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.cyan,
+                      fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan,
                       lineHeight: 1.5,
                     }}>
                       Record actual fill to complete the audit chain.
@@ -1033,7 +1034,7 @@ export default function ProposalDetailPage() {
                             setFillPrice(""); setFillNotional(""); setFillRef("");
                           }}
                           style={{
-                            fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary,
+                            fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
                             background: "transparent", border: `1px solid ${S.rim}`,
                             padding: "6px 12px", cursor: "pointer", borderRadius: 2,
                           }}
@@ -1056,7 +1057,7 @@ export default function ProposalDetailPage() {
                   }}>
                     <div style={{
                       display: "flex", alignItems: "center", gap: 8,
-                      fontFamily: S.fontMono, fontSize: "0.6875rem",
+                      fontFamily: S.fontMono, fontSize: "0.75rem",
                       fontWeight: 700, color: S.pass,
                     }}>
                       <CheckCircle size={13} />
@@ -1064,7 +1065,7 @@ export default function ProposalDetailPage() {
                     </div>
                     {proposal.fill_timestamp && (
                       <div style={{
-                        fontFamily: S.fontMono, fontSize: "0.5625rem",
+                        fontFamily: S.fontMono, fontSize: "0.75rem",
                         color: S.tertiary, marginTop: 2,
                       }}>
                         Fill recorded on {fmt(proposal.fill_timestamp)}
@@ -1078,7 +1079,7 @@ export default function ProposalDetailPage() {
                   <div style={{
                     padding: "10px 12px", background: S.bgSub,
                     border: `1px solid ${S.rim}`,
-                    fontFamily: S.fontMono, fontSize: "0.5625rem",
+                    fontFamily: S.fontMono, fontSize: "0.75rem",
                     color: S.tertiary, lineHeight: 1.6,
                   }}>
                     This proposal is in a terminal state and requires no further action.

@@ -26,7 +26,7 @@ export interface CurrencyTvSpec {
 }
 
 // Currencies quoted as CCY/USD (price currency, 1 CCY > 1 USD)
-const PRICE_CCY = new Set(['EUR', 'GBP', 'AUD', 'NZD', 'CHF']);
+const _PRICE_CCY = new Set(['EUR', 'GBP', 'AUD', 'NZD', 'CHF']);
 
 
 /**

@@ -35,7 +35,10 @@ export default function CrisisImpactPanel({ positions, hedgeCoveragePercent }: C
   const [expanded, setExpanded] = useState(false);
 
   const totalNotional = positions.reduce((sum, p) => sum + Math.abs(p.amount ?? 0), 0);
-  const currencies    = [...new Set(positions.map(p => p.currency).filter(Boolean))];
+  const currencies    = useMemo(
+    () => [...new Set(positions.map(p => p.currency).filter(Boolean))],
+    [positions],
+  );
 
   // Pick 6 most relevant crises based on portfolio currencies
   const relevantCrises = useMemo((): CrisisEvent[] => {

@@ -25,6 +25,7 @@ const S = {
   amber:     "var(--accent-amber)",
   red:       "var(--accent-red)",
   green:     "var(--status-pass)",
+  white:     "#fff",
 } as const;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -576,7 +577,7 @@ export default function TradeHistoryPage() {
                 letterSpacing: "0.08em",
                 padding: "7px 18px",
                 background: S.cyan,
-                color: "#fff",
+                color: S.white,
                 border: "none",
                 borderRadius: 2,
                 cursor: "pointer",
@@ -634,7 +635,7 @@ export default function TradeHistoryPage() {
                     "Age",
                   ] as const
                 ).map((h) => (
-                  <th key={h} style={{ ...thCell, textAlign: "left", fontWeight: 500 }}>
+                  <th scope="col" key={h} style={{ ...thCell, textAlign: "left", fontWeight: 500 }}>
                     {h}
                   </th>
                 ))}

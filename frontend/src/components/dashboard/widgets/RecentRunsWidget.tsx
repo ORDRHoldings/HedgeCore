@@ -77,7 +77,7 @@ function formatHedge(ratio: number | null): string {
 
 function Th({ children, right }: { children: React.ReactNode; right?: boolean }) {
   return (
-    <th
+    <th scope="col"
       style={{
         fontFamily:    S.fontMono,
         fontSize: 12,

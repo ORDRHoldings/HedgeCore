@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {
-  ChevronLeft, ArrowRight, Network, Users, Activity, Zap, Globe, Lock,
+  ChevronLeft, ArrowRight, Users, Activity, Zap, Globe, Lock,
   Bot, Shield, CheckCircle, Database, Radio, Cpu, Server,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
@@ -281,7 +281,7 @@ export default function ConnectPage() {
                     <span style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 700, color: s.color }}>{s.abbr}</span>
                   </div>
                   <div style={{ fontFamily: F.ui, fontSize: 11, fontWeight: 600, color: C.text }}>{s.label}</div>
-                  <div style={{ fontFamily: F.mono, fontSize: 9, color: C.textMuted, marginTop: 2 }}>{s.sub}</div>
+                  <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textMuted, marginTop: 2 }}>{s.sub}</div>
                 </div>
                 {i < arr.length - 1 && (
                   <div style={{ width: 20, height: 1, background: `linear-gradient(to right, ${s.color}40, ${arr[i + 1]!.color}40)`, flexShrink: 0 }} />
@@ -397,7 +397,7 @@ export default function ConnectPage() {
               }}>
                 <CheckCircle size={18} color="#10b981" style={{ margin: "0 auto 8px" }} />
                 <div style={{ fontFamily: F.mono, fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 4 }}>{b.label}</div>
-                <div style={{ fontFamily: F.mono, fontSize: 9, color: C.textMuted }}>{b.sub}</div>
+                <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textMuted }}>{b.sub}</div>
               </div>
             ))}
           </div>
@@ -464,9 +464,9 @@ export default function ConnectPage() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: F.ui }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${C.border}`, background: C.bgAlt }}>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontFamily: F.mono, fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>METRIC</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontFamily: F.mono, fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>SPECIFICATION</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontFamily: F.mono, fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>NOTES</th>
+                  <th scope="col" style={{ padding: "12px 16px", textAlign: "left", fontFamily: F.mono, fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>METRIC</th>
+                  <th scope="col" style={{ padding: "12px 16px", textAlign: "left", fontFamily: F.mono, fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>SPECIFICATION</th>
+                  <th scope="col" style={{ padding: "12px 16px", textAlign: "left", fontFamily: F.mono, fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>NOTES</th>
                 </tr>
               </thead>
               <tbody>

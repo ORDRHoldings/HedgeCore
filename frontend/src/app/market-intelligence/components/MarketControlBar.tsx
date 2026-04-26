@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, Search } from "lucide-react";
+import { Clock } from "lucide-react";
 import { S } from "../types";
 
 function utcNow(): string {

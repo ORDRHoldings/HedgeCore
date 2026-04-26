@@ -45,7 +45,8 @@ export default class WidgetErrorBoundary extends Component<Props, State> {
         >
           <div
             style={{
-              fontSize: "0.6rem",
+              fontSize: 12,
+              fontWeight: 700,
               color: "var(--accent-red,#B91C1C)",
               letterSpacing: "0.12em",
               textTransform: "uppercase",
@@ -56,7 +57,7 @@ export default class WidgetErrorBoundary extends Component<Props, State> {
           </div>
           <div
             style={{
-              fontSize: "0.6rem",
+              fontSize: 12,
               color: "var(--text-tertiary)",
               maxWidth: 240,
               textAlign: "center",
@@ -69,7 +70,7 @@ export default class WidgetErrorBoundary extends Component<Props, State> {
             onClick={() => this.setState({ hasError: false, error: null })}
             style={{
               marginTop: 14,
-              fontSize: "0.6rem",
+              fontSize: 12,
               fontFamily: "'IBM Plex Mono',monospace",
               color: "var(--accent-cyan)",
               background: "transparent",

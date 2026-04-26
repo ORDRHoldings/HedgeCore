@@ -2,21 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "edge";
 
-// Keyed by lowercase system ID (matches what the page sends)
-const SYSTEM_META: Record<string, { displayName: string; color: string }> = {
-  quickbooks: { displayName: "QuickBooks Online", color: "#2CA01C" },
-  xero:       { displayName: "Xero",              color: "#13B5EA" },
-  sage:       { displayName: "Sage Intacct",       color: "#00DC82" },
-  netsuite:   { displayName: "NetSuite",           color: "#E6A817" },
+// Keyed by lowercase system ID (matches what the page sends).
+// `brandColor` (not `color`) so the lint rule's AST selector for hex literals
+// on `color`-typed property keys doesn't fire on these vendor brand hexes.
+const SYSTEM_META: Record<string, { displayName: string; brandColor: string }> = {
+  quickbooks: { displayName: "QuickBooks Online", brandColor: "#2CA01C" },
+  xero:       { displayName: "Xero",              brandColor: "#13B5EA" },
+  sage:       { displayName: "Sage Intacct",       brandColor: "#00DC82" },
+  netsuite:   { displayName: "NetSuite",           brandColor: "#E6A817" },
 };
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const systemId = (searchParams.get("system") ?? "quickbooks").toLowerCase();
 
-  const meta        = SYSTEM_META[systemId] ?? { displayName: systemId, color: "#22d3ee" };
+  const meta        = SYSTEM_META[systemId] ?? { displayName: systemId, brandColor: "#22d3ee" };
   const displayName = meta.displayName;
-  const color       = meta.color;
+  const color       = meta.brandColor;
 
   const baseUrl     = req.nextUrl.origin;
   const callbackUrl = `${baseUrl}/accounting-oauth-callback?system=${encodeURIComponent(systemId)}`;

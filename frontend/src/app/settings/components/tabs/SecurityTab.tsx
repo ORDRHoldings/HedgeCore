@@ -211,7 +211,7 @@ export default function SecurityTab({ token }: Props) {
                       alt="TOTP QR Code"
                       width={160}
                       height={160}
-                      style={{ border: `1px solid ${S.rim}`, borderRadius: 2, background: "#fff", padding: 8 }}
+                      style={{ border: `1px solid ${S.rim}`, borderRadius: 2, background: S.white, padding: 8 }}
                     />
                   </div>
                 </div>
@@ -268,7 +268,7 @@ export default function SecurityTab({ token }: Props) {
             aria-label={ipEnabled ? "Disable IP allowlist" : "Enable IP allowlist"}
           >
             <span style={{
-              display: "block", width: 16, height: 16, borderRadius: "50%", background: "#fff",
+              display: "block", width: 16, height: 16, borderRadius: "50%", background: S.white,
               position: "absolute", top: 3, left: ipEnabled ? 21 : 3, transition: "left 0.15s",
             }} />
           </button>

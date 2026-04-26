@@ -6,7 +6,7 @@
  */
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
-import type { AppearanceSettings, ThemeId, AccentId, Density, UIFont, NumericFont, BaseFontSize, TemplateId } from "./types";
+import type { AppearanceSettings, ThemeId, Density } from "./types";
 import { DEFAULT_APPEARANCE, APPEARANCE_STORAGE_KEY } from "./types";
 import { THEME_PRESETS, CURATED_ACCENTS } from "./presets";
 import type { ThemeColors } from "./types";

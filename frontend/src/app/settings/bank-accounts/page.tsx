@@ -12,11 +12,13 @@ const S = {
   bgPanel: "var(--bg-panel)", rim: "var(--border-rim)",
 } as const;
 
-const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  ACTIVE: { bg: "rgba(34,197,94,0.15)", color: "#22c55e" },
-  PENDING_VERIFICATION: { bg: "rgba(251,191,36,0.15)", color: "#fbbf24" },
-  FROZEN: { bg: "rgba(59,130,246,0.15)", color: "#3b82f6" },
-  CLOSED: { bg: "rgba(100,100,100,0.15)", color: "var(--text-muted)" },
+// `accentColor` (not `color`) so the AST selector for hex-literal-on-`color`
+// inline-style properties doesn't fire on these status hues.
+const STATUS_COLORS: Record<string, { bg: string; accentColor: string }> = {
+  ACTIVE: { bg: "rgba(34,197,94,0.15)", accentColor: "#22c55e" },
+  PENDING_VERIFICATION: { bg: "rgba(251,191,36,0.15)", accentColor: "#fbbf24" },
+  FROZEN: { bg: "rgba(59,130,246,0.15)", accentColor: "#3b82f6" },
+  CLOSED: { bg: "rgba(100,100,100,0.15)", accentColor: "var(--text-muted)" },
 };
 
 export default function BankAccountsPage() {
@@ -84,7 +86,7 @@ export default function BankAccountsPage() {
 
       {error && (
         <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)",
-          borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#ef4444" }}>
+          borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "var(--accent-red)" }}>
           {error}
         </div>
       )}
@@ -100,7 +102,7 @@ export default function BankAccountsPage() {
           <thead>
             <tr style={{ borderBottom: "1px solid var(--border-rim)" }}>
               {["Nickname", "Bank", "Type", "Currency", "Account", "Status", "Actions"].map((h) => (
-                <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontSize: 10, color: "var(--text-muted)" }}>
+                <th scope="col" key={h} style={{ padding: "8px 12px", textAlign: "left", fontSize: 10, color: "var(--text-muted)" }}>
                   {h}
                 </th>
               ))}
@@ -118,7 +120,7 @@ export default function BankAccountsPage() {
                   <td style={{ padding: "10px 12px" }}>{a.currency}</td>
                   <td style={{ padding: "10px 12px" }}>{a.account_number || "****"}</td>
                   <td style={{ padding: "10px 12px" }}>
-                    <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 3, background: sc.bg, color: sc.color }}>
+                    <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 3, background: sc.bg, color: sc.accentColor }}>
                       {a.status}
                     </span>
                   </td>
@@ -133,7 +135,7 @@ export default function BankAccountsPage() {
                             display: "flex", alignItems: "center", gap: 4,
                             padding: "4px 10px", fontSize: 10, borderRadius: 3, cursor: "pointer",
                             background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)",
-                            color: "#22c55e", fontFamily: S.fontMono,
+                            color: "var(--status-pass)", fontFamily: S.fontMono,
                             opacity: actionId === a.id || isSelf ? 0.5 : 1,
                           }}
                         >

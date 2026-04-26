@@ -726,7 +726,7 @@ function LineageContent() {
                     <thead>
                       <tr style={{ borderBottom: `1px solid ${S.soft}`, background: S.bgSub }}>
                         {["FROM", "RELATION", "TO"].map(h => (
-                          <th key={h} style={{ padding: "6px 14px", textAlign: "left", fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.07em", color: S.tertiary, fontWeight: 600 }}>{h}</th>
+                          <th scope="col" key={h} style={{ padding: "6px 14px", textAlign: "left", fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.07em", color: S.tertiary, fontWeight: 600 }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -779,7 +779,7 @@ export default function LineagePage() {
               padding: "60px 24px",
               textAlign: "center",
               fontFamily: "'IBM Plex Mono', monospace",
-              fontSize: "0.625rem",
+              fontSize: "0.75rem",
               color: "var(--text-tertiary)",
               letterSpacing: "0.08em",
             }}>

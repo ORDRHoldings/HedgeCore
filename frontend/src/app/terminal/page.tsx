@@ -49,8 +49,8 @@ function Chip({ label, value, valueColor }: { label: string; value: string; valu
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 10px",
       border: `1px solid ${S.rim}`, background: S.bgPanel }}>
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary }}>{label}</span>
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", fontWeight: 700, color: valueColor ?? S.primary }}>{value}</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>{label}</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", fontWeight: 700, color: valueColor ?? S.primary }}>{value}</span>
     </div>
   );
 }
@@ -68,7 +68,7 @@ function ActionChip({ label, href, router }: { label: string; href: string; rout
   return (
     <button type="button" onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       onClick={() => router.push(href)}
-      style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "4px 12px",
+      style={{ fontFamily: S.fontMono, fontSize: "0.75rem", padding: "4px 12px",
         border: `1px solid ${hov ? S.cyan : S.soft}`,
         color: hov ? S.cyan : S.secondary,
         background: hov ? `color-mix(in srgb, ${S.cyan} 6%, ${S.bgPanel})` : "transparent",
@@ -170,8 +170,8 @@ export default function TerminalPage() {
         {/* Positions feed - 60% */}
         <div style={{ flex: isMobile ? "1 1 auto" : "0 0 60%", display: "flex", flexDirection: "column", borderRight: isMobile ? "none" : `1px solid ${S.rim}`, borderBottom: isMobile ? `1px solid ${S.rim}` : "none", minHeight: 0 }}>
           <div style={{ padding: "7px 16px", borderBottom: `1px solid ${S.rim}`, background: S.bgSub, display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: "0.5625rem", letterSpacing: "0.1em", color: S.tertiary }}>POSITIONS FEED</span>
-            <span style={{ marginLeft: "auto", fontSize: "0.5625rem", color: S.cyan, padding: "1px 6px",
+            <span style={{ fontSize: "0.75rem", letterSpacing: "0.1em", color: S.tertiary }}>POSITIONS FEED</span>
+            <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: S.cyan, padding: "1px 6px",
               border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`,
               background: `color-mix(in srgb, ${S.cyan} 8%, transparent)` }}>
               {positions.length} POSITIONS
@@ -180,26 +180,26 @@ export default function TerminalPage() {
           <div style={{ overflowX: "auto", flex: 1 }}>
             <div style={{ minWidth: 650 }}>
               <div style={{ display: "grid", gridTemplateColumns: cols.map(c => c.w).join(" "), padding: "5px 16px", borderBottom: `1px solid ${S.rim}`, background: S.bgDeep }}>
-                {cols.map(c => (<span key={c.label} style={{ fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.08em" }}>{c.label}</span>))}
+                {cols.map(c => (<span key={c.label} style={{ fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.08em" }}>{c.label}</span>))}
               </div>
               <div>
             {loading ? (
-              <div style={{ padding: "24px 16px", color: S.tertiary, fontSize: "0.6875rem" }}>Loading...</div>
+              <div style={{ padding: "24px 16px", color: S.tertiary, fontSize: "0.75rem" }}>Loading...</div>
             ) : positions.length === 0 ? (
-              <div style={{ padding: "32px 16px", textAlign: "center", color: S.tertiary, fontSize: "0.6875rem" }}>
+              <div style={{ padding: "32px 16px", textAlign: "center", color: S.tertiary, fontSize: "0.75rem" }}>
                 NO POSITIONS LOADED<br />
-                <span style={{ fontSize: "0.5625rem", display: "block", marginTop: 4 }}>Navigate to /input.</span>
+                <span style={{ fontSize: "0.75rem", display: "block", marginTop: 4 }}>Navigate to /input.</span>
               </div>
             ) : positions.map((p, i) => (
                 <div key={p.id} style={{ display: "grid", gridTemplateColumns: cols.map(c => c.w).join(" "),
                   padding: "5px 16px", background: i % 2 === 0 ? S.bgPanel : S.bgDeep, borderBottom: `1px solid ${S.rim}` }}>
-                  <span style={{ fontSize: "0.6875rem", color: S.cyan, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.id.slice(0, 8)}</span>
-                  <span style={{ fontSize: "0.6875rem", color: S.primary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.entity ?? "—"}</span>
-                  <span style={{ fontSize: "0.6875rem", color: S.amber, fontWeight: 700 }}>{p.currency}</span>
-                  <span style={{ fontSize: "0.6875rem", color: S.primary }}>{fmt(p.amount)}</span>
-                  <span style={{ fontSize: "0.6875rem", color: S.secondary }}>{p.value_date ?? "—"}</span>
-                  <span style={{ fontSize: "0.6875rem", color: p.status === "CONFIRMED" ? S.green : S.amber }}>{p.status}</span>
-                  <span style={{ fontSize: "0.6875rem", color: execColor(p.execution_status), fontWeight: 600 }}>{p.execution_status}</span>
+                  <span style={{ fontSize: "0.75rem", color: S.cyan, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.id.slice(0, 8)}</span>
+                  <span style={{ fontSize: "0.75rem", color: S.primary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.entity ?? "—"}</span>
+                  <span style={{ fontSize: "0.75rem", color: S.amber, fontWeight: 700 }}>{p.currency}</span>
+                  <span style={{ fontSize: "0.75rem", color: S.primary }}>{fmt(p.amount)}</span>
+                  <span style={{ fontSize: "0.75rem", color: S.secondary }}>{p.value_date ?? "—"}</span>
+                  <span style={{ fontSize: "0.75rem", color: p.status === "CONFIRMED" ? S.green : S.amber }}>{p.status}</span>
+                  <span style={{ fontSize: "0.75rem", color: execColor(p.execution_status), fontWeight: 600 }}>{p.execution_status}</span>
                 </div>))
                 }
               </div>
@@ -209,13 +209,13 @@ export default function TerminalPage() {
         {/* Activity log - 40% */}
         <div style={{ flex: isMobile ? "1 1 auto" : "0 0 40%", display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ padding: "7px 16px", borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
-            <span style={{ fontSize: "0.5625rem", letterSpacing: "0.1em", color: S.tertiary }}>ACTIVITY LOG</span>
+            <span style={{ fontSize: "0.75rem", letterSpacing: "0.1em", color: S.tertiary }}>ACTIVITY LOG</span>
           </div>
           <div ref={logRef} style={{ flex: 1, overflowY: "auto", padding: "8px 16px", display: "flex", flexDirection: "column", gap: 2 }}>
             {log.map(line => (
               <div key={line.id} style={{ display: "flex", gap: 8, lineHeight: 1.5 }}>
-                <span style={{ fontSize: "0.5625rem", color: S.tertiary, whiteSpace: "nowrap", marginTop: 1 }}>[{line.ts}]</span>
-                <span style={{ fontSize: "0.6875rem", color: KIND_COLOR[line.kind], wordBreak: "break-word" }}>{line.text}</span>
+                <span style={{ fontSize: "0.75rem", color: S.tertiary, whiteSpace: "nowrap", marginTop: 1 }}>[{line.ts}]</span>
+                <span style={{ fontSize: "0.75rem", color: KIND_COLOR[line.kind], wordBreak: "break-word" }}>{line.text}</span>
               </div>))}
           </div>
         </div>
@@ -231,7 +231,7 @@ export default function TerminalPage() {
           autoComplete="off" spellCheck={false}
           style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: S.fontMono, fontSize: "0.8125rem", color: S.primary }}/>
         <button type="button" onClick={() => handleCommand(cmd)}
-          style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", padding: "3px 10px",
+          style={{ fontFamily: S.fontMono, fontSize: "0.75rem", padding: "3px 10px",
             border: `1px solid ${S.soft}`, color: S.tertiary, background: "transparent", cursor: "pointer" }}>EXEC</button>
       </div>
     

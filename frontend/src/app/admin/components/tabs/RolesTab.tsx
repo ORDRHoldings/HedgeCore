@@ -145,7 +145,7 @@ function RoleCard({
             style={{
               marginLeft: 6,
               fontFamily: S.fontMono,
-              fontSize: 9,
+              fontSize: 10,
               color: S.tertiary,
               letterSpacing: "0.05em",
             }}
@@ -1053,7 +1053,7 @@ export default function RolesTab({ token }: { token: string }) {
                   <span
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: 9,
+                      fontSize: 10,
                       color: S.tertiary,
                       letterSpacing: "0.06em",
                       border: `1px solid ${S.rim}`,

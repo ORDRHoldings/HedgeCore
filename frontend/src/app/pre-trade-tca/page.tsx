@@ -9,8 +9,10 @@
  */
 
 import { useEffect, useState } from "react";
+import { TrendingDown } from "lucide-react";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { useAuth } from "@/lib/authContext";
+import { PageShell } from "@/components/layout/PageShell";
 import {
   estimatePreTrade,
   listEstimates,
@@ -111,6 +113,7 @@ export default function PreTradeTcaPage() {
   };
 
   return (
+    <PageShell icon={TrendingDown} title="Pre-Trade TCA">
     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 24 }}>
       {/* ───────── Inputs ───────── */}
       <section style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: 20 }}>
@@ -321,12 +324,12 @@ export default function PreTradeTcaPage() {
           >
             <thead>
               <tr style={{ borderBottom: `1px solid ${S.rim}`, color: S.textSec }}>
-                <th style={{ textAlign: "left", padding: 8 }}>Date</th>
-                <th style={{ textAlign: "left", padding: 8 }}>Pair</th>
-                <th style={{ textAlign: "right", padding: 8 }}>Notional</th>
-                <th style={{ textAlign: "right", padding: 8 }}>All-in</th>
-                <th style={{ textAlign: "center", padding: 8 }}>Reconciled</th>
-                <th style={{ textAlign: "right", padding: 8 }}>Variance</th>
+                <th scope="col" style={{ textAlign: "left", padding: 8 }}>Date</th>
+                <th scope="col" style={{ textAlign: "left", padding: 8 }}>Pair</th>
+                <th scope="col" style={{ textAlign: "right", padding: 8 }}>Notional</th>
+                <th scope="col" style={{ textAlign: "right", padding: 8 }}>All-in</th>
+                <th scope="col" style={{ textAlign: "center", padding: 8 }}>Reconciled</th>
+                <th scope="col" style={{ textAlign: "right", padding: 8 }}>Variance</th>
               </tr>
             </thead>
             <tbody>
@@ -380,5 +383,6 @@ export default function PreTradeTcaPage() {
         )}
       </section>
     </div>
+    </PageShell>
   );
 }

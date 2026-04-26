@@ -90,7 +90,7 @@ export default function AuditTrailTab({ token }: Props) {
       const res = await dashboardFetch("/v1/audit/chain/verify", token);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setChain(await res.json() as ChainReport);
-    } catch (e: unknown) {
+    } catch {
       setChain({ is_intact: false, events_checked: 0, broken_at: null, tenant_id: null,
         verified_at: new Date().toISOString() });
     } finally {
@@ -150,7 +150,7 @@ export default function AuditTrailTab({ token }: Props) {
           )}
           <button onClick={handleVerifyChain} disabled={checking} style={{
             fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
-            color: "#000", background: checking ? S.tertiary : S.cyan,
+            color: S.black, background: checking ? S.tertiary : S.cyan,
             border: "none", borderRadius: 2, padding: "5px 14px", cursor: checking ? "wait" : "pointer",
           }}>
             {checking ? "VERIFYING…" : "VERIFY HASH CHAIN"}
@@ -186,7 +186,7 @@ export default function AuditTrailTab({ token }: Props) {
         <div style={{ display: "flex", gap: 6, alignSelf: "flex-end" }}>
           <button onClick={applyFilters} style={{
             fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
-            color: "#000", background: S.cyan, border: "none", borderRadius: 2,
+            color: S.black, background: S.cyan, border: "none", borderRadius: 2,
             padding: "5px 14px", cursor: "pointer",
           }}>APPLY</button>
           {(typeFilter || fromTs || toTs) && (
@@ -213,12 +213,12 @@ export default function AuditTrailTab({ token }: Props) {
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
               <thead>
                 <tr>
-                  <th style={th}>TIMESTAMP</th>
-                  <th style={th}>TYPE</th>
-                  <th style={th}>ACTOR</th>
-                  <th style={th}>DESCRIPTION</th>
-                  <th style={th}>ENTITY</th>
-                  <th style={th}>HASH</th>
+                  <th scope="col" style={th}>TIMESTAMP</th>
+                  <th scope="col" style={th}>TYPE</th>
+                  <th scope="col" style={th}>ACTOR</th>
+                  <th scope="col" style={th}>DESCRIPTION</th>
+                  <th scope="col" style={th}>ENTITY</th>
+                  <th scope="col" style={th}>HASH</th>
                 </tr>
               </thead>
               <tbody>

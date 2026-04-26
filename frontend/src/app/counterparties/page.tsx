@@ -8,10 +8,12 @@
  */
 
 import { useEffect, useState } from "react";
+import { Users } from "lucide-react";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import Link from "next/link";
 import { Skeleton, SkeletonTable } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/authContext";
+import { PageShell } from "@/components/layout/PageShell";
 import {
   listCounterparties,
   createCounterparty,
@@ -29,6 +31,7 @@ const S = {
   rim: "var(--border-rim)",
   textPri: "var(--text-primary)",
   textSec: "var(--text-secondary)",
+  white: "#fff",
 } as const;
 
 const fmtUsd = (n: number | null) =>
@@ -161,7 +164,7 @@ export default function CounterpartiesHubPage() {
   );
 
   return (
-    <div>
+    <PageShell icon={Users} title="Counterparties">
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
         <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.textSec }}>
           {rows.length} counterparties
@@ -215,7 +218,7 @@ export default function CounterpartiesHubPage() {
               padding: "8px 20px",
               marginTop: 12,
               background: "var(--accent-cyan, #3b82f6)",
-              color: "#fff",
+              color: S.white,
               border: "none",
               fontFamily: S.fontUI,
               fontSize: 12,
@@ -266,7 +269,7 @@ export default function CounterpartiesHubPage() {
                 "Risk",
                 "Scored At",
               ].map((h) => (
-                <th
+                <th scope="col"
                   key={h}
                   style={{
                     textAlign: "left",
@@ -360,6 +363,6 @@ export default function CounterpartiesHubPage() {
         </table>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

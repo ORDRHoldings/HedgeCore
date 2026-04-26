@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   ChevronLeft, ArrowRight, Gauge, Radio, TrendingDown, MapPin, Layers, History,
-  Brain, AlertTriangle, Globe2, Eye,
+  AlertTriangle, Eye,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";

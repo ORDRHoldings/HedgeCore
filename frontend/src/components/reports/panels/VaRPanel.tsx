@@ -61,7 +61,7 @@ function KpiTile({ label, value, sub, color }: { label: string; value: string; s
   );
 }
 
-export default function VaRPanel({ extendedData, buckets, scenarioTotals }: VaRPanelProps) {
+export default function VaRPanel({ extendedData, buckets: _buckets, scenarioTotals }: VaRPanelProps) {
   if (scenarioTotals.length === 0) {
     return (
       <div style={{

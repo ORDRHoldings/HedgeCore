@@ -24,6 +24,7 @@ const FU = "'IBM Plex Sans', sans-serif";
 const BG      = "#131722";
 const BG_DEEP = "#0D1117";
 const BG_PANEL= "#1A1E2E";
+const BG_INPUT= "#1E222D";
 const BG_HOVER= "rgba(255,255,255,0.04)";
 const BORDER  = "#2A2E39";
 const TEXT    = "#D1D4DC";
@@ -194,7 +195,7 @@ function SymbolSearch({ value, onChange }: { value: string; onChange: (s: string
       <div
         onClick={() => { setOpen((o) => !o); setTimeout(() => inputRef.current?.focus(), 10); }}
         style={{
-          display: "flex", alignItems: "center", gap: 6, background: "#1E222D",
+          display: "flex", alignItems: "center", gap: 6, background: BG_INPUT,
           borderRadius: 6, padding: "4px 10px",
           border: "1px solid " + (open ? GREEN : BORDER),
           cursor: "pointer", minWidth: 120,
@@ -226,7 +227,7 @@ function SymbolSearch({ value, onChange }: { value: string; onChange: (s: string
           {query.length === 0
             ? ASSET_GROUPS.map((group) => (
                 <div key={group.label}>
-                  <div style={{ padding: "6px 12px 3px", fontFamily: FM, fontSize: 9,
+                  <div style={{ padding: "6px 12px 3px", fontFamily: FM, fontSize: 10,
                     color: TEXT_DIM, letterSpacing: "0.12em", fontWeight: 700 }}>
                     {group.label.toUpperCase()}
                   </div>
@@ -303,7 +304,7 @@ function MarketPageInner() {
           <span style={{ fontFamily: FM, fontSize: 15, fontWeight: 700, color: TEXT, letterSpacing: "0.06em" }}>ORDR</span>
           <span style={{ fontFamily: FM, fontSize: 11, fontWeight: 500, color: TEXT_DIM, letterSpacing: "0.04em" }}>MARKET</span>
         </Link>
-        <span style={{ fontFamily: FM, fontSize: 9, fontWeight: 700, color: GREEN,
+        <span style={{ fontFamily: FM, fontSize: 10, fontWeight: 700, color: GREEN,
           background: "rgba(38,166,154,0.15)", padding: "2px 6px", borderRadius: 3,
           letterSpacing: "0.10em" }}>FREE</span>
         <div style={{ width: 1, height: 24, background: BORDER, margin: "0 6px" }} />
@@ -311,7 +312,7 @@ function MarketPageInner() {
         <div style={{ width: 1, height: 24, background: BORDER, margin: "0 6px" }} />
         <OHLCTicker bars={bars} pair={pair} />
         <div style={{ width: 1, height: 24, background: BORDER, margin: "0 6px" }} />
-        <div style={{ display: "flex", gap: 2, background: "#1E222D", borderRadius: 6, padding: 2 }}>
+        <div style={{ display: "flex", gap: 2, background: BG_INPUT, borderRadius: 6, padding: 2 }}>
           {TIMEFRAMES.map((tf) => (
             <button key={tf.value} onClick={() => setInterval(tf.value)} style={{
               fontFamily: FM, fontSize: 11, fontWeight: interval === tf.value ? 700 : 500,
@@ -340,17 +341,17 @@ function MarketPageInner() {
       <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
         {loading && !bars.length
           ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
-              height: "100%", fontFamily: FM, fontSize: 13, color: TEXT_DIM, background: "#131722" }}>
+              height: "100%", fontFamily: FM, fontSize: 13, color: TEXT_DIM, background: BG }}>
               Loading {pair}...
             </div>
           : error && !bars.length
             ? <div style={{ display: "flex", flexDirection: "column", alignItems: "center",
                 justifyContent: "center", height: "100%", gap: 8,
-                fontFamily: FM, fontSize: 12, color: RED, background: "#131722" }}>
+                fontFamily: FM, fontSize: 12, color: RED, background: BG }}>
                 <span>{error}</span>
                 <button onClick={refetch} style={{ fontFamily: FM, fontSize: 11,
                   padding: "4px 12px", borderRadius: 4, border: "1px solid " + BORDER,
-                  background: "#1E222D", color: TEXT, cursor: "pointer" }}>RETRY</button>
+                  background: BG_INPUT, color: TEXT, cursor: "pointer" }}>RETRY</button>
               </div>
             : <ChartEngine bars={bars} pair={pair} interval={interval}
                 source={source} loading={loading} error={error} onPairChange={setPair} />

@@ -31,7 +31,7 @@ function fmtUSD(n: number): string {
   return sign + abs.toFixed(0);
 }
 
-function fmtPct(n: number, decimals = 1): string {
+function _fmtPct(n: number, decimals = 1): string {
   if (!isFinite(n)) return "—";
   return (n >= 0 ? "+" : "") + (n * 100).toFixed(decimals) + "%";
 }

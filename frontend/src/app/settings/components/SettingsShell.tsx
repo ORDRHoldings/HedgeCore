@@ -74,7 +74,7 @@ export default function SettingsShell({
           disabled={saving || !isDirty}
           style={{
             fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em",
-            color: "#000", background: saving || !isDirty ? S.tertiary : S.cyan,
+            color: S.black, background: saving || !isDirty ? S.tertiary : S.cyan,
             border: "none", borderRadius: 2, padding: "5px 18px",
             cursor: saving || !isDirty ? "not-allowed" : "pointer",
           }}

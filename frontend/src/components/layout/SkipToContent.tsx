@@ -14,7 +14,7 @@ export function SkipToContent() {
         zIndex: 99999,
         padding: "12px 24px",
         background: "var(--accent-blue, #1C62F2)",
-        color: "#FFFFFF",
+        color: "var(--text-primary)",
         fontFamily: "var(--font-ui, 'IBM Plex Sans', sans-serif)",
         fontSize: 14,
         fontWeight: 700,

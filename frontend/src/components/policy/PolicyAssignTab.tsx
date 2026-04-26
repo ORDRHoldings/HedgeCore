@@ -15,7 +15,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { logger } from "@/lib/logger";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
 import { useAuth } from "@/lib/authContext";
 import type { AppDispatch, RootState } from "@/lib/store";
@@ -24,7 +23,7 @@ import {
   assignPolicyThunk,
   clearLifecycleError,
 } from "@/lib/store/slices/positionSlice";
-import type { PositionRow, BulkAssignResult } from "@/api/positionClient";
+import type { BulkAssignResult } from "@/api/positionClient";
 import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
 import WorkflowGuide from "@/components/layout/WorkflowGuide";
 import { bulkAssignPolicy } from "@/api/positionClient";
@@ -60,6 +59,8 @@ const S = {
   fail:      "var(--accent-red,#ef4444)",
   neutral:   "#6b7280",
   darkBorder: "#374151",
+  white:     "#ffffff",
+  ctaBlue:   "#1C62F2",
 } as const;
 
 type ExecStatus = "NEW" | "POLICY_ASSIGNED" | "READY_TO_EXECUTE" | "HEDGED" | "REJECTED";
@@ -267,7 +268,7 @@ export default function PolicyAssignTab() {
   const { user, token } = useAuth();
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const { positions, loading, error, lifecycleLoading, lifecycleError } = useSelector(
+  const { positions, loading, error, lifecycleLoading: _lifecycleLoading, lifecycleError } = useSelector(
     (s: RootState) => s.positions
   );
 
@@ -279,7 +280,7 @@ export default function PolicyAssignTab() {
   const [activePolicy, setActivePolicy] = useState<PolicyInstance | null>(null);
   const [templates, setTemplates] = useState<PolicyTemplate[]>([]);
   const [favorites, setFavorites] = useState<PolicyFavorite[]>([]);
-  const [loadingPolicies, setLoadingPolicies] = useState(false);
+  const [_loadingPolicies, setLoadingPolicies] = useState(false);
 
   // Modal state
   const [assignMode, setAssignMode] = useState<AssignMode | null>(null);
@@ -846,7 +847,7 @@ export default function PolicyAssignTab() {
         }}>
           {(["ALL", "NEEDS_POLICY", "NEW", "POLICY_ASSIGNED"] as FilterPreset[]).map((p) => {
             const isActive = preset === p;
-            const color = p === "NEEDS_POLICY" ? S.amber : p === "ALL" ? S.secondary : STATUS_CONFIG[p as ExecStatus]?.color ?? S.secondary;
+            const _color = p === "NEEDS_POLICY" ? S.amber : p === "ALL" ? S.secondary : STATUS_CONFIG[p as ExecStatus]?.color ?? S.secondary;
             const count = statusCounts[p] ?? 0;
             return (
               <button
@@ -1113,8 +1114,8 @@ export default function PolicyAssignTab() {
                   fontFamily: S.fontMono,
                   fontSize: 12,
                   fontWeight: 700,
-                  color: "#ffffff",
-                  background: "#1C62F2",
+                  color: S.white,
+                  background: S.ctaBlue,
                   border: "none",
                   borderRadius: 3,
                   padding: "8px 18px",
@@ -1151,7 +1152,7 @@ export default function PolicyAssignTab() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.fontMono }}>
               <thead>
                 <tr style={{ background: S.bgSub, borderBottom: `1px solid ${S.rim}` }}>
-                  <th style={{ padding: "8px 10px", textAlign: "left" }}>
+                  <th scope="col" style={{ padding: "8px 10px", textAlign: "left" }}>
                     <input
                       type="checkbox"
                       checked={allVisibleSelected}
@@ -1159,28 +1160,28 @@ export default function PolicyAssignTab() {
                       style={{ cursor: "pointer" }}
                     />
                   </th>
-                  <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <th scope="col" style={{ padding: "8px 10px", textAlign: "left", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                     RECORD ID
                   </th>
-                  <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <th scope="col" style={{ padding: "8px 10px", textAlign: "left", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                     ENTITY
                   </th>
-                  <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <th scope="col" style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                     TYPE
                   </th>
-                  <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <th scope="col" style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                     CCY
                   </th>
-                  <th style={{ padding: "8px 10px", textAlign: "right", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <th scope="col" style={{ padding: "8px 10px", textAlign: "right", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                     AMOUNT
                   </th>
-                  <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <th scope="col" style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                     VALUE DATE
                   </th>
-                  <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <th scope="col" style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                     STATUS
                   </th>
-                  <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <th scope="col" style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                     POLICY
                   </th>
                 </tr>
@@ -1511,11 +1512,11 @@ export default function PolicyAssignTab() {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: 12 }}>
                   <thead>
                     <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
-                      <th style={{ textAlign: "left", padding: "6px 8px", color: S.secondary }}>Attribute</th>
+                      <th scope="col" style={{ textAlign: "left", padding: "6px 8px", color: S.secondary }}>Attribute</th>
                       {comparisonPolicies.map((pId) => {
                         const tmpl = templates.find((t) => t.id === pId);
                         return (
-                          <th key={pId} style={{ textAlign: "left", padding: "6px 8px", color: S.primary }}>
+                          <th scope="col" key={pId} style={{ textAlign: "left", padding: "6px 8px", color: S.primary }}>
                             {truncate(tmpl?.name ?? "N/A", 15)}
                           </th>
                         );

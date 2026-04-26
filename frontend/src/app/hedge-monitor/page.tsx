@@ -19,8 +19,6 @@ import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
-import { Play } from "lucide-react";
-
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -40,6 +38,9 @@ const S = {
   fail:      "var(--status-fail, #ef4444)",
   emerald:   "#2ECC71",
   crimson:   "#E74C3C",
+  // Institutional blue CTA + button-text foreground.
+  cta:       "#1C62F2",
+  white:     "#fff",
 } as const;
 
 // ── CME futures month codes ────────────────────────────────────────────────────
@@ -285,7 +286,7 @@ export default function HedgeMonitorPage() {
         </div>
         <Link href="/hedge-desk" style={{
           fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
-          color: "#fff", background: "#1C62F2", border: "none", padding: "10px 24px",
+          color: S.white, background: S.cta, border: "none", padding: "10px 24px",
           textDecoration: "none", display: "inline-block",
         }}>
           → OPEN HEDGE DESK
@@ -387,7 +388,7 @@ export default function HedgeMonitorPage() {
               <div style={{ flex: 1 }} />
               <Link href="/hedge-desk" style={{
                 fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
-                color: "#fff", background: "#1C62F2", padding: "7px 16px",
+                color: S.white, background: S.cta, padding: "7px 16px",
                 textDecoration: "none", borderRadius: 3, whiteSpace: "nowrap",
               }}>
                 Hedge More Positions →
@@ -401,7 +402,7 @@ export default function HedgeMonitorPage() {
                   <thead>
                     <tr style={{ background: S.bgSub }}>
                       {["ENTITY", "CCY", "NOTIONAL", "ENTRY RATE", "CURRENT", "MTM P&L", "EFF.%", "INSTRUMENT", "STATUS"].map(h => (
-                        <th key={h} scope="col" style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, padding: "7px 12px", textAlign: "left", whiteSpace: "nowrap", borderBottom: `1px solid ${S.soft}` }}>
+                        <th scope="col" key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, padding: "7px 12px", textAlign: "left", whiteSpace: "nowrap", borderBottom: `1px solid ${S.soft}` }}>
                           {h}
                         </th>
                       ))}

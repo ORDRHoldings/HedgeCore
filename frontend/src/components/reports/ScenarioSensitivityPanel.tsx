@@ -76,10 +76,10 @@ const ScenarioSensitivityPanel: React.FC<ScenarioSensitivityPanelProps> = ({
       <table className="table-enterprise" style={{ width: '100%' }}>
         <thead>
           <tr>
-            <th>Rank</th>
-            <th>Bucket</th>
-            <th style={{ textAlign: 'right' }}>Worst-Case Impact USD</th>
-            <th style={{ textAlign: 'right' }}>% of Total</th>
+            <th scope="col">Rank</th>
+            <th scope="col">Bucket</th>
+            <th scope="col" style={{ textAlign: 'right' }}>Worst-Case Impact USD</th>
+            <th scope="col" style={{ textAlign: 'right' }}>% of Total</th>
           </tr>
         </thead>
         <tbody>

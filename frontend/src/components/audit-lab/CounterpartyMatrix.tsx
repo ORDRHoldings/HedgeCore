@@ -27,6 +27,8 @@ const S = {
   textTertiary: "var(--text-tertiary)",
   accentGreen: "var(--accent-green)",
   accentRed: "var(--accent-red)",
+  accentGreenTint: "#05966912",
+  accentRedTint: "#DC262612",
 } as const;
 
 /* ── Props ────────────────────────────────────────────────────────────────── */
@@ -223,7 +225,7 @@ export default function CounterpartyMatrix({
           <tr>
             {["COUNTERPARTY", "AVG MARKUP", "TOTAL COST", "TRADES", "WITHIN SPREAD"].map(
               (col, i) => (
-                <th
+                <th scope="col"
                   key={col}
                   style={{
                     background: S.bgDeep,
@@ -309,7 +311,7 @@ export default function CounterpartyMatrix({
                           padding: "1px 6px",
                           border: "1px solid var(--accent-green)",
                           color: S.accentGreen,
-                          background: "#05966912",
+                          background: S.accentGreenTint,
                         }}
                       >
                         <TrendingDown size={12} />
@@ -329,7 +331,7 @@ export default function CounterpartyMatrix({
                           padding: "1px 6px",
                           border: "1px solid var(--accent-red)",
                           color: S.accentRed,
-                          background: "#DC262612",
+                          background: S.accentRedTint,
                         }}
                       >
                         <TrendingUp size={12} />

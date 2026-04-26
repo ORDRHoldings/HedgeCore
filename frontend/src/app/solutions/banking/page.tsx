@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   ChevronLeft, ArrowRight, Monitor, Gavel, BarChart3, Network,
-  TrendingUp, Lock, BookOpen, Brain, Workflow, Building,
+  Lock, BookOpen, Brain, Workflow, Building,
   Activity, ShieldCheck,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";

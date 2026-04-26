@@ -178,7 +178,7 @@ function Kpi({ label, value, color }: KpiProps) {
       background: S.bgSub, border: `1px solid ${S.rim}`, borderRadius: 4,
       padding: "10px 14px", minWidth: 100,
     }}>
-      <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 4 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 4 }}>
         {label}
       </div>
       <div style={{ fontFamily: S.fontMono, fontSize: 16, color: color ?? S.primary, fontWeight: 600 }}>
@@ -402,7 +402,7 @@ export default function OperationsTab({ token }: { token: string }) {
             <thead>
               <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                 {["TABLE", "ROWS", "LAST INSERT"].map(h => (
-                  <th key={h} style={{
+                  <th scope="col" key={h} style={{
                     textAlign: "left", padding: "4px 10px", color: S.tertiary,
                     fontWeight: 500, fontSize: 10, letterSpacing: "0.07em",
                   }}>{h}</th>
@@ -464,7 +464,7 @@ export default function OperationsTab({ token }: { token: string }) {
             <thead>
               <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                 {["EVENT TYPE", "COUNT", "LAST SEEN"].map(h => (
-                  <th key={h} style={{
+                  <th scope="col" key={h} style={{
                     textAlign: "left", padding: "4px 10px", color: S.tertiary,
                     fontWeight: 500, fontSize: 10, letterSpacing: "0.07em",
                   }}>{h}</th>

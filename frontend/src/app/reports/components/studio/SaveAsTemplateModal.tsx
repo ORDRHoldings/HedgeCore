@@ -297,7 +297,7 @@ export default function SaveAsTemplateModal({
               style={{
                 padding: "8px 10px", background: "rgba(220,60,60,0.1)",
                 border: "1px solid rgba(220,60,60,0.4)", borderRadius: 4,
-                fontFamily: T.fontMono, fontSize: 12, color: "#ff7070",
+                fontFamily: T.fontMono, fontSize: 12, color: "var(--accent-red,#ff7070)",
               }}
             >
               {error}

@@ -15,7 +15,7 @@
  */
 
 import type { HedgePlan, BucketResult, PolicyConfig } from '../../api/types';
-import { fmtMXN, fmtUSD, fmtPct } from '../../utils/formatters';
+import { fmtMXN, fmtPct } from '../../utils/formatters';
 import ExposureChart from '../results/ExposureChart';
 import HedgePlanTable from '../results/HedgePlanTable';
 
@@ -213,7 +213,7 @@ export default function ExposureTab({ hedgePlan, policy }: Props) {
                   'Existing Hedge', 'New Action', 'Net Position',
                   'Residual', 'Coverage', 'Fwd Rate',
                 ].map(h => (
-                  <th key={h} className="text-left px-3 py-2 text-[9px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider whitespace-nowrap">
+                  <th scope="col" key={h} className="text-left px-3 py-2 text-[9px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
                 ))}

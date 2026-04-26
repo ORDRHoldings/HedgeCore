@@ -109,7 +109,7 @@ export default function BranchComparisonWidget({ token, onRemove }: Props) {
         <GitBranch size={12} color={S.cyan} />
         <span style={{
           fontFamily:    S.fontMono,
-          fontSize:      "0.625rem",
+          fontSize:      "0.75rem",
           letterSpacing: "0.1em",
           color:         S.cyan,
           fontWeight:    700,
@@ -125,7 +125,7 @@ export default function BranchComparisonWidget({ token, onRemove }: Props) {
               onClick={() => setView(v)}
               style={{
                 fontFamily:    S.fontMono,
-                fontSize:      "0.55rem",
+                fontSize:      "0.75rem",
                 letterSpacing: "0.08em",
                 color:         view === v ? S.bgDeep : S.tertiary,
                 background:    view === v ? S.cyan : "transparent",
@@ -187,7 +187,7 @@ export default function BranchComparisonWidget({ token, onRemove }: Props) {
               {["Branch", view === "exposure" ? "Exposure" : "Coverage", ""].map((h) => (
                 <span key={h} style={{
                   fontFamily:    S.fontMono,
-                  fontSize:      "0.55rem",
+                  fontSize:      "0.75rem",
                   color:         S.tertiary,
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
@@ -221,25 +221,25 @@ export default function BranchComparisonWidget({ token, onRemove }: Props) {
                         background: barColor, display: "inline-block", flexShrink: 0,
                       }} />
                       <span style={{
-                        fontFamily: S.fontMono, fontSize: "0.625rem", color: S.primary,
+                        fontFamily: S.fontMono, fontSize: "0.75rem", color: S.primary,
                         fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                       }}>
                         {branch.branch_name}
                       </span>
                       <span style={{
-                        fontFamily: S.fontMono, fontSize: "0.5rem",
+                        fontFamily: S.fontMono, fontSize: "0.75rem",
                         color: S.tertiary, letterSpacing: "0.06em", flexShrink: 0,
                       }}>
                         {branch.currency}
                       </span>
                     </div>
                     <span style={{
-                      fontFamily: S.fontMono, fontSize: "0.6875rem",
+                      fontFamily: S.fontMono, fontSize: "0.75rem",
                       color: barColor, fontWeight: 700, textAlign: "right",
                     }}>
                       {valueStr}
                     </span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, textAlign: "right" }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, textAlign: "right" }}>
                       {branch.pending_approvals > 0 && (
                         <span style={{ color: S.amber }}>{branch.pending_approvals}⚑</span>
                       )}
@@ -262,7 +262,7 @@ export default function BranchComparisonWidget({ token, onRemove }: Props) {
                 style={{
                   display: "flex", alignItems: "center", gap: 4,
                   background: "none", border: "none", cursor: "pointer",
-                  fontFamily: S.fontMono, fontSize: "0.55rem", color: S.cyan, padding: 0,
+                  fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan, padding: 0,
                 }}
               >
                 Full Portfolio Risk <ArrowRight size={9} />

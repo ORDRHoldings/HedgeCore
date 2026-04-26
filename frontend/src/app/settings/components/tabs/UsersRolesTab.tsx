@@ -61,6 +61,7 @@ export default function UsersRolesTab({ token }: Props) {
   const [assigning,   setAssigning]   = useState<string | null>(null);
   const [pendingRole, setPendingRole] = useState<Record<string, string>>({});
   const [expandRole,  setExpandRole]  = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<{ userId: string; userEmail: string; roleName: string } | null>(null);
 
   const showToast = (kind: "success" | "error", msg: string) => {
     setToast({ kind, msg });
@@ -117,7 +118,7 @@ export default function UsersRolesTab({ token }: Props) {
     } finally { setAssigning(null); }
   };
 
-  /* Remove role */
+  /* Remove role — caller must pre-confirm via the modal. */
   const handleRemove = async (userId: string, roleName: string) => {
     const role = roles.find(r => r.name === roleName);
     if (!role) return;
@@ -135,7 +136,10 @@ export default function UsersRolesTab({ token }: Props) {
       showToast("success", `Role "${roleName}" removed.`);
     } catch (e: unknown) {
       showToast("error", e instanceof Error ? e.message : "Failed to remove role.");
-    } finally { setAssigning(null); }
+    } finally {
+      setAssigning(null);
+      setConfirmRemove(null);
+    }
   };
 
   const goPage = (p: number) => { setPage(p); load(p); };
@@ -213,10 +217,10 @@ export default function UsersRolesTab({ token }: Props) {
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
             <thead>
               <tr>
-                <th style={th}>EMAIL</th>
-                <th style={th}>ROLES</th>
-                <th style={th}>STATUS</th>
-                <th style={th}>ASSIGN ROLE</th>
+                <th scope="col" style={th}>EMAIL</th>
+                <th scope="col" style={th}>ROLES</th>
+                <th scope="col" style={th}>STATUS</th>
+                <th scope="col" style={th}>ASSIGN ROLE</th>
               </tr>
             </thead>
             <tbody>
@@ -255,7 +259,7 @@ export default function UsersRolesTab({ token }: Props) {
                               }}>
                                 {r.toUpperCase()}
                                 <button
-                                  onClick={() => handleRemove(u.id, r)}
+                                  onClick={() => setConfirmRemove({ userId: u.id, userEmail: u.email, roleName: r })}
                                   disabled={assigning === u.id}
                                   title={`Remove ${r}`}
                                   style={{ fontFamily: S.fontMono, fontSize: 12, color: rc, background: "transparent", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, opacity: 0.8 }}
@@ -295,7 +299,7 @@ export default function UsersRolesTab({ token }: Props) {
                         {pending && (
                           <button onClick={() => handleAssign(u.id)} disabled={assigning === u.id} style={{
                             fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
-                            color: "#000", background: assigning === u.id ? S.tertiary : S.cyan,
+                            color: S.black, background: assigning === u.id ? S.tertiary : S.cyan,
                             border: "none", borderRadius: 2, padding: "4px 10px",
                             cursor: assigning === u.id ? "wait" : "pointer",
                           }}>
@@ -392,6 +396,72 @@ export default function UsersRolesTab({ token }: Props) {
         Roles are bounded by your own hierarchy_level. You cannot assign a role with a higher level than your own.
         Click a role card to expand its permission set. Role changes are effective immediately and audit-logged.
       </div>
+
+      {/* Role removal confirmation — destructive, audit-logged */}
+      {confirmRemove && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="remove-role-title"
+          onClick={() => assigning === null && setConfirmRemove(null)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(0,0,0,0.65)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: S.bgPanel, border: `1px solid ${S.fail}`,
+              borderLeft: `3px solid ${S.fail}`,
+              borderRadius: 2, padding: "20px 22px", maxWidth: 460, width: "100%",
+              display: "flex", flexDirection: "column", gap: 14,
+            }}
+          >
+            <div id="remove-role-title" style={{
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
+              color: S.fail, letterSpacing: "0.09em",
+            }}>
+              REMOVE ROLE · AUDIT-LOGGED
+            </div>
+            <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.primary, lineHeight: 1.6 }}>
+              Remove role <code style={{
+                fontFamily: S.fontMono, fontSize: 12, color: roleColor(confirmRemove.roleName), fontWeight: 700,
+              }}>{confirmRemove.roleName.toUpperCase()}</code>{" "}
+              from <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan }}>{confirmRemove.userEmail}</span>?{" "}
+              Their permissions will narrow immediately. If this is their only role, they will lose UI access.
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setConfirmRemove(null)}
+                disabled={assigning !== null}
+                style={{
+                  fontFamily: S.fontMono, fontSize: 12, color: S.secondary,
+                  background: "transparent", border: `1px solid ${S.rim}`,
+                  borderRadius: 2, padding: "6px 14px",
+                  cursor: assigning !== null ? "wait" : "pointer",
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={() => handleRemove(confirmRemove.userId, confirmRemove.roleName)}
+                disabled={assigning !== null}
+                style={{
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
+                  color: S.white, background: S.fail, border: "none",
+                  borderRadius: 2, padding: "6px 16px",
+                  cursor: assigning !== null ? "wait" : "pointer",
+                }}
+              >
+                {assigning === confirmRemove.userId ? "REMOVING…" : "REMOVE ROLE"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

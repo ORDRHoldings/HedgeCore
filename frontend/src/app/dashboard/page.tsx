@@ -10,6 +10,7 @@ import { T } from "@/lib/design/tokens";
 import { PageShell } from "@/components/layout/PageShell";
 import { KpiStrip } from "@/components/ui/KpiStrip";
 import { Icon } from "@/components/ui/Icon";
+import FeatureErrorBoundary from "@/components/ui/FeatureErrorBoundary";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 import { LayoutDashboard, Play, BarChart3, Activity, ArrowRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -195,7 +196,7 @@ function SectionHeader({ title, badge }: { title: string; badge?: string }) {
       </span>
       {badge && (
         <span style={{
-          fontFamily: T.fontMono, fontSize: 9, fontWeight: 700,
+          fontFamily: T.fontMono, fontSize: 10, fontWeight: 700,
           letterSpacing: "0.08em", color: T.pass,
           display: "inline-flex", alignItems: "center", gap: 5,
         }}>
@@ -211,7 +212,7 @@ function SectionHeader({ title, badge }: { title: string; badge?: string }) {
   );
 }
 
-function FxRateCard({ pair, mid, bid, ask, change }: {
+function _FxRateCard({ pair, mid, bid, ask, change }: {
   pair: string; mid: number; bid: number; ask: number; change: number;
 }) {
   const isUp = change > 0;
@@ -547,6 +548,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Mission Cards */}
+      <FeatureErrorBoundary feature="Dashboard Overview">
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
         {loading ? (
           <>
@@ -595,8 +597,10 @@ export default function DashboardPage() {
           { label: "Hedged", value: data?.hedgedCount ?? 0 },
         ]}
       />
+      </FeatureErrorBoundary>
 
       {/* ── Market Pulse ──────────────────────────────────────────────── */}
+      <FeatureErrorBoundary feature="Market Pulse">
       <SectionHeader title="MARKET PULSE" badge={widgets.fxRates.length > 0 ? "LIVE" : undefined} />
 
       {/* TradingView chart + compact FX rates */}
@@ -629,7 +633,7 @@ export default function DashboardPage() {
                     <div style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 600, color: T.secondary }}>
                       {pairDisplay}
                     </div>
-                    <div style={{ fontFamily: T.fontMono, fontSize: 9, color: T.tertiary, marginTop: 1 }}>
+                    <div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary, marginTop: 1 }}>
                       B {(rate.bid ?? 0).toFixed((rate.bid ?? 0) >= 100 ? 2 : 4)} / A {(rate.ask ?? 0).toFixed((rate.ask ?? 0) >= 100 ? 2 : 4)}
                     </div>
                   </div>
@@ -637,7 +641,7 @@ export default function DashboardPage() {
                     <div style={{ fontFamily: T.fontMono, fontSize: 16, fontWeight: 700, color: T.primary }}>
                       {(rate.mid ?? 0).toFixed((rate.mid ?? 0) >= 100 ? 2 : 4)}
                     </div>
-                    <div style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, color: changeColor }}>
+                    <div style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: changeColor }}>
                       {arrow} {change > 0 ? "+" : ""}{(change ?? 0).toFixed(2)}%
                     </div>
                   </div>
@@ -691,8 +695,10 @@ export default function DashboardPage() {
           ))}
         </div>
       )}
+      </FeatureErrorBoundary>
 
       {/* ── Operations ────────────────────────────────────────────────── */}
+      <FeatureErrorBoundary feature="Operations">
       <SectionHeader title="OPERATIONS" />
 
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
@@ -740,7 +746,7 @@ export default function DashboardPage() {
                     {run.hedge_ratio ?? "—"}%
                   </span>
                   <span style={{
-                    fontFamily: T.fontMono, fontSize: 9, fontWeight: 700,
+                    fontFamily: T.fontMono, fontSize: 10, fontWeight: 700,
                     color: run.status === "COMPLETE" ? T.pass : run.status === "FAILED" ? T.fail : T.warn,
                     display: "inline-flex", alignItems: "center", gap: 4,
                   }}>
@@ -805,10 +811,11 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+      </FeatureErrorBoundary>
 
       {/* ── Activity Feed ─────────────────────────────────────────────── */}
       {widgets.activity.length > 0 && (
-        <>
+        <FeatureErrorBoundary feature="Team Activity">
           <SectionHeader title="TEAM ACTIVITY" />
           <div style={{
             background: T.bgPanel, border: `1px solid ${T.rim}`, borderRadius: 4,
@@ -845,7 +852,7 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-        </>
+        </FeatureErrorBoundary>
       )}
     </PageShell>
   );

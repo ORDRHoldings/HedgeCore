@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/authContext";
 import {
   getConsolidatedForecast, getLiquidityGaps, runForecastScenario,
   getForecastVariance, getForecastItems, createForecastItem,
-  type ForecastResponse, type ForecastBucket, type LiquidityGap,
+  type ForecastResponse, type LiquidityGap,
   type VarianceRow, type ForecastItem,
 } from "@/lib/api/cashClient";
 import { TrendingUp, AlertTriangle, BarChart2, FileText, List, Plus } from "lucide-react";
@@ -19,10 +19,21 @@ const S = {
   rim: "var(--border-rim)",
 } as const;
 
+// Cash-forecast signal palette: red/green for inflow/outflow direction,
+// muted gray for zero rows, white for button text on accent backgrounds.
+// Tuned hues are not in T because forecast direction signals need
+// higher saturation than `T.pass`/`T.fail` provides.
+const C = {
+  white: "#fff",
+  red:   "#ef4444",
+  green: "#22c55e",
+  muted: "#9ca3af",
+} as const;
+
 type Tab = "FORECAST" | "GAPS" | "VARIANCE" | "ITEMS";
 
 function CashForecastInner() {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const isMobile = useIsMobile();
   const [horizon, setHorizon] = useState<"13w" | "12m">("13w");
   const [tab, setTab] = useState<Tab>("FORECAST");
@@ -144,7 +155,7 @@ function CashForecastInner() {
           <button key={h} onClick={() => setHorizon(h)} style={{
             padding: "4px 12px", fontSize: 12, fontFamily: S.fontMono, cursor: "pointer",
             background: horizon === h ? "var(--accent-primary)" : S.bgSub,
-            color: horizon === h ? "#fff" : "var(--text-secondary)",
+            color: horizon === h ? C.white : "var(--text-secondary)",
             border: `1px solid ${S.rim}`, borderRadius: 4,
           }}>{h.toUpperCase()}</button>
         ))}
@@ -153,8 +164,8 @@ function CashForecastInner() {
       {/* Gap alert banner */}
       {gaps.length > 0 && (
         <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6, padding: "8px 16px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-          <AlertTriangle size={16} color="#ef4444" />
-          <span style={{ fontSize: 13, color: "#ef4444", fontWeight: 500 }}>
+          <AlertTriangle size={16} color={C.red} />
+          <span style={{ fontSize: 13, color: C.red, fontWeight: 500 }}>
             {gaps.length} liquidity gap{gaps.length > 1 ? "s" : ""} detected in the forecast horizon
           </span>
         </div>
@@ -173,7 +184,7 @@ function CashForecastInner() {
       </div>
 
       {loading && <div style={{ padding: 32, color: "var(--text-secondary)", fontSize: 13 }}>Loading forecast...</div>}
-      {error && <div style={{ padding: 16, color: "#ef4444", fontSize: 13 }}>{error}</div>}
+      {error && <div style={{ padding: 16, color: C.red, fontSize: 13 }}>{error}</div>}
 
       {/* FORECAST tab */}
       {tab === "FORECAST" && !loading && buckets.length > 0 && (
@@ -182,13 +193,13 @@ function CashForecastInner() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.fontMono }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
-                <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>PERIOD</th>
-                <th style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>OPENING</th>
-                <th style={{ textAlign: "right", padding: "6px 8px", color: "#22c55e" }}>INFLOWS</th>
-                <th style={{ textAlign: "right", padding: "6px 8px", color: "#ef4444" }}>OUTFLOWS</th>
-                <th style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>CLOSING</th>
-                <th style={{ textAlign: "center", padding: "6px 8px", width: 200 }}>WATERFALL</th>
-                <th style={{ textAlign: "center", padding: "6px 8px", color: "var(--text-secondary)" }}>GAP</th>
+                <th scope="col" style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>PERIOD</th>
+                <th scope="col" style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>OPENING</th>
+                <th scope="col" style={{ textAlign: "right", padding: "6px 8px", color: C.green }}>INFLOWS</th>
+                <th scope="col" style={{ textAlign: "right", padding: "6px 8px", color: C.red }}>OUTFLOWS</th>
+                <th scope="col" style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>CLOSING</th>
+                <th scope="col" style={{ textAlign: "center", padding: "6px 8px", width: 200 }}>WATERFALL</th>
+                <th scope="col" style={{ textAlign: "center", padding: "6px 8px", color: "var(--text-secondary)" }}>GAP</th>
               </tr>
             </thead>
             <tbody>
@@ -200,15 +211,15 @@ function CashForecastInner() {
                   <tr key={`${b.period_start}-${i}`} style={{ borderBottom: `1px solid ${S.rim}`, background: b.liquidity_gap ? "rgba(239,68,68,0.05)" : undefined }}>
                     <td style={{ padding: "6px 8px", fontSize: 12 }}>{b.period_start}</td>
                     <td style={{ padding: "6px 8px", textAlign: "right" }}>{fmt(b.opening_balance)}</td>
-                    <td style={{ padding: "6px 8px", textAlign: "right", color: "#22c55e" }}>+{fmt(b.inflows)}</td>
-                    <td style={{ padding: "6px 8px", textAlign: "right", color: "#ef4444" }}>-{fmt(b.outflows)}</td>
-                    <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, color: isNeg ? "#ef4444" : "var(--text-primary)" }}>{fmt(b.closing_balance)}</td>
+                    <td style={{ padding: "6px 8px", textAlign: "right", color: C.green }}>+{fmt(b.inflows)}</td>
+                    <td style={{ padding: "6px 8px", textAlign: "right", color: C.red }}>-{fmt(b.outflows)}</td>
+                    <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, color: isNeg ? C.red : "var(--text-primary)" }}>{fmt(b.closing_balance)}</td>
                     <td style={{ padding: "6px 8px" }}>
                       <div style={{ width: "100%", height: 14, background: S.bgDeep, borderRadius: 3, overflow: "hidden" }}>
-                        <div style={{ width: `${Math.min(barWidth, 100)}%`, height: "100%", background: isNeg ? "#ef4444" : "#22c55e", borderRadius: 3 }} />
+                        <div style={{ width: `${Math.min(barWidth, 100)}%`, height: "100%", background: isNeg ? C.red : C.green, borderRadius: 3 }} />
                       </div>
                     </td>
-                    <td style={{ padding: "6px 8px", textAlign: "center" }}>{b.liquidity_gap ? <AlertTriangle size={14} color="#ef4444" /> : "\u2014"}</td>
+                    <td style={{ padding: "6px 8px", textAlign: "center" }}>{b.liquidity_gap ? <AlertTriangle size={14} color={C.red} /> : "\u2014"}</td>
                   </tr>
                 );
               })}
@@ -232,7 +243,7 @@ function CashForecastInner() {
               </label>
               <button onClick={handleScenario} style={{
                 padding: "6px 16px", fontSize: 12, fontFamily: S.fontMono, cursor: "pointer",
-                background: "var(--accent-primary)", color: "#fff", border: "none", borderRadius: 4,
+                background: "var(--accent-primary)", color: C.white, border: "none", borderRadius: 4,
               }}>Run Scenario</button>
               {scenarioResult && (
                 <button onClick={() => setScenarioResult(null)} style={{
@@ -256,11 +267,11 @@ function CashForecastInner() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.fontMono }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
-                  <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>PERIOD</th>
-                  <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>CURRENCY</th>
-                  <th style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>CLOSING</th>
-                  <th style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>THRESHOLD</th>
-                  <th style={{ textAlign: "right", padding: "6px 8px", color: "#ef4444" }}>SHORTFALL</th>
+                  <th scope="col" style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>PERIOD</th>
+                  <th scope="col" style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>CURRENCY</th>
+                  <th scope="col" style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>CLOSING</th>
+                  <th scope="col" style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>THRESHOLD</th>
+                  <th scope="col" style={{ textAlign: "right", padding: "6px 8px", color: C.red }}>SHORTFALL</th>
                 </tr>
               </thead>
               <tbody>
@@ -268,9 +279,9 @@ function CashForecastInner() {
                   <tr key={`${g.period_start}-${g.currency}-${i}`} style={{ borderBottom: `1px solid ${S.rim}` }}>
                     <td style={{ padding: "6px 8px" }}>{g.period_start} \u2014 {g.period_end}</td>
                     <td style={{ padding: "6px 8px" }}>{g.currency}</td>
-                    <td style={{ padding: "6px 8px", textAlign: "right", color: "#ef4444" }}>{fmt(g.closing_balance)}</td>
+                    <td style={{ padding: "6px 8px", textAlign: "right", color: C.red }}>{fmt(g.closing_balance)}</td>
                     <td style={{ padding: "6px 8px", textAlign: "right" }}>{fmt(g.gap_threshold)}</td>
-                    <td style={{ padding: "6px 8px", textAlign: "right", color: "#ef4444", fontWeight: 600 }}>{fmt(g.shortfall)}</td>
+                    <td style={{ padding: "6px 8px", textAlign: "right", color: C.red, fontWeight: 600 }}>{fmt(g.shortfall)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -290,11 +301,11 @@ function CashForecastInner() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.fontMono }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
-                  <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>PERIOD</th>
-                  <th style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>FORECAST</th>
-                  <th style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>ACTUAL</th>
-                  <th style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>VARIANCE</th>
-                  <th style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>VAR %</th>
+                  <th scope="col" style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>PERIOD</th>
+                  <th scope="col" style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>FORECAST</th>
+                  <th scope="col" style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>ACTUAL</th>
+                  <th scope="col" style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>VARIANCE</th>
+                  <th scope="col" style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>VAR %</th>
                 </tr>
               </thead>
               <tbody>
@@ -305,7 +316,7 @@ function CashForecastInner() {
                       <td style={{ padding: "6px 8px" }}>{v.period_start} \u2014 {v.period_end}</td>
                       <td style={{ padding: "6px 8px", textAlign: "right" }}>{fmt(v.forecast_closing)}</td>
                       <td style={{ padding: "6px 8px", textAlign: "right" }}>{v.actual_closing ? fmt(v.actual_closing) : "\u2014"}</td>
-                      <td style={{ padding: "6px 8px", textAlign: "right", color: var_val && var_val < 0 ? "#ef4444" : var_val && var_val > 0 ? "#22c55e" : undefined }}>{var_val != null ? fmt(var_val) : "\u2014"}</td>
+                      <td style={{ padding: "6px 8px", textAlign: "right", color: var_val && var_val < 0 ? C.red : var_val && var_val > 0 ? C.green : undefined }}>{var_val != null ? fmt(var_val) : "\u2014"}</td>
                       <td style={{ padding: "6px 8px", textAlign: "right" }}>{v.variance_pct ? `${parseFloat(v.variance_pct).toFixed(1)}%` : "\u2014"}</td>
                     </tr>
                   );
@@ -323,7 +334,7 @@ function CashForecastInner() {
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
             <button onClick={() => setShowForm(!showForm)} style={{
               display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", fontSize: 12,
-              fontFamily: S.fontMono, cursor: "pointer", background: "var(--accent-primary)", color: "#fff",
+              fontFamily: S.fontMono, cursor: "pointer", background: "var(--accent-primary)", color: C.white,
               border: "none", borderRadius: 4,
             }}><Plus size={14} /> Add Item</button>
           </div>
@@ -356,7 +367,7 @@ function CashForecastInner() {
                 </select>
                 <button onClick={handleCreateItem} style={{
                   padding: "6px 14px", fontSize: 12, fontFamily: S.fontMono, cursor: "pointer",
-                  background: "var(--accent-primary)", color: "#fff", border: "none", borderRadius: 4,
+                  background: "var(--accent-primary)", color: C.white, border: "none", borderRadius: 4,
                 }}>Save</button>
               </div>
             </div>
@@ -369,21 +380,21 @@ function CashForecastInner() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.fontMono }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
-                  <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>LABEL</th>
-                  <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>DIR</th>
-                  <th style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>AMOUNT</th>
-                  <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>CCY</th>
-                  <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>RECURRENCE</th>
-                  <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>CONFIDENCE</th>
-                  <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>START</th>
-                  <th style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>STATUS</th>
+                  <th scope="col" style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>LABEL</th>
+                  <th scope="col" style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>DIR</th>
+                  <th scope="col" style={{ textAlign: "right", padding: "6px 8px", color: "var(--text-secondary)" }}>AMOUNT</th>
+                  <th scope="col" style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>CCY</th>
+                  <th scope="col" style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>RECURRENCE</th>
+                  <th scope="col" style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>CONFIDENCE</th>
+                  <th scope="col" style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>START</th>
+                  <th scope="col" style={{ textAlign: "left", padding: "6px 8px", color: "var(--text-secondary)" }}>STATUS</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map(it => (
                   <tr key={it.id} style={{ borderBottom: `1px solid ${S.rim}` }}>
                     <td style={{ padding: "6px 8px" }}>{it.label}</td>
-                    <td style={{ padding: "6px 8px", color: it.direction === "INFLOW" ? "#22c55e" : "#ef4444" }}>{it.direction}</td>
+                    <td style={{ padding: "6px 8px", color: it.direction === "INFLOW" ? C.green : C.red }}>{it.direction}</td>
                     <td style={{ padding: "6px 8px", textAlign: "right" }}>{fmt(it.amount)}</td>
                     <td style={{ padding: "6px 8px" }}>{it.currency}</td>
                     <td style={{ padding: "6px 8px" }}>{it.recurrence}</td>
@@ -393,7 +404,7 @@ function CashForecastInner() {
                       <span style={{
                         fontSize: 11, padding: "2px 8px", borderRadius: 8,
                         background: it.is_active ? "rgba(34,197,94,0.1)" : "rgba(156,163,175,0.1)",
-                        color: it.is_active ? "#22c55e" : "#9ca3af",
+                        color: it.is_active ? C.green : C.muted,
                       }}>{it.is_active ? "ACTIVE" : "INACTIVE"}</span>
                     </td>
                   </tr>

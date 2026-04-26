@@ -309,7 +309,7 @@ function AuditLabComparePageInner() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: S.bgSub }}>
-                  <th style={{
+                  <th scope="col" style={{
                     fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                     letterSpacing: "0.08em", color: S.tertiary, textAlign: "left",
                     padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase",
@@ -317,7 +317,7 @@ function AuditLabComparePageInner() {
                     Currency Pair
                   </th>
                   {runs.map((r, i) => (
-                    <th key={r.run_id} style={{
+                    <th scope="col" key={r.run_id} style={{
                       fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                       letterSpacing: "0.08em", color: i === 0 ? S.cyan : S.amber,
                       textAlign: "right", padding: "10px 16px",
@@ -327,7 +327,7 @@ function AuditLabComparePageInner() {
                     </th>
                   ))}
                   {runs.length >= 2 && (
-                    <th style={{
+                    <th scope="col" style={{
                       fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                       letterSpacing: "0.08em", color: S.tertiary, textAlign: "right",
                       padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase",

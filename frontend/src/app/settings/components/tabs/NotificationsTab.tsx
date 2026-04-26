@@ -11,7 +11,7 @@ import {
   WebhookEndpoint,
   WebhookApiError,
 } from "@/lib/api/webhookClient";
-import { Plus, Trash2, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, Copy, Check, ChevronUp } from "lucide-react";
 
 interface Props {
   s:     NotificationSettings;
@@ -42,6 +42,7 @@ const EVENT_LABELS: Record<SupportedEvent, string> = {
 };
 
 const MAX_ENDPOINTS = 5;
+const SECRET_REVEAL_GREEN = "#22C55E";
 
 // ── Webhook CRUD panel ────────────────────────────────────────────────────────
 function WebhookPanel({ token }: { token: string }) {
@@ -139,7 +140,7 @@ function WebhookPanel({ token }: { token: string }) {
           border: `1px solid #22C55E`,
           borderRadius: 3, padding: "12px 14px",
         }}>
-          <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: "#22C55E", marginBottom: 6, letterSpacing: "0.07em" }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: SECRET_REVEAL_GREEN, marginBottom: 6, letterSpacing: "0.07em" }}>
             SIGNING SECRET — COPY NOW (shown once only)
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

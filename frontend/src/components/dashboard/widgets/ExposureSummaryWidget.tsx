@@ -92,7 +92,7 @@ export default function ExposureSummaryWidget({ token, onRemove }: Props) {
         <span
           style={{
             fontFamily:    S.fontMono,
-            fontSize:      "0.625rem",
+            fontSize:      "0.75rem",
             letterSpacing: "0.1em",
             color:         S.cyan,
             fontWeight:    700,
@@ -102,7 +102,7 @@ export default function ExposureSummaryWidget({ token, onRemove }: Props) {
         </span>
         <span style={{ flex: 1 }} />
         {exposureLoading && (
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.06em" }}>
             LOADING…
           </span>
         )}
@@ -137,7 +137,7 @@ export default function ExposureSummaryWidget({ token, onRemove }: Props) {
                 { label: "CONFIRMED", color: S.cyan },
                 { label: "FORECAST",  color: S.amber },
               ].map(({ label, color }) => (
-                <span key={label} style={{ fontFamily: S.fontMono, fontSize: "0.4rem", color, letterSpacing: "0.08em" }}>
+                <span key={label} style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color, letterSpacing: "0.08em" }}>
                   ● {label}
                 </span>
               ))}
@@ -158,18 +158,18 @@ export default function ExposureSummaryWidget({ token, onRemove }: Props) {
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <span style={{
                         fontFamily:    S.fontMono,
-                        fontSize:      "0.5rem",
+                        fontSize:      "0.75rem",
                         fontWeight:    700,
                         color:         S.primary,
                         letterSpacing: "0.06em",
                       }}>
                         {row.currency}
                       </span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>
                         {countTotal} pos
                       </span>
                     </div>
-                    <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>
                       {fmtCompact(total)}
                     </span>
                   </div>
@@ -206,12 +206,12 @@ export default function ExposureSummaryWidget({ token, onRemove }: Props) {
                   {/* Sub-labels */}
                   <div style={{ display: "flex", gap: 10, marginTop: 2 }}>
                     {row.total_confirmed > 0 && (
-                      <span style={{ fontFamily: S.fontMono, fontSize: "0.4rem", color: S.tertiary }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>
                         <span style={{ color: S.cyan }}>Conf</span> {fmtCompact(row.total_confirmed)}
                       </span>
                     )}
                     {row.total_forecast > 0 && (
-                      <span style={{ fontFamily: S.fontMono, fontSize: "0.4rem", color: S.tertiary }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>
                         <span style={{ color: S.amber }}>Fcst</span> {fmtCompact(row.total_forecast)}
                       </span>
                     )}

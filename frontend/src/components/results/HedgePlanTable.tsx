@@ -11,20 +11,20 @@ export default function HedgePlanTable({ plan }: Props) {
       <table className="table-enterprise">
         <thead>
           <tr>
-            <th>Bucket</th>
-            <th className="numeric">Confirmed</th>
-            <th className="numeric">Forecast</th>
-            <th className="numeric">Commercial</th>
-            <th className="numeric">Existing</th>
-            <th className="numeric">Target</th>
-            <th className="numeric">Action MXN</th>
-            <th>Direction</th>
-            <th className="numeric">Fwd Rate</th>
-            <th className="numeric">Action USD</th>
-            <th className="numeric">Friction</th>
-            <th>Supp</th>
-            <th className="numeric">Hedge Pos</th>
-            <th className="numeric">Residual</th>
+            <th scope="col">Bucket</th>
+            <th scope="col" className="numeric">Confirmed</th>
+            <th scope="col" className="numeric">Forecast</th>
+            <th scope="col" className="numeric">Commercial</th>
+            <th scope="col" className="numeric">Existing</th>
+            <th scope="col" className="numeric">Target</th>
+            <th scope="col" className="numeric">Action MXN</th>
+            <th scope="col">Direction</th>
+            <th scope="col" className="numeric">Fwd Rate</th>
+            <th scope="col" className="numeric">Action USD</th>
+            <th scope="col" className="numeric">Friction</th>
+            <th scope="col">Supp</th>
+            <th scope="col" className="numeric">Hedge Pos</th>
+            <th scope="col" className="numeric">Residual</th>
           </tr>
         </thead>
         <tbody>

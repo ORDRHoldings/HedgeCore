@@ -175,6 +175,5 @@ export function useParticleField(
       window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(animRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvasRef]); // intentionally excludes opts — opts are read via ref, no re-init on change
 }

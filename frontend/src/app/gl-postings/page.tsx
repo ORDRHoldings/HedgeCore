@@ -26,12 +26,22 @@ const S = {
   textSub: "var(--text-secondary)",
 } as const;
 
+// GL postings status palette: Bloomberg-style saturated hues for journal-entry
+// state at-a-glance. Outside the T scale because we need 4 distinct status
+// colors at higher saturation than `T.warn`/`T.pass`/`T.fail` provide.
+const C = {
+  gray:  "#888",
+  amber: "#f5a623",
+  green: "#7ed321",
+  red:   "#d0021b",
+} as const;
+
 const STATUS_CONFIG: Record<JournalEntry["status"], { label: string; color: string; bg: string }> = {
-  DRAFT: { label: "Draft", color: "#888", bg: "rgba(136,136,136,0.1)" },
-  PENDING_APPROVAL: { label: "Pending Approval", color: "#f5a623", bg: "rgba(245,166,35,0.1)" },
-  APPROVED: { label: "Approved", color: "#7ed321", bg: "rgba(126,211,33,0.1)" },
+  DRAFT: { label: "Draft", color: C.gray, bg: "rgba(136,136,136,0.1)" },
+  PENDING_APPROVAL: { label: "Pending Approval", color: C.amber, bg: "rgba(245,166,35,0.1)" },
+  APPROVED: { label: "Approved", color: C.green, bg: "rgba(126,211,33,0.1)" },
   POSTED: { label: "Posted", color: "var(--accent-cyan)", bg: "rgba(0,212,255,0.1)" },
-  REJECTED: { label: "Rejected", color: "#d0021b", bg: "rgba(208,2,27,0.1)" },
+  REJECTED: { label: "Rejected", color: C.red, bg: "rgba(208,2,27,0.1)" },
 };
 
 const STATUS_FILTERS = ["ALL", "DRAFT", "PENDING_APPROVAL", "APPROVED", "POSTED", "REJECTED"];
@@ -108,7 +118,7 @@ export default function GLPostingsPage() {
         </div>
 
         {actionError && (
-          <div style={{ background: "rgba(208,2,27,0.1)", border: "1px solid rgba(208,2,27,0.3)", borderRadius: 4, padding: "10px 16px", color: "#d0021b", fontSize: 13, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ background: "rgba(208,2,27,0.1)", border: "1px solid rgba(208,2,27,0.3)", borderRadius: 4, padding: "10px 16px", color: C.red, fontSize: 13, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
             <AlertCircle size={14} />{actionError}
           </div>
         )}
@@ -126,7 +136,7 @@ export default function GLPostingsPage() {
               <thead>
                 <tr style={{ background: S.bgDeep }}>
                   {["Type", "Standard", "Debit / Credit", "Amount", "Period", "Status", "Actions"].map((h) => (
-                    <th key={h} style={{ padding: "8px 14px", textAlign: "left", fontFamily: S.fontMono, color: S.textSub, fontSize: 11, letterSpacing: "0.06em", borderBottom: `1px solid ${S.rim}` }}>
+                    <th scope="col" key={h} style={{ padding: "8px 14px", textAlign: "left", fontFamily: S.fontMono, color: S.textSub, fontSize: 11, letterSpacing: "0.06em", borderBottom: `1px solid ${S.rim}` }}>
                       {h.toUpperCase()}
                     </th>
                   ))}
@@ -158,11 +168,11 @@ export default function GLPostingsPage() {
                           {e.status === "PENDING_APPROVAL" && (
                             <>
                               <button onClick={() => handleApprove(e.id)} title="Approve (4-eyes: checker != creator)"
-                                style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", background: "rgba(126,211,33,0.15)", border: "1px solid rgba(126,211,33,0.3)", color: "#7ed321", fontSize: 11, borderRadius: 3, cursor: "pointer", fontFamily: S.fontMono }}>
+                                style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", background: "rgba(126,211,33,0.15)", border: "1px solid rgba(126,211,33,0.3)", color: C.green, fontSize: 11, borderRadius: 3, cursor: "pointer", fontFamily: S.fontMono }}>
                                 <CheckCircle size={11} /> Approve
                               </button>
                               <button onClick={() => { setRejectModal(e.id); setRejectReason(""); }}
-                                style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", background: "rgba(208,2,27,0.1)", border: "1px solid rgba(208,2,27,0.3)", color: "#d0021b", fontSize: 11, borderRadius: 3, cursor: "pointer", fontFamily: S.fontMono }}>
+                                style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", background: "rgba(208,2,27,0.1)", border: "1px solid rgba(208,2,27,0.3)", color: C.red, fontSize: 11, borderRadius: 3, cursor: "pointer", fontFamily: S.fontMono }}>
                                 <XCircle size={11} /> Reject
                               </button>
                             </>
@@ -202,7 +212,7 @@ export default function GLPostingsPage() {
                   Cancel
                 </button>
                 <button onClick={handleRejectSubmit} disabled={!rejectReason.trim()}
-                  style={{ padding: "6px 16px", background: "rgba(208,2,27,0.15)", border: "1px solid rgba(208,2,27,0.4)", color: "#d0021b", fontSize: 12, fontFamily: S.fontMono, borderRadius: 3, cursor: rejectReason.trim() ? "pointer" : "not-allowed" }}>
+                  style={{ padding: "6px 16px", background: "rgba(208,2,27,0.15)", border: "1px solid rgba(208,2,27,0.4)", color: C.red, fontSize: 12, fontFamily: S.fontMono, borderRadius: 3, cursor: rejectReason.trim() ? "pointer" : "not-allowed" }}>
                   Reject Entry
                 </button>
               </div>

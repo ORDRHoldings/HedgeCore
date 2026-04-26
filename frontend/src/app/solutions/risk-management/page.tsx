@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import {
-  ChevronLeft, ArrowRight, Layers, Activity, FlaskConical, Users,
-  Network, Monitor, BarChart3, Shield, Brain, AlertTriangle,
-  Eye, TrendingUp, Database, Gauge, Globe,
+  ChevronLeft, ArrowRight, Layers, Activity, Users,
+  Monitor, Brain, AlertTriangle,
+  Gauge, Globe,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";
@@ -493,7 +493,7 @@ export default function RiskManagementPage() {
                   }}>
                     {["PAIR", "SCORE", "LEVEL", "DRIVER"].map((h) => (
                       <span key={h} style={{
-                        fontFamily: "'IBM Plex Mono', monospace", fontSize: 9,
+                        fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
                         color: "#6B7280", letterSpacing: "0.08em",
                       }}>{h}</span>
                     ))}

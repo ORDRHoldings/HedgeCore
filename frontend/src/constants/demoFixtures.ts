@@ -11,9 +11,6 @@ const today = new Date();
 const m1 = new Date(today.getFullYear(), today.getMonth() + 1, 28).toISOString().slice(0, 10);
 const m2 = new Date(today.getFullYear(), today.getMonth() + 2, 28).toISOString().slice(0, 10);
 const m3 = new Date(today.getFullYear(), today.getMonth() + 3, 28).toISOString().slice(0, 10);
-const bk1 = m1.slice(0, 7);
-const bk2 = m2.slice(0, 7);
-const bk3 = m3.slice(0, 7);
 
 /** Build a demo CalculateRequest for the given pair.
  *

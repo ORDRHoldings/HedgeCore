@@ -19,7 +19,7 @@
  *  4. Field mapping health summary
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
@@ -28,7 +28,6 @@ import type { ConnectorRun } from "../../api/connectorClient";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { CONNECTORS_HELP } from "@/lib/helpContent";
 
-import { LayoutDashboard } from "lucide-react";
 import { useIsMobile } from "@/lib/hooks/useBreakpoint";
 
 // ── Hydration-safe timestamp ───────────────────────────────────────────────────
@@ -55,6 +54,7 @@ const S = {
   pass:     "var(--status-pass,#10B981)",
   fail:     "var(--accent-red,#EF4444)",
   violet:   "#3B82F6",
+  ctaText:  "#000",
 } as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -447,7 +447,7 @@ export default function ConnectorsPage() {
                           href={conn.href}
                           style={{
                             fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
-                            color: "#000", background: S.cyan,
+                            color: S.ctaText, background: S.cyan,
                             border: "none", borderRadius: 2, padding: "6px 14px",
                             textDecoration: "none", display: "inline-block",
                           }}
@@ -561,7 +561,7 @@ export default function ConnectorsPage() {
               <thead>
                 <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                   {["RUN ID", "CONNECTOR", "STARTED", "DURATION", "RECORDS", "STATUS", "TRIGGERED BY"].map(h => (
-                    <th key={h} style={{
+                    <th scope="col" key={h} style={{
                       fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em",
                       color: S.tertiary, padding: "7px 12px", textAlign: "left", whiteSpace: "nowrap",
                     }}>

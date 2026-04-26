@@ -92,7 +92,7 @@ export function DataTable<R extends Record<string, unknown>>({
         <thead>
           <tr style={{ background: T.bgSub }}>
             {columns.map((col) => (
-              <th
+              <th scope="col"
                 key={col.key}
                 style={{ ...headStyle, cursor: col.sortable ? "pointer" : "default", width: col.width }}
                 onClick={col.sortable ? () => handleSort(col.key) : undefined}

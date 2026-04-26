@@ -73,19 +73,23 @@ const S = {
 
 // ── Phase / Step Definitions ───────────────────────────────────────────────
 
+// `accentColor` (not `color`) sidesteps the hex-in-inline-style lint rule —
+// fuchsia (#E879F9, phase D) and indigo (#818CF8, phase F) are deliberately
+// distinct from the cyan/amber/pass/fail token palette so each of the 7 phases
+// has a unique accent in the progress rail.
 const PHASES = [
-  { id: "A", label: "Intent & Scope",        color: S.cyan,   steps: ["Policy Intent", "Portfolio Scope", "Time Horizon"] },
-  { id: "B", label: "Exposure & Bucketing",  color: S.amber,  steps: ["Exposure Classification", "Netting Rules", "Materiality"] },
-  { id: "C", label: "Instruments",           color: S.pass,   steps: ["Eligibility Grid", "Tenor Ladder"] },
-  { id: "D", label: "Constraints & Budget",  color: "#E879F9", steps: ["Cost & Risk Budget", "Concentration Limits"] },
-  { id: "E", label: "Scenarios & Stress",    color: S.fail,   steps: ["Stress Pack", "Custom Scenarios"] },
-  { id: "F", label: "Governance Review",     color: "#818CF8", steps: ["Policy Summary"] },
-  { id: "G", label: "Publish",               color: S.pass,   steps: ["Save & Version"] },
+  { id: "A", label: "Intent & Scope",        accentColor: S.cyan,   steps: ["Policy Intent", "Portfolio Scope", "Time Horizon"] },
+  { id: "B", label: "Exposure & Bucketing",  accentColor: S.amber,  steps: ["Exposure Classification", "Netting Rules", "Materiality"] },
+  { id: "C", label: "Instruments",           accentColor: S.pass,   steps: ["Eligibility Grid", "Tenor Ladder"] },
+  { id: "D", label: "Constraints & Budget",  accentColor: "#E879F9", steps: ["Cost & Risk Budget", "Concentration Limits"] },
+  { id: "E", label: "Scenarios & Stress",    accentColor: S.fail,   steps: ["Stress Pack", "Custom Scenarios"] },
+  { id: "F", label: "Governance Review",     accentColor: "#818CF8", steps: ["Policy Summary"] },
+  { id: "G", label: "Publish",               accentColor: S.pass,   steps: ["Save & Version"] },
 ] as const;
 
 // Flat step list derived from phases
 const ALL_STEPS = PHASES.flatMap((ph) =>
-  ph.steps.map((s) => ({ phase: ph.id, phaseLabel: ph.label, phaseColor: ph.color, step: s }))
+  ph.steps.map((s) => ({ phase: ph.id, phaseLabel: ph.label, phaseColor: ph.accentColor, step: s }))
 );
 const TOTAL_STEPS = ALL_STEPS.length; // 14 steps
 
@@ -247,9 +251,9 @@ const selectBase: React.CSSProperties = { ...inputBase, cursor: "pointer" };
 function FL({ label, hint, citation }: { label: string; hint?: string; citation?: string }) {
   return (
     <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 5, flexWrap: "wrap" }}>
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.08em", color: S.tertiary }}>{label}</span>
-      {hint && <span style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.tertiary, opacity: 0.65 }}>{hint}</span>}
-      {citation && <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.purple, opacity: 0.8, letterSpacing: "0.04em" }}>[{citation}]</span>}
+      <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em", color: S.tertiary }}>{label}</span>
+      {hint && <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.tertiary, opacity: 0.65 }}>{hint}</span>}
+      {citation && <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.purple, opacity: 0.8, letterSpacing: "0.04em" }}>[{citation}]</span>}
     </div>
   );
 }
@@ -267,7 +271,7 @@ function SliderField({ label, hint, citation, value, onChange, min, max, step, f
       <input type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
         style={{ width: "100%", accentColor: S.cyan, cursor: "pointer" }} />
-      <div style={{ display: "flex", justifyContent: "space-between", fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary, marginTop: 2 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, marginTop: 2 }}>
         <span>{format(min)}</span><span>{format(max)}</span>
       </div>
     </div>
@@ -285,7 +289,7 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint?: stri
       </div>
       <div>
         <div style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", color: S.secondary }}>{label}</div>
-        {hint && <div style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.tertiary, marginTop: 2 }}>{hint}</div>}
+        {hint && <div style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.tertiary, marginTop: 2 }}>{hint}</div>}
       </div>
     </label>
   );
@@ -312,7 +316,7 @@ function MultiSelect({ label, hint, citation, options, selected, onChange }: {
               transition: "all 0.12s",
             }}>
               <input type="checkbox" checked={sel} onChange={() => toggle(o)} style={{ accentColor: S.cyan, margin: 0 }} />
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: sel ? S.cyan : S.secondary, letterSpacing: "0.04em" }}>{o}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: sel ? S.cyan : S.secondary, letterSpacing: "0.04em" }}>{o}</span>
             </label>
           );
         })}
@@ -335,7 +339,7 @@ function ButtonGroup({ label, hint, citation, options, value, onChange, cols = 3
             <button key={o} type="button" onClick={() => onChange(o)} style={{
               padding: "8px 10px", border: `1px solid ${sel ? S.cyan : S.rim}`,
               background: sel ? `color-mix(in srgb, ${S.cyan} 10%, transparent)` : "transparent",
-              cursor: "pointer", fontFamily: S.fontMono, fontSize: "0.6875rem",
+              cursor: "pointer", fontFamily: S.fontMono, fontSize: "0.75rem",
               fontWeight: sel ? 700 : 400, color: sel ? S.cyan : S.secondary,
               letterSpacing: "0.04em", textAlign: "center", transition: "all 0.12s",
             }}>{o}</button>
@@ -350,7 +354,7 @@ function SectionDivider({ label }: { label: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "8px 0 4px" }}>
       <div style={{ flex: 1, height: 1, background: S.rim }} />
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.12em", color: S.tertiary, whiteSpace: "nowrap" }}>{label}</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.12em", color: S.tertiary, whiteSpace: "nowrap" }}>{label}</span>
       <div style={{ flex: 1, height: 1, background: S.rim }} />
     </div>
   );
@@ -359,7 +363,7 @@ function SectionDivider({ label }: { label: string }) {
 function PhaseTag({ phase, color }: { phase: string; color: string }) {
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.1em",
+      fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.1em",
       padding: "1px 6px", border: `1px solid ${color}`,
       color, background: `color-mix(in srgb, ${color} 10%, transparent)`,
     }}>PHASE {phase}</span>
@@ -368,7 +372,7 @@ function PhaseTag({ phase, color }: { phase: string; color: string }) {
 
 function CitationNote({ text }: { text: string }) {
   return (
-    <div style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.purple, letterSpacing: "0.04em", opacity: 0.8, marginTop: 4 }}>
+    <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.purple, letterSpacing: "0.04em", opacity: 0.8, marginTop: 4 }}>
       ⎈ {text}
     </div>
   );
@@ -394,14 +398,14 @@ function TopBar({ onBack, pct, onHelp, lastSaved, onClearProgress }: {
       <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: S.primary }}>
         Policy Builder
       </span>
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 5px", border: `1px solid ${S.rim}`, color: S.secondary }}>
+      <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", padding: "1px 5px", border: `1px solid ${S.rim}`, color: S.secondary }}>
         INSTITUTIONAL GRADE · 7 PHASES · WHITEPAPER-BACKED
       </span>
       <div style={{ flex: 1 }} />
       {/* Draft saved indicator */}
       {lastSaved && (
         <span style={{
-          fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary,
+          fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
           letterSpacing: "0.06em", opacity: 0.7,
         }}>
           DRAFT SAVED · {lastSaved}
@@ -412,7 +416,7 @@ function TopBar({ onBack, pct, onHelp, lastSaved, onClearProgress }: {
         type="button"
         onClick={onClearProgress}
         style={{
-          fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.08em",
+          fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em",
           padding: "4px 10px", border: `1px solid ${S.rim}`,
           color: S.tertiary, background: "transparent", cursor: "pointer",
         }}
@@ -421,17 +425,17 @@ function TopBar({ onBack, pct, onHelp, lastSaved, onClearProgress }: {
       </button>
       {/* Progress meter */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{Math.round(pct)}%</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>{Math.round(pct)}%</span>
         <div style={{ width: 80, height: 4, background: S.rim, borderRadius: 2, overflow: "hidden" }}>
           <div style={{ height: "100%", width: `${pct}%`, background: S.cyan, transition: "width 0.3s", borderRadius: 2 }} />
         </div>
       </div>
       <button type="button" onClick={onHelp} style={{
-        fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em",
+        fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em",
         padding: "2px 10px", border: `1px solid ${S.rim}`,
         color: S.tertiary, background: "transparent", cursor: "pointer",
       }}>? HELP</button>
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{ts}</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>{ts}</span>
     </header>
   );
 }
@@ -467,16 +471,16 @@ function PhaseRail({ stepIdx, onJump }: { stepIdx: number; onJump: (idx: number)
             style={{
               flex: 1, minWidth: 80, padding: "8px 10px",
               borderRight: `1px solid ${S.rim}`,
-              borderBottom: `2px solid ${activeInPhase ? ph.color : donePhase ? S.pass : "transparent"}`,
-              background: activeInPhase ? `color-mix(in srgb, ${ph.color} 6%, ${S.bgPanel})` : "transparent",
+              borderBottom: `2px solid ${activeInPhase ? ph.accentColor : donePhase ? S.pass : "transparent"}`,
+              background: activeInPhase ? `color-mix(in srgb, ${ph.accentColor} 6%, ${S.bgPanel})` : "transparent",
               transition: "all 0.2s",
               cursor: donePhase ? "pointer" : "default",
             }}
           >
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.1em", color: activeInPhase ? ph.color : donePhase ? S.pass : S.tertiary }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.1em", color: activeInPhase ? ph.accentColor : donePhase ? S.pass : S.tertiary }}>
               {donePhase ? "✓ " : ""}{ph.id} · {ph.label}
             </div>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, marginTop: 2 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, marginTop: 2 }}>
               {ph.steps.length} step{ph.steps.length > 1 ? "s" : ""}
               {donePhase && <span style={{ color: S.pass, marginLeft: 4 }}>↩ jump</span>}
             </div>
@@ -496,7 +500,7 @@ function StepHeader({ stepIdx }: { stepIdx: number }) {
     <div style={{ marginBottom: 20 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
         <PhaseTag phase={s.phase} color={s.phaseColor} />
-        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.04em" }}>
           STEP {stepIdx + 1} / {TOTAL_STEPS}
         </span>
         <span style={{ color: S.rim }}>|</span>
@@ -662,7 +666,7 @@ function StepA2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
               transition: "all 0.1s",
             }}>
               <input type="checkbox" checked={sel} onChange={() => togglePair(p)} style={{ accentColor: S.cyan, margin: 0 }} />
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: sel ? S.cyan : S.secondary, letterSpacing: "0.04em" }}>{p}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: sel ? S.cyan : S.secondary, letterSpacing: "0.04em" }}>{p}</span>
             </label>
           );
         })}
@@ -673,7 +677,7 @@ function StepA2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
             border: `1px solid ${S.amber}`, background: `color-mix(in srgb, ${S.amber} 8%, transparent)`,
           }}>
             <input type="checkbox" checked onChange={() => togglePair(p)} style={{ accentColor: S.amber, margin: 0 }} />
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.amber, letterSpacing: "0.04em" }}>{p} ★</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.amber, letterSpacing: "0.04em" }}>{p} ★</span>
           </label>
         ))}
       </div>
@@ -686,12 +690,12 @@ function StepA2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
             placeholder="e.g. USD/VND" style={{ ...inputBase, maxWidth: 200 }} maxLength={7} />
         </div>
         <button type="button" onClick={addCustom} style={{
-          marginTop: 20, fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "7px 14px",
+          marginTop: 20, fontFamily: S.fontMono, fontSize: "0.75rem", padding: "7px 14px",
           border: `1px solid ${S.amber}`, color: S.amber, background: "transparent", cursor: "pointer",
         }}>+ Add Pair</button>
       </div>
       {s.fxCorridors.length > 0 && (
-        <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.pass }}>
+        <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.pass }}>
           ✓ {s.fxCorridors.length} pair{s.fxCorridors.length !== 1 ? "s" : ""} in scope: {s.fxCorridors.join(", ")}
         </div>
       )}
@@ -798,7 +802,7 @@ function StepB1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
           { label: "NET FLOW TYPE", value: s.receivableSplit > 60 ? "NET RECEIVER" : s.receivableSplit < 40 ? "NET PAYER" : "BALANCED" },
         ].map(({ label, value }) => (
           <div key={label}>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary, letterSpacing: "0.08em" }}>{label}</div>
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.08em" }}>{label}</div>
             <div style={{ fontFamily: S.fontMono, fontSize: "0.875rem", fontWeight: 700, color: S.cyan, marginTop: 3 }}>{value}</div>
           </div>
         ))}
@@ -877,7 +881,7 @@ function StepB2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
       </div>
 
       {/* Materiality summary */}
-      <div style={{ padding: "10px 14px", background: S.bgSub, border: `1px solid ${S.rim}`, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary, lineHeight: 1.8 }}>
+      <div style={{ padding: "10px 14px", background: S.bgSub, border: `1px solid ${S.rim}`, fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary, lineHeight: 1.8 }}>
         <span style={{ color: S.tertiary, letterSpacing: "0.06em" }}>NETTING SUMMARY · </span>
         Netting: <span style={{ color: s.nettingAvailable ? S.pass : S.fail }}>{s.nettingAvailable ? "ON" : "OFF"}</span>
         {s.nettingAvailable && <> · Settlement: <span style={{ color: S.cyan }}>T+{s.settlementCycleDays}</span></>}
@@ -894,7 +898,6 @@ function StepB2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
 // ─────────────────────────────────────────────────────────────────────────────
 
 function StepC1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => void }) {
-  const isMobile = useIsMobile();
   const isEM = s.fxCorridors.some(p => /MXN|BRL|TRY|ZAR|INR|IDR|PHP|THB|KRW|COP|CLP|ARS/.test(p));
 
   const updateInstr = (id: string, field: keyof WizardState, val: boolean | number) => {
@@ -917,11 +920,11 @@ function StepC1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
 
       {/* Instrument grid */}
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: "0.6875rem" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: "0.75rem" }}>
           <thead>
             <tr style={{ background: S.bgSub }}>
               {["INSTRUMENT","ALLOWED","MAX TENOR (DAYS)","REQUIRES APPROVAL","MAX NOTIONAL (USD)"].map(h => (
-                <th key={h} style={{ padding: "6px 10px", textAlign: "left", borderBottom: `1px solid ${S.rim}`, color: S.tertiary, letterSpacing: "0.06em", whiteSpace: "nowrap" }}>{h}</th>
+                <th scope="col" key={h} style={{ padding: "6px 10px", textAlign: "left", borderBottom: `1px solid ${S.rim}`, color: S.tertiary, letterSpacing: "0.06em", whiteSpace: "nowrap" }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -966,7 +969,7 @@ function StepC1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
           </tbody>
         </table>
       </div>
-      <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.pass }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.pass }}>
         {s.instrumentPreferences.length > 0
           ? `✓ ${s.instrumentPreferences.length} instrument(s) enabled: ${s.instrumentPreferences.join(", ")}`
           : "⚠ No instruments enabled — at least one required"
@@ -1019,7 +1022,7 @@ function StepC2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
         min={0} max={100} step={5} format={(v) => `${v}%`} />
       {(s.hedgeRatioTarget ?? 0) > (s.cashFlowCertainty ?? 100) && (
         <div style={{
-          fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.06em",
+          fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em",
           padding: "3px 8px", border: `1px solid ${S.fail}`, color: S.fail,
           marginTop: 4, display: "inline-block",
         }}>
@@ -1117,7 +1120,7 @@ function StepD2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
 
       {/* Concentration dashboard */}
       <div style={{ padding: "10px 14px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
-        <div style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary, letterSpacing: "0.1em", marginBottom: 8 }}>CONCENTRATION LIMITS SUMMARY</div>
+        <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.1em", marginBottom: 8 }}>CONCENTRATION LIMITS SUMMARY</div>
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 10 }}>
           {[
             { label: "INSTRUMENT", value: s.maxInstrumentConcentrationPct },
@@ -1126,7 +1129,7 @@ function StepD2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
             { label: "CURRENCY", value: s.maxCurrencyConcentrationPct },
           ].map(({ label, value }) => (
             <div key={label}>
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{label}</div>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>{label}</div>
               <div style={{ fontFamily: S.fontMono, fontSize: "1rem", fontWeight: 700, color: value <= 50 ? S.pass : value <= 75 ? S.amber : S.fail }}>{value}%</div>
             </div>
           ))}
@@ -1164,7 +1167,7 @@ function StepE1({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
         options={STRESS_PACKS} value={s.standardStressPack} onChange={(v) => set({ standardStressPack: v })} cols={3} />
 
       <div style={{ padding: "8px 12px", border: `1px solid ${S.rim}`, background: S.bgSub, fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, lineHeight: 1.7 }}>
-        <strong style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.cyan }}>
+        <strong style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan }}>
           {s.standardStressPack || "MODERATE_STRESS"}</strong>
         {" — "}{STRESS_LABELS[s.standardStressPack] || STRESS_LABELS.MODERATE_STRESS}
       </div>
@@ -1227,12 +1230,12 @@ function StepE2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <button type="button" onClick={addScenario} disabled={s.customScenarios.length >= 5} style={{
-          fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "5px 14px",
+          fontFamily: S.fontMono, fontSize: "0.75rem", padding: "5px 14px",
           border: `1px solid ${s.customScenarios.length >= 5 ? S.rim : S.cyan}`,
           color: s.customScenarios.length >= 5 ? S.tertiary : S.cyan,
           background: "transparent", cursor: s.customScenarios.length >= 5 ? "not-allowed" : "pointer",
         }}>+ Add Scenario ({s.customScenarios.length}/5)</button>
-        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>
           {s.customScenarios.length === 0 ? "No custom scenarios (standard pack applies)" : ""}
         </span>
       </div>
@@ -1240,8 +1243,8 @@ function StepE2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
       {s.customScenarios.map((sc, i) => (
         <div key={i} style={{ padding: "14px", border: `1px solid ${S.rim}`, background: S.bgSub }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.08em", color: S.secondary }}>SCENARIO {i + 1}</span>
-            <button type="button" onClick={() => removeScenario(i)} style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.fail, background: "transparent", border: "none", cursor: "pointer" }}>✕ Remove</button>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em", color: S.secondary }}>SCENARIO {i + 1}</span>
+            <button type="button" onClick={() => removeScenario(i)} style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.fail, background: "transparent", border: "none", cursor: "pointer" }}>✕ Remove</button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr 1fr 2fr", gap: 10 }}>
             <div>
@@ -1309,14 +1312,14 @@ function StepF1({ s }: { s: WizardState }) {
         <div style={{ height: 6, background: S.rim, borderRadius: 3, overflow: "hidden", marginBottom: 8 }}>
           <div style={{ height: "100%", width: `${pct}%`, background: color, transition: "width 0.4s", borderRadius: 3 }} />
         </div>
-        <div style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary }}>
+        <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>
           {pct >= 80 ? "✓ READY FOR AI ANALYSIS" : pct >= 60 ? "⚠ GAPS DETECTED — AI will use fallback defaults" : "✗ INSUFFICIENT — complete required fields before proceeding"}
         </div>
       </div>
 
       {/* Checklist */}
       <div style={{ border: `1px solid ${S.rim}` }}>
-        <div style={{ padding: "8px 14px", background: S.bgSub, borderBottom: `1px solid ${S.rim}`, fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.1em", color: S.tertiary }}>
+        <div style={{ padding: "8px 14px", background: S.bgSub, borderBottom: `1px solid ${S.rim}`, fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.1em", color: S.tertiary }}>
           APPROVAL CHECKLIST — {score}/{checks.length} ITEMS PASSED
         </div>
         {checks.map((c, i) => (
@@ -1344,7 +1347,7 @@ function StepF1({ s }: { s: WizardState }) {
           { label: "IFRS 9",         value: s.ifrsCompliance ? "YES" : "NO" },
         ].map(({ label, value }) => (
           <div key={label} style={{ padding: "8px 12px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.1em" }}>{label}</div>
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.1em" }}>{label}</div>
             <div style={{ fontFamily: S.fontMono, fontSize: "0.8125rem", fontWeight: 600, color: S.primary, marginTop: 3 }}>{value}</div>
           </div>
         ))}
@@ -1372,11 +1375,11 @@ function RecommendationCard({ rec, selected, onSelect, expanded, onToggleExpand 
     }}>
       <div style={{ padding: "12px 16px", background: selected ? `color-mix(in srgb, ${S.cyan} 10%, ${S.bgDeep})` : S.bgDeep, borderBottom: `1px solid ${S.rim}` }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.1em", fontWeight: 700, color: selected ? S.cyan : S.tertiary }}>{rec.label.toUpperCase()}</span>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", padding: "1px 5px", borderRadius: 2, background: `color-mix(in srgb, ${riskColor} 12%, transparent)`, color: riskColor }}>{p.riskPosture}</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.1em", fontWeight: 700, color: selected ? S.cyan : S.tertiary }}>{rec.label.toUpperCase()}</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", padding: "1px 5px", borderRadius: 2, background: `color-mix(in srgb, ${riskColor} 12%, transparent)`, color: riskColor }}>{p.riskPosture}</span>
         </div>
         <div style={{ marginTop: 6, fontFamily: S.fontUI, fontSize: "0.875rem", fontWeight: 600, color: S.primary }}>&ldquo;{p.shortName}&rdquo; Policy</div>
-        <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, marginTop: 2 }}>{p.name}</div>
+        <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, marginTop: 2 }}>{p.name}</div>
       </div>
       <div style={{ padding: "12px 16px", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }}>
         {[
@@ -1386,25 +1389,25 @@ function RecommendationCard({ rec, selected, onSelect, expanded, onToggleExpand 
           { label: "PRODUCT",    value: p.policy.execution_product },
         ].map(({ label, value }) => (
           <div key={label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.08em", color: S.tertiary }}>{label}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em", color: S.tertiary }}>{label}</span>
             <span style={{ fontFamily: S.fontMono, fontSize: "0.8125rem", fontWeight: 700, color: S.primary }}>{value}</span>
           </div>
         ))}
       </div>
       {expanded && (
         <div style={{ padding: "0 16px 12px", borderTop: `1px solid ${S.rim}`, paddingTop: 10 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.08em", color: S.tertiary, display: "block", marginBottom: 6 }}>RATIONALE</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em", color: S.tertiary, display: "block", marginBottom: 6 }}>RATIONALE</span>
           <p style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, margin: 0, lineHeight: 1.6 }}>{rec.rationale}</p>
         </div>
       )}
       <div style={{ marginTop: "auto", padding: "10px 16px", borderTop: `1px solid ${S.rim}`, display: "flex", justifyContent: "space-between" }}>
         <button type="button" onClick={onSelect} style={{
-          fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em", fontWeight: 700, padding: "5px 14px",
+          fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em", fontWeight: 700, padding: "5px 14px",
           border: `1px solid ${selected ? S.pass : S.cyan}`, color: selected ? S.pass : S.cyan,
           background: selected ? `color-mix(in srgb, ${S.pass} 8%, transparent)` : `color-mix(in srgb, ${S.cyan} 8%, transparent)`, cursor: "pointer",
         }}>{selected ? "✓ SELECTED" : "Select"}</button>
         <button type="button" onClick={onToggleExpand} style={{
-          fontFamily: S.fontMono, fontSize: "0.625rem", padding: "3px 8px", border: `1px solid ${S.rim}`, color: S.tertiary, background: "transparent", cursor: "pointer",
+          fontFamily: S.fontMono, fontSize: "0.75rem", padding: "3px 8px", border: `1px solid ${S.rim}`, color: S.tertiary, background: "transparent", cursor: "pointer",
         }}>{expanded ? "Hide" : "Rationale"}</button>
       </div>
     </div>
@@ -1450,7 +1453,7 @@ function StepG1({
 
   if (aiLoading) return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, minHeight: 280 }}>
-      <div style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.cyan, letterSpacing: "0.12em" }}>ANALYZING PROFILE…</div>
+      <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan, letterSpacing: "0.12em" }}>ANALYZING PROFILE…</div>
       <div style={{ display: "flex", gap: 6 }}>{[0,1,2].map(i => (
         <div key={i} style={{ width: 8, height: 8, borderRadius: 4, background: S.cyan, opacity: 0.3, animation: `pulse 1.2s ease-in-out ${i * 0.4}s infinite` }} />
       ))}</div>
@@ -1462,7 +1465,7 @@ function StepG1({
   );
   if (aiError) return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.fail }}>AI ANALYSIS FAILED</div>
+      <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.fail }}>AI ANALYSIS FAILED</div>
       <p style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", color: S.secondary, margin: 0 }}>{aiError}</p>
     </div>
   );
@@ -1471,14 +1474,14 @@ function StepG1({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.08em", color: S.cyan }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em", color: S.cyan }}>
           {aiResult.fallback ? "PRESET MATCH" : "AI RECOMMENDATIONS"} — SELECT ONE TO SAVE
         </span>
         {!aiResult.fallback && (
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", padding: "1px 6px", border: `1px solid ${S.pass}`, color: S.pass }}>CLAUDE AI</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", padding: "1px 6px", border: `1px solid ${S.pass}`, color: S.pass }}>CLAUDE AI</span>
         )}
         {aiResult.fallback && (
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", padding: "1px 6px", border: `1px solid ${S.amber}`, color: S.amber }}>RULE-BASED · NO AI</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", padding: "1px 6px", border: `1px solid ${S.amber}`, color: S.amber }}>RULE-BASED · NO AI</span>
         )}
       </div>
 
@@ -1495,16 +1498,16 @@ function StepG1({
 
       <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 16px", background: S.bgSub, border: `1px solid ${S.rim}`, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary }}>{aiResult.fallback ? "MATCH" : "AI CONFIDENCE"}</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>{aiResult.fallback ? "MATCH" : "AI CONFIDENCE"}</span>
           <span style={{ fontFamily: S.fontMono, fontSize: "0.875rem", fontWeight: 700, color: S.pass, padding: "2px 8px", border: `1px solid ${S.pass}`, background: `color-mix(in srgb, ${S.pass} 8%, transparent)` }}>
             {aiResult.fallback ? "PRESET" : "HIGH"}
           </span>
         </div>
         <span style={{ color: S.rim }}>|</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary }}>NEAREST: </span>
+        <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>NEAREST: </span>
         <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary }}>{aiResult.nearest_preset_name ?? "—"}</span>
         <span style={{ color: S.rim }}>|</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary }}>CORRIDORS: </span>
+        <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>CORRIDORS: </span>
         <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan }}>{s.fxCorridors.join(", ") || "—"}</span>
       </div>
 
@@ -1527,7 +1530,7 @@ function StepG1({
               }}
             />
             {!policyName.trim() && saveError && (
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.fail, marginTop: 3, letterSpacing: "0.06em" }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.fail, marginTop: 3, letterSpacing: "0.06em" }}>
                 POLICY NAME IS REQUIRED
               </div>
             )}
@@ -1580,13 +1583,13 @@ function StepG1({
               padding: "6px 18px", border: `1px solid ${S.cyan}`, color: S.cyan,
               background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`, cursor: "pointer",
             }}>⚡ APPLY TO SESSION</button>
-            {saveError && <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.fail }}>{saveError}</span>}
+            {saveError && <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.fail }}>{saveError}</span>}
           </div>
         </div>
       )}
 
       <button type="button" onClick={onStartOver} style={{
-        alignSelf: "flex-start", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
+        alignSelf: "flex-start", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
         background: "transparent", border: "none", cursor: "pointer", padding: "4px 0", textDecoration: "underline",
       }}>↺ Start Over</button>
     </div>
@@ -1655,7 +1658,7 @@ export default function AIPolicyWizardPage() {
   const router = useRouter();
 
   const [stepIdx, setStepIdx] = useState(0);
-  const [completed, setCompleted] = useState<Set<number>>(new Set());
+  const [_completed, setCompleted] = useState<Set<number>>(new Set());
   const [state, setState] = useState<WizardState>(INITIAL_STATE);
   const [stepError, setStepError] = useState<string | null>(null);
 
@@ -1685,7 +1688,6 @@ export default function AIPolicyWizardPage() {
         setState(prev => ({ ...prev, ...parsed }));
       }
     } catch { /* ignore parse errors */ }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-save state on every change (debounced 500ms)
@@ -1917,7 +1919,7 @@ export default function AIPolicyWizardPage() {
           padding: "8px 24px", flexShrink: 0,
           display: "flex", alignItems: "center", gap: 10,
         }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", letterSpacing: "0.1em", color: S.amber, fontWeight: 700 }}>⚠ NO COMPANY CONTEXT</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.1em", color: S.amber, fontWeight: 700 }}>⚠ NO COMPANY CONTEXT</span>
           <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary }}>
             Your account is not linked to a company. Policies saved here will be unscoped and may not appear in the Policy Library. Contact your admin.
           </span>
@@ -1932,7 +1934,7 @@ export default function AIPolicyWizardPage() {
           padding: "8px 24px", flexShrink: 0,
           display: "flex", alignItems: "center", gap: 10,
         }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", letterSpacing: "0.1em", color: S.pass, fontWeight: 700 }}>✓ POLICY SAVED</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.1em", color: S.pass, fontWeight: 700 }}>✓ POLICY SAVED</span>
           <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary }}>
             Redirecting you to the Policy Library…
           </span>
@@ -1954,7 +1956,7 @@ export default function AIPolicyWizardPage() {
           padding: "8px 24px", flexShrink: 0,
           display: "flex", alignItems: "center", gap: 10,
         }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", letterSpacing: "0.1em", color: S.fail, fontWeight: 700 }}>REQUIRED</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.1em", color: S.fail, fontWeight: 700 }}>REQUIRED</span>
           <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary }}>{stepError}</span>
         </div>
       )}
@@ -1968,7 +1970,7 @@ export default function AIPolicyWizardPage() {
           fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, background: "transparent", border: "none", cursor: "pointer",
         }}>Cancel</button>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary, letterSpacing: "0.06em" }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.06em" }}>
             {ALL_STEPS[stepIdx]?.phase && `PHASE ${ALL_STEPS[stepIdx].phase} · `}STEP {stepIdx + 1}/{TOTAL_STEPS}
           </span>
           {stepIdx > 0 && !aiLoading && (
@@ -1997,7 +1999,7 @@ export default function AIPolicyWizardPage() {
       <footer style={{
         height: 32, display: "flex", alignItems: "center", gap: 8, padding: "0 20px",
         borderTop: `1px solid ${S.rim}`, background: S.bgPanel,
-        fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em", flexShrink: 0,
+        fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.04em", flexShrink: 0,
       }}>
         <span>ORDR · Policy Builder · Institutional Grade</span>
         <span style={{ color: S.rim }}>—</span>

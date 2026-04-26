@@ -124,7 +124,7 @@ export default function PipelineStatusWidget({ token, onRemove }: Props) {
         <GitMerge size={12} color={S.cyan} />
         <span style={{
           fontFamily:    S.fontMono,
-          fontSize:      "0.625rem",
+          fontSize:      "0.75rem",
           letterSpacing: "0.1em",
           color:         S.cyan,
           fontWeight:    700,
@@ -135,7 +135,7 @@ export default function PipelineStatusWidget({ token, onRemove }: Props) {
         {data && (
           <span style={{
             fontFamily:    S.fontMono,
-            fontSize:      "0.55rem",
+            fontSize:      "0.75rem",
             color:         S.pass,
             letterSpacing: "0.06em",
             display:       "flex",
@@ -207,7 +207,7 @@ export default function PipelineStatusWidget({ token, onRemove }: Props) {
                       }} />
                       <span style={{
                         fontFamily:    S.fontMono,
-                        fontSize:      "0.6rem",
+                        fontSize:      "0.75rem",
                         color:         st.color,
                         letterSpacing: "0.1em",
                         fontWeight:    700,
@@ -226,7 +226,7 @@ export default function PipelineStatusWidget({ token, onRemove }: Props) {
                       </span>
                       <span style={{
                         fontFamily:    S.fontMono,
-                        fontSize:      "0.55rem",
+                        fontSize:      "0.75rem",
                         color:         S.tertiary,
                         letterSpacing: "0.05em",
                       }}>
@@ -253,7 +253,7 @@ export default function PipelineStatusWidget({ token, onRemove }: Props) {
 
                   <div style={{
                     fontFamily:    S.fontMono,
-                    fontSize:      "0.55rem",
+                    fontSize:      "0.75rem",
                     color:         S.tertiary,
                     marginTop:     3,
                     letterSpacing: "0.05em",
@@ -294,7 +294,7 @@ export default function PipelineStatusWidget({ token, onRemove }: Props) {
                   {item.sub && (
                     <span style={{
                       fontFamily:    S.fontMono,
-                      fontSize:      "0.5rem",
+                      fontSize:      "0.75rem",
                       color:         S.tertiary,
                       letterSpacing: "0.08em",
                       marginTop:     2,

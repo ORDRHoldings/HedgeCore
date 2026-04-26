@@ -21,6 +21,7 @@ const S = {
   accent: "var(--accent-cyan)",
   text: "var(--text-primary)",
   textSub: "var(--text-secondary)",
+  black: "#000",
 } as const;
 
 const ENTRY_TYPES = [
@@ -124,7 +125,7 @@ export default function GLAccountsPage() {
               <thead>
                 <tr style={{ background: S.bgDeep }}>
                   {["Entry Type", "Standard", "Debit Acct", "Credit Acct", "Label", "ERP", ""].map((h) => (
-                    <th
+                    <th scope="col"
                       key={h}
                       style={{
                         padding: "8px 12px",
@@ -253,7 +254,7 @@ export default function GLAccountsPage() {
                 display: "flex", alignItems: "center", gap: 8,
                 padding: "8px 20px",
                 background: saving ? S.bgSub : S.accent,
-                color: "#000", border: "none", borderRadius: 3,
+                color: S.black, border: "none", borderRadius: 3,
                 fontSize: 13, fontFamily: S.fontMono,
                 cursor: saving ? "not-allowed" : "pointer",
                 letterSpacing: "0.04em",

@@ -8,7 +8,8 @@ import {
   type BankStatementRecord, type BankTransactionRecord, type BankAccount,
   type ReconciliationSummary, type ReconciliationRunResponse,
 } from "@/lib/api/cashClient";
-import { Upload, RefreshCw, X, Play } from "lucide-react";
+import { Upload, RefreshCw, X, Play, FileText } from "lucide-react";
+import { PageShell } from "@/components/layout/PageShell";
 
 // ── Design tokens ──────────────────────────────────────────────────────────
 const S = {
@@ -33,6 +34,7 @@ const HEX = {
   text1: "#0F172A",
   text2: "#334155",
   text3: "#94A3B8",
+  white: "#fff",
 } as const;
 
 type Tab = "STATEMENTS" | "TRANSACTIONS" | "RECONCILIATION";
@@ -177,46 +179,37 @@ function BankStatementsInner() {
   const unmatchedTx = transactions.filter(t => t.reconciliation_status === "UNMATCHED").length;
 
   return (
+    <PageShell
+      icon={FileText}
+      title="Bank Statements"
+      noPadding
+      actions={
+        <>
+          <button onClick={reload} style={{
+            display: "flex", alignItems: "center", gap: 6, padding: "6px 14px",
+            background: S.sub, border: `1px solid ${S.rim}`, borderRadius: 4,
+            cursor: "pointer", fontSize: 11, fontFamily: S.mono, fontWeight: 600,
+            color: S.text3, letterSpacing: "0.06em",
+          }}>
+            <RefreshCw size={12} />REFRESH
+          </button>
+          <span style={{
+            fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
+            padding: "4px 12px", borderRadius: 3,
+            background: "rgba(28,98,242,0.06)", color: HEX.cyan,
+            border: "1px solid rgba(28,98,242,0.12)",
+          }}>
+            PHASE 2d/2e
+          </span>
+        </>
+      }
+    >
     <div style={{ height: "100%", display: "flex", flexDirection: "column", background: S.deep }}>
-      {/* ── Header ──────────────────────────────────────────────── */}
+      {/* ── Header (stats + tabs) ───────────────────────────────── */}
       <div style={{ flexShrink: 0, background: S.panel, borderBottom: `1px solid ${S.rim}` }}>
         <div style={{ padding: "20px 28px 0" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 4 }}>
-            <div style={{
-              width: 34, height: 34, borderRadius: 6,
-              background: "rgba(28,98,242,0.06)", border: "1px solid rgba(28,98,242,0.12)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={HEX.cyan} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                <path d="M14 2v6h6" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" />
-              </svg>
-            </div>
-            <div>
-              <h1 style={{ fontFamily: S.mono, fontSize: 15, fontWeight: 700, color: S.text1, letterSpacing: "0.08em", margin: 0 }}>
-                BANK STATEMENTS & RECONCILIATION
-              </h1>
-              <span style={{ fontFamily: S.ui, fontSize: 12, color: S.text3 }}>
-                Statement import, transaction browser & auto-reconciliation engine
-              </span>
-            </div>
-            <div style={{ flex: 1 }} />
-            <button onClick={reload} style={{
-              display: "flex", alignItems: "center", gap: 6, padding: "6px 14px",
-              background: S.sub, border: `1px solid ${S.rim}`, borderRadius: 4,
-              cursor: "pointer", fontSize: 11, fontFamily: S.mono, fontWeight: 600,
-              color: S.text3, letterSpacing: "0.06em",
-            }}>
-              <RefreshCw size={12} />REFRESH
-            </button>
-            <span style={{
-              fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
-              padding: "4px 12px", borderRadius: 3,
-              background: "rgba(28,98,242,0.06)", color: HEX.cyan,
-              border: "1px solid rgba(28,98,242,0.12)",
-            }}>
-              PHASE 2d/2e
-            </span>
+          <div style={{ fontFamily: S.ui, fontSize: 12, color: S.text3, marginBottom: 4 }}>
+            Statement import, transaction browser & auto-reconciliation engine
           </div>
         </div>
 
@@ -320,7 +313,7 @@ function BankStatementsInner() {
               </div>
               <button onClick={() => setShowUpload(!showUpload)} style={{
                 display: "flex", alignItems: "center", gap: 6, padding: "8px 16px",
-                background: HEX.cyan, color: "#fff", border: "none", borderRadius: 4,
+                background: HEX.cyan, color: HEX.white, border: "none", borderRadius: 4,
                 fontSize: 11, fontFamily: S.mono, fontWeight: 700, letterSpacing: "0.06em", cursor: "pointer",
               }}>
                 <Upload size={13} />UPLOAD STATEMENT
@@ -351,7 +344,7 @@ function BankStatementsInner() {
                 </div>
                 <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
                   <button onClick={handleUpload} disabled={uploading || !uploadFile || !uploadAccountId}
-                    style={{ padding: "8px 18px", background: uploading ? HEX.text3 : HEX.cyan, color: "#fff", border: "none", borderRadius: 4, fontSize: 11, fontFamily: S.mono, fontWeight: 700, cursor: uploading ? "wait" : "pointer", letterSpacing: "0.06em" }}>
+                    style={{ padding: "8px 18px", background: uploading ? HEX.text3 : HEX.cyan, color: HEX.white, border: "none", borderRadius: 4, fontSize: 11, fontFamily: S.mono, fontWeight: 700, cursor: uploading ? "wait" : "pointer", letterSpacing: "0.06em" }}>
                     {uploading ? "UPLOADING..." : "UPLOAD"}
                   </button>
                   <button onClick={() => setShowUpload(false)} style={{ padding: "8px 18px", background: "transparent", color: S.text3, border: `1px solid ${S.rim}`, borderRadius: 4, fontSize: 11, fontFamily: S.mono, fontWeight: 700, cursor: "pointer" }}>CANCEL</button>
@@ -365,7 +358,7 @@ function BankStatementsInner() {
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                     {["ACCOUNT", "DATE", "OPENING", "CLOSING", "CCY", "FORMAT", "TXs", "FILE"].map(h => (
-                      <th key={h} style={{ padding: "10px 14px", textAlign: h === "OPENING" || h === "CLOSING" ? "right" : "left", fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>{h}</th>
+                      <th scope="col" key={h} style={{ padding: "10px 14px", textAlign: h === "OPENING" || h === "CLOSING" ? "right" : "left", fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -421,7 +414,7 @@ function BankStatementsInner() {
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                     {["DATE", "AMOUNT", "CCY", "DIR", "DESCRIPTION", "COUNTERPARTY", "REF", "STATUS", ""].map(h => (
-                      <th key={h} style={{ padding: "10px 12px", textAlign: h === "AMOUNT" ? "right" : "left", fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>{h}</th>
+                      <th scope="col" key={h} style={{ padding: "10px 12px", textAlign: h === "AMOUNT" ? "right" : "left", fontSize: 10, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -474,7 +467,7 @@ function BankStatementsInner() {
               <button onClick={handleRunRecon} disabled={!reconAccountId}
                 style={{
                   display: "flex", alignItems: "center", gap: 6, padding: "8px 16px",
-                  background: reconAccountId ? HEX.cyan : HEX.text3, color: "#fff",
+                  background: reconAccountId ? HEX.cyan : HEX.text3, color: HEX.white,
                   border: "none", borderRadius: 4, fontSize: 11, fontFamily: S.mono, fontWeight: 700,
                   cursor: reconAccountId ? "pointer" : "not-allowed", letterSpacing: "0.06em",
                 }}>
@@ -525,17 +518,17 @@ function BankStatementsInner() {
                     <input value={matchTxId} onChange={e => setMatchTxId(e.target.value)} placeholder="UUID"
                       style={{ width: "100%", padding: "8px 10px", marginTop: 4, background: S.deep, color: S.text1, border: `1px solid ${S.rim}`, borderRadius: 4, fontSize: 12, fontFamily: S.mono, boxSizing: "border-box" }} />
                   </label>
-                  <label style={{ fontSize: 10, fontFamily: S.mono, fontWeight: 600, color: S.text3, letterSpacing: "0.1em" }}>SETTLEMENT ID <span style={{ fontWeight: 400, color: S.text3, fontSize: 9 }}>(optional)</span>
+                  <label style={{ fontSize: 10, fontFamily: S.mono, fontWeight: 600, color: S.text3, letterSpacing: "0.1em" }}>SETTLEMENT ID <span style={{ fontWeight: 400, color: S.text3, fontSize: 10 }}>(optional)</span>
                     <input value={matchSettlementId} onChange={e => setMatchSettlementId(e.target.value)} placeholder="UUID"
                       style={{ width: "100%", padding: "8px 10px", marginTop: 4, background: S.deep, color: S.text1, border: `1px solid ${S.rim}`, borderRadius: 4, fontSize: 12, fontFamily: S.mono, boxSizing: "border-box" }} />
                   </label>
-                  <label style={{ fontSize: 10, fontFamily: S.mono, fontWeight: 600, color: S.text3, letterSpacing: "0.1em" }}>JOURNAL ID <span style={{ fontWeight: 400, color: S.text3, fontSize: 9 }}>(optional)</span>
+                  <label style={{ fontSize: 10, fontFamily: S.mono, fontWeight: 600, color: S.text3, letterSpacing: "0.1em" }}>JOURNAL ID <span style={{ fontWeight: 400, color: S.text3, fontSize: 10 }}>(optional)</span>
                     <input value={matchJournalId} onChange={e => setMatchJournalId(e.target.value)} placeholder="UUID"
                       style={{ width: "100%", padding: "8px 10px", marginTop: 4, background: S.deep, color: S.text1, border: `1px solid ${S.rim}`, borderRadius: 4, fontSize: 12, fontFamily: S.mono, boxSizing: "border-box" }} />
                   </label>
                 </div>
                 <button onClick={handleManualMatch} disabled={!matchTxId || (!matchSettlementId && !matchJournalId)}
-                  style={{ marginTop: 14, padding: "8px 18px", background: HEX.cyan, color: "#fff", border: "none", borderRadius: 4, fontSize: 11, fontFamily: S.mono, fontWeight: 700, cursor: "pointer", letterSpacing: "0.06em" }}>
+                  style={{ marginTop: 14, padding: "8px 18px", background: HEX.cyan, color: HEX.white, border: "none", borderRadius: 4, fontSize: 11, fontFamily: S.mono, fontWeight: 700, cursor: "pointer", letterSpacing: "0.06em" }}>
                   MATCH
                 </button>
               </div>
@@ -550,11 +543,11 @@ function BankStatementsInner() {
         )}
       </div>
     </div>
+    </PageShell>
   );
 }
 
 export default function BankStatementsPage() {
-  const isMobile = useIsMobile();
   return (
     <Suspense fallback={
       <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-deep)" }}>

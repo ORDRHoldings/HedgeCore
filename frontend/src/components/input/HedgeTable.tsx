@@ -49,13 +49,13 @@ export default function HedgeTable({ hedges, onEdit, onRemove, baseCcy }: Props)
         <table className="table-enterprise">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Instrument</th>
-              <th>Direction</th>
-              <th className="numeric">Notional {displayCcy}</th>
-              <th>Value Date</th>
-              <th>Status</th>
-              <th style={{ width: 32 }}></th>
+              <th scope="col">ID</th>
+              <th scope="col">Instrument</th>
+              <th scope="col">Direction</th>
+              <th scope="col" className="numeric">Notional {displayCcy}</th>
+              <th scope="col">Value Date</th>
+              <th scope="col">Status</th>
+              <th scope="col" style={{ width: 32 }}></th>
             </tr>
           </thead>
           <tbody>

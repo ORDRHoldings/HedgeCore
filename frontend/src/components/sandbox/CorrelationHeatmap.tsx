@@ -68,9 +68,9 @@ export default function CorrelationHeatmap({ factorCovariance }: Props) {
       <table style={{ borderCollapse: "collapse", fontSize: 12 }}>
         <thead>
           <tr>
-            <th style={{ padding: "4px 8px", fontFamily: S.fontMono, color: S.tertiary }} />
+            <th scope="col" style={{ padding: "4px 8px", fontFamily: S.fontMono, color: S.tertiary }} />
             {labels.map(l => (
-              <th key={l} style={{ padding: "4px 8px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, fontWeight: 700, textAlign: "center" }}>
+              <th scope="col" key={l} style={{ padding: "4px 8px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, fontWeight: 700, textAlign: "center" }}>
                 {l.slice(0, 6)}
               </th>
             ))}

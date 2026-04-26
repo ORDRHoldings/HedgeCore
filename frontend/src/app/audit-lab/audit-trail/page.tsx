@@ -250,7 +250,7 @@ export default function AuditTrailPage() {
             <thead>
               <tr style={{ background: S.bgSub }}>
                 {["Timestamp", "Event Type", "Description", "Entity Type", "Actor", "Hash"].map(h => (
-                  <th key={h} style={{
+                  <th scope="col" key={h} style={{
                     fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                     letterSpacing: "0.08em", color: S.tertiary, textAlign: "left",
                     padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase",

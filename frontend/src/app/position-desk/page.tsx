@@ -28,7 +28,6 @@ import {
   listPositionsThunk,
   assignPolicyThunk,
   markReadyThunk,
-  executePositionThunk,
   rejectPositionThunk,
   reopenPositionThunk,
   clearLifecycleError,
@@ -46,7 +45,7 @@ import {
 import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { POSITIONS_HELP } from "@/lib/help";
 import { ChevronDownIcon, ChevronUpIcon, ChevronsUpDownIcon,
-  ChevronRightIcon, PlusIcon, UploadIcon, LayoutDashboard } from "lucide-react"
+  ChevronRightIcon, PlusIcon, UploadIcon } from "lucide-react"
 import AddPositionDrawer from "@/components/position/AddPositionDrawer";
 import ImportCsvModal from "@/components/position/ImportCsvModal";
 
@@ -69,6 +68,9 @@ const S = {
   fail:      "var(--accent-red,#ef4444)",
   purple:    "#93C5FD",
   indigo:    "#818cf8",
+  // Position-desk-specific signals: dark navy chart canvas + button text fg.
+  bgChart:   "#1a1a2e",
+  white:     "#fff",
 } as const;
 
 // ── Status config ────────────────────────────────────────────────────────────
@@ -134,7 +136,7 @@ function Tooltip({ tip, children }: { tip: string; children: React.ReactNode }) 
         <span style={{
           position: "absolute", bottom: "calc(100% + 6px)", left: "50%",
           transform: "translateX(-50%)", zIndex: 500,
-          background: "#1a1a2e", border: `1px solid ${S.rim}`,
+          background: S.bgChart, border: `1px solid ${S.rim}`,
           color: S.secondary, fontFamily: S.fontMono, fontSize: 12,
           padding: "5px 9px", borderRadius: 2, whiteSpace: "pre-wrap",
           maxWidth: 280, lineHeight: 1.5, pointerEvents: "none",
@@ -310,8 +312,8 @@ function PolicySelectorRow({
         opacity: isActive ? 1 : 0.45,
       }}
     >
-      {isFavorite && <span style={{ color: S.amber, fontSize: '0.625rem' }}>★</span>}
-      <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem',
+      {isFavorite && <span style={{ color: S.amber, fontSize: '0.75rem' }}>★</span>}
+      <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem',
         color: S.cyan, letterSpacing: '0.06em', minWidth: 48 }}>
         {tmpl.short_name}
       </span>
@@ -320,14 +322,14 @@ function PolicySelectorRow({
         {tmpl.name}
       </span>
       {isActive && (
-        <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem',
+        <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem',
           color: S.pass, letterSpacing: '0.08em',
           border: `1px solid color-mix(in srgb, ${S.pass} 30%, transparent)`,
           padding: '1px 4px' }}>
           ACTIVE
         </span>
       )}
-      <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem',
+      <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem',
         color: S.tertiary, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
         {conf}% · {fcst}%
       </span>
@@ -471,6 +473,9 @@ export default function PositionDeskPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+    // closeModal is declared later in the component body (TDZ); the lazy closure inside
+    // the keydown handler is fine at runtime, but it can't be added to the dep array here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, token, modal.type, preset]);
 
   // ── Filtering ──────────────────────────────────────────────────────────────
@@ -574,7 +579,7 @@ export default function PositionDeskPage() {
     if (r.meta.requestStatus === "fulfilled") { closeModal(); router.push("/hedge-desk"); }
   }, [dispatch, modal.position, policyId, token, closeModal, router]);
 
-  const handleMarkReady = useCallback(async () => {
+  const _handleMarkReady = useCallback(async () => {
     if (!modal.position || !runId.trim() || !token) return;
     const r = await dispatch(markReadyThunk({
       id: modal.position.id, runId: runId.trim(),
@@ -889,7 +894,7 @@ export default function PositionDeskPage() {
           </button>
           <button
             onClick={() => { setBulkRejectReason(''); setBulkRejectResult(null); setBulkRejectOpen(true); }}
-            style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: "#fff", background: S.fail, border: "none", padding: "3px 12px", cursor: "pointer", borderRadius: 2 }}>
+            style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: S.white, background: S.fail, border: "none", padding: "3px 12px", cursor: "pointer", borderRadius: 2 }}>
             BULK REJECT
           </button>
           <button onClick={() => setSelected(new Set())} style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 8px", cursor: "pointer", borderRadius: 2 }}>CLEAR</button>
@@ -1161,20 +1166,20 @@ export default function PositionDeskPage() {
                     border: `1px solid color-mix(in srgb, var(--accent-cyan,#22d3ee) 30%, transparent)`,
                     background: `color-mix(in srgb, var(--accent-cyan,#22d3ee) 4%, var(--bg-panel))`,
                   }}>
-                    <div style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.cyan, letterSpacing: '0.12em', marginBottom: 4 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.cyan, letterSpacing: '0.12em', marginBottom: 4 }}>
                       BEST MATCH · {recommendation.confidence}
                     </div>
                     <div style={{ fontFamily: S.fontUI, fontSize: '0.8125rem', color: S.primary, fontWeight: 600, marginBottom: 2 }}>
                       [{recommendation.shortName}] {recommendation.name}
                     </div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.tertiary, marginBottom: 6 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary, marginBottom: 6 }}>
                       {recommendation.reason}
                     </div>
                     <button
                       type="button"
                       onClick={() => setPolicyId(recommendation.templateId)}
                       style={{
-                        fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.08em', padding: '3px 10px',
+                        fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.08em', padding: '3px 10px',
                         border: `1px solid ${S.cyan}`, color: S.cyan, background: 'transparent', cursor: 'pointer',
                       }}
                     >
@@ -1185,7 +1190,7 @@ export default function PositionDeskPage() {
                 <label style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, display: 'block', marginBottom: 4, letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
                   Policy Instance *
                   {!activePolicyInstance && policyTemplates.length > 0 && (
-                    <span style={{ color: S.amber, marginLeft: 8, fontSize: '0.5625rem' }}>
+                    <span style={{ color: S.amber, marginLeft: 8, fontSize: '0.75rem' }}>
                       NO ACTIVE POLICY — activate one on the Policies page first
                     </span>
                   )}
@@ -1197,7 +1202,7 @@ export default function PositionDeskPage() {
                 />
                 <div style={{ maxHeight: 240, overflowY: 'auto' as const, border: `1px solid ${S.rim}`, background: S.bgPanel }}>
                   {filteredFavs.length > 0 && (<>
-                    <div style={{ padding: '4px 10px', fontFamily: S.fontMono, fontSize: '0.4625rem', color: S.amber, letterSpacing: '0.1em', borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
+                    <div style={{ padding: '4px 10px', fontFamily: S.fontMono, fontSize: '0.75rem', color: S.amber, letterSpacing: '0.1em', borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
                       ★ FAVORITES
                     </div>
                     {filteredFavs.map(t => {
@@ -1211,7 +1216,7 @@ export default function PositionDeskPage() {
                     })}
                   </>)}
                   {filteredOthers.length > 0 && (<>
-                    <div style={{ padding: '4px 10px', fontFamily: S.fontMono, fontSize: '0.4625rem', color: S.tertiary, letterSpacing: '0.1em', borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
+                    <div style={{ padding: '4px 10px', fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary, letterSpacing: '0.1em', borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
                       ALL POLICIES
                     </div>
                     {filteredOthers.map(t => {
@@ -1225,13 +1230,13 @@ export default function PositionDeskPage() {
                     })}
                   </>)}
                   {filteredFavs.length === 0 && filteredOthers.length === 0 && (
-                    <div style={{ padding: '20px', textAlign: 'center', fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.tertiary }}>
+                    <div style={{ padding: '20px', textAlign: 'center', fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary }}>
                       {policyTemplates.length === 0 ? 'LOADING…' : 'NO POLICIES MATCH'}
                     </div>
                   )}
                 </div>
                 {policyId && (
-                  <div style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.cyan, letterSpacing: '0.06em', padding: '3px 8px', border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)` }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.cyan, letterSpacing: '0.06em', padding: '3px 8px', border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)` }}>
                     INSTANCE: {policyId.slice(0, 8).toUpperCase()}
                     {selectedTemplate && ` · ${selectedTemplate.short_name} · ${selectedTemplate.name}`}
                   </div>
@@ -1332,7 +1337,7 @@ export default function PositionDeskPage() {
                 <button
                   onClick={handleBulkReject}
                   disabled={bulkRejectReason.trim().length < 5 || bulkRejecting || rejectableIds.length === 0}
-                  style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', color: '#fff', background: bulkRejectReason.trim().length < 5 || bulkRejecting || rejectableIds.length === 0 ? S.tertiary : S.fail, border: 'none', padding: '6px 14px', cursor: bulkRejectReason.trim().length < 5 || bulkRejecting || rejectableIds.length === 0 ? 'not-allowed' : 'pointer' }}>
+                  style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', color: S.white, background: bulkRejectReason.trim().length < 5 || bulkRejecting || rejectableIds.length === 0 ? S.tertiary : S.fail, border: 'none', padding: '6px 14px', cursor: bulkRejectReason.trim().length < 5 || bulkRejecting || rejectableIds.length === 0 ? 'not-allowed' : 'pointer' }}>
                   {bulkRejecting ? `REJECTING ${bulkRejectProgress}/${rejectableIds.length}…` : `REJECT ${rejectableIds.length} POSITIONS`}
                 </button>
               </div>
@@ -1386,7 +1391,7 @@ export default function PositionDeskPage() {
                 Cancel
               </button>
               <button onClick={handleDeletePosition} disabled={deleteRunning} data-testid="confirm-delete"
-                style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', color: '#fff', background: deleteRunning ? S.tertiary : S.fail, border: 'none', padding: '6px 14px', cursor: deleteRunning ? 'not-allowed' : 'pointer' }}>
+                style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', color: S.white, background: deleteRunning ? S.tertiary : S.fail, border: 'none', padding: '6px 14px', cursor: deleteRunning ? 'not-allowed' : 'pointer' }}>
                 {deleteRunning ? 'REMOVING…' : 'CONFIRM DELETE'}
               </button>
             </div>
@@ -1432,7 +1437,7 @@ export default function PositionDeskPage() {
                 />
                 <div style={{ maxHeight: 200, overflowY: 'auto' as const, border: `1px solid ${S.rim}`, background: S.bgPanel }}>
                   {filteredBulkFavs.length > 0 && (<>
-                    <div style={{ padding: '4px 10px', fontFamily: S.fontMono, fontSize: '0.4625rem', color: S.amber, letterSpacing: '0.1em', borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
+                    <div style={{ padding: '4px 10px', fontFamily: S.fontMono, fontSize: '0.75rem', color: S.amber, letterSpacing: '0.1em', borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
                       ★ FAVORITES
                     </div>
                     {filteredBulkFavs.map(t => {
@@ -1447,7 +1452,7 @@ export default function PositionDeskPage() {
                     })}
                   </>)}
                   {filteredBulkOthers.length > 0 && (<>
-                    <div style={{ padding: '4px 10px', fontFamily: S.fontMono, fontSize: '0.4625rem', color: S.tertiary, letterSpacing: '0.1em', borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
+                    <div style={{ padding: '4px 10px', fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary, letterSpacing: '0.1em', borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
                       ALL POLICIES
                     </div>
                     {filteredBulkOthers.map(t => {
@@ -1462,13 +1467,13 @@ export default function PositionDeskPage() {
                     })}
                   </>)}
                   {filteredBulkFavs.length === 0 && filteredBulkOthers.length === 0 && (
-                    <div style={{ padding: '20px', textAlign: 'center', fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.tertiary }}>
+                    <div style={{ padding: '20px', textAlign: 'center', fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary }}>
                       {policyTemplates.length === 0 ? 'LOADING…' : 'NO POLICIES MATCH'}
                     </div>
                   )}
                 </div>
                 {bulkPolicyId && (
-                  <div style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.cyan, letterSpacing: '0.06em', padding: '3px 8px', border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)` }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.cyan, letterSpacing: '0.06em', padding: '3px 8px', border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)` }}>
                     INSTANCE: {bulkPolicyId.slice(0, 8).toUpperCase()}
                     {selectedTemplate && ` · ${selectedTemplate.short_name} · ${selectedTemplate.name}`}
                   </div>
