@@ -72,3 +72,36 @@ k6.exe
 ordr-market/node_modules/
 ordr-market/.next/
 ordr-market/test-results/
+
+# Local SQLite scratch DBs (treasuryfx_kernel.db, demo.db, ordr.db, stopmug.db, …)
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+.claude/state/nexus.db*
+.claude/nexus/
+
+# Backend stray artefacts
+backend/.next/
+backend/=*
+backend/coverage.json
+backend/check_db.py
+
+# Frontend lint snapshots
+frontend/lint*.txt
+
+# Root-level smoke screenshots and one-off helpers
+/*.png
+/runs-snap.md
+/fix_imports.py
+
+# Per-page helper scripts (one-shot codemods, not source)
+frontend/src/app/**/check.py
+frontend/src/app/**/verify.py
+frontend/src/app/**/find_grids.py
+frontend/src/app/**/add_hooks.py
+frontend/src/app/**/fix_*.py
+frontend/src/app/**/migrate_mobile.py
+
+# Playwright MCP cache + scheduler lock
+.playwright-mcp/
+.claude/scheduled_tasks.lock
