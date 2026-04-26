@@ -16,6 +16,7 @@ import logging
 import os
 import traceback
 from contextlib import asynccontextmanager
+from http import HTTPStatus
 from typing import Any
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -2001,30 +2002,92 @@ def root_redirect():
 
 # -------------------------------------------------------------------
 
+# RFC 7807 problem+json error responses.
+# Extension fields `error` (stable code) and `status` (int) are preserved for
+# backwards compatibility with clients that consumed the pre-RFC-7807 shape.
+_PROBLEM_TYPE_BASE = "https://docs.ordrtreasuryfx.com/errors"
+_PROBLEM_CONTENT_TYPE = "application/problem+json"
+
+
+def _problem_response(
+    *,
+    status_code: int,
+    error_code: str,
+    title: str,
+    detail: Any,
+    instance: str,
+    headers: dict[str, str] | None = None,
+    errors: list[dict[str, Any]] | None = None,
+) -> JSONResponse:
+    body: dict[str, Any] = {
+        "type": f"{_PROBLEM_TYPE_BASE}/{error_code.lower().replace('_', '-')}",
+        "title": title,
+        "status": status_code,
+        "detail": detail,
+        "instance": instance,
+        "error": error_code,
+    }
+    if errors is not None:
+        body["errors"] = errors
+    return JSONResponse(
+        status_code=status_code,
+        content=body,
+        media_type=_PROBLEM_CONTENT_TYPE,
+        headers=headers or {},
+    )
+
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    return JSONResponse(
+    try:
+        title = HTTPStatus(exc.status_code).phrase
+    except ValueError:
+        title = "Error"
+    return _problem_response(
         status_code=exc.status_code,
-        content={"error": "HTTP_ERROR", "detail": exc.detail, "status": exc.status_code},
-        headers=getattr(exc, "headers", None) or {},
+        error_code="HTTP_ERROR",
+        title=title,
+        # Preserve structured detail (dict / list) when routes raise it deliberately;
+        # RFC 7807 prefers a string here, but several routes use dict-typed details
+        # with stable `code` fields that downstream clients depend on.
+        detail=exc.detail,
+        instance=request.url.path,
+        headers=getattr(exc, "headers", None) or None,
     )
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    return JSONResponse(
+    field_errors = [
+        {
+            "field": ".".join(str(p) for p in (err.get("loc") or [])),
+            "code": err.get("type", "invalid"),
+            "message": err.get("msg", ""),
+            "value": err.get("input"),
+        }
+        for err in exc.errors()
+    ]
+    summary = field_errors[0]["message"] if field_errors else "Request validation failed"
+    return _problem_response(
         status_code=422,
-        content={"error": "VALIDATION_ERROR", "detail": exc.errors(), "status": 422},
+        error_code="VALIDATION_ERROR",
+        title="Validation failed",
+        detail=summary,
+        instance=request.url.path,
+        errors=field_errors,
     )
 
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
-    logger.error("? Unhandled exception %s %s: %s", request.method, request.url.path, exc)
+    logger.error("Unhandled exception %s %s: %s", request.method, request.url.path, exc)
     traceback.print_exc()
-    return JSONResponse(
+    return _problem_response(
         status_code=500,
-        content={"error": "INTERNAL_ERROR", "detail": "Internal Server Error", "status": 500},
+        error_code="INTERNAL_ERROR",
+        title="Internal Server Error",
+        detail="An unexpected error occurred. The incident has been logged.",
+        instance=request.url.path,
     )
 
 
