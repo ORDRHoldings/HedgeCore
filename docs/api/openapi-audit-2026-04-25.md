@@ -11,7 +11,7 @@
 | Item | Status | Commit |
 |---|---|---|
 | P0-1 — integration guide rewritten to live v1 surface | ✅ Closed | `0a2abc4` |
-| P0-2 — IdempotencyMiddleware | ⏳ Open (next) | — |
+| P0-2 — IdempotencyMiddleware | ✅ Closed | `446d911` |
 | P0-3 — `/api/api/admin/api-keys` double prefix | ✅ Closed | `c59ccad` |
 | P0-4 — RFC 7807 problem+json error responses | ✅ Closed | `0a2abc4` |
 | P1-1 — Pagination (cursor → docs aligned to live `?limit=&offset=`) | ✅ Closed (option B) | `0a2abc4` |
