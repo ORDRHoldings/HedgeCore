@@ -29,7 +29,6 @@ export interface ChartStatusBarProps {
    ═══════════════════════════════════════════════════════ */
 
 const BAR_HEIGHT = 24;
-const _FONT = "10px 'IBM Plex Mono', monospace";
 const BORDER_COLOR = "#2A2E39";
 const TEXT_COLOR = THEME.axisText;
 const TEXT_ACTIVE = THEME.labelText;
