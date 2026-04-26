@@ -3,7 +3,7 @@
 Sprint: Production Readiness + E2E Coverage
 Status: COMPLETE (all in-scope tracks shipped; 3 items blocked on user/ops credentials)
 Started: 2026-04-22
-Updated: 2026-04-23 (tracks 2.2, 2.3, 3, 4, 5 shipped — only external-credential items remain open)
+Updated: 2026-04-25 (Frontend Hardening sprint Day 1–3 complete; design tokens consolidated under T)
 
 ## Goal
 Make ORDR Terminal production-ready with comprehensive E2E test coverage across every section. Fix all known UI/UX bugs, runtime errors, and missing API contracts.
