@@ -2266,6 +2266,108 @@ def custom_openapi() -> dict[str, Any]:
         {"url": "/api", "description": "Same-origin (current host)"},
     ]
 
+    # P1-2: curated tag descriptions for the highest-traffic surfaces. Tags not
+    # listed here keep their bare names (FastAPI default) — that's intentional;
+    # consolidating all 81 tags is a v1.5 effort (P2-1).
+    schema["tags"] = [
+        {"name": "v1-positions", "description": (
+            "Treasury exposure positions: the unhedged FX risk that flows into the kernel. "
+            "Lifecycle: NEW → POLICY_ASSIGNED → READY_TO_EXECUTE → HEDGED | REJECTED."
+        )},
+        {"name": "v1-position-import", "description": (
+            "Bulk position upload from CSV / JSON / ERP connector. Use the batch-json "
+            "endpoint for programmatic ingestion."
+        )},
+        {"name": "v1-pipeline", "description": (
+            "The deterministic hedge calculation pipeline (Tri-State: SANDBOX → STAGING → "
+            "LEDGER). Every run produces a hash-chained RunEnvelope (engine_v1 audit)."
+        )},
+        {"name": "v1-proposals", "description": (
+            "Hedge execution proposals. 4-eyes governance: a proposal must be approved by a "
+            "checker who is NOT the maker (Separation of Duties enforced server-side)."
+        )},
+        {"name": "v1-policies", "description": (
+            "Hedge policy CRUD + revision history. Policy revisions are WORM (append-only, "
+            "hash-chained)."
+        )},
+        {"name": "v1-connectors", "description": (
+            "Outbound integrations: market data, ERPs, banks, accounting systems. Each "
+            "connector has its own auth lifecycle (OAuth, API key, mTLS)."
+        )},
+        {"name": "v1-reports", "description": (
+            "Reporting surface: hedge effectiveness, P&L attribution, risk decomposition. "
+            "Report exports are deterministic (same inputs → same hash)."
+        )},
+        {"name": "v1-risk-analytics", "description": (
+            "Read-only analytics over historical exposures and runs: VaR, ES, factor "
+            "covariance, scenario backtests."
+        )},
+        {"name": "v1-gl", "description": (
+            "General Ledger postings derived from settled hedges. WORM — corrections require "
+            "a reversing entry, never an UPDATE/DELETE."
+        )},
+        {"name": "v1-export", "description": (
+            "Bulk download of audit artefacts. ZIP exports include the raw RunEnvelope, "
+            "input snapshot, and hash-chain proof."
+        )},
+        {"name": "audit-lab", "description": (
+            "Read-only forensic surface over historical runs: replay, diff, hash-chain "
+            "verification. Use this when an auditor asks 'what did the engine actually do "
+            "on date X?'"
+        )},
+        {"name": "hedge-effectiveness", "description": (
+            "IFRS 9 / ASC 815 effectiveness testing: prospective + retrospective "
+            "regression, dollar-offset, hypothetical-derivative methods."
+        )},
+        {"name": "dashboard", "description": (
+            "Aggregated read-only widgets that power the in-app dashboard. Designed for "
+            "low latency (cached); not appropriate as a system-of-record source."
+        )},
+        {"name": "cash-pools", "description": (
+            "Multi-entity cash pooling: notional and physical structures, intercompany "
+            "loan generation, interest allocation."
+        )},
+        {"name": "cash-netting", "description": (
+            "Multilateral netting cycles across legal entities. Output feeds the proposal "
+            "engine to minimize gross hedge volume."
+        )},
+        {"name": "cash-accounts", "description": (
+            "Bank-account master data and balance polling (BAI2 / CAMT.053 / connector-fed)."
+        )},
+        {"name": "cash-positions", "description": (
+            "Real-time consolidated cash position by entity, currency, and account."
+        )},
+        {"name": "cash-forecast", "description": (
+            "Forward cash-flow projections feeding hedge sizing. Confidence-banded; "
+            "deterministic per (as-of, scenario)."
+        )},
+        {"name": "counterparty", "description": (
+            "Counterparty master + credit limits, exposure rollups, and CSA terms."
+        )},
+        {"name": "payments", "description": (
+            "Payment instruction lifecycle (pain.001 / SWIFT MT103). State machine: "
+            "DRAFT → APPROVED → SUBMITTED → ACKNOWLEDGED | REJECTED."
+        )},
+        {"name": "regulatory", "description": (
+            "Regulatory submission packs (EMIR, Dodd-Frank, MiFID II). Each pack is a "
+            "sealed snapshot; resubmissions are new packs, never edits."
+        )},
+        {"name": "debt", "description": (
+            "Corporate debt instruments and schedules — feeds liability-side currency "
+            "exposure into the kernel."
+        )},
+        {"name": "v1-admin-monitor", "description": (
+            "Operational health: middleware metrics, audit-chain integrity, queue depth. "
+            "Superuser-only."
+        )},
+        {"name": "v1-webhooks", "description": (
+            "Outbound webhook subscriptions for state-change events. HMAC-signed (X-ORDR-Signature)."
+        )},
+        {"name": "system", "description": (
+            "Health and liveness endpoints. Unauthenticated."
+        )},
+    ]
+
     schema.setdefault("components", {})["securitySchemes"] = {
         "bearerAuth": {
             "type": "http",

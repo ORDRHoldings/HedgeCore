@@ -15,10 +15,10 @@
 | P0-3 — `/api/api/admin/api-keys` double prefix | ✅ Closed | `c59ccad` |
 | P0-4 — RFC 7807 problem+json error responses | ✅ Closed | `0a2abc4` |
 | P1-1 — Pagination (cursor → docs aligned to live `?limit=&offset=`) | ✅ Closed (option B) | `0a2abc4` |
-| P1-2 — Description gaps on top tags | ⏳ Open | — |
+| P1-2 — Description gaps on top tags | ✅ Closed | (this commit) |
 | P1-3 — Webhook event-type enum + GET single | ✅ Closed | `8bfda11` |
 | P1-4 — Sandbox URL pattern (docs match reality) | ✅ Closed | `0a2abc4` |
-| P2-1 — 81 tags consolidated | ⏳ Open | — |
+| P2-1 — 81 tags consolidated | 🅿️ Deferred to v1.5 | — |
 | P2-2/3/4 — securitySchemes / servers / contact metadata | ✅ Already shipped | (pre-audit) |
 
 ---
