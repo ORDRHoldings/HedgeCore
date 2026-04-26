@@ -41,6 +41,7 @@ export default function ApiKeyManagementTab({ token }: Props) {
   const [createErr,  setCreateErr]  = useState<string | null>(null);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [revoking,   setRevoking]   = useState<string | null>(null);
+  const [confirmRevoke, setConfirmRevoke] = useState<ApiKey | null>(null);
   const [copied,     setCopied]     = useState(false);
   const [toast,      setToast]      = useState<{ kind: "success" | "error"; msg: string } | null>(null);
 
@@ -53,11 +54,11 @@ export default function ApiKeyManagementTab({ token }: Props) {
     setTimeout(() => setToast(null), 4000);
   };
 
-  /* Load API keys — uses /api/admin/api-keys (API key auth required on backend) */
+  /* Load API keys — uses /admin/api-keys (API_BASE adds the /api prefix) */
   const loadKeys = useCallback(async () => {
     setLoading(true); setError(null); setAuthError(false);
     try {
-      const res = await dashboardFetch("/api/admin/api-keys", token);
+      const res = await dashboardFetch("/admin/api-keys", token);
       if (res.status === 401 || res.status === 403) {
         setAuthError(true);
         return;
@@ -93,12 +94,34 @@ export default function ApiKeyManagementTab({ token }: Props) {
     loadAudit();
   }, [loadKeys, loadAudit]);
 
+  /* Secret hygiene: a freshly-minted HK_live_ key sits in component state until
+   * the user dismisses the banner. Reduce the in-memory exposure window:
+   *   • Auto-clear after 5 min (generous enough for copy → paste-into-vault).
+   *   • Clear when the tab is backgrounded (visibilitychange).
+   *   • Clear on unmount (route change, settings tab switch).
+   * The user can still copy it during this window — they just can't leave it
+   * sitting on screen indefinitely. */
+  useEffect(() => {
+    if (!createdKey) return;
+    const AUTO_DISMISS_MS = 5 * 60 * 1000;
+    const t = window.setTimeout(() => setCreatedKey(null), AUTO_DISMISS_MS);
+    const onHidden = () => {
+      if (document.visibilityState === "hidden") setCreatedKey(null);
+    };
+    document.addEventListener("visibilitychange", onHidden);
+    return () => {
+      window.clearTimeout(t);
+      document.removeEventListener("visibilitychange", onHidden);
+      setCreatedKey(null);
+    };
+  }, [createdKey]);
+
   /* Create key */
   const handleCreate = async () => {
     if (!newName.trim()) { setCreateErr("Name is required."); return; }
     setCreating(true); setCreateErr(null);
     try {
-      const res = await dashboardFetch("/api/admin/api-keys", token, {
+      const res = await dashboardFetch("/admin/api-keys", token, {
         method: "POST",
         body:   JSON.stringify({ name: newName.trim(), scopes: [] }),
       });
@@ -123,11 +146,11 @@ export default function ApiKeyManagementTab({ token }: Props) {
     }
   };
 
-  /* Revoke key */
+  /* Revoke key — destructive: caller must pre-confirm via the modal. */
   const handleRevoke = async (keyId: string) => {
     setRevoking(keyId);
     try {
-      const res = await dashboardFetch(`/api/admin/api-keys/${keyId}`, token, { method: "DELETE" });
+      const res = await dashboardFetch(`/admin/api-keys/${keyId}`, token, { method: "DELETE" });
       if (res.status === 401 || res.status === 403) {
         showToast("error", "API key authentication required to revoke.");
         return;
@@ -143,6 +166,7 @@ export default function ApiKeyManagementTab({ token }: Props) {
       showToast("error", e instanceof Error ? e.message : "Failed to revoke key.");
     } finally {
       setRevoking(null);
+      setConfirmRevoke(null);
     }
   };
 
@@ -229,7 +253,7 @@ export default function ApiKeyManagementTab({ token }: Props) {
             }}>↻</button>
             <button onClick={() => setShowCreate(p => !p)} style={{
               fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
-              color: "#000", background: S.cyan, border: "none", borderRadius: 2,
+              color: S.black, background: S.cyan, border: "none", borderRadius: 2,
               padding: "5px 14px", cursor: "pointer",
             }}>+ GENERATE KEY</button>
           </div>
@@ -282,7 +306,7 @@ export default function ApiKeyManagementTab({ token }: Props) {
               />
               <button onClick={handleCreate} disabled={creating} style={{
                 fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
-                color: "#000", background: creating ? S.tertiary : S.cyan, border: "none", borderRadius: 2,
+                color: S.black, background: creating ? S.tertiary : S.cyan, border: "none", borderRadius: 2,
                 padding: "6px 18px", cursor: creating ? "wait" : "pointer",
               }}>
                 {creating ? "CREATING…" : "CREATE"}
@@ -309,12 +333,12 @@ export default function ApiKeyManagementTab({ token }: Props) {
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 580 }}>
               <thead>
                 <tr>
-                  <th style={th}>NAME</th>
-                  <th style={th}>KEY ID</th>
-                  <th style={th}>CREATED</th>
-                  <th style={th}>LAST USED</th>
-                  <th style={th}>STATUS</th>
-                  <th style={th}>ACTION</th>
+                  <th scope="col" style={th}>NAME</th>
+                  <th scope="col" style={th}>KEY ID</th>
+                  <th scope="col" style={th}>CREATED</th>
+                  <th scope="col" style={th}>LAST USED</th>
+                  <th scope="col" style={th}>STATUS</th>
+                  <th scope="col" style={th}>ACTION</th>
                 </tr>
               </thead>
               <tbody>
@@ -347,7 +371,7 @@ export default function ApiKeyManagementTab({ token }: Props) {
                     <td style={{ ...td, padding: "6px 10px" }}>
                       {k.status === "active" && (
                         <button
-                          onClick={() => handleRevoke(k.key_id)}
+                          onClick={() => setConfirmRevoke(k)}
                           disabled={revoking === k.key_id}
                           style={{
                             fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
@@ -388,11 +412,11 @@ export default function ApiKeyManagementTab({ token }: Props) {
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 500 }}>
               <thead>
                 <tr>
-                  <th style={th}>TIMESTAMP</th>
-                  <th style={th}>KEY ID</th>
-                  <th style={th}>PATH</th>
-                  <th style={th}>METHOD</th>
-                  <th style={th}>STATUS</th>
+                  <th scope="col" style={th}>TIMESTAMP</th>
+                  <th scope="col" style={th}>KEY ID</th>
+                  <th scope="col" style={th}>PATH</th>
+                  <th scope="col" style={th}>METHOD</th>
+                  <th scope="col" style={th}>STATUS</th>
                 </tr>
               </thead>
               <tbody>
@@ -433,6 +457,73 @@ export default function ApiKeyManagementTab({ token }: Props) {
           </div>
         )}
       </div>
+
+      {/* Revoke confirmation — destructive, terminal-styled */}
+      {confirmRevoke && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="revoke-key-title"
+          onClick={() => revoking === null && setConfirmRevoke(null)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(0,0,0,0.65)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: S.bgPanel, border: `1px solid ${S.fail}`,
+              borderLeft: `3px solid ${S.fail}`,
+              borderRadius: 2, padding: "20px 22px", maxWidth: 460, width: "100%",
+              display: "flex", flexDirection: "column", gap: 14,
+            }}
+          >
+            <div id="revoke-key-title" style={{
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
+              color: S.fail, letterSpacing: "0.09em",
+            }}>
+              REVOKE API KEY · IRREVERSIBLE
+            </div>
+            <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.primary, lineHeight: 1.6 }}>
+              Revoking <code style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan }}>
+                HK_live_{confirmRevoke.key_id.slice(0, 10)}…
+              </code>
+              {confirmRevoke.name ? (<> ({confirmRevoke.name})</>) : null}
+              {" "}will immediately reject all requests using this key. Service integrations
+              relying on it will fail until rotated. This cannot be undone.
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setConfirmRevoke(null)}
+                disabled={revoking !== null}
+                style={{
+                  fontFamily: S.fontMono, fontSize: 12, color: S.secondary,
+                  background: "transparent", border: `1px solid ${S.rim}`,
+                  borderRadius: 2, padding: "6px 14px",
+                  cursor: revoking !== null ? "wait" : "pointer",
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={() => handleRevoke(confirmRevoke.key_id)}
+                disabled={revoking !== null}
+                style={{
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
+                  color: S.white, background: S.fail, border: "none",
+                  borderRadius: 2, padding: "6px 16px",
+                  cursor: revoking !== null ? "wait" : "pointer",
+                }}
+              >
+                {revoking === confirmRevoke.key_id ? "REVOKING…" : "REVOKE KEY"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Security footer */}
       <div style={{ background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 2, padding: "10px 14px", fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, lineHeight: 1.6 }}>

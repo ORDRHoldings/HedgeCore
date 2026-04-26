@@ -99,7 +99,7 @@ class TestAdminCreateApiKeySecretHash:
 
 
 class TestAdminApiKeysPrivilegeEscalation:
-    """C5: All /api/api/admin/api-keys endpoints must require superuser, not just any API key."""
+    """C5: All /api/admin/api-keys endpoints must require superuser, not just any API key."""
 
     def test_no_validate_api_key_import(self):
         """admin_api_keys.py must NOT import validate_api_key anymore."""
@@ -117,7 +117,7 @@ class TestAdminApiKeysPrivilegeEscalation:
 
     @pytest.mark.asyncio
     async def test_create_rejects_non_superuser(self):
-        """POST /api/api/admin/api-keys must reject non-superuser with 403."""
+        """POST /api/admin/api-keys must reject non-superuser with 403."""
         regular = _make_regular_user()
         app.dependency_overrides[get_current_user] = lambda: regular
 
@@ -125,7 +125,7 @@ class TestAdminApiKeysPrivilegeEscalation:
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
                 resp = await client.post(
-                    "/api/api/admin/api-keys",
+                    "/api/admin/api-keys",
                     json={"name": "Escalation Attempt"},
                     headers=_BEARER,
                 )
@@ -135,7 +135,7 @@ class TestAdminApiKeysPrivilegeEscalation:
 
     @pytest.mark.asyncio
     async def test_list_rejects_non_superuser(self):
-        """GET /api/api/admin/api-keys must reject non-superuser with 403."""
+        """GET /api/admin/api-keys must reject non-superuser with 403."""
         regular = _make_regular_user()
         app.dependency_overrides[get_current_user] = lambda: regular
 
@@ -143,7 +143,7 @@ class TestAdminApiKeysPrivilegeEscalation:
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
                 resp = await client.get(
-                    "/api/api/admin/api-keys",
+                    "/api/admin/api-keys",
                     headers=_BEARER,
                 )
             assert resp.status_code == 403
@@ -152,7 +152,7 @@ class TestAdminApiKeysPrivilegeEscalation:
 
     @pytest.mark.asyncio
     async def test_revoke_rejects_non_superuser(self):
-        """DELETE /api/api/admin/api-keys/{key_id} must reject non-superuser with 403."""
+        """DELETE /api/admin/api-keys/{key_id} must reject non-superuser with 403."""
         regular = _make_regular_user()
         app.dependency_overrides[get_current_user] = lambda: regular
 
@@ -160,7 +160,7 @@ class TestAdminApiKeysPrivilegeEscalation:
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
                 resp = await client.delete(
-                    "/api/api/admin/api-keys/some-key-id",
+                    "/api/admin/api-keys/some-key-id",
                     headers=_BEARER,
                 )
             assert resp.status_code == 403
@@ -169,11 +169,11 @@ class TestAdminApiKeysPrivilegeEscalation:
 
     @pytest.mark.asyncio
     async def test_create_rejects_unauthenticated(self):
-        """POST /api/api/admin/api-keys must reject unauthenticated requests (401 or 403)."""
+        """POST /api/admin/api-keys must reject unauthenticated requests (401 or 403)."""
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.post(
-                "/api/api/admin/api-keys",
+                "/api/admin/api-keys",
                 json={"name": "No Auth"},
             )
         # CSRF middleware may return 403 before auth dependency returns 401
@@ -181,18 +181,18 @@ class TestAdminApiKeysPrivilegeEscalation:
 
     @pytest.mark.asyncio
     async def test_list_rejects_unauthenticated(self):
-        """GET /api/api/admin/api-keys must reject unauthenticated requests (401 or 403)."""
+        """GET /api/admin/api-keys must reject unauthenticated requests (401 or 403)."""
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.get("/api/api/admin/api-keys")
+            resp = await client.get("/api/admin/api-keys")
         assert resp.status_code in (401, 403)
 
     @pytest.mark.asyncio
     async def test_revoke_rejects_unauthenticated(self):
-        """DELETE /api/api/admin/api-keys/{key_id} must reject unauthenticated requests (401 or 403)."""
+        """DELETE /api/admin/api-keys/{key_id} must reject unauthenticated requests (401 or 403)."""
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.delete("/api/api/admin/api-keys/some-key-id")
+            resp = await client.delete("/api/admin/api-keys/some-key-id")
         assert resp.status_code in (401, 403)
 
 

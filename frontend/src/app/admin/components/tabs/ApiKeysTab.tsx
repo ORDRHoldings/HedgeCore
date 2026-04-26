@@ -257,7 +257,7 @@ function CreateKeyModal({
     setSaving(true);
     setError(null);
     try {
-      const res = await dashboardFetch("/api/admin/api-keys", token, {
+      const res = await dashboardFetch("/admin/api-keys", token, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim() }),
@@ -450,7 +450,7 @@ function RevokeCell({
     setRevoking(true);
     try {
       const res = await dashboardFetch(
-        `/api/admin/api-keys/${apiKey.key_id}`,
+        `/admin/api-keys/${apiKey.key_id}`,
         token,
         { method: "DELETE" }
       );
@@ -557,7 +557,7 @@ export default function ApiKeysTab({ token }: { token: string }) {
     setKeysLoading(true);
     setKeysError(null);
     try {
-      const res = await dashboardFetch("/api/admin/api-keys", token);
+      const res = await dashboardFetch("/admin/api-keys", token);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: ApiKeyListResponse = await res.json();
       setKeys(data.items);
@@ -708,13 +708,13 @@ export default function ApiKeysTab({ token }: { token: string }) {
               </colgroup>
               <thead>
                 <tr>
-                  <th style={TH}>NAME</th>
-                  <th style={TH}>KEY ID</th>
-                  <th style={TH}>STATUS</th>
-                  <th style={TH}>SCOPES</th>
-                  <th style={TH}>CREATED</th>
-                  <th style={TH}>LAST USED</th>
-                  <th style={TH}>REVOKE</th>
+                  <th scope="col" style={TH}>NAME</th>
+                  <th scope="col" style={TH}>KEY ID</th>
+                  <th scope="col" style={TH}>STATUS</th>
+                  <th scope="col" style={TH}>SCOPES</th>
+                  <th scope="col" style={TH}>CREATED</th>
+                  <th scope="col" style={TH}>LAST USED</th>
+                  <th scope="col" style={TH}>REVOKE</th>
                 </tr>
               </thead>
               <tbody>
@@ -856,12 +856,12 @@ export default function ApiKeysTab({ token }: { token: string }) {
               </colgroup>
               <thead>
                 <tr>
-                  <th style={TH}>METHOD</th>
-                  <th style={TH}>PATH</th>
-                  <th style={TH}>STATUS</th>
-                  <th style={TH}>EVENT</th>
-                  <th style={TH}>KEY ID</th>
-                  <th style={TH}>TIMESTAMP</th>
+                  <th scope="col" style={TH}>METHOD</th>
+                  <th scope="col" style={TH}>PATH</th>
+                  <th scope="col" style={TH}>STATUS</th>
+                  <th scope="col" style={TH}>EVENT</th>
+                  <th scope="col" style={TH}>KEY ID</th>
+                  <th scope="col" style={TH}>TIMESTAMP</th>
                 </tr>
               </thead>
               <tbody>

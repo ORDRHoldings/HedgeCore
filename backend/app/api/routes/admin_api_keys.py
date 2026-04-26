@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # CANONICAL ROUTER (REQUIRED EXPORT)
 # ---------------------------------------------------------------------
 router = APIRouter(
-    prefix="/api/admin/api-keys",
+    prefix="/admin/api-keys",
     tags=["Admin / API Keys"],
 )
 
