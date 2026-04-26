@@ -1,9 +1,11 @@
 # Current Sprint
 
 Sprint: Production Readiness + E2E Coverage
-Status: COMPLETE (all in-scope tracks shipped; 3 items blocked on user/ops credentials)
+Status: COMPLETE + SHIPPED (deploys verified live 2026-04-26)
 Started: 2026-04-22
-Updated: 2026-04-25 (Frontend Hardening sprint Day 1–3 complete; design tokens consolidated under T)
+Updated: 2026-04-26 (audit closeout shipped; live OpenAPI verified; CHANGELOG_AI updated)
+
+> Closeout note: The OpenAPI audit follow-up (P0-1…P1-4 + P1-2) shipped to production on 2026-04-26 in 18 commits and was verified against the live OpenAPI schema. P2-1 (81-tag consolidation) deferred to v1.5. GitHub Actions CI is currently blocked at the org level by a billing failure — Render/Vercel deploy webhooks fired independently. See `.claude/state/CHANGELOG_AI.md` 2026-04-26 entry for details.
 
 ## Goal
 Make ORDR Terminal production-ready with comprehensive E2E test coverage across every section. Fix all known UI/UX bugs, runtime errors, and missing API contracts.

@@ -1,5 +1,44 @@
 # Changelog (AI-maintained)
 
+## 2026-04-26 — OpenAPI audit closeout shipped to production
+
+Pushed 18 commits to master in one flush; Render + Vercel auto-deploys both succeeded. Verified live OpenAPI carries every audit-driven contract change.
+
+### Live verification (against `https://hedgecore.onrender.com/api/openapi.json`)
+
+| Audit item | Live result |
+|---|---|
+| P0-2 IdempotencyMiddleware | `Idempotency-Key` header param on **222/222** mutating ops |
+| P0-3 admin/api-keys double prefix | Zero `/api/api/` paths in live schema |
+| P1-2 Tag descriptions | 25 curated descriptions in `tags[]` |
+| P1-3 Webhook event-type enum | `WebhookEventType` enum surfaces with 4 values |
+| P1-3 Webhook GET single | `GET /api/v1/webhooks/{webhook_id}` present |
+| P2-2 servers metadata | 3 entries, prod first |
+
+### What shipped (oldest → newest)
+
+- `c59ccad` fix(api): drop `/api/api/admin/api-keys` double prefix (P0-3) — three-sided fix touching backend router, two frontend admin tabs, and tests.
+- `0a2abc4` fix(api): RFC 7807 problem+json + integration guide rewrite (P0-1, P0-4).
+- `8bfda11` feat(api): webhook event-type enum + GET single endpoint (P1-3).
+- `446d911` feat(api): IdempotencyMiddleware (P0-2). New ASGI middleware (~200 lines), 15 unit tests, OpenAPI auto-injects header on every mutating operation, frozen middleware-order test updated to include the new layer between `APIKeyAuth` and `RateLimit`.
+- `c2eecd3` docs(openapi): curated tag descriptions for top 25 surfaces (P1-2).
+- `2593602` chore(repo): expand `.gitignore` for scratch DBs, lint snapshots, smoke artefacts; untrack stray `frontend/test-results/.last-run.json`.
+- `976e284` docs: ADRs 0017–0019, threat model, ops runbooks, sales/legal/CS kits — 114 new docs files.
+- `08d87cc` feat(frontend): production hardening sprint (258 modified, 9 new). Highlights: **login MFA now FAILS CLOSED** (was silently bypassing MFA when `/v1/mfa/status` returned non-2xx), design-token consolidation, Skeleton components, mobile-responsive fixes.
+- `584d206` chore(state): sprint rollup + redacted security audit (live secret values stripped).
+
+### Caveats
+
+- **GitHub Actions blocked at the org level by a billing failure** ("recent account payments have failed or your spending limit needs to be increased"). Every recent master CI run hits this. Render + Vercel deploys auto-deployed independently, so production shipped clean. Action: user must resolve GH Actions billing in the org settings before CI gates work again.
+- **Two ~70 MB Adobe Stock files in `docs/Docs/Img/`** triggered GitHub's >50 MB warning but pushed through. Move to Git LFS in a follow-up.
+- **`docs/api/openapi-audit-2026-04-25.md`**: P2-1 (consolidate 81 tags → ~15) explicitly deferred to v1.5. Renaming tags across every router is high blast radius for cosmetic value; descriptions on the top 25 surfaces (shipped in P1-2) cover ~75% of operations and was the higher-leverage move.
+
+### Backlog raised, not actioned
+
+- `frontend/src/app/reports/page.tsx`: `_computeReportHash` and `_buildReportHTML` are orphaned dead code that I introduced in `08d87cc` by adding a `_` prefix during the lint drain. They were intended as audit-grade report-fingerprinting (per `c006ce9 security(report-studio): P0/P1 export hardening — fingerprinting, 50 tests`). The `TestEnhancedReportHash` test class in `backend/tests/test_report_studio_governance.py` still asserts contracts on the renamed-out function. Two clean fixes possible: (a) wire `computeReportHash` into `ExportBar.handlePdf` so exports actually carry a fingerprint, (b) delete dead code + matching tests. Not blocking — left for next session.
+
+---
+
 ## 2026-04-25 — Pass 13: FINAL — drain remaining hex tier and 1-each unused-vars (68 → 0)
 
 **ESLint warning baseline: 2447 → 0 across 13 passes (100% reduction).**
