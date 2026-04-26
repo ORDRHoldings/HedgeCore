@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import timezone
+from datetime import UTC
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -26,7 +26,7 @@ from app.models.user import User
 router = APIRouter(prefix="/v1/ibkr", tags=["v1-ibkr"])
 _log = logging.getLogger(__name__)
 
-UTC = timezone.utc
+UTC = UTC
 
 # ---------------------------------------------------------------------------
 # Shared IBKR provider singleton (lazy)

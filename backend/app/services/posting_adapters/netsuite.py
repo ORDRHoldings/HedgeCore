@@ -1,5 +1,6 @@
 """NetSuite SuiteScript REST Journal Entry posting adapter."""
 from __future__ import annotations
+
 import logging
 
 from app.services.posting_adapters.base import GLPostingAdapter, PostingResult
@@ -13,10 +14,10 @@ class NetSuitePoster(GLPostingAdapter):
     def __init__(self, *, account_id: str, consumer_key: str,
                  consumer_secret: str, token: str, token_secret: str):
         self.account_id = account_id
-        self._creds = dict(
-            consumer_key=consumer_key, consumer_secret=consumer_secret,
-            token=token, token_secret=token_secret,
-        )
+        self._creds = {
+            "consumer_key": consumer_key, "consumer_secret": consumer_secret,
+            "token": token, "token_secret": token_secret,
+        }
 
     async def post(self, journal_entry) -> PostingResult:
         if not self.account_id:

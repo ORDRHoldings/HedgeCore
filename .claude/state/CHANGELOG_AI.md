@@ -1,5 +1,21 @@
 # Changelog (AI-maintained)
 
+## 2026-04-26 — Backend ruff zero (287 → 0 issues)
+
+313 issues autofixed via `ruff check app/ --fix` (I001 import sorting, UP017 datetime.UTC, UP045/UP037/UP035/UP041 annotation modernisation, B905, C420). Remaining 16 fixed manually:
+
+- **F821** (gl_service.py): `GLAccountMappingCreate` referenced without import → `TYPE_CHECKING` guard added.
+- **B023** (audit_lab_parsers.py ×2): `_get` closure captured loop-variable `cell_map` by reference; fixed with default-arg binding `_cm=cell_map` to make capture explicit.
+- **E741 ×2** (v1_chart_data, v1_public_chart_data): `OHLCVBar.l` is domain-standard OHLCV abbreviation; `# noqa: E741` added. `counterparty_service.py` loop var `l` renamed to `lim`.
+- **UP031 ×3** (v1_admin_monitor, v1_admin_reset): `%s` printf → f-string (safe; table names are hardcoded constants).
+- **C408 ×2** (erp_adapters/netsuite, posting_adapters/netsuite): `dict(k=v)` → `{"k": v}`.
+- **UP038 ×2** (hedge_template_service): `isinstance(x, (int, float))` → `isinstance(x, int | float)`.
+- **E712** (netting_service): `is_active == True` → `.is_(True)` (NULL-safe SQLAlchemy expression).
+- **C401** (v1_decision_desk): `set(genexpr)` → `{setcomp}`.
+- **UP047 ×2** (connectors/retry): `# noqa` with explanation (PEP 695 `def f[T]` syntax not yet adopted project-wide).
+
+`ruff check app/` → All checks passed.
+
 ## 2026-04-26 — Backend test-suite warning collapse (188 → 2)
 
 Three orthogonal warning streams swept in one flush; suite still 5264 passed / 158 skipped.

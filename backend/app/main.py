@@ -35,10 +35,10 @@ from app.core.logging_config import configure_logging
 from app.core.schema_loader import rebuild_all_schemas
 from app.middleware.api_key_auth import APIKeyAuthMiddleware
 from app.middleware.audit_headers import AuditHeadersMiddleware
+from app.middleware.cors_preview import VercelPreviewCORSMiddleware
 from app.middleware.csrf import CSRFMiddleware  # SEC-06: now enabled
 from app.middleware.idempotency import IdempotencyMiddleware  # P0-2: replay safety
 from app.middleware.ip_allowlist_middleware import IPAllowlistMiddleware
-from app.middleware.cors_preview import VercelPreviewCORSMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.tasks.audit_cleanup import cleanup_audit_tables
 
@@ -51,10 +51,13 @@ from app.tasks.audit_cleanup import cleanup_audit_tables
 configure_logging()
 
 from app.core.sentry_config import init_sentry
+
 init_sentry()
 
 import stripe as _stripe
+
 from app.core.config import get_settings as _get_settings
+
 _stripe_settings = _get_settings()
 if _stripe_settings.stripe_secret_key:
     _stripe.api_key = _stripe_settings.stripe_secret_key
@@ -2110,6 +2113,7 @@ app.add_middleware(GZipMiddleware, minimum_size=512)
 
 # Synexiun governance enforcement (kill switch + budget)
 from app.middleware.governance import GovernanceMiddleware
+
 app.add_middleware(GovernanceMiddleware)
 
 app.add_middleware(AuditHeadersMiddleware)

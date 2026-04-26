@@ -3,6 +3,7 @@ Generic CSV exporter for SAP/Oracle manual import.
 Does not call any external API — returns formatted CSV payload.
 """
 from __future__ import annotations
+
 import csv
 import io
 

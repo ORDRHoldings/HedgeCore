@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .ingestion_service import IngestionOrchestrator
-    from .staleness_monitor import StalenessMonitor
     from .scheduler import MarketDataScheduler
+    from .staleness_monitor import StalenessMonitor
 
 _log = logging.getLogger(__name__)
 
@@ -32,10 +32,10 @@ def init_market_data(settings) -> None:
     """Initialize providers from app settings. Called at startup."""
     global _orchestrator, _monitor, _scheduler
 
-    from .twelvedata_provider import TwelveDataProvider
     from .ingestion_service import IngestionOrchestrator
-    from .staleness_monitor import StalenessMonitor
     from .scheduler import MarketDataScheduler
+    from .staleness_monitor import StalenessMonitor
+    from .twelvedata_provider import TwelveDataProvider
 
     providers = []
 

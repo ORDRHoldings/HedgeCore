@@ -22,7 +22,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.market_data import GeopoliticalRiskSnapshot
 from app.models.user import User
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Hash contract
 # ─────────────────────────────────────────────────────────────────────────────

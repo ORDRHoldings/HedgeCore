@@ -20,7 +20,6 @@ from decimal import Decimal
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
-
 # ═════════════════════════════════════════════════════════════════════════════
 # Normalized types
 # ═════════════════════════════════════════════════════════════════════════════

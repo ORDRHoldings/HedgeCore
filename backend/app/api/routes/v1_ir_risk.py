@@ -12,11 +12,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_session
 from app.core.dependencies import get_current_user
 from app.models.user import User
+from app.services.ir_hedge_service import run_effectiveness_test
 from app.services.ir_swap_service import (
-    create_swap, get_dv01_ladder, list_swaps, mark_to_market,
+    create_swap,
+    get_dv01_ladder,
+    list_swaps,
+    mark_to_market,
     mark_to_market_all,
 )
-from app.services.ir_hedge_service import run_effectiveness_test
 
 router = APIRouter(prefix="/v1/ir-risk", tags=["ir-risk"])
 

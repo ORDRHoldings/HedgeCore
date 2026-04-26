@@ -359,11 +359,11 @@ def parse_xlsx(
             if col_idx < len(raw_headers):
                 cell_map[raw_headers[col_idx]] = str(cell_val).strip() if cell_val is not None else ""
 
-        def _get(field: str) -> str | None:
+        def _get(field: str, _cm: dict[str, str] = cell_map) -> str | None:
             h = header_map.get(field)
             if h is None:
                 return None
-            val = cell_map.get(h, "").strip()
+            val = _cm.get(h, "").strip()
             return val if val else None
 
         trade_date_str = _get("trade_date")
@@ -482,11 +482,11 @@ def parse_pdf(
             if col_idx < len(raw_headers):
                 cell_map[raw_headers[col_idx]] = str(cell_val).strip() if cell_val is not None else ""
 
-        def _get(field: str) -> str | None:
+        def _get(field: str, _cm: dict[str, str] = cell_map) -> str | None:
             h = header_map.get(field)
             if h is None:
                 return None
-            val = cell_map.get(h, "").strip()
+            val = _cm.get(h, "").strip()
             return val if val else None
 
         trade_date_str = _get("trade_date")

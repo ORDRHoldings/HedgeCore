@@ -345,8 +345,9 @@ async def get_accuracy_report(
     period: str,
     group_by: str = "pair",
 ):
-    from app.schemas_v1.tca import AccuracyBucket, AccuracyReportResponse
     import math
+
+    from app.schemas_v1.tca import AccuracyBucket, AccuracyReportResponse
 
     # Load all reconciled estimates for the tenant (period filter in Python for SQLite compat)
     stmt = (

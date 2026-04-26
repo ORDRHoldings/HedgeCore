@@ -36,7 +36,7 @@ class OHLCVBar(BaseModel):
     t: int = Field(..., description="Unix timestamp (seconds)")
     o: float = Field(..., description="Open price")
     h: float = Field(..., description="High price")
-    l: float = Field(..., description="Low price")
+    l: float = Field(..., description="Low price")  # noqa: E741 — OHLCV domain convention
     c: float = Field(..., description="Close price")
     v: float = Field(..., description="Volume")
 

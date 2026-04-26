@@ -55,8 +55,9 @@ async def deep_health():
     Returns 200 with `status: "degraded"` when non-critical deps are down,
     500 only when the database itself is unreachable.
     """
-    from sqlalchemy import text as sql_text
     from datetime import UTC, datetime
+
+    from sqlalchemy import text as sql_text
 
     checks: dict[str, dict] = {}
     degraded = False
@@ -176,6 +177,7 @@ async def schema_health_endpoint(
 async def db_tables(x_api_key: str = Header(..., alias="X-API-Key")):
     """List all tables and their columns for diagnostics."""
     import os
+
     from app.core.config import settings as _settings
     allowed = [k for k in [getattr(_settings, "HC_MASTER_KEY", None), (
         "HC_DEV_KEY_001" if os.getenv("ENV", "development").lower() != "production" else None

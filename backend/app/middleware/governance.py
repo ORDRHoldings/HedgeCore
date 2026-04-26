@@ -5,6 +5,7 @@ Logs requests to the kernel audit chain post-response.
 """
 
 import logging
+
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -80,7 +81,7 @@ class GovernanceMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         try:
-            from ..core.kernel import governance_check, audit_governance_event
+            from ..core.kernel import audit_governance_event, governance_check
             from ..core.policy_rules import get_match_sig
             _kernel_unavailable = False
         except Exception as _ke:

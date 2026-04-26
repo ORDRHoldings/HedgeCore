@@ -19,24 +19,24 @@ Providers (one package each):
 """
 
 from app.connectors.base import (
-    ConnectorProtocol,
-    ConnectorHealth,
-    ConnectorStatus,
-    JournalPayload,
-    JournalLine,
     COAAccount,
-    TrialBalanceEntry,
+    ConnectorHealth,
+    ConnectorProtocol,
+    ConnectorStatus,
+    JournalLine,
+    JournalPayload,
     PostJournalResult,
     TokenBundle,
+    TrialBalanceEntry,
 )
 from app.connectors.errors import (
-    ConnectorError,
     ConnectorAuthError,
-    ConnectorRateLimitError,
+    ConnectorCircuitOpenError,
+    ConnectorError,
     ConnectorNotConfiguredError,
+    ConnectorRateLimitError,
     ConnectorServerError,
     ConnectorValidationError,
-    ConnectorCircuitOpenError,
 )
 from app.connectors.registry import get_connector, list_providers, provider_ids
 

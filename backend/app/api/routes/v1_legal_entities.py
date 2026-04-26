@@ -1,16 +1,25 @@
 # backend/app/api/routes/v1_legal_entities.py
 """v1 legal entities — group treasury entity hierarchy."""
 import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_session
 from app.models.user import User
 from app.schemas_v1.cash import (
-    LegalEntityCreate, LegalEntityUpdate, LegalEntityCloseRequest, LegalEntityResponse,
+    LegalEntityCloseRequest,
+    LegalEntityCreate,
+    LegalEntityResponse,
+    LegalEntityUpdate,
 )
 from app.services.legal_entity_service import (
-    create_entity, update_entity, close_entity, list_entities, get_entity, EntityNotFoundError,
+    EntityNotFoundError,
+    close_entity,
+    create_entity,
+    get_entity,
+    list_entities,
+    update_entity,
 )
 
 router = APIRouter(prefix="/v1/cash/entities", tags=["cash-entities"])

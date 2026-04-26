@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import uuid as _uuid
 from datetime import date, datetime
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import (
     UUID,
@@ -35,7 +35,6 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
-
 
 # ── AuditDataset ─────────────────────────────────────────────────────────────
 
@@ -79,7 +78,7 @@ class AuditDataset(Base):
         doc="Number of parsed transaction rows.",
     )
 
-    currency_pairs: Mapped[Optional[Any]] = mapped_column(
+    currency_pairs: Mapped[Any | None] = mapped_column(
         JSONB, nullable=True,
         doc="Distinct currency pairs found in the dataset (e.g. ['USD/MXN', 'EUR/USD']).",
     )
@@ -137,57 +136,57 @@ class AuditTransaction(Base):
         doc="Zero-based row index within the source file.",
     )
 
-    trade_date: Mapped[Optional[date]] = mapped_column(
+    trade_date: Mapped[date | None] = mapped_column(
         Date, nullable=True,
         doc="Trade/execution date.",
     )
 
-    value_date: Mapped[Optional[date]] = mapped_column(
+    value_date: Mapped[date | None] = mapped_column(
         Date, nullable=True,
         doc="Settlement/value date.",
     )
 
-    currency_sold: Mapped[Optional[str]] = mapped_column(
+    currency_sold: Mapped[str | None] = mapped_column(
         String, nullable=True,
         doc="ISO 4217 currency code sold.",
     )
 
-    currency_bought: Mapped[Optional[str]] = mapped_column(
+    currency_bought: Mapped[str | None] = mapped_column(
         String, nullable=True,
         doc="ISO 4217 currency code bought.",
     )
 
-    amount_sold: Mapped[Optional[float]] = mapped_column(
+    amount_sold: Mapped[float | None] = mapped_column(
         Float, nullable=True,
         doc="Notional amount sold.",
     )
 
-    amount_bought: Mapped[Optional[float]] = mapped_column(
+    amount_bought: Mapped[float | None] = mapped_column(
         Float, nullable=True,
         doc="Notional amount bought.",
     )
 
-    effective_rate: Mapped[Optional[float]] = mapped_column(
+    effective_rate: Mapped[float | None] = mapped_column(
         Float, nullable=True,
         doc="Effective FX rate (amount_bought / amount_sold or inverse).",
     )
 
-    counterparty: Mapped[Optional[str]] = mapped_column(
+    counterparty: Mapped[str | None] = mapped_column(
         String, nullable=True,
         doc="Counterparty bank/broker name.",
     )
 
-    fee_amount: Mapped[Optional[float]] = mapped_column(
+    fee_amount: Mapped[float | None] = mapped_column(
         Float, nullable=True,
         doc="Transaction fee amount.",
     )
 
-    fee_currency: Mapped[Optional[str]] = mapped_column(
+    fee_currency: Mapped[str | None] = mapped_column(
         String, nullable=True,
         doc="ISO 4217 currency of the fee.",
     )
 
-    reference: Mapped[Optional[str]] = mapped_column(
+    reference: Mapped[str | None] = mapped_column(
         String, nullable=True,
         doc="External reference / deal ticket number.",
     )
@@ -197,7 +196,7 @@ class AuditTransaction(Base):
         doc="SHA-256 hash of the canonical row content.",
     )
 
-    parse_warnings: Mapped[Optional[Any]] = mapped_column(
+    parse_warnings: Mapped[Any | None] = mapped_column(
         JSONB, nullable=True,
         doc="Parser warnings for this row (e.g. missing fields, format issues).",
     )
@@ -331,12 +330,12 @@ class AuditFinding(Base):
         doc="Finding category (e.g. 'RATE_DEVIATION', 'FEE_OUTLIER', 'MISSING_COUNTERPARTY').",
     )
 
-    currency_pair: Mapped[Optional[str]] = mapped_column(
+    currency_pair: Mapped[str | None] = mapped_column(
         String, nullable=True,
         doc="Affected currency pair (e.g. 'USD/MXN').",
     )
 
-    counterparty: Mapped[Optional[str]] = mapped_column(
+    counterparty: Mapped[str | None] = mapped_column(
         String, nullable=True,
         doc="Affected counterparty, if applicable.",
     )
@@ -346,12 +345,12 @@ class AuditFinding(Base):
         doc="Finding amount in USD.",
     )
 
-    amount_local: Mapped[Optional[float]] = mapped_column(
+    amount_local: Mapped[float | None] = mapped_column(
         Float, nullable=True,
         doc="Finding amount in local currency.",
     )
 
-    local_currency: Mapped[Optional[str]] = mapped_column(
+    local_currency: Mapped[str | None] = mapped_column(
         String, nullable=True,
         doc="ISO 4217 code for the local currency amount.",
     )

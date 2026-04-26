@@ -42,7 +42,16 @@ import logging
 import uuid as _uuid_mod
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
 from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -72,10 +81,11 @@ router = APIRouter(prefix="/v1/positions", tags=["v1-positions"])
 
 async def _fire_webhook(company_id: _uuid_mod.UUID, endpoint_id: _uuid_mod.UUID, event_type: str, data: dict) -> None:
     """Open a fresh DB session for webhook delivery (background task)."""
+    from sqlalchemy import select as _sel
+
     from app.core.db import async_session_maker
     from app.models.webhook import WebhookEndpoint as _WE
     from app.services.webhook_service import dispatch_webhook_event as _dispatch
-    from sqlalchemy import select as _sel
     async with async_session_maker() as session:
         result = await session.execute(_sel(_WE).where(_WE.id == endpoint_id))
         ep = result.scalar_one_or_none()
@@ -326,6 +336,7 @@ async def create_position(
     # Webhook dispatch: position.created
     try:
         from sqlalchemy import select as _wh_select
+
         from app.models.webhook import WebhookEndpoint as _WebhookEndpoint
         _wh_result = await session.execute(
             _wh_select(_WebhookEndpoint)

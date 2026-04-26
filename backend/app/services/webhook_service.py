@@ -154,7 +154,12 @@ async def dispatch_webhook_event(
     Inserts a WebhookDeliveryLog row after each attempt.
     On first successful delivery, emits a WORM audit event and prunes the log.
     """
-    from app.models.webhook import MAX_ATTEMPTS, DELIVERY_LOG_WINDOW, RETRY_DELAYS_MINUTES, WebhookDeliveryLog
+    from app.models.webhook import (
+        DELIVERY_LOG_WINDOW,
+        MAX_ATTEMPTS,
+        RETRY_DELAYS_MINUTES,
+        WebhookDeliveryLog,
+    )
 
     tenant_id = str(endpoint.company_id) if endpoint.company_id else "unknown"
     payload = build_event_payload(event_type, tenant_id, data)
@@ -231,7 +236,8 @@ async def _emit_webhook_delivered_audit(
 ) -> None:
     """Write an immutable audit_events row for a successful webhook delivery."""
     from sqlalchemy import select as _sel
-    from app.models.audit_event import AuditEvent, build_audit_event, GENESIS_HASH
+
+    from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
 
     # Fetch the latest event hash for this tenant's chain
     latest = await db.execute(
@@ -274,7 +280,8 @@ async def _prune_delivery_log(
     Delete WebhookDeliveryLog rows for endpoint_id older than the last `keep` entries.
     Safe to call on every delivery — no-ops if row count <= keep.
     """
-    from sqlalchemy import select, delete
+    from sqlalchemy import delete, select
+
     from app.models.webhook import WebhookDeliveryLog
 
     # Find the created_at cutoff: the (keep+1)-th newest row

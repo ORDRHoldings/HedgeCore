@@ -2,19 +2,21 @@
 from __future__ import annotations
 
 import logging
-from datetime import timezone
+from datetime import UTC
 
-from app.services import market_snapshot_service
-from app.services import forward_curve_service
-from app.services import equity_snapshot_service
-from app.services import options_snapshot_service
+from app.services import (
+    equity_snapshot_service,
+    forward_curve_service,
+    market_snapshot_service,
+    options_snapshot_service,
+)
 
 from .provider_base import (
     MarketDataProvider,
     NormalizedOption,
 )
 
-UTC = timezone.utc
+UTC = UTC
 _log = logging.getLogger(__name__)
 
 

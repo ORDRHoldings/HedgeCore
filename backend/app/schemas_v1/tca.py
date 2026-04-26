@@ -7,7 +7,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 Direction = Literal["BUY", "SELL"]
 Instrument = Literal["FWD", "SPOT", "NDF", "OPT"]
 EstimateType = Literal["pre_trade", "post_calc"]

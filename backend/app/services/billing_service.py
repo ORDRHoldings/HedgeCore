@@ -6,8 +6,10 @@ Stripe billing integration — test-mode only until STRIPE_LIVE_MODE=true.
 from __future__ import annotations
 
 import logging
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.organization import Company
 
 logger = logging.getLogger(__name__)

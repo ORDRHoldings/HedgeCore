@@ -24,17 +24,18 @@ import asyncio
 import logging
 import random
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Awaitable, Callable, TypeVar
+from typing import TypeVar
 from uuid import UUID
 
-from app.core.config import settings
 from app.connectors.errors import (
     ConnectorCircuitOpenError,
     ConnectorError,
     ConnectorRateLimitError,
     ConnectorServerError,
 )
+from app.core.config import settings
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ T = TypeVar("T")
 # ═════════════════════════════════════════════════════════════════════════════
 
 
-async def retry(
+async def retry(  # noqa: UP047 — TypeVar style; PEP 695 requires 3.12 syntax not yet adopted project-wide
     fn: Callable[[], Awaitable[T]],
     *,
     max_attempts: int = 4,
@@ -209,7 +210,7 @@ async def record_failure(provider: str, tenant_id: UUID) -> None:
     await _save_state(provider, tenant_id, state)
 
 
-async def call_with_guard(
+async def call_with_guard(  # noqa: UP047 — TypeVar style; PEP 695 requires 3.12 syntax not yet adopted project-wide
     fn: Callable[[], Awaitable[T]],
     *,
     provider: str,

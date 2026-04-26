@@ -6,17 +6,18 @@ Stripe webhook endpoint. Signature verified before any DB writes.
 from __future__ import annotations
 
 import logging
+
 import stripe
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.db import get_session
 from app.core.config import get_settings
+from app.core.db import get_session
 from app.services.billing_service import (
+    apply_payment_failed,
     apply_subscription_active,
     apply_subscription_cancelled,
-    apply_payment_failed,
 )
 
 logger = logging.getLogger(__name__)

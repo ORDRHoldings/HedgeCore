@@ -24,7 +24,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.market_data import ForwardCurveSnapshot
 from app.models.user import User
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Hash contract (public — used by tests and endpoints)
 # ─────────────────────────────────────────────────────────────────────────────

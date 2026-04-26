@@ -32,14 +32,6 @@ from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from app.services.regulatory_export import (
-    export_dodd_frank,
-    export_emir_xml,
-    export_finra_17a4,
-    export_isda_xml,
-    export_mifid_xml,
-)
-
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -56,6 +48,13 @@ from app.models.report_schedule import ReportSchedule
 from app.models.saved_report import SavedReport
 from app.models.user import User
 from app.services import rbac_service
+from app.services.regulatory_export import (
+    export_dodd_frank,
+    export_emir_xml,
+    export_finra_17a4,
+    export_isda_xml,
+    export_mifid_xml,
+)
 
 logger = logging.getLogger(__name__)
 

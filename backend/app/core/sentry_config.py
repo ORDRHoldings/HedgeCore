@@ -86,11 +86,12 @@ def init_sentry() -> bool:
     env = os.getenv("ENV", "dev")
 
     try:
+        import logging as _logging
+
         import sentry_sdk
         from sentry_sdk.integrations.fastapi import FastApiIntegration
-        from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
         from sentry_sdk.integrations.logging import LoggingIntegration
-        import logging as _logging
+        from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
         sentry_sdk.init(
             dsn=dsn,

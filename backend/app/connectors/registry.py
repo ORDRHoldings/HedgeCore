@@ -10,12 +10,11 @@ for the base contract do not require every provider's SDK to be installed.
 """
 from __future__ import annotations
 
+from collections.abc import Iterable
 from importlib import import_module
-from typing import Iterable
 
 from app.connectors.base import ConnectorProtocol
 from app.connectors.errors import ConnectorNotConfiguredError
-
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Provider catalogue

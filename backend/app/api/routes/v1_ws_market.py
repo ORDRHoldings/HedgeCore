@@ -44,7 +44,7 @@ async def ws_market(websocket: WebSocket) -> None:
             # Wait for a client message; ping if silent for 30 s
             try:
                 raw = await asyncio.wait_for(websocket.receive_json(), timeout=30.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 await websocket.send_json({"type": "pong"})
                 continue
             except Exception:

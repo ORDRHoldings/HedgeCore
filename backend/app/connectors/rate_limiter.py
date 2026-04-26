@@ -20,9 +20,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from uuid import UUID
 
-from app.core.config import settings
 from app.connectors.errors import ConnectorRateLimitError
-
+from app.core.config import settings
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Bucket config per provider

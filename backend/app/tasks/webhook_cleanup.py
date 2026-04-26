@@ -3,6 +3,7 @@ app/tasks/webhook_cleanup.py
 Nightly APScheduler job to prune WebhookDeliveryLog to the last 100 rows per endpoint.
 """
 from __future__ import annotations
+
 import logging
 
 _log = logging.getLogger("hedgecalc.tasks.webhook_cleanup")
@@ -10,9 +11,10 @@ _log = logging.getLogger("hedgecalc.tasks.webhook_cleanup")
 
 async def cleanup_webhook_delivery_logs() -> None:
     """Prune webhook_delivery_logs to last 100 rows per endpoint_id."""
-    from sqlalchemy import select, func
+    from sqlalchemy import func, select
+
     from app.core.db import async_session_maker
-    from app.models.webhook import WebhookDeliveryLog, DELIVERY_LOG_WINDOW
+    from app.models.webhook import DELIVERY_LOG_WINDOW, WebhookDeliveryLog
 
     async with async_session_maker() as session:
         try:

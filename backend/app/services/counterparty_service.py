@@ -426,7 +426,7 @@ async def compute_exposure(
         counterparty_name=cp.name,
         as_of=cp.last_scored_at or datetime.now(UTC),
         exposure=_exposure_to_schema(cp_exp),
-        limits=[CreditLimitResponse.model_validate(l) for l in limits],
+        limits=[CreditLimitResponse.model_validate(lim) for lim in limits],
         breaches=breaches,
         risk_level=result.risk_level,  # type: ignore[arg-type]
     )

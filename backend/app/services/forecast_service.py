@@ -9,11 +9,14 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.cash import (
-    BankAccount, CashBalance, LegalEntity, CashAuditEventType,
+    BankAccount,
+    CashAuditEventType,
+    CashBalance,
+    LegalEntity,
 )
 from app.models.cash_forecast import CashForecastItem, CashForecastSnapshot
 from app.services.cash_audit_service import append_event

@@ -702,10 +702,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 # All callers should prefer importing from app.core.dependencies directly.
 from app.core.dependencies import get_current_user as get_current_user  # noqa: F401, E402
 
-
-
-
-
 oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 

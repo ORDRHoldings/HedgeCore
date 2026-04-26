@@ -215,7 +215,7 @@ def assess_statistical_forecast(
 
     ss_xx = sum((xi - x_mean) ** 2 for xi in x)
     ss_yy = sum((yi - y_mean) ** 2 for yi in y)
-    ss_xy = sum((xi - x_mean) * (yi - y_mean) for xi, yi in zip(x, y))
+    ss_xy = sum((xi - x_mean) * (yi - y_mean) for xi, yi in zip(x, y, strict=False))
 
     if ss_xx < guard or ss_yy < guard:
         return StatisticalForecastResult(

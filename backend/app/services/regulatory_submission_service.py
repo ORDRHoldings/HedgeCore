@@ -402,7 +402,7 @@ async def get_stats(db: AsyncSession, tenant_id: UUID) -> dict[str, Any]:
         .group_by(RegulatorySubmission.status)
     )
     rows = (await db.execute(stmt)).all()
-    counts = {s: 0 for s in STATUSES}
+    counts = dict.fromkeys(STATUSES, 0)
     for status, n in rows:
         counts[status] = int(n)
     total = sum(counts.values())

@@ -229,8 +229,8 @@ _MONITORED_TABLES = [
 ]
 
 # Pre-built SQL statements — table names are from a hardcoded constant, not user input.
-_COUNT_STMTS = {t: text("SELECT COUNT(*) FROM %s" % t) for t in _MONITORED_TABLES}
-_MAX_CREATED_STMTS = {t: text("SELECT MAX(created_at) FROM %s" % t) for t in _MONITORED_TABLES}
+_COUNT_STMTS = {t: text(f"SELECT COUNT(*) FROM {t}") for t in _MONITORED_TABLES}
+_MAX_CREATED_STMTS = {t: text(f"SELECT MAX(created_at) FROM {t}") for t in _MONITORED_TABLES}
 @router.get("/tables")
 async def monitor_tables(
     session: AsyncSession = Depends(get_async_session),

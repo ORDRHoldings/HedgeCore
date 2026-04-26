@@ -259,7 +259,7 @@ async def risk_summary_for_run(
 
     # Extended stress scenarios
     try:
-        from app.engine_v1.scenarios_ext import apply_extended_scenarios, INSTITUTIONAL_SCENARIOS
+        from app.engine_v1.scenarios_ext import INSTITUTIONAL_SCENARIOS, apply_extended_scenarios
         if buckets:
             exposure_usd = sum(
                 abs(b.get("commercial_exposure_mxn", b.get("commercial_exposure_local", 0.0)))
@@ -305,7 +305,7 @@ async def stress_scenarios(
     """
     await _check_risk_permission(session, current_user)
 
-    from app.engine_v1.scenarios_ext import apply_extended_scenarios, INSTITUTIONAL_SCENARIOS
+    from app.engine_v1.scenarios_ext import INSTITUTIONAL_SCENARIOS, apply_extended_scenarios
 
     if data.scenarios:
         enabled = data.scenarios
@@ -367,7 +367,7 @@ async def composite_risk(
 
     # Extended stress scenarios
     try:
-        from app.engine_v1.scenarios_ext import apply_extended_scenarios, INSTITUTIONAL_SCENARIOS
+        from app.engine_v1.scenarios_ext import INSTITUTIONAL_SCENARIOS, apply_extended_scenarios
         exposure_usd = sum(
             abs(b.get("commercial_exposure_mxn", b.get("commercial_exposure_local", 0.0)))
             / max(spot, 0.01) for b in data.hedge_actions

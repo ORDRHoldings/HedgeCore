@@ -9,12 +9,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.core.config import settings
 
-UTC = timezone.utc
+UTC = UTC
 _log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -106,7 +106,7 @@ class IBKRExecutor:
                 "IBKR executor connected: %s:%s (client %s)",
                 self._host, self._port, self._client_id,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._ib = None
             raise ConnectionError(
                 f"IBKR Gateway connection timed out after {_CONNECT_TIMEOUT_SEC}s "

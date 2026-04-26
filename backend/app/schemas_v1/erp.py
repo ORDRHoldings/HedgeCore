@@ -1,5 +1,6 @@
 """Pydantic schemas for ERP connector endpoints."""
 from __future__ import annotations
+
 from pydantic import BaseModel
 
 

@@ -13,18 +13,32 @@ from app.core.dependencies import get_current_user, get_session
 from app.models.payment import PaymentBeneficiary
 from app.models.user import User
 from app.schemas_v1.cash import (
-    BeneficiaryCreate, BeneficiaryUpdate, BeneficiaryResponse,
-    PaymentInitiate, PaymentReject,
-    PaymentInstructionResponse, PaymentListResponse,
+    BeneficiaryCreate,
+    BeneficiaryResponse,
+    BeneficiaryUpdate,
+    PaymentInitiate,
+    PaymentInstructionResponse,
+    PaymentListResponse,
+    PaymentReject,
 )
 from app.services.payment_service import (
-    list_beneficiaries, create_beneficiary, update_beneficiary, deactivate_beneficiary,
-    initiate_payment, list_payments, get_payment,
-    approve_payment, reject_payment, transmit_payment, cancel_payment,
+    approve_payment,
+    cancel_payment,
+    create_beneficiary,
+    deactivate_beneficiary,
+    get_payment,
+    initiate_payment,
+    list_beneficiaries,
+    list_payments,
+    reject_payment,
+    transmit_payment,
+    update_beneficiary,
 )
 from app.services.swift_message_service import (
-    OrderingParty, SwiftMessageError,
-    generate_message, supported_formats_for,
+    OrderingParty,
+    SwiftMessageError,
+    generate_message,
+    supported_formats_for,
 )
 
 router = APIRouter(prefix="/v1/payments", tags=["payments"])

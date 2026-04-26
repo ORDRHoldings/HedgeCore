@@ -22,10 +22,19 @@ from datetime import UTC, date, datetime
 from enum import Enum
 
 from sqlalchemy import (
-    BigInteger, Date, DateTime, Integer, Numeric, String,
-    UniqueConstraint, event as sa_event,
+    BigInteger,
+    Date,
+    DateTime,
+    Integer,
+    Numeric,
+    String,
+    UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy import (
+    event as sa_event,
+)
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base

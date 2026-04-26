@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from .provider_base import ProviderHealth
 
-UTC = timezone.utc
+UTC = UTC
 _log = logging.getLogger(__name__)
 
 
@@ -80,8 +80,9 @@ class StalenessMonitor:
 
         # Check FX spot snapshots
         try:
+            from sqlalchemy import desc, select
+
             from app.models.market_snapshot import MarketSnapshot
-            from sqlalchemy import select, desc
 
             q = (
                 select(MarketSnapshot)

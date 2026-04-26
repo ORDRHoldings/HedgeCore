@@ -105,7 +105,7 @@ def _regression(
     mean_y = sum(instrument) / n
     ss_xx = sum((x - mean_x) ** 2 for x in hedged)
     ss_yy = sum((y - mean_y) ** 2 for y in instrument)
-    ss_xy = sum((x - mean_x) * (y - mean_y) for x, y in zip(hedged, instrument))
+    ss_xy = sum((x - mean_x) * (y - mean_y) for x, y in zip(hedged, instrument, strict=False))
 
     if ss_xx < 1e-10 or ss_yy < 1e-10:
         return IREffectivenessResult(

@@ -9,13 +9,12 @@ from decimal import Decimal
 from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.cash import BankAccount, CashBalance, CashAuditEventType
-from app.models.cash_pool import TreasuryEntity, CashPool, CashPoolMember, CashPoolSweep
+from app.models.cash import BankAccount, CashAuditEventType, CashBalance
+from app.models.cash_pool import CashPool, CashPoolMember, CashPoolSweep, TreasuryEntity
 from app.services.cash_audit_service import append_event
-
 
 # ── Treasury Entity CRUD ──────────────────────────────────────────
 

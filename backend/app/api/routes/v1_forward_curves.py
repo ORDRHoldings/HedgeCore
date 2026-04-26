@@ -21,8 +21,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_async_session
 from app.core.security import get_current_user
 from app.models.user import User
-from app.services import rbac_service
 from app.services import forward_curve_service as fcs
+from app.services import rbac_service
 
 router = APIRouter(prefix="/v1/forward-curves", tags=["v1-forward-curves"])
 # ─────────────────────────────────────────────────────────────────────────────

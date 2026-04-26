@@ -157,7 +157,7 @@ class GenericBucketResult(BaseModel):
     hedge_position_local: float
     residual_local: float
 
-    def to_legacy_bucket(self) -> "BucketResult":
+    def to_legacy_bucket(self) -> BucketResult:
         """Convert to legacy BucketResult for USDMXN backward compat."""
         return BucketResult(
             bucket=self.bucket,
@@ -185,7 +185,7 @@ class GenericHedgePlan(BaseModel):
     buckets: list[GenericBucketResult]
     summary: GenericHedgePlanSummary
 
-    def to_legacy_plan(self) -> "HedgePlan":
+    def to_legacy_plan(self) -> HedgePlan:
         """Convert to legacy HedgePlan for USDMXN backward compat."""
         from app.schemas_v1.results import HedgePlan, HedgePlanSummary
         legacy_buckets = [b.to_legacy_bucket() for b in self.buckets]

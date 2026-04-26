@@ -8,6 +8,7 @@ adding caching and fallback behavior.
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+
 from app.core.security import get_current_user
 from app.models.user import User
 

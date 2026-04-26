@@ -84,7 +84,7 @@ class TemplateResponse(BaseModel):
     updated_at: str | None
 
     @classmethod
-    def from_model(cls, m) -> "TemplateResponse":
+    def from_model(cls, m) -> TemplateResponse:
         return cls(
             id=m.id,
             company_id=m.company_id,

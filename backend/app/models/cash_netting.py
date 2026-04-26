@@ -11,7 +11,8 @@ import uuid
 from datetime import UTC, date, datetime
 
 from sqlalchemy import Date, DateTime, Numeric, String
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base

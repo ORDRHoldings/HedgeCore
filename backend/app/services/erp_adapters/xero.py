@@ -3,6 +3,7 @@ Xero invoice pull adapter.
 Fetches GET /Invoices?Status=AUTHORISED and filters by currency.
 """
 from __future__ import annotations
+
 import logging
 from datetime import date
 from decimal import Decimal

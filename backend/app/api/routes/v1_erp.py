@@ -37,8 +37,8 @@ async def trigger_erp_pull(
     ERP credentials are stored in `company.settings["erp_credentials"][connector_id]`.
     A full `Connector` entity is a Phase 2 deliverable.
     """
-    from app.services.erp_adapters.xero import XeroAdapter  # noqa: PLC0415
     from app.services.erp_adapters.netsuite import NetSuiteAdapter  # noqa: PLC0415
+    from app.services.erp_adapters.xero import XeroAdapter  # noqa: PLC0415
     from app.services.erp_connector_service import process_invoices  # noqa: PLC0415
 
     company_settings = current_user.company.settings or {}

@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import urlencode
 
 import httpx
@@ -17,7 +17,7 @@ from .provider_base import (
     ProviderHealth,
 )
 
-UTC = timezone.utc
+UTC = UTC
 _log = logging.getLogger(__name__)
 
 _JPY_PAIRS = {"USDJPY", "EURJPY", "GBPJPY", "AUDJPY", "CADJPY", "CHFJPY", "NZDJPY"}

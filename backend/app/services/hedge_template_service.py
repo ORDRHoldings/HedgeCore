@@ -12,7 +12,7 @@ execution proposal pipeline.
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta, UTC
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -121,7 +121,7 @@ def validate_instrument_mix(mix: list[dict[str, Any]]) -> None:
                 f"leg[{i}].instrument '{instrument}' must be one of {sorted(_VALID_INSTRUMENTS)}"
             )
         weight = leg.get("weight")
-        if not isinstance(weight, (int, float)) or not 0 < weight <= 1:
+        if not isinstance(weight, int | float) or not 0 < weight <= 1:
             raise HedgeTemplateError(f"leg[{i}].weight must be a number in (0, 1]")
         total_weight += float(weight)
         direction = leg.get("direction")
@@ -135,7 +135,7 @@ def validate_instrument_mix(mix: list[dict[str, Any]]) -> None:
                 f"leg[{i}].tenor_days must be a positive int or null"
             )
         strike = leg.get("strike_pct")
-        if strike is not None and (not isinstance(strike, (int, float)) or strike <= 0):
+        if strike is not None and (not isinstance(strike, int | float) or strike <= 0):
             raise HedgeTemplateError(
                 f"leg[{i}].strike_pct must be a positive number or null"
             )

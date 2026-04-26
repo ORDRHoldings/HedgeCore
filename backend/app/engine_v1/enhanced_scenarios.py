@@ -22,7 +22,6 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
-
 DEFAULT_SHOCK_PACK: list[float] = [-0.10, -0.05, 0.05, 0.10]
 
 NAMED_SHOCK_PACKS: dict[str, list[float]] = {

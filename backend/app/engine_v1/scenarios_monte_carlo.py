@@ -112,7 +112,7 @@ def _get_pair_region(pair: str) -> str:
 def _build_covariance(
     factors: list[str],
     cov_override: dict[str, dict[str, float]] | None = None,
-) -> "np.ndarray[Any, np.dtype[Any]]":
+) -> np.ndarray[Any, np.dtype[Any]]:
     """Build covariance matrix from override or region-aware fallback."""
     n = len(factors)
 

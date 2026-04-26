@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import logging
-from datetime import timezone
+from datetime import UTC
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from .ingestion_service import IngestionOrchestrator
 
-UTC = timezone.utc
+UTC = UTC
 _log = logging.getLogger(__name__)
 
 DEFAULT_FX_PAIRS = [

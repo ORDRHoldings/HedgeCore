@@ -78,8 +78,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
-from app.core.schema_state import require_schema_ready
 from app.core.dependencies import get_current_user
+from app.core.schema_state import require_schema_ready
 from app.engine_v1.audit import build_run_envelope, build_trace_lite
 from app.engine_v1.kernel import compute_hedge_plan
 from app.engine_v1.normalizer import normalize_hedges, normalize_trades
@@ -110,10 +110,11 @@ router = APIRouter(prefix="/v1", tags=["v1-calculate"])
 
 async def _fire_webhook(company_id, endpoint_id, event_type: str, data: dict) -> None:
     """Open a fresh DB session for webhook delivery (background task)."""
+    from sqlalchemy import select as _sel
+
     from app.core.db import async_session_maker
     from app.models.webhook import WebhookEndpoint as _WE
     from app.services.webhook_service import dispatch_webhook_event as _dispatch
-    from sqlalchemy import select as _sel
     async with async_session_maker() as session:
         result = await session.execute(_sel(_WE).where(_WE.id == endpoint_id))
         ep = result.scalar_one_or_none()
@@ -879,6 +880,7 @@ async def calculate(
     # Webhook dispatch: calculation.completed
     try:
         from sqlalchemy import select as _wh_calc_select
+
         from app.models.webhook import WebhookEndpoint as _WH_Endpoint
         _wh_calc_result = await session.execute(
             _wh_calc_select(_WH_Endpoint)

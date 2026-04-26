@@ -23,7 +23,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models.intelligence import IntelligenceQueryLog
 
-
 # ── Internal helpers ───────────────────────────────────────────────────────
 
 
@@ -81,7 +80,7 @@ async def build_treasury_context(session: AsyncSession, company_id: uuid.UUID) -
 
     # Cash balances summary (latest per account)
     try:
-        from app.models.cash import CashBalance, BankAccount
+        from app.models.cash import BankAccount, CashBalance
         result = await session.execute(
             select(
                 BankAccount.currency,

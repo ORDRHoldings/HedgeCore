@@ -33,7 +33,8 @@ async def emit_audit_event(
     Uses the main AuditEvent hash-chain for the tenant.
     """
     try:
-        from app.models.audit_event import GENESIS_HASH as _GH, AuditEvent, build_audit_event
+        from app.models.audit_event import GENESIS_HASH as _GH
+        from app.models.audit_event import AuditEvent, build_audit_event
 
         result = await session.execute(
             select(AuditEvent.event_hash)

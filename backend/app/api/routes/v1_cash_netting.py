@@ -1,6 +1,7 @@
 # backend/app/api/routes/v1_cash_netting.py
 """v1 intercompany netting — obligations, proposals, approval, execution, savings."""
 import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,12 +9,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_current_user, get_session
 from app.models.user import User
 from app.schemas_v1.cash import (
-    ObligationCreate, ObligationResponse,
-    NettingProposalResponse, NettingSavingsSummary,
+    NettingProposalResponse,
+    NettingSavingsSummary,
+    ObligationCreate,
+    ObligationResponse,
 )
 from app.services.netting_service import (
-    create_obligation, list_obligations, cancel_obligation,
-    generate_proposals, approve_proposal, execute_proposal, get_savings_summary,
+    approve_proposal,
+    cancel_obligation,
+    create_obligation,
+    execute_proposal,
+    generate_proposals,
+    get_savings_summary,
+    list_obligations,
 )
 
 router = APIRouter(prefix="/v1/cash/netting", tags=["cash-netting"])

@@ -29,7 +29,7 @@ class MultiCurrencyMarketSnapshot(MarketSnapshot):
     Backward compatible: spot_rate and forward_points_by_month still work
     for the legacy USDMXN kernel path.
     """
-    pairs: dict[str, "PairMarketData"] = Field(
+    pairs: dict[str, PairMarketData] = Field(
         default_factory=dict,
         description="Keyed by pair code: EURUSD, USDJPY, etc."
     )

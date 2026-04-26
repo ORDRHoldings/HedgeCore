@@ -2,18 +2,23 @@
 """v1 cash positions — manual entry, pull, consolidated views."""
 import uuid
 from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 
 from app.core.dependencies import get_current_user, get_session
 from app.models.cash import BankAccount, CashBalance, LegalEntity, ReconciliationStatus
 from app.models.user import User
 from app.schemas_v1.cash import (
-    CashBalanceCreate, BulkBalanceCreate, ReconcileRequest, CashBalanceResponse,
-    ConsolidatedPositionResponse, EntityPositionResponse,
+    BulkBalanceCreate,
+    CashBalanceCreate,
+    CashBalanceResponse,
+    ConsolidatedPositionResponse,
+    EntityPositionResponse,
+    ReconcileRequest,
 )
-from app.services.cash_balance_service import enter_balance, bulk_enter_balances, reconcile_balance
+from app.services.cash_balance_service import bulk_enter_balances, enter_balance, reconcile_balance
 
 router = APIRouter(prefix="/v1/cash", tags=["cash-positions"])
 

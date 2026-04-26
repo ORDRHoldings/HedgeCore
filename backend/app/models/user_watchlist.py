@@ -11,10 +11,10 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    JSON,
     UUID,
     DateTime,
     ForeignKey,
-    JSON,
     String,
     UniqueConstraint,
     func,

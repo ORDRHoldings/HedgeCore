@@ -430,7 +430,7 @@ _TRUNCATE_TABLES = [
     "departments","branches","companies",
 ]
 # Pre-built SQL statements — static, no dynamic construction at runtime.
-_TRUNCATE_SQL = {t: 'TRUNCATE TABLE "%s" CASCADE' % t for t in _TRUNCATE_TABLES}
+_TRUNCATE_SQL = {t: f'TRUNCATE TABLE "{t}" CASCADE' for t in _TRUNCATE_TABLES}
 _TRUNCATE_STMTS = {t: text(sql) for t, sql in _TRUNCATE_SQL.items()}
 # ---------------------------------------------------------------------------
 # POST /v1/admin/reset/seed-companies

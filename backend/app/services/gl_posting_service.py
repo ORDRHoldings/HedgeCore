@@ -3,6 +3,7 @@ Adapter dispatch layer.
 Selects the right GLPostingAdapter based on connector_settings.erp_system.
 """
 from __future__ import annotations
+
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,9 +12,9 @@ from app.models.journal_entry import JournalEntry, JournalEntryStatus
 from app.models.user import User
 from app.services.posting_adapters.base import PostingResult
 from app.services.posting_adapters.csv_exporter import CSVExporter
+from app.services.posting_adapters.netsuite import NetSuitePoster
 from app.services.posting_adapters.quickbooks import QuickBooksPoster
 from app.services.posting_adapters.xero import XeroPoster
-from app.services.posting_adapters.netsuite import NetSuitePoster
 
 logger = logging.getLogger(__name__)
 

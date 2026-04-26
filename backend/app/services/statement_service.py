@@ -15,9 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.bank_statement import BankStatement, BankTransaction
 from app.models.cash import CashAuditEventType
 from app.services.cash_audit_service import append_event
-from app.services.parsers.mt940_parser import parse_mt940
-from app.services.parsers.camt053_parser import parse_camt053
 from app.services.parsers.bai2_parser import parse_bai2
+from app.services.parsers.camt053_parser import parse_camt053
+from app.services.parsers.mt940_parser import parse_mt940
 
 
 def detect_format(content: str) -> str:

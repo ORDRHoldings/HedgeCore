@@ -19,7 +19,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -30,7 +30,7 @@ from app.core.config import settings
 router = APIRouter(prefix="/v1/market-data/live", tags=["v1-market-data-live"])
 _log = logging.getLogger(__name__)
 
-UTC = timezone.utc
+UTC = UTC
 
 # ---------------------------------------------------------------------------
 # Constants

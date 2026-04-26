@@ -3,6 +3,7 @@ QuickBooks Online GL posting adapter.
 Calls QBO Journal Entry API. Credentials from connector_settings JSONB.
 """
 from __future__ import annotations
+
 import logging
 
 from app.services.posting_adapters.base import GLPostingAdapter, PostingResult

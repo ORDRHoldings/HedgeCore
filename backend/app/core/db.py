@@ -17,6 +17,7 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.pool import NullPool
 from sqlalchemy.types import Uuid
 
+
 # Teach SQLite how to render PostgreSQL-specific types so
 # Base.metadata.create_all() works in ALLOW_SQLITE_DEMO mode.
 @compiles(JSONB, "sqlite")

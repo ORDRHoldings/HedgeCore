@@ -16,9 +16,8 @@ All functions are pure (no DB / IO) and return strings.
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from xml.sax.saxutils import escape as xml_escape
-
 
 # ---------------------------------------------------------------------------
 # ISDA XML export
@@ -615,4 +614,4 @@ def _x(value: str) -> str:
 
 def _now_iso() -> str:
     """Return current UTC time as ISO-8601 string."""
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()

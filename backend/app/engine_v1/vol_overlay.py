@@ -15,7 +15,6 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Fallback volatilities by region (calibrated to BIS Triennial 2022)
 # ─────────────────────────────────────────────────────────────────────────────

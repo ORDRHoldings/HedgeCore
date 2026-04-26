@@ -13,17 +13,21 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+if TYPE_CHECKING:
+    from app.schemas_v1.gl import GLAccountMappingCreate
+
 from app.models.journal_entry import (
     GENESIS_HASH,
+    JOURNAL_ENTRY_TRANSITIONS,
     GLAccountMapping,
     GLMappingNotConfiguredError,
     JournalEntry,
     JournalEntryStatus,
-    JOURNAL_ENTRY_TRANSITIONS,
     _compute_entry_hash,
 )
 from app.models.user import User
@@ -304,7 +308,7 @@ async def list_journal_entries(
 async def upsert_gl_mapping(
     session: AsyncSession,
     company_id: uuid.UUID,
-    data: "GLAccountMappingCreate",
+    data: GLAccountMappingCreate,
     user: User,
 ) -> GLAccountMapping:
 

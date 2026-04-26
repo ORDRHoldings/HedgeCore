@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-UTC = timezone.utc
+UTC = UTC
 
 
 # ── Normalized data shapes ───────────────────────────────

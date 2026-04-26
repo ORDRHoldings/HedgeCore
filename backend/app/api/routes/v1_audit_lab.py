@@ -345,8 +345,8 @@ async def create_audit_run(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> dict:
-    import traceback as _tb
     import logging as _log
+    import traceback as _tb
     _logger = _log.getLogger(__name__)
     try:
         return await _create_audit_run_inner(body, session, current_user)

@@ -19,7 +19,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
 
-
 # Allowed frameworks (match regulatory_export.py function names)
 FRAMEWORKS = ("EMIR", "MIFID_II", "DODD_FRANK", "ISDA", "FINRA_17A4", "IFRS9")
 

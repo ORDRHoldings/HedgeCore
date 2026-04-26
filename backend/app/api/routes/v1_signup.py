@@ -6,10 +6,10 @@ Creates Company + admin User + GENESIS audit event atomically.
 """
 from __future__ import annotations
 
-from pydantic import BaseModel, EmailStr
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
 from app.services.tenant_provisioning import provision_tenant

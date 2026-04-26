@@ -109,6 +109,7 @@ async def list_estimates(
 ):
     _require_tca_perm(current_user, "tca.read")
     from sqlalchemy import select
+
     from app.models.transaction_cost_estimate import TransactionCostEstimate
 
     stmt = (
@@ -136,6 +137,7 @@ async def get_estimate(
 ):
     _require_tca_perm(current_user, "tca.read")
     from sqlalchemy import select
+
     from app.models.transaction_cost_estimate import TransactionCostEstimate
 
     est = (

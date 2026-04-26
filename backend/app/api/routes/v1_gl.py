@@ -39,6 +39,7 @@ _PLAN_DEPS = [require_plan("professional", "enterprise")]
 async def _get_run(run_id: uuid.UUID, session: AsyncSession):
     """Fetch HedgeEffectivenessRun — raises 404 if not found."""
     from sqlalchemy import select
+
     from app.models.hedge_effectiveness import HedgeEffectivenessRun  # noqa: PLC0415
 
     result = await session.execute(
@@ -218,6 +219,7 @@ async def post_journal_entry(
     current_user: User = Depends(get_current_user),
 ):
     from sqlalchemy import select as sa_select  # noqa: PLC0415
+
     from app.models.journal_entry import JournalEntry as JE  # noqa: PLC0415
     result = await session.execute(
         sa_select(JE).where(JE.id == entry_id, JE.company_id == current_user.company.id)

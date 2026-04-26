@@ -12,9 +12,9 @@ from app.core.dependencies import get_session
 from app.core.plan_enforcement import require_plan_tier
 from app.models.user import User
 from app.services.intelligence_service import (
-    query_intelligence,
     draft_commentary,
     get_usage_stats,
+    query_intelligence,
 )
 
 router = APIRouter(prefix="/v1/intelligence", tags=["intelligence"])
@@ -167,6 +167,7 @@ async def patch_settings(
         raise HTTPException(status_code=403, detail="Admin or superuser required to change intelligence settings.")
 
     from sqlalchemy import update
+
     from app.models.organization import Company
     await db.execute(
         update(Company)

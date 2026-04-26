@@ -71,9 +71,9 @@ def get_match_sig(path: str) -> int:
 
 def build_bootstrap_enforcer():
     """Build a PolicyEnforcer with default rules for all TreasuryFX routes."""
-    from synex_kernel.policy.loader import build_rule_row, build_artifact, verify_artifact
-    from synex_kernel.policy.enforcer import PolicyEnforcer
     from synex_kernel.constants import FLAG_ENABLED
+    from synex_kernel.policy.enforcer import PolicyEnforcer
+    from synex_kernel.policy.loader import build_artifact, build_rule_row, verify_artifact
 
     rule_defs = [
         # (rule_id, match_sig, budget_cost, priority)

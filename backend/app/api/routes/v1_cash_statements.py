@@ -1,16 +1,22 @@
 """v1 bank statement import — upload, list, transactions."""
 import uuid
 from datetime import date
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_session
 from app.models.user import User
 from app.schemas_v1.cash import (
-    BankStatementResponse, BankTransactionResponse, StatementUploadResponse,
+    BankStatementResponse,
+    BankTransactionResponse,
+    StatementUploadResponse,
 )
 from app.services.statement_service import (
-    import_statement, list_statements, get_statement, list_transactions,
+    get_statement,
+    import_statement,
+    list_statements,
+    list_transactions,
 )
 
 router = APIRouter(prefix="/v1/cash/statements", tags=["cash-statements"])

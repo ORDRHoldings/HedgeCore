@@ -19,7 +19,12 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.cash import BankConnection, BankConnectionProvider, BankConnectionStatus, CashAuditEventType
+from app.models.cash import (
+    BankConnection,
+    BankConnectionProvider,
+    BankConnectionStatus,
+    CashAuditEventType,
+)
 from app.services.cash_audit_service import append_event
 from app.services.cash_encryption import encrypt_field
 

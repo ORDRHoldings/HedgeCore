@@ -2,17 +2,24 @@
 """v1 bank accounts — registry + lifecycle."""
 import uuid
 from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_session
-from app.models.cash import LegalEntity, BankAccount, CashBalance, CashAuditEvent
+from app.models.cash import BankAccount, CashAuditEvent, CashBalance, LegalEntity
 from app.models.user import User
 from app.schemas_v1.cash import BankAccountCreate, BankAccountResponse, BankAccountUpdate
 from app.services.bank_account_service import (
-    create_account, verify_account, freeze_account, unfreeze_account, close_account,
-    decrypt_account_details, _get_account, AccountNotFoundError,
+    AccountNotFoundError,
+    _get_account,
+    close_account,
+    create_account,
+    decrypt_account_details,
+    freeze_account,
+    unfreeze_account,
+    verify_account,
 )
 
 router = APIRouter(prefix="/v1/cash/accounts", tags=["cash-accounts"])

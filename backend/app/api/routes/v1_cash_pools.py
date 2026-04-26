@@ -1,21 +1,33 @@
 """v1 cash pools — treasury entities, pool CRUD, balance, sweeps."""
 import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_session
 from app.models.user import User
 from app.schemas_v1.cash import (
-    TreasuryEntityCreate, TreasuryEntityResponse,
-    CashPoolCreate, CashPoolResponse,
-    CashPoolMemberCreate, CashPoolMemberResponse,
-    PoolBalanceResponse, SweepResponse,
+    CashPoolCreate,
+    CashPoolMemberCreate,
+    CashPoolMemberResponse,
+    CashPoolResponse,
+    PoolBalanceResponse,
+    SweepResponse,
+    TreasuryEntityCreate,
+    TreasuryEntityResponse,
 )
 from app.services.cash_pool_service import (
-    create_treasury_entity, list_treasury_entities,
-    create_pool, list_pools, get_pool_detail,
-    add_member, remove_member,
-    get_pool_balance, calculate_sweeps, execute_sweeps, list_sweeps,
+    add_member,
+    calculate_sweeps,
+    create_pool,
+    create_treasury_entity,
+    execute_sweeps,
+    get_pool_balance,
+    get_pool_detail,
+    list_pools,
+    list_sweeps,
+    list_treasury_entities,
+    remove_member,
 )
 
 router = APIRouter(prefix="/v1/cash/pools", tags=["cash-pools"])

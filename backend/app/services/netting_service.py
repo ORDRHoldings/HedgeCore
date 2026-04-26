@@ -101,7 +101,7 @@ async def auto_detect_obligations(
     """Scan CashForecastItems with counterparty_entity_id set and create obligations."""
     stmt = select(CashForecastItem).where(
         CashForecastItem.company_id == company_id,
-        CashForecastItem.is_active == True,
+        CashForecastItem.is_active.is_(True),
         CashForecastItem.counterparty_entity_id.is_not(None),
         CashForecastItem.entity_id.is_not(None),
     )

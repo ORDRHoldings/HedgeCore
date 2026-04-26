@@ -24,7 +24,6 @@ from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
 from app.core.db import Base
 
-
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------

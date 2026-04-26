@@ -1,14 +1,15 @@
 # backend/app/api/routes/v1_bank_connections.py
 """v1 bank connections — OAuth flow + circuit-breaker management."""
 import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_session
 from app.models.cash import BankConnection, BankConnectionStatus
 from app.models.user import User
-from app.schemas_v1.cash import AuthUrlResponse, OAuthCallbackRequest, BankConnectionResponse
+from app.schemas_v1.cash import AuthUrlResponse, BankConnectionResponse, OAuthCallbackRequest
 from app.services.bank_connection_service import get_auth_url, handle_callback, revoke_connection
 
 router = APIRouter(prefix="/v1/cash/connections", tags=["cash-connections"])

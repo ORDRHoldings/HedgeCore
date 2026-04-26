@@ -26,6 +26,8 @@ from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
 from app.models.position import Position
 from app.models.user import User
 from app.services import rbac_service
+
+
 def _canonical_json(obj) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
 

@@ -4,7 +4,13 @@ from __future__ import annotations
 import uuid as _uuid
 
 from sqlalchemy import (
-    Boolean, Column, DateTime, Float, Index, Integer, String,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    Index,
+    Integer,
+    String,
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID

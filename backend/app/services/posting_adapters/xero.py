@@ -1,6 +1,8 @@
 """Xero Manual Journals posting adapter."""
 from __future__ import annotations
+
 import logging
+from datetime import UTC
 
 from app.services.posting_adapters.base import GLPostingAdapter, PostingResult
 
@@ -23,13 +25,14 @@ class XeroPoster(GLPostingAdapter):
                 erp_ref=f"XERO-PAPER-{journal_entry.id}",
             )
         try:
+            from datetime import datetime  # noqa: PLC0415
+
             import httpx  # noqa: PLC0415
-            from datetime import datetime, timezone  # noqa: PLC0415
             _dt = datetime(
                 journal_entry.period_date.year,
                 journal_entry.period_date.month,
                 journal_entry.period_date.day,
-                tzinfo=timezone.utc,
+                tzinfo=UTC,
             )
             payload = {
                 "Date": f"/Date({int(_dt.timestamp()) * 1000}+0000)/",

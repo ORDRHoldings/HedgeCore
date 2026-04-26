@@ -16,8 +16,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.cash import (
-    BankAccount, BankAccountStatus, CashAuditEventType,
-    CashBalance, CashBalanceSource, ReconciliationStatus,
+    BankAccount,
+    BankAccountStatus,
+    CashAuditEventType,
+    CashBalance,
+    CashBalanceSource,
+    ReconciliationStatus,
 )
 from app.services.cash_audit_service import append_event
 

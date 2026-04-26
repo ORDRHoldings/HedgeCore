@@ -37,7 +37,7 @@ Plaintext is a JSON blob: { "access_token", "refresh_token", "scope", "raw" }.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -49,7 +49,6 @@ from app.connectors.base import TokenBundle
 from app.connectors.errors import ConnectorAuthError, ConnectorNotConfiguredError
 from app.core.config import settings
 from app.models.organization import Company
-
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Key resolution + Fernet factory
@@ -149,7 +148,7 @@ async def store_tokens(
         "ciphertext": ciphertext,
         "realm_id": bundle.realm_id,
         "expires_at": bundle.expires_at.isoformat() if bundle.expires_at else None,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(UTC).isoformat(),
     }
     await _save_company_settings(session, tenant_id, company_settings)
 
@@ -219,5 +218,5 @@ async def update_state(
     state = company_settings.setdefault("connector_state", {})
     provider_state = state.setdefault(provider, {})
     provider_state.update(patch)
-    provider_state["updated_at"] = datetime.now(timezone.utc).isoformat()
+    provider_state["updated_at"] = datetime.now(UTC).isoformat()
     await _save_company_settings(session, tenant_id, company_settings)

@@ -26,13 +26,15 @@ from __future__ import annotations
 
 import logging
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
 
 import httpx
 
+from app.connectors import rate_limiter, token_vault
+from app.connectors import retry as retry_mod
 from app.connectors.base import (
     COAAccount,
     ConnectorHealth,
@@ -49,7 +51,6 @@ from app.connectors.errors import (
     ConnectorValidationError,
     ConnectorWebhookError,
 )
-from app.connectors import rate_limiter, retry as retry_mod, token_vault
 from app.core.config import settings
 from app.core.db import async_session_maker
 
@@ -99,7 +100,7 @@ class SageIntacctConnector:
         bundle = TokenBundle(
             access_token=session_id,
             refresh_token=None,
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=55),
+            expires_at=datetime.now(UTC) + timedelta(minutes=55),
             realm_id=company_id,
             scope=None,
             raw={
@@ -118,7 +119,7 @@ class SageIntacctConnector:
                 session,
                 tenant_id=tenant_id,
                 provider=PROVIDER_ID,
-                last_connected_at=datetime.now(timezone.utc).isoformat(),
+                last_connected_at=datetime.now(UTC).isoformat(),
                 last_error=None,
             )
             await session.commit()
@@ -143,7 +144,7 @@ class SageIntacctConnector:
         bundle = TokenBundle(
             access_token=session_id,
             refresh_token=None,
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=55),
+            expires_at=datetime.now(UTC) + timedelta(minutes=55),
             realm_id=existing.realm_id,
             scope=None,
             raw={
@@ -169,13 +170,13 @@ class SageIntacctConnector:
     # ──────────────────────────────────────────────────────────────────────
 
     async def health_check(self, *, tenant_id: UUID) -> ConnectorHealth:
-        start = datetime.now(timezone.utc)
+        start = datetime.now(UTC)
         try:
             await self._invoke(tenant_id, "getUserPermissions", params_xml="")
-            latency = (datetime.now(timezone.utc) - start).total_seconds() * 1000
+            latency = (datetime.now(UTC) - start).total_seconds() * 1000
             return ConnectorHealth(provider=PROVIDER_ID, healthy=True, latency_ms=latency, detail="ok")
         except ConnectorError as exc:
-            latency = (datetime.now(timezone.utc) - start).total_seconds() * 1000
+            latency = (datetime.now(UTC) - start).total_seconds() * 1000
             return ConnectorHealth(provider=PROVIDER_ID, healthy=False, latency_ms=latency, detail=str(exc))
 
     async def pull_coa(self, *, tenant_id: UUID) -> list[COAAccount]:
@@ -258,7 +259,7 @@ class SageIntacctConnector:
         if payload.dry_run:
             return PostJournalResult(
                 external_ref=None,
-                posted_at=datetime.now(timezone.utc),
+                posted_at=datetime.now(UTC),
                 dry_run=True,
                 raw={"dry_run": True, "would_post": body},
             )
@@ -267,7 +268,7 @@ class SageIntacctConnector:
         key = result.findtext(".//key")
         return PostJournalResult(
             external_ref=key,
-            posted_at=datetime.now(timezone.utc),
+            posted_at=datetime.now(UTC),
             dry_run=False,
             raw={"key": key, "status": "posted"},
         )
@@ -313,7 +314,7 @@ class SageIntacctConnector:
             bundle = await token_vault.load_tokens(
                 session, tenant_id=tenant_id, provider=PROVIDER_ID
             )
-        if bundle.expires_at and bundle.expires_at - datetime.now(timezone.utc) < timedelta(seconds=60):
+        if bundle.expires_at and bundle.expires_at - datetime.now(UTC) < timedelta(seconds=60):
             bundle = await self.refresh(tenant_id=tenant_id)
         return bundle
 

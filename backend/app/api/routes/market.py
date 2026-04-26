@@ -2,12 +2,12 @@
 Market Data Routes — Institutional FX + Equity via TwelveData / yfinance failover.
 """
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException
 
 logger = logging.getLogger(__name__)
-UTC = timezone.utc
+UTC = UTC
 
 router = APIRouter(prefix="/v1/market", tags=["market"])
 
@@ -70,7 +70,7 @@ async def _fetch_via_yfinance(requested: list[str], timestamp: str) -> list[dict
         tickers = yf.Tickers(" ".join(yf_symbols))
 
         rates = []
-        for pair, yf_sym in zip(requested, yf_symbols):
+        for pair, yf_sym in zip(requested, yf_symbols, strict=False):
             try:
                 info = tickers.tickers[yf_sym].info
                 mid = (

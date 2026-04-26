@@ -7,7 +7,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 SubmissionFramework = Literal[
     "EMIR", "MIFID_II", "DODD_FRANK", "ISDA", "FINRA_17A4", "IFRS9"
 ]

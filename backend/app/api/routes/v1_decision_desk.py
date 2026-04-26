@@ -294,7 +294,7 @@ async def create_decision_run(
     # PLAN-01: audit event for decision run creation
     dominant_action = (
         max(
-            set(p.action for p in result.proposals),
+            {p.action for p in result.proposals},
             key=lambda a: [p.action for p in result.proposals].count(a),
         )
         if result.proposals

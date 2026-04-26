@@ -13,8 +13,12 @@ from app.core.db import get_session
 from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.services.debt_service import (
-    check_covenants, create_facility, get_debt_schedule,
-    get_maturity_calendar, get_total_exposure, record_drawdown,
+    check_covenants,
+    create_facility,
+    get_debt_schedule,
+    get_maturity_calendar,
+    get_total_exposure,
+    record_drawdown,
 )
 
 router = APIRouter(prefix="/v1/debt", tags=["debt"])

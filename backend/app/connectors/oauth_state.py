@@ -17,8 +17,8 @@ from uuid import UUID
 
 import jwt
 
-from app.core.config import settings
 from app.connectors.errors import ConnectorAuthError
+from app.core.config import settings
 
 _STATE_TTL_SEC = 600  # 10 minutes
 _REDIS_PREFIX = "connector:oauth_state:"

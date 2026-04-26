@@ -51,8 +51,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.db import get_async_session
-from app.core.ip_allowlist import enforce_execution_ip_allowlist
 from app.core.dependencies import get_current_user
+from app.core.ip_allowlist import enforce_execution_ip_allowlist
 from app.core.security import get_mfa_verified
 from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
 from app.models.execution_proposal import ExecutionProposal
@@ -68,10 +68,11 @@ router = APIRouter(prefix="/v1/proposals", tags=["v1-proposals"])
 
 async def _fire_webhook(company_id, endpoint_id, event_type: str, data: dict) -> None:
     """Open a fresh DB session for webhook delivery (background task)."""
+    from sqlalchemy import select as _sel
+
     from app.core.db import async_session_maker
     from app.models.webhook import WebhookEndpoint as _WE
     from app.services.webhook_service import dispatch_webhook_event as _dispatch
-    from sqlalchemy import select as _sel
     async with async_session_maker() as session:
         result = await session.execute(_sel(_WE).where(_WE.id == endpoint_id))
         ep = result.scalar_one_or_none()
@@ -793,6 +794,7 @@ async def approve_proposal(
     # Webhook dispatch: proposal.approved
     try:
         from sqlalchemy import select as _wh_ap_select
+
         from app.models.webhook import WebhookEndpoint as _WH_ApEndpoint
         _wh_ap_result = await session.execute(
             _wh_ap_select(_WH_ApEndpoint)
@@ -891,6 +893,7 @@ async def reject_proposal(
     # Webhook dispatch: proposal.rejected
     try:
         from sqlalchemy import select as _wh_rj_select
+
         from app.models.webhook import WebhookEndpoint as _WH_RjEndpoint
         _wh_rj_result = await session.execute(
             _wh_rj_select(_WH_RjEndpoint)

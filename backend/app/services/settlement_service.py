@@ -120,7 +120,11 @@ async def confirm_settlement(
         base_currency = (company_settings or {}).get("base_currency", "USD")
 
         try:
-            from app.services.gl_service import _extend_journal_chain, _get_gl_mapping, GLMappingNotConfiguredError  # noqa: PLC0415
+            from app.services.gl_service import (  # noqa: PLC0415
+                GLMappingNotConfiguredError,
+                _extend_journal_chain,
+                _get_gl_mapping,
+            )
         except ImportError:
             pass
         else:

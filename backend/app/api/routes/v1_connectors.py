@@ -25,7 +25,7 @@ Endpoints:
 All endpoints require JWT unless noted. Scope resolved from token.
 """
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -498,7 +498,7 @@ async def pull_coa(
     return COAResponse(
         provider_id=provider,
         accounts=[COAAccountResponse(**a.__dict__) for a in accounts],
-        fetched_at=datetime.now(timezone.utc),
+        fetched_at=datetime.now(UTC),
     )
 
 

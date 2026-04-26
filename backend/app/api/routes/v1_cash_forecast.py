@@ -2,19 +2,30 @@
 """v1 cash forecast — 13w/12m rolling forecasts, scenarios, gaps, variance."""
 import uuid
 from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_session
 from app.models.user import User
 from app.schemas_v1.cash import (
-    ForecastItemCreate, ForecastItemResponse, ForecastItemUpdate,
-    ForecastResponse, LiquidityGapsResponse, ScenarioRequest, VarianceResponse,
+    ForecastItemCreate,
+    ForecastItemResponse,
+    ForecastItemUpdate,
+    ForecastResponse,
+    LiquidityGapsResponse,
+    ScenarioRequest,
+    VarianceResponse,
 )
 from app.services.forecast_service import (
-    get_forecast, create_forecast_item, list_forecast_items,
-    update_forecast_item, run_scenario, get_liquidity_gaps, get_variance,
+    create_forecast_item,
+    get_forecast,
+    get_liquidity_gaps,
+    get_variance,
+    list_forecast_items,
+    run_scenario,
     save_snapshot,
+    update_forecast_item,
 )
 
 router = APIRouter(prefix="/v1/cash/forecast", tags=["cash-forecast"])

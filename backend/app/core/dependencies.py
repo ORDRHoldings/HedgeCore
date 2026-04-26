@@ -20,7 +20,7 @@ an authenticated user, e.g.:
 """
 
 import logging
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 from uuid import UUID
 
 import jwt

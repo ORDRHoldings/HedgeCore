@@ -9,12 +9,13 @@ from __future__ import annotations
 import logging
 import re
 import uuid
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import hash_password
+from app.models.audit_event import GENESIS_HASH, build_audit_event
 from app.models.organization import Company
 from app.models.user import User
-from app.models.audit_event import GENESIS_HASH, build_audit_event
-from app.core.security import hash_password
 
 logger = logging.getLogger(__name__)
 
