@@ -1,5 +1,31 @@
 # Changelog (AI-maintained)
 
+## 2026-04-26 — Backlog actioned: removed orphaned report-fingerprint code + false-assurance tests
+
+Triaged the `_computeReportHash` regression flagged in this morning's audit-closeout entry. Confirmed via `pytest` that 5 of 8 `TestEnhancedReportHash` tests were already failing locally (CI is currently billing-blocked, so the regression hadn't surfaced upstream). Chose deletion over wiring-up because the function was never called by the real export path:
+
+- **Real PDF export** is `ExportBar.handlePdf` → `exportCommitteePackPdf` from `@/utils/clientExport`, which already passes the engine's `RunEnvelope` (with `inputs_hash`, `outputs_hash`, `policy_hash`, etc. — all SHA-256, all architecture-frozen) through to the PDF.
+- **Spec language** ("from existing `computeReportHash` if available", `2026-03-13-report-studio-redesign.md:646`) was aspirational, not a v1 mandate. The `ExportBar` UI never actually displayed the SHA-256 hash the spec described.
+- **Contract tests** (`TestReportFingerprintingContract` + `TestEnhancedReportHash`, 16 tests total) used `str.find()` against source text, so they only ratified that an identifier appeared in the file — they never verified behavior. Worse: 3 spuriously passed by matching `template_id` inside a commented-out pseudocode block.
+
+### Changes
+
+- Deleted `_computeReportHash` (~36 LoC) and `_buildReportHTML` (~18 LoC) plus the ~14-line commented-out export-dispatch pseudocode from `frontend/src/app/reports/page.tsx`.
+- Deleted `TestReportFingerprintingContract` (8 tests) and `TestEnhancedReportHash` (8 tests) from `backend/tests/test_report_studio_governance.py`. Replaced with a tombstone comment pointing to this entry.
+- Updated module docstring to drop the P1 fingerprinting bullet.
+
+### Verification
+
+- `pytest tests/test_report_studio_governance.py`: **67 passed** (was 83 — 16 deleted, 0 new failures).
+- `pytest tests/test_report_studio_governance.py tests/test_idempotency_middleware.py tests/test_middleware_order.py`: **89 passed**.
+- `npx tsc --noEmit` (frontend): **clean (exit 0)**.
+
+### Backlog moved forward
+
+- v1.5: if the audit story needs a *user-visible* report fingerprint (not just engine-side `RunEnvelope` hashes), wire it into `@/utils/clientExport.exportCommitteePackPdf` so the hash actually lands in the PDF metadata and footer — and add behavioral tests that import and invoke the function, not source-grep tests.
+
+---
+
 ## 2026-04-26 — OpenAPI audit closeout shipped to production
 
 Pushed 18 commits to master in one flush; Render + Vercel auto-deploys both succeeded. Verified live OpenAPI carries every audit-driven contract change.
