@@ -371,11 +371,10 @@ async def test_erp_post_failed_dispatched():
     )
 
     with (
-        patch("app.api.routes.v1_gl.dispatch_to_company") as mock_dispatch,
+        patch("app.api.routes.v1_gl.dispatch_to_company", new_callable=AsyncMock) as mock_dispatch,
         patch("app.api.routes.v1_gl.emit_audit", new=AsyncMock()),
         patch("app.connectors.registry.get_connector", return_value=mock_connector),
     ):
-        mock_dispatch.return_value = None
 
         from app.core.dependencies import get_current_user
         from app.core.db import get_async_session
