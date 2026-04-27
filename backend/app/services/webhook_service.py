@@ -167,10 +167,13 @@ async def dispatch_webhook_event(
 
     tenant_id = str(endpoint.company_id) if endpoint.company_id else "unknown"
     channel_type = getattr(endpoint, "channel_type", "generic") or "generic"
+    delivery_id = str(uuid.uuid4())
     if channel_type in ("slack", "teams"):
         outbound = format_payload(channel_type, event_type, data)
     else:
         outbound = build_event_payload(event_type, tenant_id, data)
+        # build_event_payload generates its own delivery_id; reuse it for the audit row
+        delivery_id = outbound.get("delivery_id", delivery_id)
 
     for attempt_num in range(1, MAX_ATTEMPTS + 1):
         result = await deliver_webhook_attempt(
@@ -195,7 +198,7 @@ async def dispatch_webhook_event(
         await db.flush()
 
         if result["status"] == "delivered":
-            await _emit_webhook_delivered_audit(db, endpoint, event_type, outbound)
+            await _emit_webhook_delivered_audit(db, endpoint, event_type, delivery_id)
             await _prune_delivery_log(db, endpoint.id, DELIVERY_LOG_WINDOW)
             await db.commit()
             _log.info(
@@ -281,7 +284,7 @@ async def _emit_webhook_delivered_audit(
     db: AsyncSession,
     endpoint: Any,
     event_type: str,
-    payload: dict[str, Any],
+    delivery_id: str,
 ) -> None:
     """Write an immutable audit_events row for a successful webhook delivery."""
     from sqlalchemy import select as _sel
@@ -305,7 +308,7 @@ async def _emit_webhook_delivered_audit(
             "webhook_event_type": event_type,
             "endpoint_id": str(endpoint.id),
             "url": endpoint.url,
-            "delivery_id": payload.get("delivery_id"),
+            "delivery_id": delivery_id,
         },
         prev_event_hash=prev_hash,
         company_id=endpoint.company_id,

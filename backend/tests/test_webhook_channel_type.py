@@ -1,5 +1,10 @@
 """Tests for channel_type webhook extension."""
 from __future__ import annotations
+import json
+import uuid
+import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
+
 from app.models.webhook import SUPPORTED_EVENTS, CHANNEL_TYPES
 
 
@@ -13,11 +18,6 @@ def test_channel_types_constant():
     assert "slack" in CHANNEL_TYPES
     assert "teams" in CHANNEL_TYPES
     assert "generic" in CHANNEL_TYPES
-
-
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-import json
 
 
 @pytest.mark.asyncio
@@ -113,3 +113,70 @@ async def test_delivery_slack_sends_blocks_not_envelope():
 
     assert "blocks" in captured_body
     assert "event" not in captured_body  # no generic envelope wrapper
+
+
+@pytest.mark.asyncio
+async def test_dispatch_to_company_calls_dispatch_for_matching_endpoint():
+    """dispatch_to_company calls dispatch_webhook_event for matching active endpoints."""
+    from app.services.webhook_service import dispatch_to_company
+    from app.models.webhook import WebhookEndpoint
+
+    company_id = uuid.uuid4()
+    mock_ep = MagicMock(spec=WebhookEndpoint)
+    mock_ep.id = uuid.uuid4()
+    mock_ep.company_id = company_id
+    mock_ep.is_active = True
+    mock_ep.subscribes_to = MagicMock(return_value=True)
+
+    mock_db = AsyncMock()
+    mock_db.__aenter__ = AsyncMock(return_value=mock_db)
+    mock_db.__aexit__ = AsyncMock(return_value=False)
+    mock_db.execute = AsyncMock(
+        return_value=MagicMock(
+            scalars=MagicMock(
+                return_value=MagicMock(all=MagicMock(return_value=[mock_ep]))
+            )
+        )
+    )
+
+    def session_factory():
+        return mock_db
+
+    with patch("app.services.webhook_service.dispatch_webhook_event") as mock_dispatch:
+        mock_dispatch.return_value = None
+        await dispatch_to_company(session_factory, company_id, "hedge_run.completed", {"run_id": "x"})
+
+    mock_dispatch.assert_called_once()
+    call_args = mock_dispatch.call_args
+    assert call_args.args[2] == "hedge_run.completed"
+
+
+@pytest.mark.asyncio
+async def test_dispatch_to_company_skips_non_matching_endpoint():
+    """dispatch_to_company skips endpoints that don't subscribe to the event."""
+    from app.services.webhook_service import dispatch_to_company
+    from app.models.webhook import WebhookEndpoint
+
+    company_id = uuid.uuid4()
+    mock_ep = MagicMock(spec=WebhookEndpoint)
+    mock_ep.id = uuid.uuid4()
+    mock_ep.subscribes_to = MagicMock(return_value=False)  # does NOT subscribe
+
+    mock_db = AsyncMock()
+    mock_db.__aenter__ = AsyncMock(return_value=mock_db)
+    mock_db.__aexit__ = AsyncMock(return_value=False)
+    mock_db.execute = AsyncMock(
+        return_value=MagicMock(
+            scalars=MagicMock(
+                return_value=MagicMock(all=MagicMock(return_value=[mock_ep]))
+            )
+        )
+    )
+
+    def session_factory():
+        return mock_db
+
+    with patch("app.services.webhook_service.dispatch_webhook_event") as mock_dispatch:
+        await dispatch_to_company(session_factory, company_id, "hedge_run.completed", {})
+
+    mock_dispatch.assert_not_called()
