@@ -4,7 +4,7 @@
 
 ## Sessions: 24 total, 24 completed
 ## Active Patterns: 11
-## Last Updated: 2026-04-23
+## Last Updated: 2026-04-27
 
 ## Current Sprint
 **Launch Readiness — Production Hardening** — COMPLETE (2026-04-23)
@@ -15,31 +15,38 @@
 - Track 4 — hash-chain cron, k6 baseline doc, Vercel preview CORS, prod encryption validator, structured error handlers: ✅ (commit `c331c90`)
 - Track 5 — work items #22/#23 closed as superseded; #19/#20/#24 remain blocked on user/ops credentials
 
-## Recent Work (2026-04-23) — Live ERP / Accounting Connector Framework COMPLETE
+## Recent Work (2026-04-27) — Sub-project A: Live ERP End-to-End COMPLETE
 
-- Foundation (~1,100 LOC, 7 modules under `backend/app/connectors/`):
-  - `base.py` — `ConnectorProtocol` + normalized dataclasses (`TokenBundle`, `JournalPayload`, `JournalLine`, `COAAccount`, `TrialBalanceEntry`, `PostJournalResult`, `ConnectorStatus`, `ConnectorHealth`)
-  - `errors.py` — `ConnectorError` hierarchy with `http_status` attribute (Auth/Validation/RateLimit/Server/CircuitOpen/Webhook/NotConfigured)
-  - `token_vault.py` — Fernet MultiFernet encryption (zero-downtime key rotation via `CONNECTOR_ENCRYPTION_KEY` comma-separated); tokens stored in `company.settings` JSONB
-  - `oauth_state.py` — HS256 signed-JWT state with Redis-backed replay guard (fail-open on replay when Redis down)
-  - `rate_limiter.py` — Per-tenant+provider token bucket via Redis Lua (`register_script` → `EVALSHA`, never raw `eval`); in-memory fallback; fail-open on Redis outage
-  - `retry.py` — Exponential backoff with full jitter + per-tenant+provider circuit breaker (threshold=5, cooldown=600s, Sentry emission on trip)
-  - `registry.py` — `_PROVIDERS` dispatch table; `get_connector(provider_id)` with instance cache
-- Five provider packages (~1,800 LOC):
-  - `quickbooks/` — OAuth 2.0, QBO v3 REST, DocNumber-based idempotency, dry-run via CoA lookup, HMAC-SHA256 webhook verification
-  - `xero/` — OAuth 2.0 with `Xero-tenant-id` header, ManualJournal entity (signed `LineAmount`), webhook HMAC
-  - `netsuite/` — OAuth 2.0 (modern, not TBA), SuiteTalk REST + SuiteQL aggregations, journalEntry POST returns 204+Location; no webhooks
-  - `sage_intacct/` — XML Gateway, form-based session auth (user_id/company_id/user_password stored encrypted); session refresh on ~1h expiry
-  - `dynamics365/` — Azure AD v2 OAuth, OData v4, two-step journal (header + lines keyed by JournalBatchNumber); no webhooks (Event Grid)
-- Unified routes (`backend/app/api/routes/v1_connectors.py`):
-  - CSV/Excel/paper-mode endpoints preserved
-  - 10 new live endpoints dispatched via `registry.get_connector(provider)`: `/providers`, `/{p}/status`, `/{p}/health`, `/{p}/authorize`, `/{p}/connect-form`, `/{p}/disconnect`, `/oauth/callback` (unauth, HMAC-state secured), `/{p}/coa`, `/{p}/trial-balance`, `/{p}/post-journal`, `/{p}/webhook` (unauth, HMAC-body secured)
-  - `_connector_error_to_http` translates all provider errors via `exc.http_status` — no per-provider mapping in routes
-- Schemas (`backend/app/schemas_v1/connectors.py`): added `ProviderMeta`, `ConnectorAuthorizeRequest/Response` (with `requires_form`/`form_fields` for Intacct), `ConnectorStatusResponse`, `ConnectorHealthResponse`, `COAAccountResponse`, `COAResponse`, `JournalLineRequest` (Decimal-as-string), `JournalPostRequest/Response`, `ConnectorConnectFormRequest`
-- Config: `CONNECTOR_ENCRYPTION_KEY`, `CONNECTOR_OAUTH_STATE_SECRET`, `CONNECTOR_CIRCUIT_BREAKER_THRESHOLD/COOLDOWN_SEC`, per-provider `{PROVIDER}_CLIENT_ID/SECRET/REDIRECT_URI/WEBHOOK_KEY`; production-gated validator refuses boot if creds populated without encryption key
-- Frontend: `frontend/src/api/connectorClient.ts` extended with provider types + 7 functions; `frontend/src/app/connectors/hub/page.tsx` (~450 LOC) — provider grid with StatusDot, Connect/Disconnect/Probe/CoA actions, OAuth redirect + return-refresh, Intacct FormModal
-- ADR-0015 `docs/architecture/adr/0015-live-erp-connector-framework.md` — accepted; documents security boundaries, fail-open/closed semantics, references ADR-0009/ADR-0007
-- Validation: `tsc --noEmit` clean on new hub page + connectorClient; backend import smoke pass (`from app.connectors import get_connector, list_providers`); no frozen-file modifications (engine_v1 untouched)
+Three wire-up bugs fixed:
+- QBO + Xero `exchange_code()` now writes `company.settings["erp_system"]` after OAuth (was always "CSV")
+- GL posting route now calls `connector.post_journal(tenant_id, payload)` (handles token refresh internally) instead of legacy `erp_credentials` path
+- OAuth callback redirects to `/accounting-oauth-callback?system={provider}` (was `/settings/connectors` — non-existent route)
+
+New features shipped (commits `5a95c5f` → `1f177ef`):
+- `POST /v1/connectors/{provider}/test-post` — synthetic balanced entry, no WORM row, `trades.create` permission gate
+- GL Postings page: "Post to QB" / "Post to Xero" / "Export CSV" button derived from connector status; `posted_ref` badge (QBO deep-link); Retry button on failure
+- Accounting Connection page: real OAuth popup calls backend `/authorize`; HTTPS scheme validation before `window.open`; Test Connection button in connected card
+
+Security/quality improvements:
+- APPROVED status guard added to ERP posting path
+- `payload.assert_balanced()` enforced before hitting ERP API
+- URL-encoded error messages in OAuth redirect URLs
+- `API_KEY_AUTH_DISABLED` env bypass for test isolation
+- `ResponseValidationError` handler added to `main.py`
+
+Tests: +16 (4 `test_gl_post_wire`, 4 `test_connector_test_post`, 2 `test_oauth_redirect`, 6 connector fix assertions)
+Baseline: **5495 passed, 0 failed, 158 skipped (PG-only)**; `tsc --noEmit` clean; `next build` successful
+
+## Previous Work (2026-04-23) — Live ERP / Accounting Connector Framework COMPLETE
+
+- Foundation (~1,100 LOC, 7 modules under `backend/app/connectors/`): `base.py`, `errors.py`, `token_vault.py` (Fernet MultiFernet), `oauth_state.py` (HS256+Redis replay guard), `rate_limiter.py` (Redis Lua token bucket), `retry.py` (exp backoff + circuit breaker), `registry.py`
+- Five provider packages (~1,800 LOC): `quickbooks/`, `xero/`, `netsuite/`, `sage_intacct/`, `dynamics365/`
+- 11 new unified routes in `v1_connectors.py`; `_connector_error_to_http` via `exc.http_status`
+- Schemas: `ProviderMeta`, `ConnectorAuthorizeRequest/Response`, `ConnectorStatusResponse`, `ConnectorHealthResponse`, `COAResponse`, `JournalPostRequest/Response`, `ConnectorConnectFormRequest`
+- Config: `CONNECTOR_ENCRYPTION_KEY` + per-provider `CLIENT_ID/SECRET/REDIRECT_URI/WEBHOOK_KEY`; production validator refuses boot if creds populated without encryption key
+- Frontend: `connectorClient.ts` + connector hub page (~450 LOC) with StatusDot, OAuth redirect, Intacct FormModal
+- ADR-0015 accepted (`docs/architecture/adr/0015-live-erp-connector-framework.md`)
+- Validation: `tsc --noEmit` clean; backend import smoke pass; engine_v1 untouched
 
 ## Previous Work (2026-04-21) — Mobile-Responsive Core Pages COMPLETE
 
@@ -165,12 +172,10 @@
 - MEDIUM: TypeScript `any`-type sweep across 38 pages (Track 2.3) — not executed
 - MEDIUM: E2E provider specs (5 ERP connectors + 9 missing nav sections) — pending
 - MEDIUM: Production readiness closures — deep health endpoint, hash-chain verifier cron, GDPR anonymize job, SECURITY.md, CORS lockdown
-- MEDIUM: master ahead of origin/master — push deferred to user decision
 
 ## Validation
-- Backend tests: 5040 passed, 0 failed, 158 skipped (last full run before connector track; new connector modules have import-smoke only — full pytest not re-run this session, flagged [NOT VERIFIED])
-- Intelligence tests: 14/14 pass (7 service + 7 route)
-- tsc --noEmit: CLEAN (new `connectors/hub/page.tsx` + `connectorClient.ts` included)
-- next build: [NOT VERIFIED this session]
+- Backend tests: **5495 passed, 0 failed, 158 skipped** (full run 2026-04-27 — includes 16 new ERP wire-up tests)
+- tsc --noEmit: CLEAN
+- next build: PASS (2026-04-27)
 - Coverage: 75%+ (gate: 60%)
 - CI: gitleaks + Dependabot + Trivy + coverage gate all active
