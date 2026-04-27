@@ -128,6 +128,11 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
         return rec
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        import os
+        # Allow full bypass in test environments (CI / unit tests with dependency_overrides).
+        if os.getenv("API_KEY_AUTH_DISABLED", "").lower() in ("1", "true", "yes"):
+            return await call_next(request)
+
         path = request.url.path
 
         # Public routes — pass through unconditionally

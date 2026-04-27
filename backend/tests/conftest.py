@@ -13,6 +13,14 @@ import sys
 import asyncio
 import logging
 import contextlib
+
+# Disable CSRF for all tests — test clients don't send browser cookies.
+# CSRF_DISABLED=1 is read by app/middleware/csrf.py at request time.
+os.environ.setdefault("CSRF_DISABLED", "1")
+
+# Disable API key middleware for all tests — auth is handled via dependency_overrides.
+# API_KEY_AUTH_DISABLED=1 is read by app/middleware/api_key_auth.py at request time.
+os.environ.setdefault("API_KEY_AUTH_DISABLED", "1")
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport

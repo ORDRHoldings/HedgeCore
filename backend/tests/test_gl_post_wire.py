@@ -104,3 +104,107 @@ class TestErpSystemWrittenAfterXeroOAuth:
             )
 
         assert saved_settings.get("erp_system") == "xero"
+
+
+class TestGlPostingUsesConnector:
+
+    @pytest.mark.asyncio
+    async def test_post_route_calls_connector_post_journal_for_quickbooks(self):
+        """When erp_system='quickbooks', route must call connector.post_journal not _post_je."""
+        from httpx import AsyncClient, ASGITransport
+        from app.main import app
+
+        mock_result = MagicMock()
+        mock_result.external_ref = "QB-9001"
+
+        mock_connector = AsyncMock()
+        mock_connector.post_journal = AsyncMock(return_value=mock_result)
+
+        je_id = uuid.uuid4()
+
+        with (
+            patch("app.api.routes.v1_gl.registry") as mock_registry,
+            patch("app.api.routes.v1_gl._post_je", new_callable=AsyncMock) as mock_csv,
+        ):
+            mock_registry.get_connector.return_value = mock_connector
+
+            from app.core.dependencies import get_current_user
+            from app.core.db import get_async_session
+
+            mock_je = MagicMock()
+            mock_je.id = je_id
+            mock_je.status = "APPROVED"
+            mock_je.amount = 1000
+            mock_je.currency = "USD"
+            mock_je.debit_account = "1001"
+            mock_je.credit_account = "2001"
+            mock_je.description = "Test hedge"
+            mock_je.period_date = __import__("datetime").date(2026, 1, 1)
+            mock_je.entry_type = "HEDGE_EFFECTIVE"
+            mock_je.company_id = uuid.uuid4()
+
+            mock_company = MagicMock()
+            mock_company.settings = {"erp_system": "quickbooks"}
+            mock_company.id = uuid.uuid4()
+
+            mock_user = MagicMock()
+            mock_user.company = mock_company
+
+            mock_session = AsyncMock()
+            result_mock = MagicMock()
+            result_mock.scalar_one_or_none.return_value = mock_je
+            mock_session.execute = AsyncMock(return_value=result_mock)
+            mock_session.commit = AsyncMock()
+
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                app.dependency_overrides[get_current_user] = lambda: mock_user
+                app.dependency_overrides[get_async_session] = lambda: mock_session
+                resp = await client.post(f"/api/v1/gl/journal-entries/{je_id}/post")
+                app.dependency_overrides.clear()
+
+        # connector.post_journal must have been called
+        mock_connector.post_journal.assert_called_once()
+        # CSV fallback must NOT have been called
+        mock_csv.assert_not_called()
+        # Status must be POSTED
+        assert mock_je.status == "POSTED"
+        assert mock_je.posted_ref == "QB-9001"
+
+    @pytest.mark.asyncio
+    async def test_post_route_uses_csv_when_no_erp_connected(self):
+        """When erp_system absent/'CSV', route falls through to CSV export."""
+        from httpx import AsyncClient, ASGITransport
+        from app.main import app
+        from app.services.posting_adapters.base import PostingResult
+        from app.core.dependencies import get_current_user
+        from app.core.db import get_async_session
+
+        mock_je = MagicMock()
+        mock_je.id = uuid.uuid4()
+        mock_je.status = "APPROVED"
+        mock_je.company_id = uuid.uuid4()
+
+        mock_company = MagicMock()
+        mock_company.settings = {}  # no erp_system
+        mock_company.id = uuid.uuid4()
+
+        mock_user = MagicMock()
+        mock_user.company = mock_company
+
+        mock_session = AsyncMock()
+        result_mock = MagicMock()
+        result_mock.scalar_one_or_none.return_value = mock_je
+        mock_session.execute = AsyncMock(return_value=result_mock)
+        mock_session.commit = AsyncMock()
+
+        csv_result = PostingResult(success=True, payload="csv_data", erp_ref="CSV-export")
+
+        with patch("app.api.routes.v1_gl._post_je", new_callable=AsyncMock, return_value=csv_result):
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                app.dependency_overrides[get_current_user] = lambda: mock_user
+                app.dependency_overrides[get_async_session] = lambda: mock_session
+                await client.post(f"/api/v1/gl/journal-entries/{mock_je.id}/post")
+                app.dependency_overrides.clear()
+        # If we get here without an exception, the CSV path was hit

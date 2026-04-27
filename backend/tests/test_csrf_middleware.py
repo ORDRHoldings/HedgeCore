@@ -48,12 +48,16 @@ class TestCSRFMiddleware:
     def test_csrf_disabled_env_respected(self):
         """When CSRF_DISABLED=1, middleware must skip checks."""
         import os
+        _prev = os.environ.get("CSRF_DISABLED")
         os.environ["CSRF_DISABLED"] = "1"
         try:
             from app.middleware.csrf import _is_disabled
             assert _is_disabled() is True
         finally:
-            del os.environ["CSRF_DISABLED"]
+            if _prev is None:
+                os.environ.pop("CSRF_DISABLED", None)
+            else:
+                os.environ["CSRF_DISABLED"] = _prev
 
     def test_csrf_middleware_registered_in_main(self):
         """CSRFMiddleware must be registered in app/main.py."""

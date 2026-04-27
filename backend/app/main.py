@@ -22,7 +22,7 @@ from typing import Any
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.exceptions import RequestValidationError
+from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
@@ -2079,6 +2079,18 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         detail=summary,
         instance=request.url.path,
         errors=field_errors,
+    )
+
+
+@app.exception_handler(ResponseValidationError)
+async def response_validation_exception_handler(request: Request, exc: ResponseValidationError):
+    logger.error("Response validation error %s %s: %s", request.method, request.url.path, exc)
+    return _problem_response(
+        status_code=500,
+        error_code="RESPONSE_VALIDATION_ERROR",
+        title="Internal Server Error",
+        detail="Response serialization failed. The incident has been logged.",
+        instance=request.url.path,
     )
 
 
