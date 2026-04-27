@@ -104,6 +104,7 @@ from app.services.market_snapshot_service import (
 from app.services.market_snapshot_service import (
     get_by_id as _snapshot_get_by_id,
 )
+from app.services.webhook_service import dispatch_to_company
 
 router = APIRouter(prefix="/v1", tags=["v1-calculate"])
 
@@ -877,24 +878,29 @@ async def calculate(
 
         del _run_store[oldest]
 
-    # Webhook dispatch: calculation.completed
-    try:
-        from sqlalchemy import select as _wh_calc_select
+    # Webhook dispatch — migrated to dispatch_to_company (handles per-endpoint sessions safely)
+    from app.core.db import async_session_maker as _asm  # noqa: PLC0415
 
-        from app.models.webhook import WebhookEndpoint as _WH_Endpoint
-        _wh_calc_result = await session.execute(
-            _wh_calc_select(_WH_Endpoint)
-            .where(_WH_Endpoint.company_id == current_user.company_id)
-            .where(_WH_Endpoint.is_active.is_(True))
+    if current_user is not None and current_user.company_id is not None:
+        background_tasks.add_task(
+            dispatch_to_company,
+            _asm,
+            current_user.company_id,
+            "calculation.completed",
+            {"run_id": run_id, "position_count": len(trades)},
         )
-        for _wh_ep in _wh_calc_result.scalars().all():
-            if _wh_ep.subscribes_to("calculation.completed"):
-                background_tasks.add_task(
-                    _fire_webhook, current_user.company_id, _wh_ep.id, "calculation.completed",
-                    {"run_id": run_id, "position_count": len(trades)},
-                )
-    except Exception:
-        _log.warning("Failed to dispatch calculation.completed webhook for run %s", run_id, exc_info=True)
+        background_tasks.add_task(
+            dispatch_to_company,
+            _asm,
+            current_user.company_id,
+            "hedge_run.completed",
+            {
+                "run_id": run_id,
+                "trade_count": len(trades),
+                "hedge_count": len(response.hedge_plan.buckets) if response.hedge_plan else 0,
+                "run_hash": run_envelope.run_hash,
+            },
+        )
 
     return response
 

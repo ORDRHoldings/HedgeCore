@@ -1,30 +1,33 @@
-"""TDD: calculation.completed webhook event fires after engine run."""
+"""Tests that route handlers emit the correct webhook events."""
 from __future__ import annotations
+
+import os
+
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite://")
+os.environ.setdefault("JWT_SECRET", "test-secret-key-for-ci-at-least-32-chars-long")
+
 import contextlib
-import uuid
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 
 from app.core.db import get_async_session, get_session
+from app.core.dependencies import get_current_user
 from app.core.schema_state import set_schema_ready
-from app.core.security import get_current_user, create_access_token
+from app.core.security import create_access_token
 from app.main import app
+
+BASE_URL = "http://test"
+CALC = "/api/v1"
 
 USER_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 COMPANY_ID = "11111111-2222-3333-4444-555555555555"
 BRANCH_ID = "55555555-6666-7777-8888-999999999999"
 
 
-@pytest.fixture(autouse=True)
-def _schema_ready():
-    set_schema_ready(True)
-    yield
-
-
-def _make_user():
+def _make_superuser() -> MagicMock:
     user = MagicMock()
     user.id = UUID(USER_ID)
     user.is_active = True
@@ -42,11 +45,16 @@ def _make_user():
     return user
 
 
-def _make_db():
+def _make_token() -> str:
+    return create_access_token(sub=USER_ID, email="test@example.com")
+
+
+def _make_db_session() -> AsyncMock:
     empty_result = MagicMock()
     empty_result.scalars.return_value.all.return_value = []
     empty_result.scalars.return_value.first.return_value = None
     empty_result.scalar.return_value = None
+
     db = AsyncMock()
     db.execute = AsyncMock(return_value=empty_result)
     db.get = AsyncMock(return_value=None)
@@ -56,59 +64,54 @@ def _make_db():
     return db
 
 
-def _override_session(mock_db):
+def _override_session(mock_db: AsyncMock):
     async def _gen():
         yield mock_db
     return _gen
 
 
-def _override_user(user):
+def _override_user(user: MagicMock):
     async def _dep():
         return user
     return _dep
 
 
-def _make_token():
-    return create_access_token(sub=USER_ID, email="test@example.com")
-
-
 @contextlib.contextmanager
-def _with_overrides(user, db=None):
+def _with_overrides(user: MagicMock, db: AsyncMock | None = None):
     if db is None:
-        db = _make_db()
+        db = _make_db_session()
     app.dependency_overrides[get_async_session] = _override_session(db)
     app.dependency_overrides[get_session] = _override_session(db)
     app.dependency_overrides[get_current_user] = _override_user(user)
     try:
-        yield db
+        yield
     finally:
         app.dependency_overrides.pop(get_async_session, None)
         app.dependency_overrides.pop(get_session, None)
         app.dependency_overrides.pop(get_current_user, None)
 
 
-def _market_payload():
+def _full_request() -> dict:
     return {
-        "as_of": "2025-01-15T09:00:00Z",
-        "spot_rate": 17.15,
-        "forward_points_by_month": {"1": 0.05, "3": 0.12},
-        "provider_metadata": {},
-    }
-
-
-def _full_request():
-    return {
-        "trades": [{
-            "record_id": "WH-CALC-01",
-            "entity": "ACME Corp",
-            "type": "AR",
-            "currency": "MXN",
-            "amount": 1_000_000.0,
-            "value_date": "2025-03-31",
-            "status": "CONFIRMED",
-        }],
+        "trades": [
+            {
+                "record_id": "TR-001",
+                "entity": "ACME Corp",
+                "type": "AR",
+                "currency": "MXN",
+                "amount": 1_000_000.0,
+                "value_date": "2025-03-31",
+                "status": "CONFIRMED",
+                "description": "Test trade",
+            }
+        ],
         "hedges": [],
-        "market": _market_payload(),
+        "market": {
+            "as_of": "2025-01-15T09:00:00Z",
+            "spot_rate": 17.15,
+            "forward_points_by_month": {"1": 0.05, "3": 0.12},
+            "provider_metadata": {},
+        },
         "policy": {
             "bucket_mode": "CALENDAR_MONTH",
             "hedge_ratios": {"confirmed": 0.9, "forecast": 0.5},
@@ -125,6 +128,7 @@ def _setup_engine_mocks(mock_validate, mock_kernel, mock_scenarios, mock_envelop
         BucketResult, HedgePlan, HedgePlanSummary,
         RunEnvelope, ScenarioResults, TraceLite, ValidationReport,
     )
+    from datetime import datetime, timezone
 
     validation_report = ValidationReport(status="PASS", errors=[], warnings=[])
     mock_validate.return_value = validation_report
@@ -180,13 +184,16 @@ def _setup_engine_mocks(mock_validate, mock_kernel, mock_scenarios, mock_envelop
     mock_trace.return_value = trace_lite
 
 
-@pytest.mark.asyncio
-async def test_calculation_completed_webhook_dispatched():
-    """After POST /v1/calculate succeeds, dispatch_to_company must be called
-    with event_type='calculation.completed' (migrated from _fire_webhook pattern)."""
-    from httpx import AsyncClient, ASGITransport
+@pytest.fixture(autouse=True)
+def _schema_ready():
+    set_schema_ready(True)
+    yield
 
-    user = _make_user()
+
+@pytest.mark.asyncio
+async def test_hedge_run_completed_dispatched():
+    """POST /v1/calculate emits hedge_run.completed via dispatch_to_company."""
+    user = _make_superuser()
 
     with (
         _with_overrides(user),
@@ -204,18 +211,24 @@ async def test_calculation_completed_webhook_dispatched():
     ):
         mock_dispatch.return_value = None
         _setup_engine_mocks(mock_validate, mock_kernel, mock_scenarios, mock_envelope, mock_trace)
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url=BASE_URL) as client:
             resp = await client.post(
-                "/api/v1/calculate",
+                f"{CALC}/calculate",
                 json=_full_request(),
                 headers={"Authorization": f"Bearer {_make_token()}"},
             )
 
-    assert resp.status_code == 200, resp.text
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+
     called_event_types = [
         call.args[2] if len(call.args) >= 3 else call.kwargs.get("event_type")
         for call in mock_dispatch.call_args_list
     ]
+    assert "hedge_run.completed" in called_event_types, (
+        f"hedge_run.completed not in dispatched events: {called_event_types}"
+    )
     assert "calculation.completed" in called_event_types, (
-        f"dispatch_to_company not called with calculation.completed. Got: {called_event_types}"
+        f"calculation.completed not in dispatched events: {called_event_types}"
     )
