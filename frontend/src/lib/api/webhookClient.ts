@@ -1,68 +1,70 @@
-// frontend/src/lib/api/webhookClient.ts
-//
-// Webhook endpoint management API client.
-// Backend mounts router at /api/v1/webhooks.
-
 import { dashboardFetch } from "@/lib/api/dashboardClient";
-
-export class WebhookApiError extends Error {
-  status: number;
-  constructor(status: number, message: string) {
-    super(message);
-    this.name = "WebhookApiError";
-    this.status = status;
-  }
-}
-
-async function _fetchJson<T>(path: string, token: string, options?: RequestInit): Promise<T> {
-  const res = await dashboardFetch(path, token, options);
-  if (!res.ok) {
-    let detail = `HTTP ${res.status}`;
-    try {
-      const b = await res.json();
-      if (b?.detail) detail = typeof b.detail === "string" ? b.detail : JSON.stringify(b.detail);
-    } catch { /* noop */ }
-    throw new WebhookApiError(res.status, detail);
-  }
-  if (res.status === 204) return undefined as unknown as T;
-  return res.json() as Promise<T>;
-}
 
 export interface WebhookEndpoint {
   id: string;
   url: string;
   description: string | null;
   events: string[];
+  channel_type: string;
   is_active: boolean;
   created_at: string | null;
 }
 
-// Only returned on creation — secret is not persisted in plaintext
-export interface WebhookRegisterResponse extends WebhookEndpoint {
-  secret: string;
-}
-
-export interface WebhookCreateBody {
+export interface WebhookRegisterRequest {
   url: string;
   description?: string;
-  events?: string[];
+  events: string[];
+  channel_type: "generic" | "slack" | "teams";
 }
 
-export async function listWebhookEndpoints(token: string): Promise<WebhookEndpoint[]> {
-  return _fetchJson<WebhookEndpoint[]>("/api/v1/webhooks", token);
+export interface WebhookTestResult {
+  success: boolean;
+  status_code: number | null;
+  error: string | null;
 }
 
-export async function createWebhookEndpoint(
+async function parseOrThrow<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === "string") detail = body.detail;
+      else if (typeof body?.message === "string") detail = body.message;
+    } catch {
+      // body not JSON
+    }
+    throw new Error(detail);
+  }
+  return res.json() as Promise<T>;
+}
+
+export async function listWebhooks(token: string): Promise<WebhookEndpoint[]> {
+  const res = await dashboardFetch("/v1/webhooks", token);
+  return parseOrThrow<WebhookEndpoint[]>(res);
+}
+
+export async function registerWebhook(
   token: string,
-  body: WebhookCreateBody,
-): Promise<WebhookRegisterResponse> {
-  return _fetchJson<WebhookRegisterResponse>("/api/v1/webhooks", token, {
+  body: WebhookRegisterRequest
+): Promise<WebhookEndpoint & { secret: string }> {
+  const res = await dashboardFetch("/v1/webhooks", token, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  return parseOrThrow<WebhookEndpoint & { secret: string }>(res);
 }
 
-export async function deleteWebhookEndpoint(token: string, id: string): Promise<void> {
-  await _fetchJson<void>(`/api/v1/webhooks/${id}`, token, { method: "DELETE" });
+export async function deleteWebhook(token: string, id: string): Promise<void> {
+  const res = await dashboardFetch(`/v1/webhooks/${id}`, token, { method: "DELETE" });
+  await parseOrThrow<void>(res);
+}
+
+export async function testWebhook(
+  token: string,
+  id: string
+): Promise<WebhookTestResult> {
+  const res = await dashboardFetch(`/v1/webhooks/${id}/test`, token, {
+    method: "POST",
+  });
+  return parseOrThrow<WebhookTestResult>(res);
 }

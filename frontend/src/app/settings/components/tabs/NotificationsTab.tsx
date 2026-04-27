@@ -5,11 +5,10 @@ import SectionHeader from "../shared/SectionHeader";
 import Field from "../shared/Field";
 import SliderField from "../shared/SliderField";
 import {
-  listWebhookEndpoints,
-  createWebhookEndpoint,
-  deleteWebhookEndpoint,
+  listWebhooks,
+  registerWebhook,
+  deleteWebhook,
   WebhookEndpoint,
-  WebhookApiError,
 } from "@/lib/api/webhookClient";
 import { Plus, Trash2, Copy, Check, ChevronUp } from "lucide-react";
 
@@ -64,10 +63,10 @@ function WebhookPanel({ token }: { token: string }) {
     setLoading(true);
     setFetchError(null);
     try {
-      const eps = await listWebhookEndpoints(token);
+      const eps = await listWebhooks(token);
       setEndpoints(eps);
     } catch (e) {
-      setFetchError(e instanceof WebhookApiError ? e.message : "Failed to load endpoints");
+      setFetchError(e instanceof Error ? e.message : "Failed to load endpoints");
     } finally {
       setLoading(false);
     }
@@ -91,10 +90,11 @@ function WebhookPanel({ token }: { token: string }) {
     }
     setSubmitting(true);
     try {
-      const resp = await createWebhookEndpoint(token, {
+      const resp = await registerWebhook(token, {
         url: formUrl.trim(),
         description: formDesc.trim() || undefined,
         events: Array.from(formEvents),
+        channel_type: "generic",
       });
       setNewSecret(resp.secret);
       setNewId(resp.id);
@@ -104,7 +104,7 @@ function WebhookPanel({ token }: { token: string }) {
       setFormEvents(new Set(ALL_EVENTS));
       await load();
     } catch (e) {
-      setSubmitError(e instanceof WebhookApiError ? e.message : "Create failed");
+      setSubmitError(e instanceof Error ? e.message : "Create failed");
     } finally {
       setSubmitting(false);
     }
@@ -113,7 +113,7 @@ function WebhookPanel({ token }: { token: string }) {
   const handleDelete = async (id: string) => {
     setDeletingId(id);
     try {
-      await deleteWebhookEndpoint(token, id);
+      await deleteWebhook(token, id);
       setEndpoints(prev => prev.filter(ep => ep.id !== id));
       if (newId === id) { setNewSecret(null); setNewId(null); }
     } catch { /* silently refresh */ await load(); }
