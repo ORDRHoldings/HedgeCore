@@ -4,6 +4,17 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 60_000,
   retries: 1,
+  // Legacy specs referencing non-existent routes (/policy-desk, /execution-desk,
+  // /decision-desk, /input) or hardcoded prod backends — excluded until rewritten.
+  testIgnore: [
+    "**/happy_path.spec.ts",
+    "**/decision-desk.spec.ts",
+    "**/position_persistence.spec.ts",
+    "**/policy_desk_confirmation.spec.ts",
+    "**/rejection_path.spec.ts",
+    "**/invalid_input.spec.ts",
+    "**/position_lifecycle.spec.ts",
+  ],
   reporter: [["list"], ["json", { outputFile: "e2e-results.json" }]],
   use: {
     baseURL: process.env.E2E_BASE_URL || "http://localhost:3000",

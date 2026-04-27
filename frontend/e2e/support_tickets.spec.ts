@@ -4,7 +4,7 @@
  * Prerequisites:
  *   - `npm run dev` running on http://localhost:3000
  *   - Backend running on http://localhost:8000 (or NEXT_PUBLIC_API_URL)
- *   - Seeded DB with admin@synexcapital.com / Admin@2026!
+ *   - Seeded DB with demo / demo
  *
  * Auth strategy: inject JWT cookie directly (avoids UI login flakiness in dev mode)
  *
@@ -13,9 +13,9 @@
 
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 
-// ── Credentials (admin user from seed_company.py) ─────────────────────────────
-const DEMO_EMAIL    = "admin@synexcapital.com";
-const DEMO_PASSWORD = "Admin@2026!";
+// ── Credentials (demo user from seed_company.py) ──────────────────────────────
+const DEMO_EMAIL    = "demo";
+const DEMO_PASSWORD = "demo";
 const BACKEND_URL   = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 const DEV_API_KEY   = "HC_DEV_KEY_001";
 
