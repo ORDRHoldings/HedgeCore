@@ -1,5 +1,28 @@
 # Changelog (AI-maintained)
 
+## 2026-04-27 — Sub-project A complete: Live ERP end-to-end activated
+
+Three bugs fixed:
+- QBO + Xero exchange_code() now writes company.settings["erp_system"] after OAuth
+- GL posting route now calls connector.post_journal() (handles token refresh internally) instead of legacy erp_credentials path
+- OAuth callback now redirects to /accounting-oauth-callback?system={provider} (was /settings/connectors — non-existent)
+
+New features:
+- POST /v1/connectors/{provider}/test-post: synthetic balanced entry, no WORM row, trades.create gate
+- GL Postings: "Post to QB" / "Post to Xero" / "Export CSV" label from connector status
+- GL Postings: posted_ref badge (QBO deep-link, Xero text) + Retry button on failure
+- Accounting Connection: real OAuth popup calls backend authorize endpoint; Test Connection button in connected card
+
+Additional improvements made during implementation:
+- Status guard added to ERP posting path (only APPROVED entries can be posted)
+- payload.assert_balanced() called before hitting ERP API
+- URL-encoded error messages in OAuth redirect URLs (security fix)
+- HTTPS scheme validation before window.open(authorize_url)
+- API_KEY_AUTH_DISABLED env bypass added for test isolation
+- ResponseValidationError handler added to main.py
+
+Tests: +16 new tests (test_gl_post_wire: 4, test_connector_test_post: 4, test_oauth_redirect: 2, connector fixes: 2 each)
+
 ## 2026-04-26 — Sub-project C complete: pushed to origin, CI gates unblocked
 
 7 commits pushed to `origin/master` (95a020a → ba30a24). Render/Vercel auto-deploy triggered.
