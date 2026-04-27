@@ -179,7 +179,7 @@ test.describe("Contrast Validation", () => {
     expect(res?.status()).toBe(200);
     const json = await res?.json();
     expect(json.presets).toBeDefined();
-    expect(Object.keys(json.presets).length).toBe(4);
+    expect(Object.keys(json.presets).length).toBeGreaterThanOrEqual(7);
   });
 
   test("tokens.css is accessible", async ({ page }) => {

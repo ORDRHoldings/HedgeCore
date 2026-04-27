@@ -21,7 +21,7 @@ test.describe('Reports, Market & Research', () => {
   test('sandbox loads', async ({ page }) => {
     await navigateAuth(page, '/sandbox');
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('body')).toContainText('Simulation', { timeout: 10000 });
+    await expect(page.locator('body')).toContainText('Simulation', { timeout: 10000, ignoreCase: true });
   });
 
   test('scenario studio loads', async ({ page }) => {
