@@ -26,7 +26,7 @@ import {
   ChevronRight, LogOut, PanelLeftClose,
   Target, Cpu, PenSquare, Download, Key, User, Ticket, CircleHelp, Database,
   DollarSign, RefreshCw, BarChart2, Building2, CreditCard, Link2, TrendingUp, GitMerge,
-  Layers, FileSpreadsheet, Brain, TrendingDown, Calculator, Users, FileCheck, Library,
+  Layers, FileSpreadsheet, Brain, TrendingDown, Calculator, Users, FileCheck, Library, Bell,
 } from "lucide-react";
 import { Icon } from "@/components/ui/Icon";
 import { T } from "@/lib/design/tokens";
@@ -190,14 +190,14 @@ const NAV: NavSection[] = [
   },
   {
     label: "Settings", href: "/settings", icon: Settings,
-    prefixes: ["/settings", "/database-connection", "/erp-integration", "/accounting-connection", "/connectors", "/import-history", "/settings/gl-accounts", "/settings/legal-entities", "/settings/bank-accounts", "/settings/bank-connections"],
+    prefixes: ["/settings", "/database-connection", "/erp-integration", "/accounting-connection", "/connectors", "/import-history", "/settings/gl-accounts", "/settings/legal-entities", "/settings/bank-accounts", "/settings/bank-connections", "/settings/notifications"],
     header: "Configuration",
     items: [
       { label: "General",            desc: "Organisation, currency, timezone",    href: "/settings",                   icon: User },
       { label: "Policy Limits",      desc: "Hedge ratios, trade size limits",     href: "/settings?tab=policy_limits", icon: Shield },
       { label: "Execution",          desc: "Default product, stress sigma",       href: "/settings?tab=execution",     icon: Zap },
       { label: "API & Config",       desc: "API keys, backend URL, IBKR",        href: "/settings?tab=api_config",    icon: Key },
-      { label: "Notifications",      desc: "Alert triggers, webhooks",            href: "/settings?tab=notifications", icon: Clock },
+      { label: "Notifications",      desc: "Email alerts, webhooks, channels",     href: "/settings/notifications",     icon: Bell, minTier: "professional" as PlanTier },
       { label: "Security",           desc: "TOTP MFA enrolment",                  href: "/settings?tab=security",      icon: Shield },
       // ── CONNECTORS
       { label: "Connect Database",   desc: "SQL pull -- Oracle, Postgres, MySQL",  href: "/settings?tab=connectors",    icon: Database, minTier: "professional" as PlanTier },
