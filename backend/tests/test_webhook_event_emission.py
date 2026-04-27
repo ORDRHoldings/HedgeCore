@@ -232,3 +232,177 @@ async def test_hedge_run_completed_dispatched():
     assert "calculation.completed" in called_event_types, (
         f"calculation.completed not in dispatched events: {called_event_types}"
     )
+
+
+@pytest.mark.asyncio
+async def test_journal_entry_posted_dispatched():
+    """POST /v1/gl/journal-entries/{id}/post emits journal_entry.posted on ERP success."""
+    from httpx import AsyncClient, ASGITransport
+    from app.main import app
+    import uuid
+
+    je_id = uuid.uuid4()
+
+    mock_company = MagicMock()
+    mock_company.id = uuid.uuid4()
+    mock_company.settings = {"erp_system": "quickbooks"}
+
+    mock_user = MagicMock()
+    mock_user.is_superuser = False
+    mock_user.company_id = mock_company.id
+    mock_user.company = mock_company
+
+    from datetime import date as _date, datetime as _datetime, timezone as _tz
+    from decimal import Decimal as _Dec
+
+    mock_je = MagicMock()
+    mock_je.id = je_id
+    mock_je.company_id = mock_company.id
+    mock_je.run_id = None
+    mock_je.ledger_entry_id = None
+    mock_je.settlement_event_id = None
+    mock_je.status = "APPROVED"
+    mock_je.amount = _Dec("1000")
+    mock_je.currency = "USD"
+    mock_je.base_amount = _Dec("1000")
+    mock_je.base_currency = "USD"
+    mock_je.fx_rate_used = _Dec("1")
+    mock_je.period_date = _date(2025, 3, 31)
+    mock_je.description = "Test"
+    mock_je.debit_account = "1000"
+    mock_je.credit_account = "2000"
+    mock_je.entry_type = "FX_HEDGE"
+    mock_je.standard = "IFRS9"
+    mock_je.posted_at = None
+    mock_je.posted_to = None
+    mock_je.posted_ref = None
+    mock_je.chain_seq = 1
+    mock_je.created_at = _datetime.now(_tz.utc)
+
+    mock_connector = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.external_ref = "QB-1234"
+    mock_connector.post_journal = AsyncMock(return_value=mock_result)
+
+    with (
+        patch("app.api.routes.v1_gl.dispatch_to_company") as mock_dispatch,
+        patch("app.api.routes.v1_gl.emit_audit", new=AsyncMock()),
+        patch("app.connectors.registry.get_connector", return_value=mock_connector),
+    ):
+        mock_dispatch.return_value = None
+
+        from app.core.dependencies import get_current_user
+        from app.core.db import get_async_session
+
+        mock_session = AsyncMock()
+        mock_session.execute = AsyncMock(
+            return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=mock_je))
+        )
+        mock_session.commit = AsyncMock()
+
+        async def override_session():
+            yield mock_session
+
+        app.dependency_overrides[get_current_user] = lambda: mock_user
+        app.dependency_overrides[get_async_session] = override_session
+
+        try:
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                resp = await client.post(f"/api/v1/gl/journal-entries/{je_id}/post")
+        finally:
+            app.dependency_overrides.clear()
+
+    # 200 or 500-from-response-model — we only care about dispatch being called
+    called_events = [
+        call.args[2] if len(call.args) >= 3 else call.kwargs.get("event_type")
+        for call in mock_dispatch.call_args_list
+    ]
+    assert "journal_entry.posted" in called_events
+
+
+@pytest.mark.asyncio
+async def test_erp_post_failed_dispatched():
+    """POST /v1/gl/journal-entries/{id}/post emits erp_post.failed on ConnectorError."""
+    import uuid
+    from app.connectors.errors import ConnectorServerError
+
+    je_id = uuid.uuid4()
+
+    mock_company = MagicMock()
+    mock_company.id = uuid.uuid4()
+    mock_company.settings = {"erp_system": "quickbooks"}
+
+    mock_user = MagicMock()
+    mock_user.is_superuser = False
+    mock_user.company_id = mock_company.id
+    mock_user.company = mock_company
+
+    from datetime import date as _date, datetime as _datetime, timezone as _tz
+    from decimal import Decimal as _Dec
+
+    mock_je = MagicMock()
+    mock_je.id = je_id
+    mock_je.company_id = mock_company.id
+    mock_je.run_id = None
+    mock_je.ledger_entry_id = None
+    mock_je.settlement_event_id = None
+    mock_je.status = "APPROVED"
+    mock_je.amount = _Dec("1000")
+    mock_je.currency = "USD"
+    mock_je.base_amount = _Dec("1000")
+    mock_je.base_currency = "USD"
+    mock_je.fx_rate_used = _Dec("1")
+    mock_je.period_date = _date(2025, 3, 31)
+    mock_je.description = ""
+    mock_je.debit_account = "1000"
+    mock_je.credit_account = "2000"
+    mock_je.entry_type = "FX_HEDGE"
+    mock_je.standard = "IFRS9"
+    mock_je.posted_at = None
+    mock_je.posted_to = None
+    mock_je.posted_ref = None
+    mock_je.chain_seq = 1
+    mock_je.created_at = _datetime.now(_tz.utc)
+
+    mock_connector = AsyncMock()
+    mock_connector.post_journal = AsyncMock(
+        side_effect=ConnectorServerError("QBO timeout", provider="quickbooks")
+    )
+
+    with (
+        patch("app.api.routes.v1_gl.dispatch_to_company") as mock_dispatch,
+        patch("app.api.routes.v1_gl.emit_audit", new=AsyncMock()),
+        patch("app.connectors.registry.get_connector", return_value=mock_connector),
+    ):
+        mock_dispatch.return_value = None
+
+        from app.core.dependencies import get_current_user
+        from app.core.db import get_async_session
+        from app.main import app
+        from httpx import AsyncClient, ASGITransport
+
+        mock_session = AsyncMock()
+        mock_session.execute = AsyncMock(
+            return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=mock_je))
+        )
+
+        async def override_session_fail():
+            yield mock_session
+
+        app.dependency_overrides[get_current_user] = lambda: mock_user
+        app.dependency_overrides[get_async_session] = override_session_fail
+
+        try:
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                resp = await client.post(f"/api/v1/gl/journal-entries/{je_id}/post")
+        finally:
+            app.dependency_overrides.clear()
+
+    assert resp.status_code == 502
+    called_events = [
+        call.args[2] if len(call.args) >= 3 else call.kwargs.get("event_type")
+        for call in mock_dispatch.call_args_list
+    ]
+    assert "erp_post.failed" in called_events

@@ -7,16 +7,18 @@ All routes: PROFESSIONAL+ plan tier (Phase 1 core feature).
 """
 from __future__ import annotations
 
+import asyncio
 import csv
 import io as _io
 import uuid
 from datetime import UTC, date, datetime, time
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db import async_session_maker as _gl_session_maker
 from app.core.db import get_async_session
 from app.core.dependencies import get_current_user
 from app.deps.plan_tier import require_plan
@@ -30,6 +32,7 @@ from app.schemas_v1.gl import (
     JournalEntryRejectRequest,
 )
 from app.services import gl_service
+from app.services.webhook_service import dispatch_to_company
 from app.services.audit_emit import emit_audit
 from app.services.gl_posting_service import post_journal_entry as _post_je
 
@@ -217,6 +220,7 @@ async def reject_journal_entry(
 )
 async def post_journal_entry(
     entry_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -282,6 +286,20 @@ async def post_journal_entry(
                 detail="No ERP connected — complete OAuth setup in Accounting Settings.",
             ) from exc
         except ConnectorError as exc:
+            # Fire-and-forget: background_tasks won't run on HTTPException,
+            # so use asyncio.create_task directly.
+            asyncio.create_task(
+                dispatch_to_company(
+                    _gl_session_maker,
+                    current_user.company_id,
+                    "erp_post.failed",
+                    {
+                        "je_id": str(je.id),
+                        "provider": provider,
+                        "error_message": str(exc)[:200],
+                    },
+                )
+            )
             raise HTTPException(
                 status_code=502, detail=f"ERP posting failed: {exc.message}"
             ) from exc
@@ -290,6 +308,19 @@ async def post_journal_entry(
         je.posted_to = provider[:4].upper()
         je.posted_ref = result.external_ref
         je.posted_at = datetime.now(UTC)
+        background_tasks.add_task(
+            dispatch_to_company,
+            _gl_session_maker,
+            current_user.company_id,
+            "journal_entry.posted",
+            {
+                "je_id": str(je.id),
+                "erp_ref": je.posted_ref,
+                "provider": je.posted_to,
+                "amount": str(je.amount),
+                "currency": je.currency,
+            },
+        )
     else:
         try:
             posting_result = await _post_je(
