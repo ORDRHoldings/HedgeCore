@@ -68,6 +68,12 @@ class WebhookRegisterResponse(WebhookResponse):
     secret: str
 
 
+class WebhookTestResponse(BaseModel):
+    success: bool
+    status_code: int | None
+    error: str | None
+
+
 async def _check_permission(db: AsyncSession, user: User, codename: str) -> None:
     if user.is_superuser:
         return
@@ -189,7 +195,7 @@ async def delete_webhook(
     return None
 
 
-@router.post("/{webhook_id}/test")
+@router.post("/{webhook_id}/test", response_model=WebhookTestResponse)
 async def test_webhook(
     webhook_id: uuid.UUID,
     db: AsyncSession = Depends(get_session),
@@ -202,6 +208,7 @@ async def test_webhook(
         select(WebhookEndpoint).where(
             WebhookEndpoint.id == webhook_id,
             WebhookEndpoint.company_id == current_user.company_id,
+            WebhookEndpoint.is_active.is_(True),
         )
     )
     ep = result_ep.scalar_one_or_none()

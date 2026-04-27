@@ -216,13 +216,11 @@ async def test_register_slack_channel_type_stored():
                 "/api/v1/webhooks",
                 json={
                     "url": "https://hooks.slack.com/services/T123/B456/abc",
-                    "events": ["HEDGE_RUN_COMPLETED"],
+                    "events": ["hedge_run.completed"],
                     "channel_type": "slack",
                 },
             )
-        # Before: 422 (channel_type not in schema); After: 201 with channel_type="slack"
-        assert resp.status_code in (201, 422)
-        if resp.status_code == 201:
-            assert resp.json()["channel_type"] == "slack"
+        assert resp.status_code == 201
+        assert resp.json()["channel_type"] == "slack"
     finally:
         app.dependency_overrides.clear()
