@@ -1,5 +1,18 @@
 # Changelog (AI-maintained)
 
+## 2026-04-26 — Sub-project C complete: pushed to origin, CI gates unblocked
+
+7 commits pushed to `origin/master` (95a020a → ba30a24). Render/Vercel auto-deploy triggered.
+
+Key fixes before push:
+- **Contrast check script created**: `frontend/scripts/check-contrast.mjs` was referenced in `ci.yml` but never committed. Validates 11 WCAG AA token pairs — all pass (14.33:1 primary text, 6.99:1 secondary, 3.45:1+ accents).
+- **Config.py unchanged** since origin/master → no new env var requirements on Render/Vercel.
+- **Tests**: 5327 passed, 158 skipped (PG-only), 0 failures.
+- **ruff app/**: All checks passed.
+- **tsc --noEmit**: Passed.
+
+CI gates: ruff lint ✓, mypy engine_v1 (advisory) ✓, pytest 60% gate (at ~75%) ✓, tsc ✓, contrast check ✓, governance freeze check ✓.
+
 ## 2026-04-26 — Test coverage push: +63 tests (5264 → 5327)
 
 Four new test modules covering previously 0%-covered security and infrastructure:
