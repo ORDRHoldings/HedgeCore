@@ -199,6 +199,7 @@ def compute_hedge_plan_multi(
         raise ValueError(f"Pair {pair!r} market data missing 'spot' field")
 
     pair_market = MarketSnapshot(
+        as_of=market.as_of,
         spot_rate=pair_spot,
         forward_points_by_month=pair_fwd or {},
     )

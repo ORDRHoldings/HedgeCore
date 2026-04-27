@@ -13,7 +13,7 @@ Production readiness requires external data feeds -- module logic remains unchan
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any
 
 from app.schemas_v1.market_ext import ExtendedMarketSnapshot
 from app.schemas_v1.policy import CostAssumptions, HedgeRatios
@@ -243,7 +243,8 @@ def demo_market_dict() -> dict[str, Any]:
 
     """Market snapshot as a plain dict."""
 
-    return cast(dict[str, Any], demo_market_snapshot().model_dump(mode="json"))
+    result: dict[str, Any] = demo_market_snapshot().model_dump(mode="json")
+    return result
 
 
 
@@ -253,7 +254,8 @@ def demo_policy_dict() -> dict[str, Any]:
 
     """Policy config as a plain dict."""
 
-    return cast(dict[str, Any], demo_policy_config().model_dump(mode="json"))
+    result: dict[str, Any] = demo_policy_config().model_dump(mode="json")
+    return result
 
 
 
