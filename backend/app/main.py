@@ -2445,10 +2445,40 @@ app.openapi = custom_openapi
 # -------------------------------------------------------------------
 
 @app.get("/api/health", tags=["system"])
+async def health():
+    """Dependency-aware health check for load balancer and on-call monitoring."""
+    from sqlalchemy import text as _sa_text  # noqa: PLC0415
 
-def health():
+    checks: dict[str, str] = {}
 
-    return {"status": "ok", "service": settings.APP_NAME}
+    # DB probe — lightweight SELECT 1
+    try:
+        async with async_session_maker() as _db:
+            await _db.execute(_sa_text("SELECT 1"))
+        checks["db"] = "ok"
+    except Exception as _exc:  # noqa: BLE001
+        checks["db"] = f"error: {str(_exc)[:80]}"
+
+    # Redis probe — optional (fail-open by design)
+    try:
+        from app.core.redis_client import get_cache_stats, get_redis_client  # noqa: PLC0415
+        _r = get_redis_client()
+        if _r is not None:
+            await _r.ping()
+            stats = get_cache_stats()
+            checks["redis"] = f"ok (hit_rate={stats['hit_rate_pct']}%)"
+        else:
+            checks["redis"] = "not_configured"
+    except Exception:  # noqa: BLE001
+        checks["redis"] = "degraded"
+
+    overall = "ok" if checks.get("db") == "ok" else "degraded"
+    status_code = 200 if overall == "ok" else 503
+    from fastapi.responses import JSONResponse  # noqa: PLC0415
+    return JSONResponse(
+        status_code=status_code,
+        content={"status": overall, "service": settings.APP_NAME, "checks": checks},
+    )
 
 
 @app.get("/api/kernel/health", tags=["system"])
