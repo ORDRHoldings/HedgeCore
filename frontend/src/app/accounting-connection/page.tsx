@@ -351,6 +351,7 @@ export default function AccountingConnectionPage() {
           "width=600,height=700,scrollbars=yes",
         );
 
+        let poll: ReturnType<typeof setInterval>;
         const timeout = setTimeout(() => {
           clearInterval(poll);
           if (popup && !popup.closed) popup.close();
@@ -363,7 +364,7 @@ export default function AccountingConnectionPage() {
           });
         }, 5 * 60 * 1000);
 
-        const poll = setInterval(() => {
+        poll = setInterval(() => {
           if (popup?.closed) {
             clearInterval(poll);
             clearTimeout(timeout);

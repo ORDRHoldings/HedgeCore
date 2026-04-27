@@ -32,6 +32,7 @@ from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Request, UploadFile
+from pydantic import BaseModel
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -67,6 +68,14 @@ from app.services.audit_emit import emit_audit
 log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/connectors", tags=["v1-connectors"])
+
+
+class TestPostResult(BaseModel):
+    success: bool
+    provider: str
+    erp_ref: str | None
+    sandbox: bool
+    error: str | None
 # ---------------------------------------------------------------------------
 # Auth/RBAC helpers
 # ---------------------------------------------------------------------------
@@ -488,7 +497,7 @@ async def disconnect_connector(
     )
 
 
-@router.post("/{provider}/test-post")
+@router.post("/{provider}/test-post", response_model=TestPostResult)
 async def test_post_connector(
     provider: str,
     session: AsyncSession = Depends(get_async_session),
@@ -536,25 +545,38 @@ async def test_post_connector(
         ),
     )
 
+    success_flag = False
+    erp_ref_val = None
+    error_msg = None
+
     try:
         connector = registry.get_connector(provider)
         result = await connector.post_journal(tenant_id=tenant, payload=payload)
+        success_flag = True
+        erp_ref_val = result.external_ref
     except ConnectorError as exc:
-        return {
-            "success": False,
-            "provider": provider,
-            "error": exc.message,
-            "erp_ref": None,
-            "sandbox": True,
-        }
+        error_msg = exc.message
 
-    return {
-        "success": True,
-        "provider": provider,
-        "erp_ref": result.external_ref,
-        "sandbox": True,  # test-post is always a non-production probe
-        "error": None,
-    }
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="SYSTEM",
+        description=f"Connector test-post probe: provider={provider} success={success_flag}",
+        entity_type="connector",
+        entity_id=provider,
+        payload={"probe": True, "provider": provider, "erp_ref": erp_ref_val},
+    )
+
+    if not success_flag:
+        return TestPostResult(success=False, provider=provider, error=error_msg, erp_ref=None, sandbox=True)
+
+    return TestPostResult(
+        success=True,
+        provider=provider,
+        erp_ref=erp_ref_val,
+        sandbox=True,
+        error=None,
+    )
 
 
 @router.get("/{provider}/coa", response_model=COAResponse)
