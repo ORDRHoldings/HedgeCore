@@ -21,8 +21,8 @@ import { BarChart3, TrendingDown, Shield, Activity, AlertTriangle, ChevronRight 
 const RISK_API = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api"}/v1/risk`;
 
 function riskApiKey(): string {
-  if (typeof window !== "undefined") return localStorage.getItem("hc_api_key") ?? "HC_DEV_KEY_001";
-  return "HC_DEV_KEY_001";
+  if (typeof window !== "undefined") return localStorage.getItem("hc_api_key") ?? "";
+  return "";
 }
 
 function useRenderTs(): string {
