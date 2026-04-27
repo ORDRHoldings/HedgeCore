@@ -56,3 +56,51 @@ class TestErpSystemWrittenAfterQboOAuth:
             )
 
         assert saved_settings.get("erp_system") == "quickbooks"
+
+
+class TestErpSystemWrittenAfterXeroOAuth:
+
+    @pytest.mark.asyncio
+    async def test_erp_system_set_to_xero_after_exchange_code(self):
+        """exchange_code() must write company.settings['erp_system'] = 'xero'."""
+        from app.connectors.xero.connector import XeroConnector
+
+        tenant_id = uuid.uuid4()
+        saved_settings: dict = {}
+
+        async def fake_load(session, tenant_id):
+            return dict(saved_settings)
+
+        async def fake_save(session, tenant_id, settings):
+            saved_settings.update(settings)
+
+        mock_bundle = MagicMock()
+        mock_bundle.access_token = "xtok"
+        mock_bundle.refresh_token = "xref"
+        mock_bundle.expires_at = None
+        mock_bundle.realm_id = "xero-tenant-abc"
+        mock_bundle.scope = "openid profile email accounting.transactions"
+        mock_bundle.raw = {}
+
+        with (
+            patch("app.connectors.xero.connector.settings") as ms,
+            patch("app.connectors.xero.connector.token_vault.store_tokens", new_callable=AsyncMock),
+            patch("app.connectors.xero.connector.token_vault.update_state", new_callable=AsyncMock),
+            patch("app.connectors.xero.connector.token_vault._load_company_settings", side_effect=fake_load),
+            patch("app.connectors.xero.connector.token_vault._save_company_settings", side_effect=fake_save),
+            patch("app.connectors.xero.connector.async_session_maker") as mock_maker,
+            patch("app.connectors.xero.connector.XeroConnector._token_request", new_callable=AsyncMock, return_value=mock_bundle),
+            patch("app.connectors.xero.connector.XeroConnector._fetch_first_tenant", new_callable=AsyncMock, return_value="xero-tenant-abc"),
+        ):
+            ms.XERO_REDIRECT_URI = "https://example.com/callback"
+            mock_session = AsyncMock()
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=False)
+            mock_maker.return_value = mock_session
+
+            connector = XeroConnector()
+            await connector.exchange_code(
+                code="auth_code", state="state_token", tenant_id=tenant_id,
+            )
+
+        assert saved_settings.get("erp_system") == "xero"
