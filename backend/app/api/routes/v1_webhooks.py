@@ -34,10 +34,17 @@ WebhookEventType = Enum(
 )
 
 
+class ChannelType(str, Enum):
+    generic = "generic"
+    slack = "slack"
+    teams = "teams"
+
+
 class WebhookRegisterRequest(BaseModel):
     url: str
     description: str | None = None
     events: list[WebhookEventType] = []
+    channel_type: ChannelType = ChannelType.generic
 
     @field_validator("url")
     @classmethod
@@ -51,7 +58,8 @@ class WebhookResponse(BaseModel):
     id: str
     url: str
     description: str | None
-    events: list[WebhookEventType]
+    events: list[str]
+    channel_type: str
     is_active: bool
     created_at: str | None
 
@@ -77,6 +85,7 @@ def _endpoint_to_response(ep: WebhookEndpoint) -> WebhookResponse:
         url=ep.url,
         description=ep.description,
         events=sorted(ep.get_events()),
+        channel_type=getattr(ep, "channel_type", None) or "generic",
         is_active=ep.is_active,
         created_at=ep.created_at.isoformat() if ep.created_at else None,
     )
@@ -111,6 +120,7 @@ async def register_webhook(
         secret=secret,
         description=body.description,
         events=events_str,
+        channel_type=body.channel_type.value,
         is_active=True,
     )
     db.add(endpoint)
@@ -177,3 +187,45 @@ async def delete_webhook(
     endpoint.is_active = False
     await db.commit()
     return None
+
+
+@router.post("/{webhook_id}/test")
+async def test_webhook(
+    webhook_id: uuid.UUID,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Send a synthetic ping to verify the endpoint is reachable."""
+    await _check_permission(db, current_user, "api_keys.manage")
+
+    result_ep = await db.execute(
+        select(WebhookEndpoint).where(
+            WebhookEndpoint.id == webhook_id,
+            WebhookEndpoint.company_id == current_user.company_id,
+        )
+    )
+    ep = result_ep.scalar_one_or_none()
+    if ep is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Webhook endpoint not found.")
+
+    from app.services.notification_formatters import format_payload  # noqa: PLC0415
+    from app.services.webhook_service import build_event_payload, deliver_webhook_attempt  # noqa: PLC0415
+
+    channel_type = getattr(ep, "channel_type", None) or "generic"
+    test_data: dict = {"message": "ORDR connectivity test — safe to ignore", "source": "test-ping"}
+    if channel_type in ("slack", "teams"):
+        payload = format_payload(channel_type, "test.ping", test_data)
+    else:
+        payload = build_event_payload("test.ping", str(current_user.company_id), test_data)
+
+    result = await deliver_webhook_attempt(
+        url=ep.url,
+        secret=ep.secret,
+        payload=payload,
+        channel_type=channel_type,
+    )
+    return {
+        "success": result["status"] == "delivered",
+        "status_code": result["response_status"],
+        "error": result["error_message"],
+    }

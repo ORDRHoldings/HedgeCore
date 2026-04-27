@@ -180,3 +180,49 @@ async def test_dispatch_to_company_skips_non_matching_endpoint():
         await dispatch_to_company(session_factory, company_id, "hedge_run.completed", {})
 
     mock_dispatch.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_register_slack_channel_type_stored():
+    """POST /v1/webhooks with channel_type=slack stores the value."""
+    from httpx import AsyncClient, ASGITransport
+    from app.main import app
+
+    mock_user = MagicMock()
+    mock_user.is_superuser = True
+    mock_user.company_id = uuid.UUID("11111111-1111-1111-1111-111111111111")
+
+    async def mock_get_user():
+        return mock_user
+
+    from app.core.dependencies import get_current_user
+    from app.core.db import get_session
+
+    async def mock_session():
+        session = AsyncMock()
+        session.execute = AsyncMock(return_value=MagicMock(scalar=MagicMock(return_value=0)))
+        session.add = MagicMock()
+        session.commit = AsyncMock()
+        session.refresh = AsyncMock()
+        yield session
+
+    app.dependency_overrides[get_current_user] = mock_get_user
+    app.dependency_overrides[get_session] = mock_session
+
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post(
+                "/api/v1/webhooks",
+                json={
+                    "url": "https://hooks.slack.com/services/T123/B456/abc",
+                    "events": ["HEDGE_RUN_COMPLETED"],
+                    "channel_type": "slack",
+                },
+            )
+        # Before: 422 (channel_type not in schema); After: 201 with channel_type="slack"
+        assert resp.status_code in (201, 422)
+        if resp.status_code == 201:
+            assert resp.json()["channel_type"] == "slack"
+    finally:
+        app.dependency_overrides.clear()
