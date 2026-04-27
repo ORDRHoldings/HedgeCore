@@ -428,7 +428,11 @@ async def oauth_callback(
     try:
         parsed_state = await oauth_state.verify_and_consume(state)
     except ConnectorError as exc:
-        raise _connector_error_to_http(exc) from exc
+        log.warning("connector.oauth_callback state verification failed: %s", exc.message)
+        return RedirectResponse(
+            url=f"/accounting-oauth-callback?error=state_error&error_description={exc.message[:120]}",
+            status_code=302,
+        )
 
     provider = parsed_state.provider
     tenant_id_ = parsed_state.tenant_id
@@ -443,9 +447,8 @@ async def oauth_callback(
         )
     except ConnectorError as exc:
         log.exception("connector.oauth_callback failed provider=%s tenant=%s", provider, tenant_id_)
-        # Use a user-visible frontend URL for the error — keeps error out of logs only.
         return RedirectResponse(
-            url=f"/settings/connectors?provider={provider}&status=error&detail={exc.message[:120]}",
+            url=f"/accounting-oauth-callback?system={provider}&error=connector_error&error_description={exc.message[:120]}",
             status_code=302,
         )
 
@@ -454,7 +457,7 @@ async def oauth_callback(
         log.info("connector.connected provider=%s tenant=%s", provider, tenant_id_)
 
     return RedirectResponse(
-        url=f"/settings/connectors?provider={provider}&status=connected",
+        url=f"/accounting-oauth-callback?system={provider}",
         status_code=302,
     )
 
