@@ -14,6 +14,8 @@ Standard CRUD:
 
   POST   /v1/positions/import             -> CSV bulk import (trades.create)
 
+  POST   /v1/positions/bulk              -> JSON bulk import, max 500 rows (trades.create)
+
   GET    /v1/positions/exposure           -> aggregated per-currency totals (trades.view)
 
 Lifecycle transitions (Phase 0 regulated backbone -- fail-closed):
@@ -63,6 +65,8 @@ from app.schemas_v1.positions import (
     AssignPolicyRequest,
     BulkAssignPolicyRequest,
     BulkAssignResult,
+    BulkPositionCreateRequest,
+    BulkPositionCreateResult,
     ExecutePositionRequest,
     ExposureAggregation,
     PositionCreate,
@@ -352,6 +356,54 @@ async def create_position(
     except Exception:
         logger.warning("Failed to dispatch position.created webhook for position %s", pos.id, exc_info=True)
     return pos
+
+
+@router.post("/bulk", response_model=BulkPositionCreateResult, status_code=207)
+async def bulk_create_positions(
+    data:             BulkPositionCreateRequest,
+    request:          Request,
+    session:          AsyncSession = Depends(get_async_session),
+    current_user:     User         = Depends(get_current_user),
+):
+    """Create multiple positions from a JSON array (max 500).
+
+    Fail-soft: each row is attempted independently. Partial success is
+    returned with HTTP 207. Inspect `errors` for per-row failure details.
+    """
+    await _check_permission(session, current_user, "trades.create")
+    created_ids: list[str] = []
+    errors: list[str] = []
+
+    for idx, item in enumerate(data.items):
+        try:
+            pos = await position_service.create_position(session, current_user, item)
+            await _emit_lifecycle_audit(
+                session, current_user,
+                event_type  = "INGEST",
+                description = f"Position {pos.record_id} created via bulk JSON import",
+                position_id = str(pos.id),
+                payload     = {
+                    "action":     "BULK_CREATE",
+                    "row":        idx,
+                    "record_id":  pos.record_id,
+                    "entity":     pos.entity,
+                    "currency":   pos.currency,
+                    "amount":     float(pos.amount),
+                },
+                request = request,
+            )
+            created_ids.append(str(pos.id))
+        except Exception as exc:
+            errors.append(f"row {idx} ({item.record_id!r}): {exc}")
+
+    return BulkPositionCreateResult(
+        created = len(created_ids),
+        failed  = len(errors),
+        errors  = errors,
+        ids     = created_ids,
+    )
+
+
 @router.put("/{position_id}", response_model=PositionResponse)
 async def update_position(
     position_id:  UUID,

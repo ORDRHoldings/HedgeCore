@@ -136,6 +136,22 @@ class BulkAssignPolicyRequest(BaseModel):
     )
 
 
+class BulkPositionCreateRequest(BaseModel):
+    """Request for POST /v1/positions/bulk — JSON array import (max 500 rows)."""
+    items: list[PositionCreate] = Field(..., min_length=1, max_length=500,
+                                        description="Array of positions to create (1–500)")
+
+
+class BulkPositionCreateResult(BaseModel):
+    """Response for POST /v1/positions/bulk."""
+    created: int = Field(..., description="Number of positions successfully created.")
+    failed:  int = Field(..., description="Number of rows that raised an error.")
+    errors:  list[str] = Field(default_factory=list,
+                               description="Error messages keyed by row index.")
+    ids:     list[str] = Field(default_factory=list,
+                               description="UUIDs of successfully created positions.")
+
+
 class BulkAssignResult(BaseModel):
     """Response for PATCH /v1/positions/bulk-assign-policy."""
     assigned: int = Field(..., description="Number of positions successfully assigned.")
