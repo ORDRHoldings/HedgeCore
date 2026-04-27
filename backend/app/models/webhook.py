@@ -33,7 +33,13 @@ SUPPORTED_EVENTS: set[str] = {
     "calculation.completed",
     "proposal.approved",
     "proposal.rejected",
+    "hedge_run.completed",
+    "journal_entry.posted",
+    "erp_post.failed",
 }
+
+CHANNEL_TYPES: set[str] = {"generic", "slack", "teams"}
+
 RETRY_DELAYS_MINUTES: list[int] = [1, 5, 15, 60]  # gaps between attempts 1->2, 2->3, 3->4, 4->5
 MAX_ATTEMPTS: int = 5
 DELIVERY_LOG_WINDOW: int = 100
@@ -59,6 +65,7 @@ class WebhookEndpoint(Base):
     # Comma-separated event names. Empty string = subscribe to all.
     events = Column(String(512), nullable=False, default="")
     is_active = Column(Boolean, nullable=False, default=True)
+    channel_type = Column(String(16), nullable=False, server_default="generic")
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

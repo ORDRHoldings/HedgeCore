@@ -1563,6 +1563,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
         "CREATE INDEX IF NOT EXISTS ix_webhook_endpoints_company ON webhook_endpoints(company_id)",
+        "ALTER TABLE webhook_endpoints ADD COLUMN IF NOT EXISTS channel_type VARCHAR(16) NOT NULL DEFAULT 'generic'",
 
         """CREATE TABLE IF NOT EXISTS webhook_delivery_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
