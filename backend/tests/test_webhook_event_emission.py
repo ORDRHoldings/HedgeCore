@@ -8,7 +8,7 @@ os.environ.setdefault("JWT_SECRET", "test-secret-key-for-ci-at-least-32-chars-lo
 
 import contextlib
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 from httpx import ASGITransport, AsyncClient

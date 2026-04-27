@@ -108,21 +108,6 @@ from app.services.webhook_service import dispatch_to_company
 
 router = APIRouter(prefix="/v1", tags=["v1-calculate"])
 
-
-async def _fire_webhook(company_id, endpoint_id, event_type: str, data: dict) -> None:
-    """Open a fresh DB session for webhook delivery (background task)."""
-    from sqlalchemy import select as _sel
-
-    from app.core.db import async_session_maker
-    from app.models.webhook import WebhookEndpoint as _WE
-    from app.services.webhook_service import dispatch_webhook_event as _dispatch
-    async with async_session_maker() as session:
-        result = await session.execute(_sel(_WE).where(_WE.id == endpoint_id))
-        ep = result.scalar_one_or_none()
-        if ep:
-            await _dispatch(session, ep, event_type, data)
-
-
 # In-memory cache (bounded to 50 items) -- supplements DB persistence for fast access
 
 _run_store: dict[str, CalculateResponse] = {}
