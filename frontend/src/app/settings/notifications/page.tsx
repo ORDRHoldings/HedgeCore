@@ -57,7 +57,7 @@ function NotificationsPageInner() {
 
   useEffect(() => {
     if (!user || !token) return;
-    if ((user as any).plan_tier === "starter") {
+    if (user.plan_tier === "lite") {
       router.replace("/upgrade");
       return;
     }
