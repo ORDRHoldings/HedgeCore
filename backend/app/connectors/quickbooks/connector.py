@@ -130,6 +130,10 @@ class QuickBooksConnector:
                 last_connected_at=datetime.now(UTC).isoformat(),
                 last_error=None,
             )
+            # Mark this provider as active for GL posting route
+            company_settings = await token_vault._load_company_settings(session, tenant_id)
+            company_settings["erp_system"] = PROVIDER_ID
+            await token_vault._save_company_settings(session, tenant_id, company_settings)
             await session.commit()
 
         return bundle
