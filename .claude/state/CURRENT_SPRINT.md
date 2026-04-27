@@ -1,9 +1,24 @@
 # Current Sprint
 
-Sprint: Production Readiness + E2E Coverage
-Status: COMPLETE + SHIPPED (deploys verified live 2026-04-26)
+Sprint: Production Readiness + E2E Coverage → Sub-project A: Live ERP End-to-End
+Status: COMPLETE + SHIPPED (last shipped 2026-04-27 Sub-project A)
 Started: 2026-04-22
-Updated: 2026-04-26 (post-shipment cleanup: dead-code regression closed, full backend suite green at 5264/0)
+Updated: 2026-04-27 (Sub-project A: live QBO/Xero end-to-end activated; 5495 passed, 0 failed)
+
+## Sub-project A: Live ERP End-to-End (2026-04-27)
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| E1 | QBO exchange_code() writes erp_system | ✅ Done | Fixes erp_system=CSV fallback bug |
+| E2 | Xero exchange_code() writes erp_system | ✅ Done | Same fix, PROVIDER_ID="xero" |
+| E3 | GL posting route → connector.post_journal() | ✅ Done | Replaces legacy erp_credentials path; handles token refresh internally |
+| E4 | POST /v1/connectors/{provider}/test-post | ✅ Done | Synthetic balanced entry, no WORM row, trades.create gate |
+| E5 | OAuth callback redirect fix | ✅ Done | Now redirects to /accounting-oauth-callback (was /settings/connectors — non-existent) |
+| E6 | Accounting connection page: real OAuth popup + Test Connection | ✅ Done | Backend authorize endpoint + HTTPS guard + localStorage poll |
+| E7 | GL Postings: provider label + posted_ref badge + Retry | ✅ Done | "Post to QB" / "Post to Xero" / "Export CSV"; QBO deep-link badge |
+| E8 | Tests: +16 new passing tests | ✅ Done | test_gl_post_wire (4), test_connector_test_post (4), test_oauth_redirect (2), connector (4), infra (2) |
+
+**Test baseline after Sub-project A: 5495 passed, 0 failed, 158 skipped (PG-only)**
 
 > Closeout note: The OpenAPI audit follow-up (P0-1…P1-4 + P1-2) shipped to production on 2026-04-26 in 18 commits and was verified against the live OpenAPI schema. P2-1 (81-tag consolidation) deferred to v1.5. GitHub Actions CI is currently blocked at the org level by a billing failure — Render/Vercel deploy webhooks fired independently.
 >
