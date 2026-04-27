@@ -11,6 +11,7 @@ import {
   approveJournalEntry,
   rejectJournalEntry,
   postJournalEntry,
+  getConnectorStatus,
   type JournalEntry,
 } from "@/lib/api/glClient";
 
@@ -54,6 +55,8 @@ export default function GLPostingsPage() {
   const [rejectModal, setRejectModal] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [activeProvider, setActiveProvider] = useState<string | null>(null);
+  const [postErrors, setPostErrors] = useState<Record<string, string | null>>({});
   const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
@@ -70,6 +73,18 @@ export default function GLPostingsPage() {
   }, [token, filter]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!token) return;
+    Promise.all([
+      getConnectorStatus(token, "quickbooks").catch(() => null),
+      getConnectorStatus(token, "xero").catch(() => null),
+    ]).then(([qbo, xero]) => {
+      if (qbo?.connected) setActiveProvider("quickbooks");
+      else if (xero?.connected) setActiveProvider("xero");
+      else setActiveProvider(null);
+    });
+  }, [token]);
 
   if (!token) return null;
 
@@ -89,8 +104,14 @@ export default function GLPostingsPage() {
 
   const handlePost = async (id: string) => {
     setActionError(null);
-    try { await postJournalEntry(token, id); await load(); }
-    catch (e) { setActionError(e instanceof Error ? e.message : "Post failed"); }
+    setPostErrors(prev => ({ ...prev, [id]: null }));
+    try {
+      await postJournalEntry(token, id);
+      await load();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Post failed";
+      setPostErrors(prev => ({ ...prev, [id]: msg }));
+    }
   };
 
   return (
@@ -162,6 +183,22 @@ export default function GLPostingsPage() {
                         <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 3, fontSize: 11, fontFamily: S.fontMono, letterSpacing: "0.04em", color: sc.color, background: sc.bg }}>
                           {sc.label}
                         </span>
+                        {e.status === "POSTED" && e.posted_ref && (
+                          <div style={{ marginTop: 4, fontSize: 10, fontFamily: S.fontMono }}>
+                            {e.posted_to === "QUIC" ? (
+                              <a
+                                href={`https://qbo.intuit.com/app/journal?txnId=${e.posted_ref}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ color: "var(--accent-cyan)", textDecoration: "underline" }}
+                              >
+                                {e.posted_ref}
+                              </a>
+                            ) : (
+                              <span style={{ color: "var(--text-secondary)" }}>{e.posted_ref}</span>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: "10px 14px" }}>
                         <div style={{ display: "flex", gap: 6, flexWrap: isMobile ? "wrap" : "nowrap" }}>
@@ -178,10 +215,36 @@ export default function GLPostingsPage() {
                             </>
                           )}
                           {e.status === "APPROVED" && (
-                            <button onClick={() => handlePost(e.id)} title="Post to ERP"
-                              style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", background: "rgba(0,212,255,0.1)", border: `1px solid rgba(0,212,255,0.3)`, color: S.accent, fontSize: 11, borderRadius: 3, cursor: "pointer", fontFamily: S.fontMono }}>
-                              <Send size={11} /> Post to ERP
-                            </button>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                              <button
+                                onClick={() => handlePost(e.id)}
+                                title={activeProvider ? `Post to ${activeProvider}` : "Export CSV"}
+                                style={{
+                                  display: "flex", alignItems: "center", gap: 4,
+                                  padding: "4px 10px",
+                                  background: "rgba(0,212,255,0.1)",
+                                  border: "1px solid rgba(0,212,255,0.3)",
+                                  color: S.accent, fontSize: 11, borderRadius: 3,
+                                  cursor: "pointer", fontFamily: S.fontMono,
+                                }}
+                              >
+                                <Send size={11} />
+                                {activeProvider === "quickbooks" ? "Post to QB"
+                                  : activeProvider === "xero" ? "Post to Xero"
+                                  : "Export CSV"}
+                              </button>
+                              {postErrors[e.id] && (
+                                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                  <span style={{ fontSize: 10, color: C.red, fontFamily: S.fontMono }}>{postErrors[e.id]}</span>
+                                  <button
+                                    onClick={() => handlePost(e.id)}
+                                    style={{ fontSize: 10, color: S.accent, background: "transparent", border: "none", cursor: "pointer", fontFamily: S.fontMono }}
+                                  >
+                                    Retry
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       </td>

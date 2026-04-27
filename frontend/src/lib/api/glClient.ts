@@ -159,6 +159,20 @@ export async function confirmSettlement(
   });
 }
 
+// ── Connector Status ──────────────────────────────────────────────────────
+
+export interface ConnectorStatus {
+  connected: boolean;
+  provider: string;
+  realm_id: string | null;
+  last_sync_at: string | null;
+  circuit_open: boolean;
+}
+
+export async function getConnectorStatus(token: string, provider: string): Promise<ConnectorStatus> {
+  return _fetchJson<ConnectorStatus>(`/v1/connectors/${provider}/status`, token);
+}
+
 // ── ERP Pull ──────────────────────────────────────────────────────────────
 
 export async function triggerERPPull(
