@@ -40,6 +40,9 @@ router = APIRouter(prefix="/v1/gl", tags=["v1-gl"])
 
 _PLAN_DEPS = [require_plan("professional", "enterprise")]
 
+# Strong references for fire-and-forget tasks — prevents GC from cancelling pending tasks
+_fire_tasks: set[asyncio.Task] = set()
+
 
 async def _get_run(run_id: uuid.UUID, session: AsyncSession):
     """Fetch HedgeEffectivenessRun — raises 404 if not found."""
@@ -287,8 +290,9 @@ async def post_journal_entry(
             ) from exc
         except ConnectorError as exc:
             # Fire-and-forget: background_tasks won't run on HTTPException,
-            # so use asyncio.create_task directly.
-            asyncio.create_task(
+            # so use asyncio.create_task directly. Strong reference in _fire_tasks
+            # prevents GC from cancelling the task before it completes.
+            _task = asyncio.create_task(
                 dispatch_to_company(
                     _gl_session_maker,
                     current_user.company_id,
@@ -300,6 +304,8 @@ async def post_journal_entry(
                     },
                 )
             )
+            _fire_tasks.add(_task)
+            _task.add_done_callback(_fire_tasks.discard)
             raise HTTPException(
                 status_code=502, detail=f"ERP posting failed: {exc.message}"
             ) from exc

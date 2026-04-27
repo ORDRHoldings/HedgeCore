@@ -56,7 +56,10 @@ export async function registerWebhook(
 
 export async function deleteWebhook(token: string, id: string): Promise<void> {
   const res = await dashboardFetch(`/v1/webhooks/${id}`, token, { method: "DELETE" });
-  await parseOrThrow<void>(res);
+  if (!res.ok) {
+    await parseOrThrow<void>(res);
+  }
+  // 204 No Content — no body to parse
 }
 
 export async function testWebhook(
