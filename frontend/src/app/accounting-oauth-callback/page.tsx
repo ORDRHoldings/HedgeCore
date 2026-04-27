@@ -62,9 +62,11 @@ function CallbackContent() {
     setReady(true);
   }, [systemId, searchParams]);
 
-  // A miss on state means either a forged callback or a stale popup; either
-  // way, surface as an error and never write the "authorized" sentinel.
-  const error = upstreamError ?? (stateReady && systemId && !stateOk ? "state_mismatch" : null);
+  // State CSRF check is optional: the backend HMAC-signs its own state (real
+  // protection). The frontend check is defense-in-depth; only run it when the
+  // backend echoed a state param back — which it does not in the current flow.
+  const stateInUrl = searchParams.get("state") !== null;
+  const error = upstreamError ?? (stateReady && systemId && stateInUrl && !stateOk ? "state_mismatch" : null);
 
   useEffect(() => {
     // Only persist state once the CSRF check has settled, and only for

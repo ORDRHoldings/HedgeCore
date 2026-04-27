@@ -17,7 +17,6 @@ import { useRouter } from "next/navigation";
 import { listConnectorRuns } from "../../api/connectorClient";
 import type { ConnectorRun } from "../../api/connectorClient";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
-import { generateOauthState, oauthStateKey } from "@/lib/oauth/sanitize";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { CONNECTORS_HELP } from "@/lib/helpContent";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
@@ -224,6 +223,8 @@ export default function AccountingConnectionPage() {
     Record<string, { connectedAs: string; tenantId: string; expiresAt: string } | null>
   >({});
   const [connErrors, setConnErrors] = useState<Record<string, string | null>>({});
+  const [testPosting, setTestPosting] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<Record<string, { success: boolean; erp_ref?: string | null; error?: string | null } | null>>({});
 
   // ── UI state ────────────────────────────────────────────────────────────
   const [selectedSystem, setSelectedSystem] = useState<string>("quickbooks");
@@ -328,70 +329,71 @@ export default function AccountingConnectionPage() {
     setImportResult(null);
     setImportError(null);
 
-    // CSRF protection: generate a one-time state value, persist to sessionStorage
-    // for the callback to verify, and pass to the OAuth start endpoint. The state
-    // round-trips through the IdP and lands back as ?state= on /accounting-oauth-callback.
-    let state: string;
-    try {
-      state = generateOauthState();
-      sessionStorage.setItem(oauthStateKey("accounting", systemId), state);
-    } catch {
+    if (!token) {
       setConnections(prev => ({ ...prev, [systemId]: "error" }));
-      setConnErrors(prev => ({ ...prev, [systemId]: "Browser secure storage unavailable. Cannot start OAuth flow." }));
+      setConnErrors(prev => ({ ...prev, [systemId]: "Not authenticated." }));
       return;
     }
 
-    const popup = window.open(
-      `/api/accounting-oauth-start?system=${systemId}&state=${encodeURIComponent(state)}`,
-      "accounting-oauth",
-      "width=600,height=700,scrollbars=yes"
-    );
+    // Get real authorize URL from backend, then open popup directly to QBO/Xero
+    dashboardFetch(`/v1/connectors/${systemId}/authorize`, token, { method: "POST" })
+      .then(async (resp) => {
+        if (!resp.ok) throw new Error(`Authorize failed: ${resp.status}`);
+        const data = await resp.json() as { authorize_url: string | null; requires_form: boolean };
+        if (!data.authorize_url) throw new Error("Provider requires form-based auth — not yet supported in this UI.");
 
-    // Safety timeout: abort connecting after 5 minutes
-    const timeout = setTimeout(() => {
-      clearInterval(poll);
-      if (popup && !popup.closed) popup.close();
-      setConnections(prev => {
-        if (prev[systemId] === "connecting") {
-          setConnErrors(p => ({ ...p, [systemId]: "Connection timed out. The OAuth window was open too long. Please try again." }));
-          return { ...prev, [systemId]: "error" };
-        }
-        return prev;
+        const popup = window.open(
+          data.authorize_url,
+          "accounting-oauth",
+          "width=600,height=700,scrollbars=yes",
+        );
+
+        const timeout = setTimeout(() => {
+          clearInterval(poll);
+          if (popup && !popup.closed) popup.close();
+          setConnections(prev => {
+            if (prev[systemId] === "connecting") {
+              setConnErrors(p => ({ ...p, [systemId]: "Connection timed out. Please try again." }));
+              return { ...prev, [systemId]: "error" };
+            }
+            return prev;
+          });
+        }, 5 * 60 * 1000);
+
+        const poll = setInterval(() => {
+          if (popup?.closed) {
+            clearInterval(poll);
+            clearTimeout(timeout);
+            const result = localStorage.getItem(lsOAuthResult(systemId));
+            if (result === "authorized") {
+              const details = {
+                connectedAs: user?.full_name ?? user?.email ?? "Unknown",
+                tenantId: ((user?.company?.name ?? user?.company?.slug ?? "ORG")
+                  .replace(/\s+/g, "").slice(0, 6).toUpperCase()) + "-****-****",
+                expiresAt: new Date(Date.now() + 30 * 24 * 3600_000)
+                  .toISOString().slice(0, 16) + " UTC",
+              };
+              setConnections(prev => ({ ...prev, [systemId]: "connected" }));
+              setConnDetails(prev => ({ ...prev, [systemId]: details }));
+              try {
+                localStorage.setItem(lsConnKey(systemId), JSON.stringify({ status: "connected", details }));
+              } catch { /* quota */ }
+              localStorage.removeItem(lsOAuthResult(systemId));
+            } else if (result?.startsWith("error:")) {
+              const errMsg = result.slice(6);
+              setConnErrors(prev => ({ ...prev, [systemId]: errMsg }));
+              setConnections(prev => ({ ...prev, [systemId]: "error" }));
+              localStorage.removeItem(lsOAuthResult(systemId));
+            } else {
+              setConnections(prev => ({ ...prev, [systemId]: "not_connected" }));
+            }
+          }
+        }, 500);
+      })
+      .catch((e: unknown) => {
+        setConnections(prev => ({ ...prev, [systemId]: "error" }));
+        setConnErrors(prev => ({ ...prev, [systemId]: e instanceof Error ? e.message : "Connect failed" }));
       });
-    }, 5 * 60 * 1000);
-
-    const poll = setInterval(() => {
-      if (popup?.closed) {
-        clearInterval(poll);
-        clearTimeout(timeout);
-        const result = localStorage.getItem(lsOAuthResult(systemId));
-        if (result === "authorized") {
-          const details = {
-            connectedAs: user?.full_name ?? user?.email ?? "Unknown",
-            tenantId:    ((user?.company?.name ?? user?.company?.slug ?? "ORG")
-                           .replace(/\s+/g, "")
-                           .slice(0, 6)
-                           .toUpperCase()) + "-****-****",
-            expiresAt:   new Date(Date.now() + 30 * 24 * 3600_000)
-                           .toISOString()
-                           .slice(0, 16) + " UTC",
-          };
-          setConnections(prev => ({ ...prev, [systemId]: "connected" }));
-          setConnDetails(prev => ({ ...prev, [systemId]: details }));
-          try {
-            localStorage.setItem(lsConnKey(systemId), JSON.stringify({ status: "connected", details }));
-          } catch { /* quota */ }
-          localStorage.removeItem(lsOAuthResult(systemId));
-        } else if (result?.startsWith("error:")) {
-          const errMsg = result.slice(6);
-          setConnErrors(prev => ({ ...prev, [systemId]: errMsg }));
-          setConnections(prev => ({ ...prev, [systemId]: "error" }));
-          localStorage.removeItem(lsOAuthResult(systemId));
-        } else {
-          setConnections(prev => ({ ...prev, [systemId]: "not_connected" }));
-        }
-      }
-    }, 500);
   }
 
   // ── Disconnect handler ───────────────────────────────────────────────────
@@ -401,6 +403,23 @@ export default function AccountingConnectionPage() {
     try {
       localStorage.removeItem(lsConnKey(systemId));
     } catch { /* ignore */ }
+  }
+
+  // ── Test Connection handler ──────────────────────────────────────────────
+  async function handleTestPost(systemId: string) {
+    if (!token) return;
+    setTestPosting(systemId);
+    setTestResult(prev => ({ ...prev, [systemId]: null }));
+    try {
+      const resp = await dashboardFetch(`/v1/connectors/${systemId}/test-post`, token, { method: "POST" });
+      if (!resp.ok) throw new Error(`Test post failed: ${resp.status}`);
+      const data = await resp.json() as { success: boolean; erp_ref?: string | null; error?: string | null };
+      setTestResult(prev => ({ ...prev, [systemId]: data }));
+    } catch (e) {
+      setTestResult(prev => ({ ...prev, [systemId]: { success: false, error: e instanceof Error ? e.message : "Unknown error" } }));
+    } finally {
+      setTestPosting(null);
+    }
   }
 
   // ── Import now ───────────────────────────────────────────────────────────
@@ -832,6 +851,42 @@ export default function AccountingConnectionPage() {
                         DISCONNECT
                       </button>
                     </div>
+                    {connections[selectedSystem] === "connected" && (
+                      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                        <button
+                          onClick={() => handleTestPost(selectedSystem)}
+                          disabled={testPosting === selectedSystem}
+                          style={{
+                            padding:    "6px 14px",
+                            background: "rgba(28,98,242,0.12)",
+                            border:     "1px solid rgba(28,98,242,0.3)",
+                            color:      S.cyan,
+                            fontSize:   11,
+                            fontFamily: S.fontMono,
+                            borderRadius: 3,
+                            cursor:     testPosting === selectedSystem ? "not-allowed" : "pointer",
+                            letterSpacing: "0.06em",
+                          }}
+                        >
+                          {testPosting === selectedSystem ? "TESTING…" : "TEST CONNECTION"}
+                        </button>
+                        {testResult[selectedSystem] && (
+                          <div style={{
+                            fontSize:   11,
+                            fontFamily: S.fontMono,
+                            color:      testResult[selectedSystem]?.success ? S.pass : S.fail,
+                            padding:    "4px 8px",
+                            background: testResult[selectedSystem]?.success ? "rgba(5,150,105,0.1)" : "rgba(220,38,38,0.1)",
+                            border:     `1px solid ${testResult[selectedSystem]?.success ? "rgba(5,150,105,0.3)" : "rgba(220,38,38,0.3)"}`,
+                            borderRadius: 3,
+                          }}>
+                            {testResult[selectedSystem]?.success
+                              ? `✓ Test posted — ref ${testResult[selectedSystem]?.erp_ref ?? "n/a"}`
+                              : `✗ ${testResult[selectedSystem]?.error ?? "Post failed"}`}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : isConnecting ? (
                   /* ── Connecting view ───────────────────────────────────── */
