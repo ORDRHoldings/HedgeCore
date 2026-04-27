@@ -112,7 +112,12 @@ def format_slack_blocks(event_type: str, data: dict) -> dict:
     }
 
 def format_teams_card(event_type: str, data: dict) -> dict:
-    """Return Teams Incoming Webhook body (Adaptive Card via legacy MessageCard)."""
+    """Return Teams Incoming Webhook body (legacy MessageCard format).
+
+    [KNOWN DEBT]: Microsoft deprecated MessageCard in favour of Adaptive Cards
+    and has announced a sunset for legacy connectors. MessageCard still works as
+    of 2026. Upgrade to Adaptive Card format in a future sub-project.
+    """
     facts = [{"name": k, "value": str(v)} for k, v in data.items() if k != "tenant_id"]
     return {
         "@type": "MessageCard",
@@ -172,7 +177,7 @@ else:
 # )
 ```
 
-**4c. Add `dispatch_to_company` wrapper** — new public function that fan-outs to all matching endpoints for a company. Uses its own session (safe to call from `BackgroundTasks`):
+**4c. Add `dispatch_to_company` wrapper** — new public function that fan-outs to all matching endpoints for a company. Uses its own sessions (safe to call from `BackgroundTasks`). Each endpoint gets an **independent session** to avoid holding one DB connection across multiple long retry sleeps:
 
 ```python
 async def dispatch_to_company(
@@ -183,14 +188,18 @@ async def dispatch_to_company(
 ) -> None:
     """Fan out a webhook event to all active endpoints for a company.
 
-    Opens its own DB session — safe to use as a BackgroundTask after
-    the request session has been closed. In-process retry (asyncio.sleep)
-    means a background task may run for up to 81 minutes on 5 failed
-    attempts; this is acceptable for v1 fire-and-forget semantics.
+    Opens its own DB sessions — safe to use as a BackgroundTask after
+    the request session has been closed. Each endpoint gets a separate
+    session because dispatch_webhook_event may sleep up to 81 minutes
+    (5 retries × 60-min max delay) and calling db.commit() across
+    multiple endpoints on the same session is unsafe.
     """
     from sqlalchemy import select
     from app.models.webhook import WebhookEndpoint
 
+    # Step 1: Fetch matching endpoints in a short-lived read session.
+    # ORM instances remain accessible as detached objects after session close
+    # because WebhookEndpoint has no lazy-loaded relationships.
     async with session_factory() as db:
         result = await db.execute(
             select(WebhookEndpoint).where(
@@ -198,11 +207,15 @@ async def dispatch_to_company(
                 WebhookEndpoint.is_active.is_(True),
             )
         )
-        endpoints = result.scalars().all()
-        for ep in endpoints:
-            if ep.subscribes_to(event_type):
-                await dispatch_webhook_event(db, ep, event_type, data)
+        endpoints = [ep for ep in result.scalars().all() if ep.subscribes_to(event_type)]
+
+    # Step 2: Each endpoint gets its own session for delivery + retry.
+    for ep in endpoints:
+        async with session_factory() as ep_db:
+            await dispatch_webhook_event(ep_db, ep, event_type, data)
 ```
+
+**Migration note for `v1_calculate.py`**: The existing inline `calculation.completed` dispatch (lines ~881–897 in `v1_calculate.py`) uses the request session directly. Migrate it to use `dispatch_to_company` via `background_tasks.add_task` for consistency — doing so removes the in-request retry sleep risk for that event too.
 
 #### 5. `backend/app/api/routes/v1_webhooks.py`
 
@@ -228,21 +241,26 @@ class WebhookRegisterRequest(BaseModel):
         return v
 ```
 
-**5b.** Add `channel_type` to `WebhookResponse` and update `_endpoint_to_response` helper:
+**5b.** Add `channel_type` to `WebhookResponse` and update `_endpoint_to_response` helper.
+
+Change `events` type from `list[WebhookEventType]` to `list[str]` (intentional: response returns plain strings; request still uses `WebhookEventType` enum for validation). `WebhookRegisterResponse(WebhookResponse)` inherits `channel_type` automatically — no separate declaration needed there.
 
 ```python
 class WebhookResponse(BaseModel):
     id: str
     url: str
     description: str | None
-    events: list[str]
+    events: list[str]        # changed from list[WebhookEventType] — plain strings in response
     channel_type: str        # NEW
     is_active: bool
     created_at: str
 
 # In _endpoint_to_response():
+    events=sorted(ep.get_events()),              # already returns list[str]
     channel_type=ep.channel_type or "generic",   # NEW field
 ```
+
+Note: OpenAPI response schema changes from `enum[]` to `string[]` for `events`. This is acceptable — the request schema still validates against the enum.
 
 **5c.** Add test endpoint — calls `deliver_webhook_attempt` directly (bypasses `dispatch_webhook_event` pipeline; does NOT add `test.ping` to `SUPPORTED_EVENTS`):
 
@@ -288,7 +306,20 @@ async def test_webhook(
 
 #### 6. Event emission
 
-Add `background_tasks: BackgroundTasks` parameter to the relevant route handlers. Import `dispatch_to_company` and `async_session_maker` (from `app.core.db`).
+**`v1_gl.py`** — add `from fastapi import BackgroundTasks` to the fastapi imports at the top of the file. Add `background_tasks: BackgroundTasks` to the `post_journal_entry` signature:
+
+```python
+async def post_journal_entry(
+    entry_id: uuid.UUID,
+    background_tasks: BackgroundTasks,                   # NEW
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+```
+
+**`v1_calculate.py`** — `background_tasks: BackgroundTasks` is **already present** in the calculate route handler. No signature change needed. The existing inline `calculation.completed` dispatch must be migrated to `dispatch_to_company` (see §4c migration note).
+
+Add `from app.services.webhook_service import dispatch_to_company` and `from app.core.db import async_session_maker` to the deferred import block inside each emission call site (or top-of-file if not already present).
 
 **`v1_calculate.py`** — after the `CalculationRun` row is committed, before returning the response:
 
@@ -310,7 +341,7 @@ background_tasks.add_task(
 )
 ```
 
-Note: `CalculationRun` has no `total_notional` or `base_currency` column — use `trade_count` and `hedge_count` (real indexed columns). Richer fields (currency, notional) can be extracted from `run.run_envelope` JSONB at implementation time if the field path is confirmed.
+Note: `CalculationRun` has no `total_notional` or `base_currency` column — use `trade_count` and `hedge_count` (real indexed columns on the model). `je.amount` (`Numeric(20,6)`) and `je.currency` (`String(3)`) are confirmed real columns on `JournalEntry`. Richer calculation fields (currency, notional) can be extracted from `run.run_envelope` JSONB at implementation time if the field path is confirmed.
 
 **`v1_gl.py`** — add `background_tasks: BackgroundTasks` to `post_journal_entry`. After `je.posted_ref = result.external_ref` (success path, before `await session.commit()`):
 
