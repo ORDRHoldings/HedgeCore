@@ -1,9 +1,27 @@
 # Current Sprint
 
-Sprint: Production Readiness + E2E Coverage → Sub-project A: Live ERP End-to-End
-Status: COMPLETE + SHIPPED (last shipped 2026-04-27 Sub-project A)
+Sprint: Production Readiness + E2E Coverage → Sub-project B: Slack/Teams Notifications
+Status: COMPLETE + SHIPPED (last shipped 2026-04-27 Sub-project B)
 Started: 2026-04-22
-Updated: 2026-04-27 (Sub-project A: live QBO/Xero end-to-end activated; 5495 passed, 0 failed)
+Updated: 2026-04-27 (Sub-project B: Slack/Teams webhook notifications shipped; 5357 passed, 0 failed)
+
+## Sub-project B: Slack/Teams Notifications (2026-04-27)
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| N1 | `channel_type` on WebhookEndpoint + 3 new events in SUPPORTED_EVENTS | ✅ Done | ALTER TABLE migration in _ensure_tables() |
+| N2 | `notification_formatters.py` — Slack Block Kit + Teams MessageCard | ✅ Done | Pure function, no I/O |
+| N3 | `webhook_service.py` — channel_type delivery + dispatch_to_company | ✅ Done | Two-phase session safety; no HMAC for Slack/Teams |
+| N4 | `v1_webhooks.py` — ChannelType enum + POST /{id}/test | ✅ Done | is_active filter; WebhookTestResponse schema |
+| N5 | `v1_calculate.py` — hedge_run.completed emission | ✅ Done | Replaced _fire_webhook inline pattern |
+| N6 | `v1_gl.py` — journal_entry.posted + erp_post.failed | ✅ Done | BackgroundTasks + asyncio.create_task with _fire_tasks GC guard |
+| N7 | `webhookClient.ts` — list, register, delete, test | ✅ Done | parseOrThrow helper; 204-safe delete |
+| N8 | `/settings/notifications` page | ✅ Done | Channel form, type toggle, events multiselect, table |
+| N9 | AppSidebar — Notifications nav item (professional+) | ✅ Done | Bell icon, /settings/notifications |
+
+**Test baseline after Sub-project B: 5357 passed, 0 failed, 158 skipped (PG-only)**
+
+---
 
 ## Sub-project A: Live ERP End-to-End (2026-04-27)
 

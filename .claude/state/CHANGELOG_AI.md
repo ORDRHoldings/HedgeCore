@@ -1,5 +1,31 @@
 # Changelog (AI-maintained)
 
+## 2026-04-27 — Sub-project B complete: Slack/Teams webhook notifications
+
+Backend:
+- `channel_type` column on WebhookEndpoint (slack/teams/generic); ALTER TABLE migration in _ensure_tables()
+- `notification_formatters.py`: pure-function Slack Block Kit + Teams MessageCard formatters
+- `webhook_service.py`: channel_type-aware delivery (no HMAC header for Slack/Teams), `dispatch_to_company` two-phase session fan-out wrapper
+- `v1_webhooks.py`: ChannelType enum, channel_type in register/response, `POST /{id}/test` endpoint
+- `v1_calculate.py`: hedge_run.completed + calculation.completed emitted via dispatch_to_company
+- `v1_gl.py`: journal_entry.posted (BackgroundTasks) + erp_post.failed (asyncio.create_task with GC-safe _fire_tasks set)
+- 3 new events in SUPPORTED_EVENTS: hedge_run.completed, journal_entry.posted, erp_post.failed
+- 30+ new tests; suite: 5357 passed, 158 skipped, 0 failed
+
+Frontend:
+- `webhookClient.ts` rewritten: parseOrThrow helper, channel_type support, testWebhook function, 204-safe deleteWebhook
+- `/settings/notifications` page: channel type toggle (Slack/Teams/Generic), URL input, events multiselect, active channels table with test/delete
+- Notifications nav item in SETTINGS group (professional+ tier gate)
+
+Post-review fixes:
+- asyncio.create_task GC risk: added _fire_tasks set with done_callback
+- deleteWebhook 204 No Content: skip res.json() on success
+- Plan tier gate: blocks lite/smb, allows professional/enterprise/intelligence
+
+Commits: 34ea2c6..98b778f (14 commits) pushed to origin/master
+
+---
+
 ## 2026-04-27 — Sub-project A complete: Live ERP end-to-end activated
 
 Three bugs fixed:
