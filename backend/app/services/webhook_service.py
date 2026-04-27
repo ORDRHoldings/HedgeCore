@@ -78,6 +78,7 @@ async def deliver_webhook_attempt(
     url: str,
     secret: str,
     payload: dict[str, Any],
+    channel_type: str = "generic",
 ) -> dict[str, Any]:
     """
     POST the payload to url with HMAC signature header.
@@ -95,11 +96,12 @@ async def deliver_webhook_attempt(
     payload_json = json.dumps(payload, default=str)
     signature = compute_signature(secret, payload_json)
 
-    headers = {
+    headers: dict[str, str] = {
         "Content-Type": "application/json",
-        "X-ORDR-Signature": signature,
         "User-Agent": "ORDR-Terminal-Webhook/1.0",
     }
+    if channel_type == "generic":
+        headers["X-ORDR-Signature"] = signature
 
     try:
         async with httpx.AsyncClient(timeout=_DELIVERY_TIMEOUT) as client:
@@ -161,20 +163,27 @@ async def dispatch_webhook_event(
         WebhookDeliveryLog,
     )
 
+    from app.services.notification_formatters import format_payload  # noqa: PLC0415
+
     tenant_id = str(endpoint.company_id) if endpoint.company_id else "unknown"
-    payload = build_event_payload(event_type, tenant_id, data)
+    channel_type = getattr(endpoint, "channel_type", "generic") or "generic"
+    if channel_type in ("slack", "teams"):
+        outbound = format_payload(channel_type, event_type, data)
+    else:
+        outbound = build_event_payload(event_type, tenant_id, data)
 
     for attempt_num in range(1, MAX_ATTEMPTS + 1):
         result = await deliver_webhook_attempt(
             url=endpoint.url,
             secret=endpoint.secret,
-            payload=payload,
+            payload=outbound,
+            channel_type=channel_type,
         )
 
         log_row = WebhookDeliveryLog(
             endpoint_id=endpoint.id,
             event_type=event_type,
-            payload_json=payload,
+            payload_json=outbound,
             attempt=attempt_num,
             status=result["status"],
             response_status=result["response_status"],
@@ -186,7 +195,7 @@ async def dispatch_webhook_event(
         await db.flush()
 
         if result["status"] == "delivered":
-            await _emit_webhook_delivered_audit(db, endpoint, event_type, payload)
+            await _emit_webhook_delivered_audit(db, endpoint, event_type, outbound)
             await _prune_delivery_log(db, endpoint.id, DELIVERY_LOG_WINDOW)
             await db.commit()
             _log.info(
@@ -222,6 +231,46 @@ async def dispatch_webhook_event(
         endpoint.id,
         event_type,
     )
+
+
+async def dispatch_to_company(
+    session_factory: Any,
+    company_id: Any,
+    event_type: str,
+    data: dict[str, Any],
+) -> None:
+    """Fan out a webhook event to all active endpoints for a company.
+
+    Opens its own DB sessions — safe to call from FastAPI BackgroundTasks.
+    Each endpoint gets a separate session because dispatch_webhook_event
+    may sleep up to 81 minutes between retry attempts.
+    """
+    from sqlalchemy import select  # noqa: PLC0415
+
+    from app.models.webhook import WebhookEndpoint  # noqa: PLC0415
+
+    try:
+        async with session_factory() as db:
+            result = await db.execute(
+                select(WebhookEndpoint).where(
+                    WebhookEndpoint.company_id == company_id,
+                    WebhookEndpoint.is_active.is_(True),
+                )
+            )
+            endpoints = [ep for ep in result.scalars().all() if ep.subscribes_to(event_type)]
+    except Exception:  # noqa: BLE001
+        _log.warning("dispatch_to_company: failed to fetch endpoints for event=%s", event_type, exc_info=True)
+        return
+
+    for ep in endpoints:
+        try:
+            async with session_factory() as ep_db:
+                await dispatch_webhook_event(ep_db, ep, event_type, data)
+        except Exception:  # noqa: BLE001
+            _log.warning(
+                "dispatch_to_company: delivery failed endpoint_id=%s event=%s",
+                ep.id, event_type, exc_info=True,
+            )
 
 
 # ---------------------------------------------------------------------------
