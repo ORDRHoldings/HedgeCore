@@ -342,6 +342,9 @@ export default function AccountingConnectionPage() {
         const data = await resp.json() as { authorize_url: string | null; requires_form: boolean };
         if (!data.authorize_url) throw new Error("Provider requires form-based auth — not yet supported in this UI.");
 
+        const parsed = new URL(data.authorize_url);
+        if (parsed.protocol !== "https:") throw new Error("Authorize URL must use HTTPS.");
+
         const popup = window.open(
           data.authorize_url,
           "accounting-oauth",
