@@ -1,5 +1,31 @@
 # Changelog (AI-maintained)
 
+## 2026-04-27 — Phase 4 Production Readiness: security hardening + env/ops documentation
+
+Security:
+- Removed hardcoded `HC_DEV_KEY_001` fallback from `frontend/src/lib/api.ts` (header omitted when no key configured)
+- Removed `HC_DEV_KEY_001` fallback from `portfolio-risk/page.tsx` riskApiKey() (returns "" instead)
+- `/api/health` upgraded to dependency-aware: DB probe via SELECT 1, Redis ping; returns 503 when DB unreachable
+
+Observability verified:
+- Sentry LoggingIntegration(event_level=ERROR) captures all cron job failures automatically
+- All 5 cron jobs (audit_cleanup, compliance_evidence_export, gdpr_anonymise, webhook_cleanup, hash_chain_verify) log ERROR on failure → Sentry-capturable
+- hash_chain_verify raises HashChainBrokenError on integrity break (explicit Sentry comment in source)
+
+Documentation:
+- `backend/.env.example`: refreshed with SENTRY_DSN, CORS_ALLOW_VERCEL_PREVIEWS, CONNECTOR_ENCRYPTION_KEY, all 5 ERP OAuth provider credential sections, HEDGEWIKI_API_KEY
+- `frontend/.env.example`: refreshed with NEXT_PUBLIC_HEDGECALC_API_KEY (with bundle-exposure warning), removed stale JWT_SECRET
+
+Phase 4 items verified locally: [✅ next build <200kB] [✅ DB pool_size=20] [✅ Redis fail-open] [✅ Structured JSON logging] [✅ WORM hash chain] [✅ Sentry init exists] [✅ Cron alerting via LoggingIntegration] [✅ .env not committed]
+
+Remaining Phase 4 items blocked on external access: secret rotation (Render/Vercel), cold start timing (live Render), Redis cache hit ratio (deployed Redis), Alembic baseline (prod DB), Sentry DSN value (Sentry account).
+
+Test baseline: 5357 passed, 0 failed, 158 skipped (PG-only) — unchanged.
+
+Commit: 4a1465d
+
+---
+
 ## 2026-04-27 — Sub-project B complete: Slack/Teams webhook notifications
 
 Backend:
