@@ -65,7 +65,7 @@ class WebhookEndpoint(Base):
     # Comma-separated event names. Empty string = subscribe to all.
     events = Column(String(512), nullable=False, default="")
     is_active = Column(Boolean, nullable=False, default=True)
-    channel_type = Column(String(16), nullable=False, server_default="generic")
+    channel_type = Column(String(16), nullable=False, default="generic", server_default="generic")
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

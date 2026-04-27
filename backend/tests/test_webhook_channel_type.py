@@ -1,6 +1,5 @@
 """Tests for channel_type webhook extension."""
 from __future__ import annotations
-import pytest
 from app.models.webhook import SUPPORTED_EVENTS, CHANNEL_TYPES
 
 
