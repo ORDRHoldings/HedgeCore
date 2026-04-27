@@ -29,7 +29,6 @@ from app.schemas_v1.gl import (
     JournalEntryRead,
     JournalEntryRejectRequest,
 )
-from app.connectors import registry
 from app.services import gl_service
 from app.services.audit_emit import emit_audit
 from app.services.gl_posting_service import post_journal_entry as _post_je
@@ -235,8 +234,15 @@ async def post_journal_entry(
     erp_system = (company.settings or {}).get("erp_system", "CSV")
 
     if erp_system.lower() in ("quickbooks", "xero"):
+        from app.connectors import registry  # noqa: PLC0415
         from app.connectors.base import JournalLine, JournalPayload  # noqa: PLC0415
         from app.connectors.errors import ConnectorError, ConnectorNotConfiguredError  # noqa: PLC0415
+
+        if je.status != JournalEntryStatus.APPROVED.value:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Cannot post JournalEntry {je.id} — status is {je.status}, expected APPROVED",
+            )
 
         provider = erp_system.lower()
         connector = registry.get_connector(provider)
@@ -263,6 +269,10 @@ async def post_journal_entry(
             ),
         )
         try:
+            payload.assert_balanced()
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=f"Unbalanced journal entry: {exc}") from exc
+        try:
             result = await connector.post_journal(
                 tenant_id=current_user.company.id, payload=payload
             )
@@ -278,7 +288,7 @@ async def post_journal_entry(
 
         je.status = JournalEntryStatus.POSTED.value
         je.posted_to = provider[:4].upper()
-        je.posted_ref = result.external_ref or ""
+        je.posted_ref = result.external_ref
         je.posted_at = datetime.now(UTC)
     else:
         try:
@@ -296,7 +306,7 @@ async def post_journal_entry(
         event_type="SYSTEM",
         description=f"Journal entry {entry_id} posted to {erp_system}",
         entity_type="journal_entry", entity_id=str(entry_id),
-        payload={"erp_system": erp_system},
+        payload={"erp_system": erp_system, "erp_ref": getattr(je, "posted_ref", None)},
     )
     return je
 

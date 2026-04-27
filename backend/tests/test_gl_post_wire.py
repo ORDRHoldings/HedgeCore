@@ -123,7 +123,7 @@ class TestGlPostingUsesConnector:
         je_id = uuid.uuid4()
 
         with (
-            patch("app.api.routes.v1_gl.registry") as mock_registry,
+            patch("app.connectors.registry") as mock_registry,
             patch("app.api.routes.v1_gl._post_je", new_callable=AsyncMock) as mock_csv,
         ):
             mock_registry.get_connector.return_value = mock_connector
@@ -131,17 +131,32 @@ class TestGlPostingUsesConnector:
             from app.core.dependencies import get_current_user
             from app.core.db import get_async_session
 
+            import datetime as _dt
+            from decimal import Decimal as _D
+
             mock_je = MagicMock()
             mock_je.id = je_id
+            mock_je.company_id = uuid.uuid4()
+            mock_je.run_id = None
+            mock_je.ledger_entry_id = None
+            mock_je.settlement_event_id = None
             mock_je.status = "APPROVED"
-            mock_je.amount = 1000
-            mock_je.currency = "USD"
+            mock_je.entry_type = "HEDGE_EFFECTIVE"
+            mock_je.standard = "IFRS9"
             mock_je.debit_account = "1001"
             mock_je.credit_account = "2001"
+            mock_je.amount = _D("1000.00")
+            mock_je.currency = "USD"
+            mock_je.base_amount = _D("1000.00")
+            mock_je.base_currency = "USD"
+            mock_je.fx_rate_used = _D("1.0")
+            mock_je.period_date = _dt.date(2026, 1, 1)
             mock_je.description = "Test hedge"
-            mock_je.period_date = __import__("datetime").date(2026, 1, 1)
-            mock_je.entry_type = "HEDGE_EFFECTIVE"
-            mock_je.company_id = uuid.uuid4()
+            mock_je.posted_at = None
+            mock_je.posted_to = None
+            mock_je.posted_ref = None
+            mock_je.chain_seq = 1
+            mock_je.created_at = _dt.datetime(2026, 1, 1, tzinfo=_dt.timezone.utc)
 
             mock_company = MagicMock()
             mock_company.settings = {"erp_system": "quickbooks"}
@@ -163,6 +178,7 @@ class TestGlPostingUsesConnector:
                 resp = await client.post(f"/api/v1/gl/journal-entries/{je_id}/post")
                 app.dependency_overrides.clear()
 
+        assert resp.status_code == 200
         # connector.post_journal must have been called
         mock_connector.post_journal.assert_called_once()
         # CSV fallback must NOT have been called
@@ -180,10 +196,33 @@ class TestGlPostingUsesConnector:
         from app.core.dependencies import get_current_user
         from app.core.db import get_async_session
 
+        import datetime as _dt2
+        from decimal import Decimal as _D2
+
+        _je_id2 = uuid.uuid4()
         mock_je = MagicMock()
-        mock_je.id = uuid.uuid4()
-        mock_je.status = "APPROVED"
+        mock_je.id = _je_id2
         mock_je.company_id = uuid.uuid4()
+        mock_je.run_id = None
+        mock_je.ledger_entry_id = None
+        mock_je.settlement_event_id = None
+        mock_je.status = "APPROVED"
+        mock_je.entry_type = "HEDGE_EFFECTIVE"
+        mock_je.standard = "IFRS9"
+        mock_je.debit_account = "1001"
+        mock_je.credit_account = "2001"
+        mock_je.amount = _D2("500.00")
+        mock_je.currency = "USD"
+        mock_je.base_amount = _D2("500.00")
+        mock_je.base_currency = "USD"
+        mock_je.fx_rate_used = _D2("1.0")
+        mock_je.period_date = _dt2.date(2026, 1, 1)
+        mock_je.description = "CSV hedge"
+        mock_je.posted_at = None
+        mock_je.posted_to = None
+        mock_je.posted_ref = None
+        mock_je.chain_seq = 2
+        mock_je.created_at = _dt2.datetime(2026, 1, 1, tzinfo=_dt2.timezone.utc)
 
         mock_company = MagicMock()
         mock_company.settings = {}  # no erp_system
@@ -200,11 +239,12 @@ class TestGlPostingUsesConnector:
 
         csv_result = PostingResult(success=True, payload="csv_data", erp_ref="CSV-export")
 
-        with patch("app.api.routes.v1_gl._post_je", new_callable=AsyncMock, return_value=csv_result):
+        with patch("app.api.routes.v1_gl._post_je", new_callable=AsyncMock, return_value=csv_result) as mock_csv:
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
                 app.dependency_overrides[get_current_user] = lambda: mock_user
                 app.dependency_overrides[get_async_session] = lambda: mock_session
-                await client.post(f"/api/v1/gl/journal-entries/{mock_je.id}/post")
+                resp = await client.post(f"/api/v1/gl/journal-entries/{mock_je.id}/post")
                 app.dependency_overrides.clear()
-        # If we get here without an exception, the CSV path was hit
+        assert resp.status_code == 200
+        mock_csv.assert_called_once()
