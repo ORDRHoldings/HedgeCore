@@ -502,7 +502,7 @@ async def test_post_connector(
     # Pull first GL mapping for real account codes; fall back to "9999"
     mappings_result = await session.execute(
         sa_select(GLAccountMapping)
-        .where(GLAccountMapping.company_id == current_user.company.id)
+        .where(GLAccountMapping.company_id == current_user.company_id)
         .limit(1)
     )
     mappings = mappings_result.scalars().all()
@@ -548,7 +548,7 @@ async def test_post_connector(
         "success": True,
         "provider": provider,
         "erp_ref": result.external_ref,
-        "sandbox": getattr(settings, "QBO_ENVIRONMENT", "sandbox") == "sandbox",
+        "sandbox": True,  # test-post is always a non-production probe
         "error": None,
     }
 

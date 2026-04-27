@@ -22,6 +22,7 @@ def _make_mock_user(permissions=("trades.create",)):
 
     mock_user = MagicMock()
     mock_user.company = mock_company
+    mock_user.company_id = mock_company.id  # needed for company_id scalar access
     mock_user.role = MagicMock()
     mock_user.role.permissions = [mock_permission] if "trades.create" in permissions else []
     return mock_user
