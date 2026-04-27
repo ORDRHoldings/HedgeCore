@@ -1,5 +1,16 @@
 # Changelog (AI-maintained)
 
+## 2026-04-26 — Test coverage push: +63 tests (5264 → 5327)
+
+Four new test modules covering previously 0%-covered security and infrastructure:
+- `test_hash_chain_verifier.py` (16): verify_tenant_chain (empty chain, valid chain, hash_mismatch, genesis_mismatch, prev_hash_mismatch), verify_all_chains, run_hash_chain_verify_job (healthy/broken/message)
+- `test_connector_retry.py` (18): _BreakerState.is_open, retry() backoff+retries, check_breaker/record_success/record_failure state machine, call_with_guard routing
+- `test_connector_rate_limiter.py` (19): budget_for() lookup/default, _inmem_take() token math+refill+capacity cap, take() success/exhausted/fail-open, peek(), webhook_cleanup task error handling
+- `test_db_migrations.py` (5): SQLite skip guard, ASYNC_DATABASE_URL priority, Alembic upgrade invocation, non-fatal error fallback, asyncpg→psycopg2 URL conversion
+- `test_system_routes.py` (5): GET /system/health (200, status:ok, fields), GET /system/schema-health (redacted without key, values propagate)
+
+Also: `frontend/tsconfig.tsbuildinfo` removed from git tracking (build artifact).
+
 ## 2026-04-26 — Backend ruff zero (287 → 0 issues)
 
 313 issues autofixed via `ruff check app/ --fix` (I001 import sorting, UP017 datetime.UTC, UP045/UP037/UP035/UP041 annotation modernisation, B905, C420). Remaining 16 fixed manually:
