@@ -28,6 +28,7 @@ import logging
 import uuid as _uuid
 from datetime import UTC, datetime
 from decimal import Decimal
+from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Request, UploadFile
@@ -430,7 +431,7 @@ async def oauth_callback(
     except ConnectorError as exc:
         log.warning("connector.oauth_callback state verification failed: %s", exc.message)
         return RedirectResponse(
-            url=f"/accounting-oauth-callback?error=state_error&error_description={exc.message[:120]}",
+            url=f"/accounting-oauth-callback?error=state_error&error_description={quote(exc.message[:120])}",
             status_code=302,
         )
 
@@ -448,7 +449,7 @@ async def oauth_callback(
     except ConnectorError as exc:
         log.exception("connector.oauth_callback failed provider=%s tenant=%s", provider, tenant_id_)
         return RedirectResponse(
-            url=f"/accounting-oauth-callback?system={provider}&error=connector_error&error_description={exc.message[:120]}",
+            url=f"/accounting-oauth-callback?system={provider}&error=connector_error&error_description={quote(exc.message[:120])}",
             status_code=302,
         )
 

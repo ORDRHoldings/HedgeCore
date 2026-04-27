@@ -69,3 +69,5 @@ class TestOAuthCallbackRedirect:
         location = resp.headers["location"]
         assert "/accounting-oauth-callback" in location
         assert "/settings/connectors" not in location
+        assert "error=" in location
+        assert "error_description=" in location
