@@ -25,6 +25,7 @@ Endpoints:
 All endpoints require JWT unless noted. Scope resolved from token.
 """
 import logging
+import uuid as _uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
@@ -34,6 +35,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors import oauth_state, registry, token_vault
+from app.core.config import settings
 from app.connectors.base import JournalLine, JournalPayload
 from app.connectors.errors import ConnectorError
 from app.core.db import async_session_maker, get_async_session
@@ -480,6 +482,75 @@ async def disconnect_connector(
         entity_id=provider,
         payload={"provider": provider},
     )
+
+
+@router.post("/{provider}/test-post")
+async def test_post_connector(
+    provider: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Post a synthetic balanced journal entry to verify end-to-end connector health.
+    Does NOT create a JournalEntry row — this is a connectivity probe only.
+    """
+    await _check_permission(session, current_user, "trades.create")
+    tenant = _tenant_id(current_user)
+
+    from sqlalchemy import select as sa_select  # noqa: PLC0415
+    from app.models.journal_entry import GLAccountMapping  # noqa: PLC0415
+
+    # Pull first GL mapping for real account codes; fall back to "9999"
+    mappings_result = await session.execute(
+        sa_select(GLAccountMapping)
+        .where(GLAccountMapping.company_id == current_user.company.id)
+        .limit(1)
+    )
+    mappings = mappings_result.scalars().all()
+    dr_code = mappings[0].debit_account if mappings else "9999"
+    cr_code = mappings[0].credit_account if mappings else "9999"
+
+    payload = JournalPayload(
+        journal_entry_id=_uuid.uuid4(),
+        reference="ORDR-TEST",
+        memo="ORDR connectivity test — safe to delete",
+        posting_date=datetime.now(UTC),
+        lines=(
+            JournalLine(
+                account_external_id=dr_code,
+                debit=Decimal("100"),
+                credit=Decimal("0"),
+                description="Test debit",
+                currency="USD",
+            ),
+            JournalLine(
+                account_external_id=cr_code,
+                debit=Decimal("0"),
+                credit=Decimal("100"),
+                description="Test credit",
+                currency="USD",
+            ),
+        ),
+    )
+
+    try:
+        connector = registry.get_connector(provider)
+        result = await connector.post_journal(tenant_id=tenant, payload=payload)
+    except ConnectorError as exc:
+        return {
+            "success": False,
+            "provider": provider,
+            "error": exc.message,
+            "erp_ref": None,
+            "sandbox": True,
+        }
+
+    return {
+        "success": True,
+        "provider": provider,
+        "erp_ref": result.external_ref,
+        "sandbox": getattr(settings, "QBO_ENVIRONMENT", "sandbox") == "sandbox",
+        "error": None,
+    }
 
 
 @router.get("/{provider}/coa", response_model=COAResponse)
