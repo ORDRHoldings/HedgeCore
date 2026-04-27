@@ -47,4 +47,16 @@ test.describe('Settings Pages', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.locator('body')).toContainText('Connection', { timeout: 10000 });
   });
+
+  test('gl accounts settings loads', async ({ page }) => {
+    await navigateAuth(page, '/settings/gl-accounts');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('body')).toContainText('GL', { timeout: 10000 });
+  });
+
+  test('notifications page loads and shows webhook UI', async ({ page }) => {
+    await navigateAuth(page, '/settings/notifications');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('body')).toContainText('Webhook', { timeout: 10000 });
+  });
 });
