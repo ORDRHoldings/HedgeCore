@@ -30,10 +30,6 @@
 - **Status**: Open
 - **Opened**: 2026-04-14
 
-## RISK-GIT-02: master ~50 commits ahead of origin/master
-- **Severity**: MEDIUM
-- **Component**: git / CI
-- **Description**: Fast-forward merge from feat/treasury-suite-phase1 → master completed at HEAD 6b2856e. Push to origin deferred at user's discretion. CI gates have not been run against remote since before this sprint.
-- **Mitigation**: All tests pass locally (4839/0/158). tsc + next build clean. No frozen file changes without ADR. Ready to push when user approves.
-- **Status**: Open
-- **Opened**: 2026-04-14
+## RISK-GIT-02: master ahead of origin — CLOSED
+- **Status**: CLOSED 2026-04-28 — master pushed regularly; latest HEAD `0d34942` on origin.
+- **Opened**: 2026-04-14 / **Closed**: 2026-04-28
