@@ -10,21 +10,31 @@ POST /api/v1/seed/company
 
 """
 
+import hashlib
+import json as _json
 import logging
 import uuid
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Header, HTTPException
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.db import get_session
 from app.core.security import get_current_user, hash_password
+from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event, compute_event_hash
+from app.models.calculation_run import CalculationRun
+from app.models.counterparty import Counterparty, CreditLimit
+from app.models.execution_proposal import ExecutionProposal
 from app.models.organization import Branch, Company, Department
 from app.models.permission import SEED_PERMISSIONS, Permission, RolePermission
 from app.models.policy import PolicyTemplate
+from app.models.position import Position
 from app.models.rbac import Role, UserRole
 from app.models.user import User
+from app.models.webhook import WebhookEndpoint
 
 logger = logging.getLogger(__name__)
 
@@ -1070,3 +1080,367 @@ async def fix_smb_permissions(
     db.add(RolePermission(role_id=role.id, permission_id=perm.id))
     await db.commit()
     return {"status": "added", "role": "senior_analyst", "permission": "trades.execute"}
+
+
+# ── Demo Reset ────────────────────────────────────────────────────────────────
+# Wipes and reseeds all demo data for COMPANY_ID (Synex Capital).
+# WORM tables (calculation_runs, audit_events) are appended, not wiped.
+# Non-WORM tables (positions, counterparties, proposals, webhooks) are wiped clean.
+
+_DEMO_POSITIONS = [
+    # Historical — HEDGED (Q4 2025 — Q2 2026)
+    {"record_id": "POS-EUR-001", "entity": "Subsidiary A — Sales",      "flow_type": "AP", "currency": "EUR", "amount": 1_200_000.0, "value_date": "2026-01-31", "status": "CONFIRMED", "execution_status": "HEDGED", "hedge_rate": 1.0840, "execution_ref": "FWD-881234"},
+    {"record_id": "POS-EUR-002", "entity": "Sales Office EU",            "flow_type": "AR", "currency": "EUR", "amount": 850_000.0,  "value_date": "2026-02-28", "status": "CONFIRMED", "execution_status": "HEDGED", "hedge_rate": 1.0855, "execution_ref": "FWD-881235"},
+    {"record_id": "POS-JPY-001", "entity": "Manufacturing JP",           "flow_type": "AP", "currency": "JPY", "amount": 62_000_000.0,"value_date": "2026-01-15", "status": "CONFIRMED", "execution_status": "HEDGED", "hedge_rate": 0.00671,"execution_ref": "FWD-881236"},
+    {"record_id": "POS-GBP-001", "entity": "London Entity",              "flow_type": "AR", "currency": "GBP", "amount": 675_000.0,  "value_date": "2026-03-31", "status": "CONFIRMED", "execution_status": "HEDGED", "hedge_rate": 1.2720, "execution_ref": "FWD-881237"},
+    {"record_id": "POS-CHF-001", "entity": "Swiss Supplier",             "flow_type": "AP", "currency": "CHF", "amount": 320_000.0,  "value_date": "2026-02-15", "status": "CONFIRMED", "execution_status": "HEDGED", "hedge_rate": 1.1415, "execution_ref": "FWD-881238"},
+    {"record_id": "POS-MXN-001", "entity": "Mexico Operations",          "flow_type": "AP", "currency": "MXN", "amount": 3_100_000.0,"value_date": "2026-01-31", "status": "CONFIRMED", "execution_status": "HEDGED", "hedge_rate": 0.0581, "execution_ref": "FWD-881239"},
+    {"record_id": "POS-EUR-003", "entity": "Subsidiary A — Sales",      "flow_type": "AP", "currency": "EUR", "amount": 950_000.0,  "value_date": "2026-04-30", "status": "CONFIRMED", "execution_status": "HEDGED", "hedge_rate": 1.0830, "execution_ref": "FWD-881240"},
+    {"record_id": "POS-GBP-002", "entity": "London Entity",              "flow_type": "AR", "currency": "GBP", "amount": 540_000.0,  "value_date": "2026-05-31", "status": "CONFIRMED", "execution_status": "HEDGED", "hedge_rate": 1.2735, "execution_ref": "FWD-881241"},
+    {"record_id": "POS-JPY-002", "entity": "Japan Sales",                "flow_type": "AR", "currency": "JPY", "amount": 41_000_000.0,"value_date": "2026-04-15", "status": "CONFIRMED", "execution_status": "HEDGED", "hedge_rate": 0.00668,"execution_ref": "FWD-881242"},
+    # Active — open positions (Q3 — Q4 2026)
+    {"record_id": "POS-EUR-004", "entity": "Subsidiary A — Sales",      "flow_type": "AP", "currency": "EUR", "amount": 1_500_000.0, "value_date": "2026-07-31", "status": "CONFIRMED", "execution_status": "POLICY_ASSIGNED", "hedge_rate": None, "execution_ref": None},
+    {"record_id": "POS-GBP-003", "entity": "London Entity",              "flow_type": "AR", "currency": "GBP", "amount": 720_000.0,  "value_date": "2026-08-31", "status": "CONFIRMED", "execution_status": "POLICY_ASSIGNED", "hedge_rate": None, "execution_ref": None},
+    {"record_id": "POS-JPY-003", "entity": "Manufacturing JP",           "flow_type": "AP", "currency": "JPY", "amount": 56_000_000.0,"value_date": "2026-09-30", "status": "CONFIRMED", "execution_status": "NEW",             "hedge_rate": None, "execution_ref": None},
+    {"record_id": "POS-CHF-002", "entity": "Swiss Supplier",             "flow_type": "AP", "currency": "CHF", "amount": 490_000.0,  "value_date": "2026-07-15", "status": "CONFIRMED", "execution_status": "NEW",             "hedge_rate": None, "execution_ref": None},
+    {"record_id": "POS-EUR-005", "entity": "Sales Office EU",            "flow_type": "AR", "currency": "EUR", "amount": 1_100_000.0, "value_date": "2026-10-31", "status": "FORECAST",  "execution_status": "NEW",             "hedge_rate": None, "execution_ref": None},
+    {"record_id": "POS-MXN-002", "entity": "Mexico Operations",          "flow_type": "AP", "currency": "MXN", "amount": 3_800_000.0,"value_date": "2026-09-30", "status": "CONFIRMED", "execution_status": "READY_TO_EXECUTE","hedge_rate": None, "execution_ref": None},
+]
+
+_DEMO_COUNTERPARTIES = [
+    {"name": "Deutsche Bank AG",          "internal_code": "DB-001",  "legal_entity_name": "Deutsche Bank Aktiengesellschaft", "lei": "7LTWFZYICNSX8D621K86", "credit_rating": "A+",  "rating_agency": "S&P",     "country_iso": "DE", "last_exposure_usd": 18_500_000.0, "last_pfe_usd": 2_200_000.0, "risk_level_cached": "LOW",    "limit_type": "notional",    "limit_usd": 50_000_000.0},
+    {"name": "BNP Paribas SA",             "internal_code": "BNP-001", "legal_entity_name": "BNP Paribas Société Anonyme",      "lei": "R0MUWSFPU8MPRO8K5P83", "credit_rating": "AA-", "rating_agency": "Moody's",  "country_iso": "FR", "last_exposure_usd": 12_300_000.0, "last_pfe_usd": 1_400_000.0, "risk_level_cached": "LOW",    "limit_type": "notional",    "limit_usd": 40_000_000.0},
+    {"name": "Standard Chartered plc",    "internal_code": "SCB-001", "legal_entity_name": "Standard Chartered Bank plc",      "lei": "RILFO74KP1CM8P6PCT96", "credit_rating": "A",   "rating_agency": "Fitch",   "country_iso": "GB", "last_exposure_usd": 8_750_000.0,  "last_pfe_usd": 980_000.0,   "risk_level_cached": "MEDIUM", "limit_type": "notional",    "limit_usd": 25_000_000.0},
+    {"name": "JPMorgan Chase Bank NA",    "internal_code": "JPM-001", "legal_entity_name": "JPMorgan Chase Bank, National Association", "lei": "7H6GLXDRUGQFU57RNE97", "credit_rating": "AA-", "rating_agency": "S&P", "country_iso": "US", "last_exposure_usd": 22_100_000.0, "last_pfe_usd": 2_800_000.0, "risk_level_cached": "LOW",    "limit_type": "notional",    "limit_usd": 75_000_000.0},
+    {"name": "HSBC Bank plc",             "internal_code": "HSBC-01", "legal_entity_name": "HSBC Bank plc",                    "lei": "MP6I5ZYZBEU3UXPYFY54", "credit_rating": "AA-", "rating_agency": "Moody's",  "country_iso": "GB", "last_exposure_usd": 14_600_000.0, "last_pfe_usd": 1_750_000.0, "risk_level_cached": "LOW",    "limit_type": "notional",    "limit_usd": 35_000_000.0},
+    {"name": "Citibank NA",               "internal_code": "CITI-01", "legal_entity_name": "Citibank, N.A.",                   "lei": "E57ODZWZ7FF32TWEFA76", "credit_rating": "A+",  "rating_agency": "Fitch",   "country_iso": "US", "last_exposure_usd": 9_900_000.0,  "last_pfe_usd": 1_100_000.0, "risk_level_cached": "LOW",    "limit_type": "notional",    "limit_usd": 30_000_000.0},
+]
+
+
+def _sha256(data: object) -> str:
+    return hashlib.sha256(_json.dumps(data, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def _make_calc_run(
+    run_num: int,
+    company_id: uuid.UUID,
+    user_id: uuid.UUID,
+    position_ids: list[str],
+    currencies: list[str],
+    created_at: datetime,
+) -> CalculationRun:
+    run_id = f"DEMO-RUN-{run_num:03d}-{created_at.strftime('%Y%m%d')}"
+    inputs = {"positions": position_ids, "currencies": currencies, "as_of": created_at.isoformat()}
+    results = [
+        {"record_id": f"POS-{c}-00{i+1}", "hedge_ratio": 1.0, "instrument": "FX_FORWARD",
+         "effectiveness_score": round(0.91 + 0.01 * i, 3)}
+        for i, c in enumerate(currencies)
+    ]
+    outputs = {"results": results, "effectiveness": {"grade": "EFFECTIVE", "score": 0.96}}
+    inputs_hash  = _sha256(inputs)
+    outputs_hash = _sha256(outputs)
+    run_hash     = _sha256({"inputs": inputs_hash, "outputs": outputs_hash, "run_id": run_id})
+    run_envelope = {
+        "run_id": run_id, "version": "1.0.0", "engine": "engine_v1",
+        "created_at": created_at.isoformat(),
+        "inputs_hash": inputs_hash, "outputs_hash": outputs_hash, "run_hash": run_hash,
+        "market_snapshot": {
+            "as_of": created_at.isoformat(),
+            "rates": {"EUR/USD": 1.085, "GBP/USD": 1.272, "USD/JPY": 149.5, "USD/CHF": 0.875, "USD/MXN": 17.2},
+        },
+        "policy": {"short_name": "BLNC", "hedge_ratios": {"confirmed": 1.0, "forecast": 0.5}, "execution_product": "NDF"},
+        "results": results,
+        "effectiveness": {"method": "critical_terms_match", "score": 0.96, "grade": "EFFECTIVE", "threshold": 0.80},
+        "metadata": {"computation_ms": 42, "positions_processed": len(position_ids), "hedges_generated": len(position_ids)},
+    }
+    trace_lite = [
+        {"stage": "VALIDATE_INPUT",       "ok": True, "ms": 2,  "items": len(position_ids)},
+        {"stage": "MARKET_SNAPSHOT",       "ok": True, "ms": 7,  "pairs": currencies},
+        {"stage": "BUCKET_POSITIONS",      "ok": True, "ms": 12, "buckets": len(currencies)},
+        {"stage": "APPLY_POLICY",          "ok": True, "ms": 18, "policy": "BLNC"},
+        {"stage": "COMPUTE_HEDGES",        "ok": True, "ms": 38, "hedges": len(position_ids)},
+        {"stage": "EFFECTIVENESS_TEST",    "ok": True, "ms": 44, "score": 0.96, "grade": "EFFECTIVE"},
+        {"stage": "HASH_CHAIN",            "ok": True, "ms": 45},
+    ]
+    return CalculationRun(
+        id=run_id,
+        company_id=company_id,
+        user_id=user_id,
+        inputs_hash=inputs_hash,
+        outputs_hash=outputs_hash,
+        run_hash=run_hash,
+        position_ids=position_ids,
+        run_envelope=run_envelope,
+        trace_lite=trace_lite,
+        trade_count=len(position_ids),
+        hedge_count=len(position_ids),
+        created_at=created_at,
+    )
+
+
+@router.post("/demo-reset")
+async def reset_demo_data(
+    db: AsyncSession = Depends(get_session),
+    x_api_key: str = Header(default=None, alias="X-API-Key"),
+):
+    """
+    DEMO: Wipe and reseed all demo data for the Synex Capital tenant (COMPANY_ID).
+    Positions, counterparties, credit limits, proposals, and webhooks are wiped.
+    Calculation runs and audit events are appended (WORM semantics preserved).
+    Protected by API key. Safe to call between prospect demos.
+    """
+    expected_keys = [getattr(settings, "HC_MASTER_KEY", None), "HC_DEV_KEY_001"]
+    if x_api_key not in [k for k in expected_keys if k]:
+        raise HTTPException(status_code=403, detail="Invalid API key")
+
+    now = datetime.now(UTC)
+    results: dict[str, int] = {
+        "positions_deleted": 0, "counterparties_deleted": 0,
+        "positions_created": 0, "counterparties_created": 0,
+        "credit_limits_created": 0, "calc_runs_created": 0,
+        "webhook_created": 0, "proposal_created": 0,
+    }
+
+    try:
+        # ── 1. Wipe non-WORM tables ──────────────────────────────────────────
+        del_proposals = await db.execute(
+            sa_delete(ExecutionProposal).where(ExecutionProposal.company_id == COMPANY_ID)
+        )
+        del_positions = await db.execute(
+            sa_delete(Position).where(Position.company_id == COMPANY_ID)
+        )
+        del_cl = await db.execute(
+            sa_delete(CreditLimit).where(CreditLimit.tenant_id == COMPANY_ID)
+        )
+        del_cp = await db.execute(
+            sa_delete(Counterparty).where(Counterparty.tenant_id == COMPANY_ID)
+        )
+        await db.execute(
+            sa_delete(WebhookEndpoint).where(WebhookEndpoint.company_id == COMPANY_ID)
+        )
+        results["positions_deleted"]     = del_positions.rowcount or 0
+        results["counterparties_deleted"] = del_cp.rowcount or 0
+        await db.flush()
+
+        # ── 2. Resolve demo user (created_by for positions) ──────────────────
+        demo_user_row = (await db.execute(
+            select(User).where(User.email == "demo", User.company_id == COMPANY_ID)
+        )).scalars().first()
+        if not demo_user_row:
+            # Fallback: any user in this company
+            demo_user_row = (await db.execute(
+                select(User).where(User.company_id == COMPANY_ID).limit(1)
+            )).scalars().first()
+        if not demo_user_row:
+            raise HTTPException(status_code=422, detail="No user found for COMPANY_ID — run /v1/seed/company first")
+
+        demo_user_id = demo_user_row.id
+
+        # ── 3. Create positions ──────────────────────────────────────────────
+        created_positions: list[Position] = []
+        pending_pos: Position | None = None
+
+        for p in _DEMO_POSITIONS:
+            days_back = 0 if p["execution_status"] in {"NEW", "POLICY_ASSIGNED", "READY_TO_EXECUTE"} else 30
+            pos_created = now - timedelta(days=days_back + 10)
+            pos = Position(
+                id=uuid.uuid4(),
+                company_id=COMPANY_ID,
+                branch_id=BRANCH_HQ_ID,
+                created_by=demo_user_id,
+                record_id=p["record_id"],
+                entity=p["entity"],
+                flow_type=p["flow_type"],
+                currency=p["currency"],
+                amount=p["amount"],
+                value_date=p["value_date"],
+                status=p["status"],
+                description=f"Demo position — Synex Capital FX programme",
+                execution_status=p["execution_status"],
+                is_active=True,
+                created_at=pos_created,
+                updated_at=pos_created,
+            )
+            if p["hedge_rate"] is not None:
+                pos.hedge_rate = p["hedge_rate"]
+                pos.hedge_amount = p["amount"]
+                pos.execution_ref = p["execution_ref"]
+                pos.executed_at = pos_created + timedelta(days=3)
+            db.add(pos)
+            created_positions.append(pos)
+            if p["execution_status"] == "READY_TO_EXECUTE" and pending_pos is None:
+                pending_pos = pos
+            results["positions_created"] += 1
+
+        await db.flush()
+
+        # ── 4. Create counterparties + credit limits ─────────────────────────
+        for cp_data in _DEMO_COUNTERPARTIES:
+            cp = Counterparty(
+                id=uuid.uuid4(),
+                tenant_id=COMPANY_ID,
+                name=cp_data["name"],
+                internal_code=cp_data["internal_code"],
+                legal_entity_name=cp_data["legal_entity_name"],
+                lei=cp_data["lei"],
+                credit_rating=cp_data["credit_rating"],
+                rating_agency=cp_data["rating_agency"],
+                country_iso=cp_data["country_iso"],
+                active=True,
+                last_exposure_usd=cp_data["last_exposure_usd"],
+                last_pfe_usd=cp_data["last_pfe_usd"],
+                risk_level_cached=cp_data["risk_level_cached"],
+                last_scored_at=now - timedelta(hours=2),
+            )
+            db.add(cp)
+            await db.flush()
+            results["counterparties_created"] += 1
+
+            cl = CreditLimit(
+                id=uuid.uuid4(),
+                counterparty_id=cp.id,
+                tenant_id=COMPANY_ID,
+                limit_type=cp_data["limit_type"],
+                limit_amount_usd=cp_data["limit_usd"],
+                currency="USD",
+                effective_date=now - timedelta(days=365),
+                active=True,
+                created_by_user_id=demo_user_id,
+            )
+            db.add(cl)
+            results["credit_limits_created"] += 1
+
+        await db.flush()
+
+        # ── 5. Create calculation runs (WORM — append) ────────────────────────
+        hedged_ids  = [str(p.id) for p in created_positions if p.execution_status == "HEDGED"][:6]
+        active_ids  = [str(p.id) for p in created_positions if p.execution_status in {"POLICY_ASSIGNED", "NEW"}][:5]
+
+        run_count = (await db.execute(
+            select(CalculationRun).where(CalculationRun.company_id == COMPANY_ID)
+        )).scalars().all()
+        next_num = len(run_count) + 1
+
+        run1 = _make_calc_run(next_num,     COMPANY_ID, demo_user_id, hedged_ids,
+                              ["EUR", "GBP", "JPY", "CHF", "MXN"],
+                              now - timedelta(days=60))
+        run2 = _make_calc_run(next_num + 1, COMPANY_ID, demo_user_id, active_ids,
+                              ["EUR", "GBP", "JPY"],
+                              now - timedelta(hours=3))
+        db.add(run1)
+        db.add(run2)
+        results["calc_runs_created"] = 2
+        await db.flush()
+
+        # ── 6. Create Slack webhook endpoint ─────────────────────────────────
+        wh = WebhookEndpoint(
+            id=uuid.uuid4(),
+            company_id=COMPANY_ID,
+            url="https://hooks.slack.com/services/T00000000/B00000000/DEMO_WEBHOOK_TOKEN",
+            secret="demo-webhook-secret-replace-with-real",
+            description="Treasury Alerts — #fx-risk-desk",
+            events="calculation.completed,proposal.approved,proposal.rejected,hedge_run.completed",
+            is_active=True,
+            channel_type="slack",
+        )
+        db.add(wh)
+        results["webhook_created"] = 1
+        await db.flush()
+
+        # ── 7. Create pending execution proposal (maker/checker demo) ─────────
+        if pending_pos is not None:
+            payload = {
+                "execution_ref": "FWD-PENDING-999001",
+                "hedge_amount": pending_pos.amount,
+                "hedge_rate": 0.0578,
+                "instrument": "FX_FORWARD",
+                "settlement_date": pending_pos.value_date,
+                "notes": "Awaiting 4-eyes approval — checker review required",
+            }
+            proposal_hash = _sha256(payload)
+            db.add(ExecutionProposal(
+                id=uuid.uuid4(),
+                position_id=pending_pos.id,
+                company_id=COMPANY_ID,
+                branch_id=BRANCH_HQ_ID,
+                status="PROPOSED",
+                proposed_by=demo_user_id,
+                proposed_by_email=demo_user_row.email,
+                proposed_at=now - timedelta(hours=1),
+                proposal_payload=payload,
+                proposal_hash=proposal_hash,
+                created_at=now - timedelta(hours=1),
+                updated_at=now - timedelta(hours=1),
+            ))
+            results["proposal_created"] = 1
+            await db.flush()
+
+        # ── 8. Append audit events (WORM — chain from GENESIS) ───────────────
+        prev_hash = GENESIS_HASH
+        ts = now - timedelta(hours=6)
+        ts_step = timedelta(milliseconds=1)
+
+        def _emit(event_type: str, description: str, payload: dict, entity_id: str | None = None) -> None:
+            nonlocal prev_hash, ts
+            ts = ts + ts_step
+            evt = build_audit_event(
+                prev_event_hash=prev_hash,
+                event_type=event_type,
+                description=description,
+                payload=payload,
+                company_id=COMPANY_ID,
+                branch_id=BRANCH_HQ_ID,
+                actor_id=demo_user_id,
+                actor_email=demo_user_row.email,
+                actor_role="senior_analyst",
+                entity_type="position" if entity_id else None,
+                entity_id=entity_id,
+            )
+            evt.created_at = ts
+            evt.event_hash = compute_event_hash(
+                event_type=evt.event_type,
+                actor_id=str(evt.actor_id) if evt.actor_id else None,
+                entity_id=str(evt.entity_id) if evt.entity_id else None,
+                payload=evt.payload,
+                created_at=ts,
+                prev_hash=prev_hash,
+            )
+            db.add(evt)
+            prev_hash = evt.event_hash
+
+        _emit("SYSTEM", "Demo tenant reset — fresh data loaded",
+              {"reset_at": now.isoformat(), "positions": results["positions_created"],
+               "counterparties": results["counterparties_created"]})
+
+        for pos in created_positions[:5]:
+            _emit("INGEST", f"Position {pos.record_id} imported",
+                  {"record_id": pos.record_id, "currency": pos.currency,
+                   "amount": pos.amount, "flow_type": pos.flow_type},
+                  entity_id=str(pos.id))
+            if pos.execution_status == "HEDGED":
+                _emit("LIFECYCLE", f"{pos.record_id} → HEDGED",
+                      {"from": "READY_TO_EXECUTE", "to": "HEDGED",
+                       "hedge_rate": pos.hedge_rate, "execution_ref": pos.execution_ref},
+                      entity_id=str(pos.id))
+
+        _emit("CALCULATE", f"Hedge plan computed for {len(hedged_ids)} positions",
+              {"run_id": run1.id, "positions": len(hedged_ids), "engine_version": "1.0.0",
+               "effectiveness_score": 0.96, "computation_ms": 42})
+
+        await db.commit()
+        logger.info(f"demo-reset complete: {results}")
+
+        return {
+            "status": "success",
+            "tenant": "Synex Capital Partners",
+            "reset_at": now.isoformat(),
+            "summary": results,
+            "demo_login": {"email": "demo", "password": "demo"},
+            "calc_runs": [run1.id, run2.id],
+            "pending_proposal_position": pending_pos.record_id if pending_pos else None,
+        }
+
+    except Exception as e:
+        await db.rollback()
+        logger.exception(f"demo-reset failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
