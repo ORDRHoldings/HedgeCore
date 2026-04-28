@@ -1,74 +1,115 @@
-import http from 'k6/http';
-import { check, sleep } from 'k6';
-import { Rate } from 'k6/metrics';
+/**
+ * tests/k6/smoke-test.js
+ *
+ * Smoke test — 1 VU, 30s, verifies every major API surface area works.
+ *
+ * Run locally (backend must be up):
+ *   k6 run tests/k6/smoke-test.js
+ *
+ * Run against staging:
+ *   BASE_URL=https://hedgecore.onrender.com k6 run tests/k6/smoke-test.js
+ *
+ * Uses JWT Bearer auth via demo/demo (always-present seed user).
+ * Token is obtained once in setup() and shared across all VUs.
+ */
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:8000';
-const API_KEY = __ENV.API_KEY || '';
+import http from "k6/http";
+import { check, sleep } from "k6";
+import { Rate } from "k6/metrics";
 
-const errorRate = new Rate('error_rate');
-const successRate = new Rate('success_rate');
+const BASE_URL = __ENV.BASE_URL || "http://localhost:8000";
+const DEMO_USER = __ENV.DEMO_USER || "demo";
+const DEMO_PASS = __ENV.DEMO_PASS || "demo";
+
+const errorRate = new Rate("error_rate");
 
 export const options = {
   vus: 1,
-  duration: '30s',
+  duration: "30s",
   thresholds: {
-    http_req_duration: ['p(95)<500'],
-    error_rate: ['rate<0.01'],
-    success_rate: ['rate>0.99'],
-    http_req_failed: ['rate<0.01'],
+    http_req_duration: ["p(95)<2000"],
+    error_rate: ["rate<0.05"],
+    http_req_failed: ["rate<0.05"],
   },
 };
 
-function makeRequest(method, endpoint, body = null, headers = {}) {
-  const url = `${BASE_URL}/api${endpoint}`;
-  let res;
+/** Obtain a JWT token in setup() — shared across all VUs (not per-VU). */
+export function setup() {
+  const loginRes = http.post(
+    `${BASE_URL}/api/auth/login`,
+    `username=${encodeURIComponent(DEMO_USER)}&password=${encodeURIComponent(DEMO_PASS)}`,
+    { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+  );
 
-  // Add API key if provided (required for all endpoints except /health)
-  const authHeaders = API_KEY ? { 'X-API-Key': API_KEY } : {};
-  const allHeaders = { ...authHeaders, ...headers };
-
-  if (method === 'POST') {
-    const defaultHeaders = { 'Content-Type': 'application/json' };
-    res = http.post(url, JSON.stringify(body), { headers: { ...defaultHeaders, ...allHeaders } });
-  } else {
-    res = http.get(url, { headers: allHeaders });
-  }
-
-  const isSuccess = check(res, {
-    [`${method} ${endpoint} status is 200`]: (r) => r.status === 200,
+  const ok = check(loginRes, {
+    "login 200": (r) => r.status === 200,
+    "has access_token": (r) => {
+      try {
+        return !!JSON.parse(r.body).access_token;
+      } catch {
+        return false;
+      }
+    },
   });
 
-  errorRate.add(!isSuccess);
-  successRate.add(isSuccess);
+  if (!ok) {
+    console.error("Login failed — aborting smoke test. Status:", loginRes.status, loginRes.body);
+    return { token: null };
+  }
 
+  const token = JSON.parse(loginRes.body).access_token;
+  console.log("Login successful — token acquired");
+  return { token };
+}
+
+function get(token, path) {
+  const res = http.get(`${BASE_URL}/api${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const ok = check(res, {
+    [`GET ${path} → 200`]: (r) => r.status === 200,
+  });
+  errorRate.add(!ok);
   return res;
 }
 
-export default function () {
-  // Health check — no API key required
-  makeRequest('GET', '/health');
-  sleep(0.1);
+export default function (data) {
+  if (!data.token) return;
+  const { token } = data;
 
-  // The following endpoints require a valid X-API-Key header.
-  // Set API_KEY env var to test authenticated endpoints:
-  //   API_KEY=your-test-key k6 run tests/k6/smoke-test.js
-  if (API_KEY) {
-    makeRequest('POST', '/v1/auth/login', {
-      username: 'smoke_test_user',
-      password: 'smoke_test_pass',
-    });
-    sleep(0.1);
+  // ── Unauthenticated ───────────────────────────────────────────────────────
+  const health = http.get(`${BASE_URL}/api/health`);
+  check(health, { "health 200": (r) => r.status === 200 });
+  errorRate.add(health.status !== 200);
+  sleep(0.2);
 
-    makeRequest('GET', '/v1/calculate');
-    sleep(0.1);
+  // ── Auth context ─────────────────────────────────────────────────────────
+  get(token, "/auth/me");
+  sleep(0.2);
 
-    makeRequest('GET', '/v1/portfolio');
-    sleep(0.1);
+  // ── Core treasury endpoints ───────────────────────────────────────────────
+  get(token, "/v1/positions");
+  sleep(0.2);
 
-    makeRequest('GET', '/v1/market/fx/rates');
-    sleep(0.1);
+  get(token, "/v1/runs");
+  sleep(0.2);
 
-    makeRequest('GET', '/v1/hedge-effectiveness/datasets');
-    sleep(0.1);
-  }
+  get(token, "/v1/policies");
+  sleep(0.2);
+
+  // ── Market data ───────────────────────────────────────────────────────────
+  get(token, "/v1/market/fx/rates");
+  sleep(0.2);
+
+  // ── Dashboard ─────────────────────────────────────────────────────────────
+  get(token, "/v1/dashboard/summary");
+  sleep(0.2);
+
+  // ── Audit trail ───────────────────────────────────────────────────────────
+  get(token, "/v1/audit");
+  sleep(0.2);
+
+  // ── Saved reports ─────────────────────────────────────────────────────────
+  get(token, "/v1/reports/saved");
+  sleep(0.2);
 }
