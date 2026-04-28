@@ -1,24 +1,22 @@
 /**
  * frontend/e2e/decision-desk.spec.ts
  *
- * E2E smoke tests for Decision Desk pages.
+ * Smoke tests for treasury operations pages — audit trail and cash positions.
+ * Replaces legacy tests that targeted the non-existent /decision-desk route.
  */
 
 import { test, expect } from "@playwright/test";
 
-test.describe("Decision Desk", () => {
-  test("renders page or redirects to login", async ({ page }) => {
-    await page.goto("/decision-desk");
+test.describe("Treasury Operations — Audit Trail & Cash Positions", () => {
+  test("audit trail renders or redirects to login", async ({ page }) => {
+    await page.goto("/audit-trail");
     const url = page.url();
-    const isDecisionDesk = url.includes("/decision-desk");
-    const isAuth = url.includes("/auth");
-    expect(isDecisionDesk || isAuth).toBe(true);
+    expect(url.includes("/audit-trail") || url.includes("/auth")).toBe(true);
   });
 
-  test("run detail page is reachable with valid UUID", async ({ page }) => {
-    const fakeRunId = "00000000-0000-0000-0000-000000000001";
-    await page.goto(`/decision-desk/runs/${fakeRunId}`);
+  test("cash positions page is reachable", async ({ page }) => {
+    await page.goto("/cash-positions");
     const url = page.url();
-    expect(url.includes("/decision-desk") || url.includes("/auth")).toBe(true);
+    expect(url.includes("/cash-positions") || url.includes("/auth")).toBe(true);
   });
 });

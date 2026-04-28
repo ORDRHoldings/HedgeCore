@@ -19,7 +19,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { loginAsDemo, getCapturedToken } from "./helpers/auth";
 
-const BACKEND = "https://hedgecore.onrender.com/api";
+const BACKEND = process.env.E2E_API_URL || "http://localhost:8000/api";
 
 /** Helper: fetch positions array from paginated API response */
 async function fetchPositions(
