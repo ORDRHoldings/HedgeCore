@@ -40,11 +40,17 @@ async function waitAndClick(page: Page, selector: string, opts?: { timeout?: num
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Full pipeline test requires a live backend (not just the frontend).
+// Run explicitly: E2E_FULL=1 npx playwright test e2e/hedge_desk_e2e_full.spec.ts
+// Skip in standard CI (webServer only starts the Next.js app, not the backend).
+const RUN_FULL = !!process.env.E2E_FULL;
+
 test.describe("Hedge Desk — Full Pipeline E2E", () => {
 
   test.setTimeout(300_000); // 5 minutes for the full pipeline
 
   test("full pipeline: select → assign → calculate → risk → review → execute → hedged", async ({ page }) => {
+    test.skip(!RUN_FULL, "Set E2E_FULL=1 to run the full pipeline test against a live backend");
 
     // ── SETUP ─────────────────────────────────────────────────────────────────
     await step(page, "00 - Login");
