@@ -203,11 +203,12 @@ Score calibration:
 
 export async function analyzeGeoIntelligence(
   headlines: { headline: string; url?: string; datetime?: number }[],
+  options: { allowAi?: boolean } = {},
 ): Promise<GeoIntelligence> {
   const ts            = Date.now();
   const headlineTexts = headlines.map((h) => h.headline);
 
-  if (ANT_KEY && headlineTexts.length > 0) {
+  if (options.allowAi !== false && ANT_KEY && headlineTexts.length > 0) {
     const claude = await callClaudeGeoAnalysis(headlineTexts);
     if (claude) {
       const score = Math.max(0, Math.min(10, claude.geo_risk_score ?? 2));

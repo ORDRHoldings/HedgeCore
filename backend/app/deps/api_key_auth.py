@@ -55,7 +55,7 @@ class ServicePrincipal:
             "key_id": self.key_id,
             "owner_user_id": str(self.owner_user_id) if self.owner_user_id else None,
             "scopes": self.scopes,
-            "status": self.status.value,
+            "status": self.status.value if hasattr(self.status, "value") else str(self.status),
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
         }
 

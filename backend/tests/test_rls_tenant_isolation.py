@@ -8,8 +8,9 @@ and cross-tenant isolation with pool_size >= 3.
 from __future__ import annotations
 
 import uuid
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock
 
 
 class TestRLSModuleStructure:
@@ -20,6 +21,7 @@ class TestRLSModuleStructure:
     def test_rls_uses_set_local(self):
         """Source must use SET LOCAL (not SET) to keep setting transaction-scoped."""
         import inspect
+
         from app.core import rls
         src = inspect.getsource(rls)
         assert "SET LOCAL" in src, "RLS must use SET LOCAL for transaction-scoping"
@@ -28,6 +30,7 @@ class TestRLSModuleStructure:
 
     def test_rls_module_does_not_use_connection_scoped_set(self):
         import inspect
+
         from app.core import rls
         src = inspect.getsource(rls)
         lines = src.splitlines()
@@ -50,10 +53,11 @@ class TestRLSInjectionInterface:
         company_id = uuid.uuid4()
         await inject_tenant_rls(mock_session, str(company_id))
 
-        mock_session.execute.assert_called_once()
-        call_args = mock_session.execute.call_args
-        sql_text = str(call_args[0][0])
+        assert mock_session.execute.call_count == 2
+        sql_text = "\n".join(str(call.args[0]) for call in mock_session.execute.call_args_list)
         assert "SET LOCAL" in sql_text or "set local" in sql_text.lower()
+        assert "app.current_tenant_id" in sql_text
+        assert "app.bypass_tenant_rls" in sql_text
 
     @pytest.mark.asyncio
     async def test_inject_tenant_rls_with_none_uses_empty_string(self):
@@ -64,7 +68,21 @@ class TestRLSInjectionInterface:
         mock_session.execute = AsyncMock()
 
         await inject_tenant_rls(mock_session, None)
-        mock_session.execute.assert_called_once()
+        assert mock_session.execute.call_count == 2
+
+    def test_context_helpers_round_trip(self):
+        from app.core.rls import (
+            clear_tenant_rls_context,
+            get_tenant_rls_context,
+            set_tenant_rls_context,
+        )
+
+        company_id = str(uuid.uuid4())
+        set_tenant_rls_context(company_id, bypass=True)
+        assert get_tenant_rls_context() == (company_id, True)
+
+        clear_tenant_rls_context()
+        assert get_tenant_rls_context() == (None, False)
 
 
 @pytest.mark.requires_postgres
@@ -98,6 +116,7 @@ class TestRLSPostgresPoolIsolation:
     @pytest.mark.asyncio
     async def test_concurrent_sessions_no_cross_tenant_leak(self, pg_engine):
         import asyncio
+
         from sqlalchemy import text
         from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 

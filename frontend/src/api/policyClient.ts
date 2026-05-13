@@ -5,31 +5,18 @@ import axios from "axios";
 import type { PolicyConfig } from "./types";
 import type { PolicyPreset } from "@/constants/policyPresets";
 import type { QuestionnaireAnswers, AIPolicyResult, AIPolicyRecommendation } from "@/app/api/policy-ai/route";
-import { logger } from "@/lib/logger";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
 function getApiKey(): string {
-  // 1. Env var always takes priority in all environments.
-  if (process.env.NEXT_PUBLIC_HEDGECALC_API_KEY) return process.env.NEXT_PUBLIC_HEDGECALC_API_KEY;
-  // 2. DEV-KEY-1: localStorage override is ONLY allowed in development.
-  //    In production a stale localStorage key must never silently authenticate
-  //    without a corresponding env var — fail-closed, not fail-open.
   if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
     const stored = localStorage.getItem("hc_api_key");
     if (stored) return stored;
   }
-  logger.warn(
-    "[policyClient] No API key found. Set NEXT_PUBLIC_HEDGECALC_API_KEY (all envs) " +
-    "or localStorage.setItem('hc_api_key', '<key>') (dev only)."
-  );
   return "";
 }
 
 function authHeaders(token?: string): Record<string, string> {
-  // DEV-KEY-1: Omit X-API-Key header entirely when key is empty — sending an
-  // empty header value is semantically wrong and may cause spurious 400s on some
-  // API gateways. Bearer-only auth is valid without the key header.
   const headers: Record<string, string> = {};
   const apiKey = getApiKey();
   if (apiKey) headers["X-API-Key"] = apiKey;
@@ -159,18 +146,22 @@ export async function createPolicyTemplate(
 }
 
 // ---------------------------------------------------------------------------
-// AI Policy Suggestion — calls the Next.js /api/policy-ai route (server-side)
-// No auth required — the Claude API key lives on the server.
+// AI Policy Suggestion — calls the Next.js /api/policy-ai route (server-side).
+// The route verifies the caller's JWT before using server-side AI credentials.
 // ---------------------------------------------------------------------------
 
 export type { QuestionnaireAnswers, AIPolicyResult, AIPolicyRecommendation };
 
 export async function suggestPolicyAI(
   answers: QuestionnaireAnswers,
+  token?: string | null,
 ): Promise<AIPolicyResult> {
   const res = await fetch("/api/policy-ai", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({ answers }),
   });
   if (!res.ok) {

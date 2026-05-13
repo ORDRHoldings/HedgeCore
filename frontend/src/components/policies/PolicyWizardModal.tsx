@@ -388,7 +388,7 @@ export default function PolicyWizardModal({ open, onClose, token, onApply, onSav
       setAiLoading(true); setAiError(""); setAiResult(null); setSelectedIdx(0);
       try {
         const qa = mapWizardStateToQA(state);
-        const result = await suggestPolicyAI(qa);
+        const result = await suggestPolicyAI(qa, token);
         setAiResult(result);
         setPolicyName(result.suggested.name);
         setPolicyTag(result.suggested.shortName.toLowerCase());
@@ -398,7 +398,7 @@ export default function PolicyWizardModal({ open, onClose, token, onApply, onSav
         setAiLoading(false);
       }
     }
-  }, [step, state]);
+  }, [step, state, token]);
 
   const goBack = useCallback(() => {
     if (step > 0) setStep(s => s - 1);

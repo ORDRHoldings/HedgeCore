@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { POLICY_PRESETS } from '@/constants/policyPresets';
 import type { PolicyPreset } from '@/constants/policyPresets';
+import { requireVerifiedBearer } from '@/lib/server/auth';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AI Policy Builder API Route
@@ -606,6 +607,9 @@ Return ONLY the JSON policy object as specified.`;
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
+    const auth = await requireVerifiedBearer(req);
+    if (!auth.ok) return auth.response;
+
     const body = await req.json() as { answers: QuestionnaireAnswers };
     const { answers } = body;
 

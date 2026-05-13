@@ -8,10 +8,13 @@ API-key protected unless explicitly public.
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.db import async_engine
+from app.core.db import async_engine, get_async_session
 from app.core.schema_state import is_schema_ready, run_readiness_checks_cached
 from app.deps.api_key_auth import get_api_key_principal as require_api_key
+from app.deps.api_key_auth import require_api_key_scopes
+from app.services.api_keys import verify_api_key_header
 
 router = APIRouter(prefix="/system", tags=["system"])
 
@@ -132,6 +135,7 @@ async def whoami_api_key(api_key=Depends(require_api_key)):
 @router.get("/schema-health", include_in_schema=True)
 async def schema_health_endpoint(
     x_api_key: str | None = Header(None, alias="X-API-Key"),
+    session: AsyncSession = Depends(get_async_session),
 ):
     """Schema readiness check — verifies WORM store, critical indexes, and triggers.
 
@@ -165,8 +169,11 @@ async def schema_health_endpoint(
         }
 
     # ── Full diagnostic response (authenticated callers only) ─────────────────
-    # The middleware has already validated x_api_key before reaching here.
-    # Permission system.schema.read is the RBAC gate for this level of detail.
+    # Schema-health remains publicly pollable for redacted booleans, so this route
+    # must verify the key itself before returning internal object names/checks.
+    api_key = await verify_api_key_header(session, x_api_key, required_scopes=["system.schema.read"])
+    if not api_key:
+        raise HTTPException(403, "Invalid API key or missing system.schema.read scope")
     return {
         "startup_schema_ready": is_schema_ready(),
         **live,
@@ -174,16 +181,8 @@ async def schema_health_endpoint(
 
 
 @router.get("/db-tables", include_in_schema=False)
-async def db_tables(x_api_key: str = Header(..., alias="X-API-Key")):
+async def db_tables(_api_key=Depends(require_api_key_scopes(["system.schema.read"]))):
     """List all tables and their columns for diagnostics."""
-    import os
-
-    from app.core.config import settings as _settings
-    allowed = [k for k in [getattr(_settings, "HC_MASTER_KEY", None), (
-        "HC_DEV_KEY_001" if os.getenv("ENV", "development").lower() != "production" else None
-    )] if k]
-    if x_api_key not in allowed:
-        raise HTTPException(403, "Invalid key")
     async with async_engine.connect() as conn:
         result = await conn.execute(text(
             "SELECT table_name FROM information_schema.tables "

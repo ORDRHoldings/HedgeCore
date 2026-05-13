@@ -2,14 +2,12 @@
 """cash_forecast_items and cash_forecast_snapshots tables
 
 Revision ID: 0022
-Revises: 0021
+Revises: 0021_cash_audit_events
 """
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 revision = "0022"
-down_revision = "0021"
+down_revision = "0021_cash_audit_events"
 branch_labels = None
 depends_on = None
 

@@ -185,18 +185,28 @@ async def verify_api_key_header(
     if str(api_key.status).lower() != ApiKeyStatus.ACTIVE.value.lower():
         return None
 
+    expires_at = api_key.expires_at
+    if expires_at is not None:
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=UTC)
+        if expires_at <= datetime.now(UTC):
+            return None
+
     if not verify_secret_hash(secret, api_key.secret_hash):
         return None
 
     if required_scopes and not api_key.has_scopes(required_scopes):
         return None
 
-    await session.execute(
-        update(ApiKey)
-        .where(ApiKey.id == api_key.id)
-        .values(last_used_at=datetime.now(UTC))
-    )
-    await session.commit()
+    try:
+        await session.execute(
+            update(ApiKey)
+            .where(ApiKey.id == api_key.id)
+            .values(last_used_at=datetime.now(UTC))
+        )
+        await session.commit()
+    except Exception:
+        await session.rollback()
 
     return api_key
 

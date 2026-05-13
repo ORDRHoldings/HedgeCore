@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 // Keyed by lowercase system ID (matches what the page sends).
 // `brandColor` (not `color`) so the lint rule's AST selector for hex literals
@@ -12,12 +12,26 @@ const SYSTEM_META: Record<string, { displayName: string; brandColor: string }> =
   netsuite:   { displayName: "NetSuite",           brandColor: "#E6A817" },
 };
 
+function sanitizeSystemId(value: string | null): string {
+  return (value ?? "quickbooks").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40) || "quickbooks";
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+  })[char] ?? char);
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const systemId = (searchParams.get("system") ?? "quickbooks").toLowerCase();
+  const systemId = sanitizeSystemId(searchParams.get("system"));
 
-  const meta        = SYSTEM_META[systemId] ?? { displayName: systemId, brandColor: "#22d3ee" };
-  const displayName = meta.displayName;
+  const meta        = SYSTEM_META[systemId] ?? { displayName: "Accounting system", brandColor: "#22d3ee" };
+  const displayName = escapeHtml(meta.displayName);
   const color       = meta.brandColor;
 
   const baseUrl     = req.nextUrl.origin;

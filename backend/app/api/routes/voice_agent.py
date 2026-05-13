@@ -177,10 +177,14 @@ async def _call_hedgecore(name: str, args: dict, token: str) -> dict:
                     }
             except Exception:
                 pass
-            # Ensure the requested pair is present; fall back to stale value if missing
+            # Ensure the requested pair is present. Do not calculate with a
+            # guessed/stale rate; voice output can be actioned by users.
             if pair not in market:
-                market[pair] = 17.24  # last-resort fallback — logged below
-                logger.warning("Voice calculate_hedge: live rate for %s unavailable, using fallback 17.24", pair)
+                logger.warning("Voice calculate_hedge: live rate for %s unavailable; failing closed", pair)
+                return {
+                    "error": "market_rate_unavailable",
+                    "detail": f"Live market rate for {pair} is unavailable. Hedge calculation was not run.",
+                }
 
             payload = {
                 "trades": [{

@@ -32,12 +32,11 @@ from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Request, UploadFile
-from pydantic import BaseModel
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors import oauth_state, registry, token_vault
-from app.core.config import settings
 from app.connectors.base import JournalLine, JournalPayload
 from app.connectors.errors import ConnectorError
 from app.core.db import async_session_maker, get_async_session
@@ -510,6 +509,7 @@ async def test_post_connector(
     tenant = _tenant_id(current_user)
 
     from sqlalchemy import select as sa_select  # noqa: PLC0415
+
     from app.models.journal_entry import GLAccountMapping  # noqa: PLC0415
 
     # Pull first GL mapping for real account codes; fall back to "9999"

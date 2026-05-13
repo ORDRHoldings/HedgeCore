@@ -12,14 +12,12 @@ const API_BASE =
 
 const api = axios.create({ baseURL: `${API_BASE}/v1` });
 
-// Attach X-API-Key header on every request.
-// Priority: NEXT_PUBLIC_HEDGECALC_API_KEY env var > localStorage (dev only).
-// Omit header entirely if no key is available — sending an empty value causes 400s.
+// Attach a dev-only X-API-Key override when explicitly set in localStorage.
+// Production browser requests must authenticate with user-scoped Bearer tokens.
 api.interceptors.request.use((config) => {
-  let key = process.env.NEXT_PUBLIC_HEDGECALC_API_KEY ?? "";
-  if (!key && process.env.NODE_ENV === "development" && typeof window !== 'undefined') {
-    key = localStorage.getItem('hc_api_key') ?? "";
-  }
+  const key = process.env.NODE_ENV === "development" && typeof window !== 'undefined'
+    ? localStorage.getItem('hc_api_key') ?? ""
+    : "";
   if (key) config.headers['X-API-Key'] = key;
   return config;
 });

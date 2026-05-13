@@ -11,7 +11,7 @@ import asyncio
 import csv
 import io as _io
 import uuid
-from datetime import UTC, date, datetime, time
+from datetime import UTC, datetime, time
 from decimal import Decimal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
@@ -32,9 +32,9 @@ from app.schemas_v1.gl import (
     JournalEntryRejectRequest,
 )
 from app.services import gl_service
-from app.services.webhook_service import dispatch_to_company
 from app.services.audit_emit import emit_audit
 from app.services.gl_posting_service import post_journal_entry as _post_je
+from app.services.webhook_service import dispatch_to_company
 
 router = APIRouter(prefix="/v1/gl", tags=["v1-gl"])
 
@@ -243,7 +243,10 @@ async def post_journal_entry(
     if erp_system.lower() in ("quickbooks", "xero"):
         from app.connectors import registry  # noqa: PLC0415
         from app.connectors.base import JournalLine, JournalPayload  # noqa: PLC0415
-        from app.connectors.errors import ConnectorError, ConnectorNotConfiguredError  # noqa: PLC0415
+        from app.connectors.errors import (  # noqa: PLC0415
+            ConnectorError,
+            ConnectorNotConfiguredError,
+        )
 
         if je.status != JournalEntryStatus.APPROVED.value:
             raise HTTPException(

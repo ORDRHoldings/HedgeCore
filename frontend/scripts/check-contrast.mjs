@@ -73,7 +73,7 @@ for (const [label, fg, bg, min] of PAIRS) {
   const pass = ratio >= min;
   const icon = pass ? '✓' : '✗';
   const status = pass ? 'PASS' : `FAIL (min ${min}:1)`;
-  console.log(`${icon} ${ratio.toFixed(2)}:1  ${label}  [${status}]`);
+  process.stdout.write(`${icon} ${ratio.toFixed(2)}:1  ${label}  [${status}]\n`);
   if (!pass) failed++;
 }
 
@@ -81,5 +81,5 @@ if (failed > 0) {
   console.error(`\n${failed} contrast pair(s) below WCAG AA threshold.`);
   process.exit(1);
 } else {
-  console.log('\nAll contrast checks passed.');
+  process.stdout.write('\nAll contrast checks passed.\n');
 }

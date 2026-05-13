@@ -162,7 +162,6 @@ async def dispatch_webhook_event(
         RETRY_DELAYS_MINUTES,
         WebhookDeliveryLog,
     )
-
     from app.services.notification_formatters import format_payload  # noqa: PLC0415
 
     tenant_id = str(endpoint.company_id) if endpoint.company_id else "unknown"

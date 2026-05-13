@@ -60,8 +60,6 @@ type VerifyState = "idle" | "verifying" | "pass" | "fail" | "error";
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function getApiKey(): string {
-  if (process.env.NEXT_PUBLIC_HEDGECALC_API_KEY) return process.env.NEXT_PUBLIC_HEDGECALC_API_KEY;
-  // DEV-KEY-1: localStorage only in development
   if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
     const stored = localStorage.getItem("hc_api_key");
     if (stored) return stored;

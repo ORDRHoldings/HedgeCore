@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import time
 from collections.abc import Callable
 
@@ -46,7 +47,7 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
         app,
         *,
         header_name: str = "X-API-Key",
-        required_scope: str = "engine:recommend",
+        required_scope: str | None = None,
     ) -> None:
         super().__init__(app)
         self.header_name = header_name
@@ -97,10 +98,6 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
 
         self._keys: dict[str, APIKeyRecord] = {}
 
-        # DEV bootstrap key — only registered in non-production environments.
-        # In production (ENV=production) this key is intentionally absent so
-        # that the only valid API keys are those stored in the database.
-        import os
         if os.getenv("ENV", "development").lower() != "production":
             bootstrap_key = "HC_DEV_KEY_001"
             key_hash = _stable_hash(bootstrap_key)
@@ -123,12 +120,21 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
         rec = self._keys.get(key_hash)
         if not rec or not rec.active:
             return None
-        if self.required_scope not in rec.scopes:
+        if self.required_scope and self.required_scope not in rec.scopes:
             return None
         return rec
 
+    async def _authorize_db_key(self, raw_key: str):
+        if not raw_key.startswith("HK_live_"):
+            return None
+        from app.core.db import async_session_maker
+        from app.services.api_keys import verify_api_key_header
+
+        required = [self.required_scope] if self.required_scope else []
+        async with async_session_maker() as session:
+            return await verify_api_key_header(session, raw_key, required_scopes=required)
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        import os
         # Allow full bypass in test environments (CI / unit tests with dependency_overrides).
         if os.getenv("API_KEY_AUTH_DISABLED", "").lower() in ("1", "true", "yes"):
             return await call_next(request)
@@ -157,8 +163,14 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
             )
 
         rec = self._authorize(raw_key)
-
+        db_key = None
         if not rec:
+            try:
+                db_key = await self._authorize_db_key(raw_key)
+            except Exception:
+                db_key = None
+
+        if not rec and not db_key:
             return JSONResponse(
                 status_code=403,
                 content={
@@ -167,8 +179,12 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        rec.last_used_at_ms = _now_ms()
-        request.state.api_key_hash = rec.key_hash
-        request.state.api_scopes = list(rec.scopes)
+        if rec:
+            rec.last_used_at_ms = _now_ms()
+            request.state.api_key_hash = rec.key_hash
+            request.state.api_scopes = list(rec.scopes)
+        else:
+            request.state.api_key_id = db_key.key_id
+            request.state.api_scopes = list(db_key.scopes or [])
 
         return await call_next(request)

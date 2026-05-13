@@ -19,6 +19,15 @@ const S = {
   bgDeep: "var(--bg-deep)",
   bgSub: "var(--bg-sub)",
   rim: "var(--border-rim)",
+  accent: "var(--accent-blue)",
+  danger: "var(--status-fail)",
+  success: "var(--status-pass)",
+  text: "var(--text-primary)",
+  textMuted: "var(--text-secondary)",
+  disabled: "var(--text-disabled)",
+  inverse: "var(--bg-deep)",
+  slack: "color-mix(in srgb, var(--accent-red) 50%, var(--accent-indigo))",
+  teams: "var(--accent-indigo)",
 } as const;
 
 const ALL_EVENTS = [
@@ -32,9 +41,9 @@ const ALL_EVENTS = [
 ];
 
 const CHANNEL_LABELS: Record<string, { label: string; color: string }> = {
-  slack: { label: "Slack", color: "#4A154B" },
-  teams: { label: "Teams", color: "#6264A7" },
-  generic: { label: "Generic", color: "#374151" },
+  slack: { label: "Slack", color: S.slack },
+  teams: { label: "Teams", color: S.teams },
+  generic: { label: "Generic", color: S.bgSub },
 };
 
 function NotificationsPageInner() {
@@ -146,8 +155,8 @@ function NotificationsPageInner() {
             top: 20,
             right: 20,
             zIndex: 9999,
-            background: toast.ok ? "#059669" : "#DC2626",
-            color: "#fff",
+            background: toast.ok ? S.success : S.danger,
+            color: S.inverse,
             padding: "10px 18px",
             borderRadius: 6,
             fontFamily: S.fontUI,
@@ -169,7 +178,7 @@ function NotificationsPageInner() {
             padding: 24,
           }}
         >
-          <div style={{ fontFamily: S.fontMono, fontSize: 11, color: "#9CA3AF", marginBottom: 16, letterSpacing: 1 }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.textMuted, marginBottom: 16, letterSpacing: 1 }}>
             ADD CHANNEL
           </div>
 
@@ -184,7 +193,7 @@ function NotificationsPageInner() {
                   borderRadius: 4,
                   border: channelType === ct ? "none" : `1px solid ${S.rim}`,
                   background: channelType === ct ? (CHANNEL_LABELS[ct].color) : "transparent",
-                  color: channelType === ct ? "#fff" : "#9CA3AF",
+                  color: channelType === ct ? S.inverse : S.textMuted,
                   fontFamily: S.fontUI,
                   fontSize: 12,
                   cursor: "pointer",
@@ -212,16 +221,16 @@ function NotificationsPageInner() {
                 width: "100%",
                 padding: "8px 12px",
                 background: S.bgDeep,
-                border: `1px solid ${urlError ? "#DC2626" : S.rim}`,
+                border: `1px solid ${urlError ? S.danger : S.rim}`,
                 borderRadius: 4,
-                color: "#E5E7EB",
+                color: S.text,
                 fontFamily: S.fontMono,
                 fontSize: 12,
                 boxSizing: "border-box",
               }}
             />
             {urlError && (
-              <div style={{ color: "#DC2626", fontSize: 11, marginTop: 4, fontFamily: S.fontUI }}>
+              <div style={{ color: S.danger, fontSize: 11, marginTop: 4, fontFamily: S.fontUI }}>
                 {urlError}
               </div>
             )}
@@ -229,7 +238,7 @@ function NotificationsPageInner() {
 
           {/* Events multiselect */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontFamily: S.fontUI, fontSize: 11, color: "#9CA3AF", marginBottom: 8 }}>
+            <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.textMuted, marginBottom: 8 }}>
               EVENTS (leave empty to subscribe to all)
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -242,7 +251,7 @@ function NotificationsPageInner() {
                     gap: 6,
                     fontFamily: S.fontMono,
                     fontSize: 11,
-                    color: selectedEvents.includes(ev) ? "#E5E7EB" : "#9CA3AF",
+                    color: selectedEvents.includes(ev) ? S.text : S.textMuted,
                     cursor: "pointer",
                   }}
                 >
@@ -250,7 +259,7 @@ function NotificationsPageInner() {
                     type="checkbox"
                     checked={selectedEvents.includes(ev)}
                     onChange={() => toggleEvent(ev)}
-                    style={{ accentColor: "#1C62F2" }}
+                    style={{ accentColor: S.accent }}
                   />
                   {ev}
                 </label>
@@ -266,8 +275,8 @@ function NotificationsPageInner() {
               alignItems: "center",
               gap: 6,
               padding: "8px 20px",
-              background: saving || !url ? "#374151" : "#1C62F2",
-              color: "#fff",
+              background: saving || !url ? S.disabled : S.accent,
+              color: S.inverse,
               border: "none",
               borderRadius: 4,
               fontFamily: S.fontUI,
@@ -282,20 +291,20 @@ function NotificationsPageInner() {
 
         {/* Active channels list */}
         <section>
-          <div style={{ fontFamily: S.fontMono, fontSize: 11, color: "#9CA3AF", marginBottom: 12, letterSpacing: 1 }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.textMuted, marginBottom: 12, letterSpacing: 1 }}>
             ACTIVE CHANNELS ({endpoints.length} / 5)
           </div>
 
           {loading ? (
-            <div style={{ color: "#9CA3AF", fontFamily: S.fontUI, fontSize: 13 }}>Loading...</div>
+            <div style={{ color: S.textMuted, fontFamily: S.fontUI, fontSize: 13 }}>Loading...</div>
           ) : endpoints.length === 0 ? (
-            <div style={{ color: "#9CA3AF", fontFamily: S.fontUI, fontSize: 13 }}>
+            <div style={{ color: S.textMuted, fontFamily: S.fontUI, fontSize: 13 }}>
               No channels configured. Add one above.
             </div>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ fontFamily: S.fontMono, fontSize: 10, color: "#9CA3AF", textAlign: "left" }}>
+                <tr style={{ fontFamily: S.fontMono, fontSize: 10, color: S.textMuted, textAlign: "left" }}>
                   <th style={{ padding: "6px 12px" }}>TYPE</th>
                   <th style={{ padding: "6px 12px" }}>URL</th>
                   <th style={{ padding: "6px 12px" }}>EVENTS</th>
@@ -314,8 +323,8 @@ function NotificationsPageInner() {
                     <td style={{ padding: "10px 12px" }}>
                       <span
                         style={{
-                          background: CHANNEL_LABELS[ep.channel_type]?.color ?? "#374151",
-                          color: "#fff",
+                          background: CHANNEL_LABELS[ep.channel_type]?.color ?? S.bgSub,
+                          color: S.inverse,
                           padding: "2px 8px",
                           borderRadius: 3,
                           fontFamily: S.fontMono,
@@ -325,10 +334,10 @@ function NotificationsPageInner() {
                         {CHANNEL_LABELS[ep.channel_type]?.label ?? ep.channel_type}
                       </span>
                     </td>
-                    <td style={{ padding: "10px 12px", fontFamily: S.fontMono, fontSize: 11, color: "#E5E7EB" }}>
+                    <td style={{ padding: "10px 12px", fontFamily: S.fontMono, fontSize: 11, color: S.text }}>
                       {ep.url.length > 48 ? ep.url.slice(0, 45) + "…" : ep.url}
                     </td>
-                    <td style={{ padding: "10px 12px", fontFamily: S.fontUI, fontSize: 12, color: "#9CA3AF" }}>
+                    <td style={{ padding: "10px 12px", fontFamily: S.fontUI, fontSize: 12, color: S.textMuted }}>
                       {ep.events.length === 0 ? "all" : `${ep.events.length} event${ep.events.length !== 1 ? "s" : ""}`}
                     </td>
                     <td style={{ padding: "10px 12px", display: "flex", gap: 8 }}>
@@ -340,7 +349,7 @@ function NotificationsPageInner() {
                           background: "transparent",
                           border: `1px solid ${S.rim}`,
                           borderRadius: 4,
-                          color: "#9CA3AF",
+                          color: S.textMuted,
                           padding: "4px 10px",
                           cursor: testing === ep.id ? "not-allowed" : "pointer",
                           display: "flex",
@@ -360,7 +369,7 @@ function NotificationsPageInner() {
                           background: "transparent",
                           border: `1px solid ${S.rim}`,
                           borderRadius: 4,
-                          color: "#DC2626",
+                          color: S.danger,
                           padding: "4px 8px",
                           cursor: "pointer",
                         }}

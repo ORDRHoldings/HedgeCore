@@ -25,6 +25,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
+from app.core.rls import TenantRLSAsyncSession, clear_tenant_rls_context
 
 # ---------------------------------------------------------------------------
 # Engine Configuration
@@ -47,7 +48,7 @@ async_session_maker = async_sessionmaker(
     bind=engine,
     expire_on_commit=False,
     autoflush=False,
-    class_=AsyncSession,
+    class_=TenantRLSAsyncSession,
 )
 
 # ---------------------------------------------------------------------------
@@ -76,6 +77,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         await session.rollback()
         raise
     finally:
+        clear_tenant_rls_context()
         await session.close()
         log.debug("? Async DB session closed cleanly.")
 

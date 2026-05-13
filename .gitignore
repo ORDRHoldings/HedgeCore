@@ -48,6 +48,10 @@ infra/.terraform/
 # Test artifacts
 .coverage
 htmlcov/
+.pytest_cache/
+backend/.pytest_cache/
+backend/tests/.artifacts/
+LOG/
 
 # Docker overrides
 docker-compose.override.yml

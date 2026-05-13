@@ -1,11 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
+
+function sanitizeLabel(value: string | null, fallback: string): string {
+  const cleaned = (value ?? fallback).replace(/[^\w .-]/g, "").trim().slice(0, 48);
+  return cleaned || fallback;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+  })[char] ?? char);
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const system   = searchParams.get("system")    ?? "ERP";
+  const system   = sanitizeLabel(searchParams.get("system"), "ERP");
   const clientId = searchParams.get("client_id") ?? "";
+  const systemHtml = escapeHtml(system);
 
   const baseUrl     = req.nextUrl.origin;
   const callbackUrl = `${baseUrl}/erp-oauth-callback?system=${encodeURIComponent(system)}&client_id=${encodeURIComponent(clientId)}`;
@@ -53,7 +69,7 @@ export async function GET(req: NextRequest) {
 <body>
   <div class="card">
     <div class="label">ORDR TERMINAL \u00b7 OAUTH 2.0 AUTHORIZATION</div>
-    <div class="system">${system}</div>
+    <div class="system">${systemHtml}</div>
     <div class="msg">
       Simulating vendor authorization consent. In production, this page is hosted by
       the ERP vendor and requires your corporate credentials to grant ORDR read access.

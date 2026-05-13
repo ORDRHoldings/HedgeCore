@@ -42,6 +42,8 @@ PyJWT==2.10.1
 pytest==8.4.2
 pytest-asyncio==1.2.0
 pytest-cov==7.0.0
+ruff>=0.14.0,<0.15
+mypy>=1.18.0,<1.19
 python-dotenv==1.1.1
 python-jose==3.5.0
 pyotp==2.9.0

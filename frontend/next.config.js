@@ -63,6 +63,12 @@ const nextConfig = {
 
 module.exports = withSentryConfig(withBundleAnalyzer(nextConfig), {
   silent: !process.env.SENTRY_AUTH_TOKEN,
-  disableSourceMapUpload: !process.env.SENTRY_AUTH_TOKEN,
-  disableLogger: true,
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 });

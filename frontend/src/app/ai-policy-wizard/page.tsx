@@ -1766,7 +1766,7 @@ export default function AIPolicyWizardPage() {
       setSaveError('');
       try {
         const qa = mapWizardStateToQA(state);
-        const result = await suggestPolicyAI(qa);
+        const result = await suggestPolicyAI(qa, token);
         setAiResult(result);
         // UX-POLICY-2: Do NOT auto-select — analyst must explicitly choose a recommendation
         // before the save button becomes available, preventing accidental saves.
@@ -1778,7 +1778,7 @@ export default function AIPolicyWizardPage() {
         setAiLoading(false);
       }
     }
-  }, [stepIdx, state]);
+  }, [stepIdx, state, token]);
 
   const goBack = useCallback(() => { if (stepIdx > 0) setStepIdx(s => s - 1); }, [stepIdx]);
 

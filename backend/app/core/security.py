@@ -28,7 +28,7 @@ Phase VIII Add-on (API Keys):
 
   - expires_at must be in the future (UTC-safe)
 
-  - secret hash verification (bcrypt)
+  - canonical Argon2id+pepper secret hash verification
 
 """
 
@@ -501,19 +501,7 @@ async def verify_api_key(raw_api_key: str, db: AsyncSession) -> Any:
 
     """
 
-    Canonical API key verifier.
-
-
-
-    Enforces:
-
-    - status == active
-
-    - expires_at is None OR expires_at > now (UTC)
-
-    - secret matches stored hash (bcrypt)
-
-
+    Compatibility wrapper around the canonical Argon2id+pepper API-key verifier.
 
     Returns:
 
@@ -527,120 +515,13 @@ async def verify_api_key(raw_api_key: str, db: AsyncSession) -> Any:
 
     """
 
-    from app.models.api_key import ApiKey  # local import to avoid circulars
+    from app.services.api_keys import verify_api_key_header
 
-
-
-    key_id, secret = _parse_api_key(raw_api_key)
-
-
-
-    result = await db.execute(select(ApiKey).where(ApiKey.key_id == key_id))
-
-    key = result.scalars().first()
-
-
-
+    key = await verify_api_key_header(db, raw_api_key, required_scopes=[])
     if not key:
-
-        logger.warning("API key not found key_id=%s", _redact_key_id(key_id))
-
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
 
-
-
-    # Status enforcement
-
-    if getattr(key, "status", None) != "active":
-
-        logger.warning(
-
-            "API key rejected (non-active) key_id=%s status=%s",
-
-            _redact_key_id(key_id),
-
-            getattr(key, "status", None),
-
-        )
-
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
-
-
-
-    # Expiry enforcement (UTC-safe)
-
-    expires_at = getattr(key, "expires_at", None)
-
-    if expires_at is not None:
-
-        # Normalize naive timestamps as UTC
-
-        if isinstance(expires_at, datetime) and expires_at.tzinfo is None:
-
-            expires_at = expires_at.replace(tzinfo=UTC)
-
-
-
-        if isinstance(expires_at, datetime) and expires_at <= _now_utc():
-
-            logger.warning("API key rejected (expired) key_id=%s", _redact_key_id(key_id))
-
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API key expired")
-
-
-
-    # Secret verification (bcrypt)
-
-    stored_hash = getattr(key, "secret_hash", None)
-
-    if not stored_hash:
-
-        logger.error("API key missing secret hash key_id=%s", _redact_key_id(key_id))
-
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
-
-
-
-    try:
-
-        ok = bcrypt.checkpw(secret.encode("utf-8"), stored_hash.encode("utf-8"))
-
-    except Exception as exc:
-
-        logger.exception("API key secret verification error key_id=%s err=%s", _redact_key_id(key_id), exc)
-
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
-
-
-
-    if not ok:
-
-        logger.warning("API key rejected (bad secret) key_id=%s", _redact_key_id(key_id))
-
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
-
-
-
-    # Update last_used_at opportunistically (best-effort)
-
-    try:
-
-        key.last_used_at = _now_utc()
-
-        await db.commit()
-
-    except Exception:
-
-        # Never block auth on telemetry
-
-        await db.rollback()
-
-        logger.debug("API key last_used_at update failed (non-fatal) key_id=%s", _redact_key_id(key_id))
-
-
-
-    logger.info("API key accepted key_id=%s", _redact_key_id(key_id))
-
+    logger.info("API key accepted key_id=%s", _redact_key_id(getattr(key, "key_id", "")))
     return key
 
 

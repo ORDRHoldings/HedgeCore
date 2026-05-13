@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.db import get_session
 from app.core.security import get_current_user, hash_password
-from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event, compute_event_hash
+from app.models.audit_event import GENESIS_HASH, build_audit_event, compute_event_hash
 from app.models.calculation_run import CalculationRun
 from app.models.counterparty import Counterparty, CreditLimit
 from app.models.execution_proposal import ExecutionProposal
@@ -1255,7 +1255,7 @@ async def reset_demo_data(
                 amount=p["amount"],
                 value_date=p["value_date"],
                 status=p["status"],
-                description=f"Demo position — Synex Capital FX programme",
+                description="Demo position — Synex Capital FX programme",
                 execution_status=p["execution_status"],
                 is_active=True,
                 created_at=pos_created,

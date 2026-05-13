@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import type { AIReportGoal, AIReportPlan, ReportModule, SectionType } from "../../../types/reportTypes";
+import { requireVerifiedBearer } from "@/lib/server/auth";
 
 // Simple UUID v4 — no external dep
 function uuidv4(): string {
@@ -175,17 +176,9 @@ function buildFallbackPlan(req: AIReportRequest): AIReportPlan {
 
 export async function POST(req: NextRequest) {
   try {
-    // P1: Require authentication — prevent unauthenticated/anonymous AI calls.
-    // The Authorization header must carry the caller's JWT (Bearer scheme).
-    // We only check presence here; the backend enforces JWT validity on all
-    // data-bound API calls made downstream.
-    const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "authentication_required", detail: "Authorization: Bearer <token> header required" },
-        { status: 401 }
-      );
-    }
+    // Authorization: Bearer token is verified before body parsing; missing auth returns 401.
+    const auth = await requireVerifiedBearer(req);
+    if (!auth.ok) return auth.response;
 
     const body: AIReportRequest = await req.json();
 

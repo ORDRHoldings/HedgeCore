@@ -193,7 +193,6 @@ const WORKFLOW_STEPS = [
   },
 ];
 
-const ERP_LOGOS = ["SAP", "Oracle", "NetSuite", "QuickBooks", "Xero"];
 const REG_FRAMEWORKS = [
   { name: "EMIR", region: "European Union", desc: "Trade reporting, clearing thresholds, and margin requirements for OTC derivatives." },
   { name: "MiFID II", region: "European Union", desc: "Best execution reporting, trade transparency, and systematic internaliser obligations." },

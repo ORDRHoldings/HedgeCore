@@ -8,11 +8,15 @@ Includes:
 - Full async teardown & cross-loop cleanup patch
 """
 
+import asyncio
+import contextlib
+import logging
 import os
 import sys
-import asyncio
-import logging
-import contextlib
+
+import pytest
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
 
 # Disable CSRF for all tests — test clients don't send browser cookies.
 # CSRF_DISABLED=1 is read by app/middleware/csrf.py at request time.
@@ -21,9 +25,6 @@ os.environ.setdefault("CSRF_DISABLED", "1")
 # Disable API key middleware for all tests — auth is handled via dependency_overrides.
 # API_KEY_AUTH_DISABLED=1 is read by app/middleware/api_key_auth.py at request time.
 os.environ.setdefault("API_KEY_AUTH_DISABLED", "1")
-import pytest
-import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
 
 # ---------------------------------------------------------------------
 # Windows Selector Policy (avoid Proactor teardown errors)
@@ -45,9 +46,9 @@ for path in [PROJECT_ROOT, BACKEND_DIR, APP_DIR]:
     if path not in sys.path:
         sys.path.insert(0, path)
 
-from app.main import app
 from app.core.db import async_engine, async_session_maker
 from app.core.security import create_access_token
+from app.main import app
 
 # ---------------------------------------------------------------------
 # Database Backend Detection
@@ -131,6 +132,32 @@ def event_loop():
             loop.close()
         asyncio.set_event_loop(None)
         logger.info("Event loop closed cleanly (selector policy).")
+
+
+@pytest.fixture(autouse=True)
+def ensure_default_event_loop():
+    """Keep legacy synchronous tests compatible with Python 3.12.
+
+    Several older tests call asyncio.get_event_loop().run_until_complete(...)
+    directly. Python 3.12 no longer creates a default loop implicitly, so
+    provide one for sync tests that do not request the event_loop fixture.
+    """
+    created = False
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            raise RuntimeError("closed event loop")
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        created = True
+
+    yield
+
+    if created:
+        with contextlib.suppress(Exception):
+            loop.close()
+        asyncio.set_event_loop(None)
 
 # ---------------------------------------------------------------------
 # Database Session Fixture

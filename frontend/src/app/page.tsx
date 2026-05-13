@@ -42,8 +42,8 @@ const PRODUCTS: Product[] = [
     category: "TRADING TECHNOLOGY",
     tagline: "Agentic institutional charting terminal",
     desc: "Professional charting at 60fps with 77+ indicators, Python/JS algo builder, and AI-coached trading discipline. The first agentic charting system built for institutional traders.",
-    status: "launching",
-    statusLabel: "LAUNCHING MID-APRIL 2026",
+    status: "beta",
+    statusLabel: "BETA · ACTIVE",
     icon: BarChart2,
     href: "/products/market",
     external: "https://ordr-market.vercel.app/",
@@ -67,7 +67,7 @@ const PRODUCTS: Product[] = [
     tagline: "Multi-currency portfolio risk decomposition",
     desc: "R1-R8 risk taxonomy, concentration monitoring, multi-entity netting, and AI-assisted institutional risk reports for portfolio managers.",
     status: "beta",
-    statusLabel: "BETA · APRIL 1, 2026",
+    statusLabel: "BETA · ACTIVE",
     icon: Layers,
     href: "/products/portfolio",
   },
@@ -89,7 +89,7 @@ const PRODUCTS: Product[] = [
     tagline: "Geopolitical risk intelligence platform",
     desc: "AI corridor scoring across 190+ countries, event-driven exposure alerts, and geopolitical risk integration with hedge policy engines.",
     status: "beta",
-    statusLabel: "BETA · END OF MARCH 2026",
+    statusLabel: "BETA · ACTIVE",
     icon: Globe,
     href: "/products/polisophic",
   },
@@ -213,22 +213,22 @@ const ROADMAP = [
     bg: "#FFFBEB",
   },
   {
-    quarter: "END OF MARCH 2026",
-    label: "Beta Launch",
+    quarter: "ACTIVE BETA",
+    label: "Beta",
     items: ["ORDR Polisophic — public beta with 190+ country coverage"],
     color: "#92400E",
     bg: "#FFFBEB",
   },
   {
-    quarter: "APRIL 1, 2026",
-    label: "Beta Launch",
+    quarter: "ACTIVE BETA",
+    label: "Beta",
     items: ["ORDR Portfolio — beta available to institutional clients"],
     color: "#92400E",
     bg: "#FFFBEB",
   },
   {
-    quarter: "MID-APRIL 2026",
-    label: "Full Launch",
+    quarter: "ACTIVE BETA",
+    label: "Beta",
     items: ["ORDR Market — institutional charting terminal goes live"],
     color: "#1D4ED8",
     bg: "#EFF6FF",
@@ -303,7 +303,7 @@ export default function HomePage() {
               {[
                 { v: "11", l: "Products" },
                 { v: "6", l: "Live Now" },
-                { v: "3", l: "Launching Q2 2026" },
+                { v: "3", l: "Active Beta" },
                 { v: "1", l: "Pilot (GOLDX)" },
                 { v: "41", l: "Engine Modules" },
                 { v: "SHA-256", l: "Audit Chain" },
@@ -501,10 +501,10 @@ export default function HomePage() {
             className="text-3xl md:text-[44px] font-extrabold mb-4"
             style={{ fontFamily: "'Manrope', sans-serif" }}
           >
-            Product launch timeline.
+            Product status.
           </h2>
           <p className="text-[16px] text-[#4B5563] max-w-2xl mb-12 leading-relaxed border-l-2 border-[#E5E7EB] pl-4">
-            Six products are live today. Three are in final stages before their 2026 launch. GOLDX is implementation-complete, pending regulatory licensing.
+            Six products are live today. Three products are in active beta. GOLDX is implementation-complete, pending regulatory licensing.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">

@@ -9,9 +9,10 @@
  * Cache: 5-minute TTL.
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { riskPulseCache, geoIntelCache, riskInsightCache } from "@/lib/market/cache";
 import type { RiskFactor, RiskInsight, RiskRegime, GeoIntelligence } from "@/lib/market/types";
+import { requireVerifiedBearer } from "@/lib/server/auth";
 
 const PULSE_KEY   = "risk_pulse";
 const INSIGHT_KEY = "risk_pulse_insight";
@@ -155,11 +156,14 @@ Be specific. Reference actual values. No boilerplate. If geo risk is elevated, l
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const ts = Date.now();
+  const authHeader = req.headers.get("authorization") ?? "";
+  const aiAuth = ANT_KEY && authHeader.startsWith("Bearer ") ? await requireVerifiedBearer(req) : null;
+  const allowAi = Boolean(aiAuth?.ok);
 
   const cached = riskInsightCache.get(INSIGHT_KEY);
-  if (cached) {
+  if (cached && (allowAi || !cached.ai_assisted)) {
     return NextResponse.json({ insight: cached, cachedAt: ts });
   }
 
@@ -180,7 +184,7 @@ export async function GET() {
 
   // Try Claude first, fall back to template
   const insight =
-    (await buildClaudeInsight(regime, score, factors, geo, highImpactEvents)) ??
+    (allowAi ? await buildClaudeInsight(regime, score, factors, geo, highImpactEvents) : null) ??
     buildTemplateInsight(regime, factors, score, deltaScore, highImpactEvents, geo);
 
   riskInsightCache.set(INSIGHT_KEY, insight, TTL_MS);

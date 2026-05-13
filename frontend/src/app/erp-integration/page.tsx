@@ -340,7 +340,10 @@ export default function ERPIntegrationPage() {
     try {
       const res = await fetch("/api/erp-probe", {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body:    JSON.stringify({
           endpoint_url: currentConfig.endpointUrl,
           auth_method:  currentConfig.authMethod,

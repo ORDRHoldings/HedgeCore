@@ -1714,20 +1714,36 @@ async def lifespan(app: FastAPI):
             "NEVER use SQLite mode in production or staging."
         )
 
-    # ── Alembic forward migrations ────────────────────────────────────────────
-    # Runs before _ensure_tables() so new Alembic revisions apply first.
-    # _ensure_tables() is the legacy bootstrap bridge (will be retired in v2).
-    # Skipped automatically for SQLite (ALLOW_SQLITE_DEMO).
-    try:
-        from app.core.db_migrations import run_alembic_upgrade
-        run_alembic_upgrade()
-    except Exception as e:
-        logger.warning(f"⚠️  Alembic runner skipped (non-fatal): {e}")
+    is_production = settings.ENV in ("production", "prod")
+    run_alembic_on_startup = os.getenv(
+        "RUN_ALEMBIC_ON_STARTUP",
+        "false" if is_production else "true",
+    ).strip().lower() in ("1", "true", "yes")
+    run_schema_bootstrap_on_startup = os.getenv(
+        "RUN_SCHEMA_BOOTSTRAP_ON_STARTUP",
+        "false" if is_production else "true",
+    ).strip().lower() in ("1", "true", "yes")
 
-    try:
-        await _ensure_tables()
-    except Exception as e:
-        logger.warning(f"_ensure_tables skipped: {e}")
+    # ── Alembic forward migrations ────────────────────────────────────────────
+    # Enterprise default: production schema changes are handled by release
+    # orchestration, not implicitly by app startup. Dev/test retain automatic
+    # bootstrap behavior for local velocity.
+    if run_alembic_on_startup:
+        try:
+            from app.core.db_migrations import run_alembic_upgrade
+            run_alembic_upgrade()
+        except Exception as e:
+            logger.warning(f"⚠️  Alembic runner skipped (non-fatal): {e}")
+    else:
+        logger.info("Alembic startup migration skipped (RUN_ALEMBIC_ON_STARTUP=false)")
+
+    if run_schema_bootstrap_on_startup:
+        try:
+            await _ensure_tables()
+        except Exception as e:
+            logger.warning(f"_ensure_tables skipped: {e}")
+    else:
+        logger.info("Legacy schema bootstrap skipped (RUN_SCHEMA_BOOTSTRAP_ON_STARTUP=false)")
 
 
 

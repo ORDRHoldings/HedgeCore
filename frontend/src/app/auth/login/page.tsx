@@ -116,7 +116,7 @@ export default function LoginPage() {
   const [mfaError,     setMfaError]     = useState<string | null>(null);
   const mfaInputRef = useRef<HTMLInputElement>(null);
 
-  const { login }   = useAuth();
+  const { login, completeMfa } = useAuth();
   const router      = useRouter();
   const { resolvedMode } = useTheme();
   const usernameRef = useRef<HTMLInputElement>(null);
@@ -162,22 +162,19 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result.success) {
-      const cookieToken = document.cookie
-        .split("; ")
-        .find(r => r.startsWith("access_token="))
-        ?.split("=")[1] ?? null;
+      const accessToken = result.accessToken ?? null;
       let mfaCheckOk = false;
-      if (cookieToken) {
+      if (accessToken) {
         try {
           const mfaRes = await publicFetch(`/v1/mfa/status`, {
-            headers: { Authorization: `Bearer ${cookieToken}` },
+            headers: { Authorization: `Bearer ${accessToken}` },
             signal: AbortSignal.timeout(5000),
           });
           if (mfaRes.ok) {
             mfaCheckOk = true;
             const mfaData = await mfaRes.json();
             if (mfaData.is_enabled) {
-              setMfaToken(cookieToken);
+              setMfaToken(accessToken);
               setMfaChallenge(true);
               setTimeout(() => mfaInputRef.current?.focus(), 80);
               return;
@@ -189,7 +186,7 @@ export default function LoginPage() {
           console.error("[login] MFA status check failed", err);
         }
       }
-      if (cookieToken && !mfaCheckOk) {
+      if (!accessToken || !mfaCheckOk) {
         setError("Could not verify MFA status. Please retry in a moment.");
         setErrKind("server");
         return;
@@ -216,6 +213,15 @@ export default function LoginPage() {
         signal: AbortSignal.timeout(10_000),
       });
       if (res.ok) {
+        const data = await res.json().catch(() => null);
+        const verifiedToken = data?.access_token;
+        if (typeof verifiedToken === "string") {
+          const hydrated = await completeMfa(verifiedToken);
+          if (!hydrated) {
+            setMfaError("MFA verified, but session refresh failed. Please sign in again.");
+            return;
+          }
+        }
         router.push("/dashboard");
       } else {
         const data = await res.json().catch(() => ({}));

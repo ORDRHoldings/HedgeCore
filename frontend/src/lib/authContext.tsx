@@ -45,6 +45,8 @@ export interface UserContext {
   plan_tier: PlanTier;
 }
 
+type LoginResult = { success: boolean; error?: string; accessToken?: string };
+
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -53,8 +55,9 @@ interface AuthContextType {
   login: (
     username: string,
     password: string,
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<LoginResult>;
   logout: () => void;
+  completeMfa: (accessToken: string) => Promise<boolean>;
   hasPermission: (codename: string) => boolean;
   hasAnyPermission: (...codenames: string[]) => boolean;
   /** Attempt a silent token refresh. Returns new access token or null. */
@@ -68,6 +71,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   login: async () => ({ success: false, error: "AuthProvider not mounted" }),
   logout: () => {},
+  completeMfa: async () => false,
   hasPermission: () => false,
   hasAnyPermission: () => false,
   refreshTokens: async () => null,
@@ -181,7 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (
       username: string,
       password: string,
-    ): Promise<{ success: boolean; error?: string }> => {
+    ): Promise<LoginResult> => {
       try {
         const formData = new URLSearchParams();
         formData.append("username", username);
@@ -223,7 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         store.dispatch(setAuthState({ token: data.access_token as string, user: me ?? null }));
 
-        return { success: true };
+        return { success: true, accessToken: data.access_token as string };
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") {
           return {
@@ -237,6 +241,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [fetchMe, scheduleRefresh],
   );
+
+  const completeMfa = useCallback(async (accessToken: string): Promise<boolean> => {
+    setToken(accessToken);
+    const me = await fetchMe(accessToken);
+    if (!me) return false;
+    setUser(me);
+    store.dispatch(setAuthState({ token: accessToken, user: me }));
+    scheduleRefresh();
+    return true;
+  }, [fetchMe, scheduleRefresh]);
 
   // ── Logout ──
   const logout = useCallback(() => {
@@ -282,6 +296,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         login,
         logout,
+        completeMfa,
         hasPermission,
         hasAnyPermission,
         refreshTokens,

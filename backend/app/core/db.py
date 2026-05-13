@@ -17,6 +17,8 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.pool import NullPool
 from sqlalchemy.types import Uuid
 
+from app.core.rls import TenantRLSAsyncSession, clear_tenant_rls_context
+
 
 # Teach SQLite how to render PostgreSQL-specific types so
 # Base.metadata.create_all() works in ALLOW_SQLITE_DEMO mode.
@@ -158,7 +160,7 @@ async_engine: AsyncEngine = _build_engine()
 # ---------------------------------------------------------------------
 async_session_maker = async_sessionmaker(
     bind=async_engine,
-    class_=AsyncSession,
+    class_=TenantRLSAsyncSession,
     expire_on_commit=False,
 )
 
@@ -170,6 +172,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
         finally:
+            clear_tenant_rls_context()
             await session.close()
 
 
@@ -178,6 +181,7 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
         finally:
+            clear_tenant_rls_context()
             await session.close()
 
 

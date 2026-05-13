@@ -27,12 +27,11 @@ const API_BASE =
 
 const api = axios.create({ baseURL: `${API_BASE}/v1/pipeline` });
 
-// Attach API key header — env var takes priority; localStorage only in development.
+// Attach API key header only for explicit local development overrides.
 api.interceptors.request.use((config) => {
-  let key = process.env.NEXT_PUBLIC_HEDGECALC_API_KEY ?? "";
-  if (!key && process.env.NODE_ENV === "development" && typeof window !== "undefined") {
-    key = localStorage.getItem("hc_api_key") ?? "";
-  }
+  const key = process.env.NODE_ENV === "development" && typeof window !== "undefined"
+    ? localStorage.getItem("hc_api_key") ?? ""
+    : "";
   if (key) config.headers["X-API-Key"] = key;
   return config;
 });

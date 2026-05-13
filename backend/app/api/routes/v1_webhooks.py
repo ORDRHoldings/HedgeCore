@@ -216,7 +216,10 @@ async def test_webhook(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Webhook endpoint not found.")
 
     from app.services.notification_formatters import format_payload  # noqa: PLC0415
-    from app.services.webhook_service import build_event_payload, deliver_webhook_attempt  # noqa: PLC0415
+    from app.services.webhook_service import (  # noqa: PLC0415
+        build_event_payload,
+        deliver_webhook_attempt,
+    )
 
     channel_type = getattr(ep, "channel_type", None) or "generic"
     test_data: dict = {"message": "ORDR connectivity test — safe to ignore", "source": "test-ping"}

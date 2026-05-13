@@ -13,8 +13,9 @@
  * Cache: 30s snapshot, 5 min geo + insight.
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { requireVerifiedBearer } from "@/lib/server/auth";
 import {
   riskPulseCache,
   geoIntelCache,
@@ -192,8 +193,11 @@ Be specific. Reference actual values. If geo risk is elevated, lead with geopoli
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const ts = Date.now();
+  const authHeader = req.headers.get("authorization") ?? "";
+  const aiAuth = ANT_KEY && authHeader.startsWith("Bearer ") ? await requireVerifiedBearer(req) : null;
+  const allowAi = Boolean(aiAuth?.ok);
 
   const cachedSnap    = riskPulseCache.get(SNAP_KEY);
   const cachedGeo     = geoIntelCache.get(GEO_KEY);
@@ -220,7 +224,7 @@ export async function GET() {
 
   // ── Geo intelligence ───────────────────────────────────────────────────────
   const geoIntel = cachedGeo ?? await (async () => {
-    const g = await analyzeGeoIntelligence(geoHeadlines);
+    const g = await analyzeGeoIntelligence(geoHeadlines, { allowAi });
     geoIntelCache.set(GEO_KEY, g, GEO_TTL);
     return g;
   })();
@@ -280,7 +284,7 @@ export async function GET() {
 
   // ── Insight (Claude or template, in same Lambda invocation) ───────────────
   const insight = cachedInsight ?? await (async () => {
-    const ins = (await buildClaudeInsight(snapshot, geoIntel)) ?? buildTemplateInsight(snapshot, geoIntel);
+    const ins = (allowAi ? await buildClaudeInsight(snapshot, geoIntel) : null) ?? buildTemplateInsight(snapshot, geoIntel);
     riskInsightCache.set(INSIGHT_KEY, ins, INSIGHT_TTL);
     return ins;
   })();

@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.db import get_session
+from app.core.rls import inject_tenant_rls, set_tenant_rls_context
 from app.core.security import decode_token
 from app.models.user import User
 
@@ -125,6 +126,10 @@ async def get_current_user(
             )
 
         user = await _load_active_user(db, user_id)
+        tenant_id = str(user.company_id) if user.company_id else None
+        bypass_tenant_rls = bool(getattr(user, "is_superuser", False))
+        set_tenant_rls_context(tenant_id, bypass=bypass_tenant_rls)
+        await inject_tenant_rls(db, tenant_id, bypass=bypass_tenant_rls)
 
         # Token version validation: reject tokens issued before a version bump
         token_ver = payload.get("ver")
@@ -192,5 +197,5 @@ async def get_session_with_rls(
     """
     from app.core.rls import inject_tenant_rls
     tenant_id = str(current_user.company_id) if current_user.company_id else None
-    await inject_tenant_rls(db, tenant_id)
+    await inject_tenant_rls(db, tenant_id, bypass=bool(getattr(current_user, "is_superuser", False)))
     yield db

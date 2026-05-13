@@ -18,7 +18,6 @@ import type { RunEnvelope, TraceLite } from "./types";
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
 function getApiKey(): string {
-  if (process.env.NEXT_PUBLIC_HEDGECALC_API_KEY) return process.env.NEXT_PUBLIC_HEDGECALC_API_KEY;
   if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
     const stored = localStorage.getItem("hc_api_key");
     if (stored) return stored;

@@ -26,6 +26,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Alembic migration integrity
+        run: |
+          python -m alembic heads
+          python -m alembic history --verbose
+
       - name: Ruff lint
         run: python -m ruff check app/
 
@@ -165,7 +170,7 @@ jobs:
         with:
           image-ref: ordr-backend:ci
           format: table
-          exit-code: 0          # warn only — don't block CI until baseline is established
+          exit-code: 1
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 

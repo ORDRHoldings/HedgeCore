@@ -163,7 +163,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
     setStep(3);
     setStatus("generating");
     try {
-      const res = await suggestPolicyAI(answers);
+      const res = await suggestPolicyAI(answers, token);
       setResult(res);
       setStatus("done");
     } catch (err: unknown) {
