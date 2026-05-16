@@ -18,27 +18,34 @@ class TestRLSModuleStructure:
         from app.core.rls import inject_tenant_rls
         assert callable(inject_tenant_rls)
 
-    def test_rls_uses_set_local(self):
-        """Source must use SET LOCAL (not SET) to keep setting transaction-scoped."""
+    def test_rls_uses_transaction_local_scope(self):
+        """Source must use transaction-local injection (set_config(...,true) or
+        SET LOCAL) — never connection-scoped SET, which would leak across pooled
+        connections."""
         import inspect
 
         from app.core import rls
         src = inspect.getsource(rls)
-        assert "SET LOCAL" in src, "RLS must use SET LOCAL for transaction-scoping"
-        assert "SET app." not in src.replace("SET LOCAL", ""), \
-            "Plain SET (connection-scoped) must not be used for tenant_id"
+        # Either the function form (parameterizable, current implementation) or
+        # the bare statement form (kept allowed for any future inlined call site).
+        assert "set_config(" in src or "SET LOCAL" in src, (
+            "RLS must use a transaction-local injection pattern "
+            "(set_config(name, value, true) or SET LOCAL)"
+        )
 
     def test_rls_module_does_not_use_connection_scoped_set(self):
+        """Plain `SET app.x = ...` (connection-scoped) must never appear, since
+        pooled asyncpg connections would leak the value to the next request."""
         import inspect
 
         from app.core import rls
         src = inspect.getsource(rls)
-        lines = src.splitlines()
-        for line in lines:
+        for line in src.splitlines():
             stripped = line.strip()
             if "SET app.current_tenant_id" in stripped and "SET LOCAL" not in stripped:
                 pytest.fail(
-                    f"Found connection-scoped SET on line: {stripped!r}. Must use SET LOCAL."
+                    f"Found connection-scoped SET on line: {stripped!r}. "
+                    f"Must use set_config(..., true) or SET LOCAL."
                 )
 
 
@@ -55,7 +62,10 @@ class TestRLSInjectionInterface:
 
         assert mock_session.execute.call_count == 2
         sql_text = "\n".join(str(call.args[0]) for call in mock_session.execute.call_args_list)
-        assert "SET LOCAL" in sql_text or "set local" in sql_text.lower()
+        lower = sql_text.lower()
+        assert "set_config(" in lower or "set local" in lower, (
+            f"Expected transaction-local injection (set_config or SET LOCAL); got: {sql_text!r}"
+        )
         assert "app.current_tenant_id" in sql_text
         assert "app.bypass_tenant_rls" in sql_text
 

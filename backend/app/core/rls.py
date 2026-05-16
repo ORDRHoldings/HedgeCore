@@ -2,11 +2,15 @@
 app/core/rls.py
 ORDR Terminal — PostgreSQL Row Level Security tenant injection.
 
-CRITICAL: SET LOCAL is used (not SET) because:
-- SET LOCAL is transaction-scoped: reverts when the transaction ends.
-- SET is connection-scoped: persists on pooled connections and leaks to next request.
+CRITICAL: transaction-local (is_local=true) injection is used, not connection-scoped SET:
+- Transaction-local: reverts when the transaction ends. Cannot leak across requests.
+- Connection-scoped SET persists on pooled connections and leaks to the next request.
 - async connection pooling (asyncpg + SQLAlchemy) reuses connections across requests.
-  SET LOCAL is the only safe option.
+
+Implementation note: PostgreSQL's grammar rejects bind parameters inside SET
+statements ("SET LOCAL x = $1" is a syntax error). We use set_config(name,
+value, is_local=true), which is PostgreSQL's documented function-form equivalent
+and accepts parameters through the extended query protocol.
 
 Usage:
     await inject_tenant_rls(session, str(current_user.company_id))
@@ -80,12 +84,17 @@ async def inject_tenant_rls(
     previous_injecting = getattr(session, "_tenant_rls_injecting", False)
     session._tenant_rls_injecting = True
     try:
+        # set_config(name, value, is_local=true) is PostgreSQL's parameterized
+        # equivalent of SET LOCAL. We use the function form because asyncpg's
+        # extended query protocol rejects bind parameters inside SET statements
+        # (PostgreSQL grammar limitation). is_local=true keeps the value
+        # transaction-scoped, matching the SET LOCAL semantics the policy expects.
         await session.execute(
-            text("SET LOCAL app.current_tenant_id = :tenant_id"),
+            text("SELECT set_config('app.current_tenant_id', :tenant_id, true)"),
             {"tenant_id": safe_id},
         )
         await session.execute(
-            text("SET LOCAL app.bypass_tenant_rls = :bypass"),
+            text("SELECT set_config('app.bypass_tenant_rls', :bypass, true)"),
             {"bypass": "true" if bypass else "false"},
         )
     finally:
