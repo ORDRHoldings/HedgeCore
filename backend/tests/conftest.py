@@ -174,6 +174,33 @@ async def db_session():
             logger.debug("Closed async SQLAlchemy session.")
 
 # ---------------------------------------------------------------------
+# PostgreSQL Engine Fixture (for requires_postgres tests)
+# ---------------------------------------------------------------------
+@pytest_asyncio.fixture(scope="function")
+async def pg_engine():
+    """AsyncEngine bound to the configured PostgreSQL DATABASE_URL.
+
+    Tests using this fixture must carry @pytest.mark.requires_postgres
+    so they auto-skip when CI runs against SQLite. The fixture itself
+    also defensively skips if the URL isn't Postgres.
+    """
+    if not IS_POSTGRES:
+        pytest.skip("pg_engine requires a PostgreSQL DATABASE_URL")
+    from sqlalchemy.ext.asyncio import create_async_engine as _cae
+    url = _DB_URL
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    engine = _cae(url, pool_size=3, max_overflow=2)
+    try:
+        yield engine
+    finally:
+        with contextlib.suppress(Exception):
+            await engine.dispose()
+
+
+# ---------------------------------------------------------------------
 # FastAPI Async Client Fixture
 # ---------------------------------------------------------------------
 @pytest_asyncio.fixture(scope="function")

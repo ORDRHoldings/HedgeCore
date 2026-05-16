@@ -96,6 +96,68 @@ class TestRLSInjectionInterface:
 
 
 @pytest.mark.requires_postgres
+class TestRLSProductionSessionPath:
+    """Regression coverage for the 2026-05-16 P1 incident: production
+    `TenantRLSAsyncSession.execute()` must successfully issue its
+    transaction-local tenant injection against a real PostgreSQL driver.
+
+    The earlier `TestRLSPostgresPoolIsolation` tests bypass the wrapped
+    session class and call SET LOCAL directly via f-string, so they
+    cannot exercise the bind-parameter path that broke production.
+    These tests use the actual production class to close that gap.
+    """
+
+    @pytest.mark.asyncio
+    async def test_wrapped_session_executes_select_one(self, pg_engine):
+        """The canonical health-check query (`SELECT 1`) must succeed through
+        TenantRLSAsyncSession. This is the exact failure mode of the
+        2026-05-16 incident: SET LOCAL with bind params raised
+        asyncpg.exceptions.PostgresSyntaxError before SELECT 1 could run."""
+        from sqlalchemy import text
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+
+        from app.core.rls import TenantRLSAsyncSession, clear_tenant_rls_context
+
+        Session = async_sessionmaker(
+            pg_engine, class_=TenantRLSAsyncSession, expire_on_commit=False
+        )
+        try:
+            async with Session() as s:
+                result = await s.execute(text("SELECT 1"))
+                assert result.scalar() == 1
+        finally:
+            clear_tenant_rls_context()
+
+    @pytest.mark.asyncio
+    async def test_wrapped_session_sets_tenant_via_set_config(self, pg_engine):
+        """With a tenant context set, the wrapped session must inject it such
+        that current_setting('app.current_tenant_id') returns the same UUID
+        from inside the same transaction."""
+        from sqlalchemy import text
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+
+        from app.core.rls import (
+            TenantRLSAsyncSession,
+            clear_tenant_rls_context,
+            set_tenant_rls_context,
+        )
+
+        Session = async_sessionmaker(
+            pg_engine, class_=TenantRLSAsyncSession, expire_on_commit=False
+        )
+        tenant_id = str(uuid.uuid4())
+        set_tenant_rls_context(tenant_id, bypass=False)
+        try:
+            async with Session() as s:
+                result = await s.execute(
+                    text("SELECT current_setting('app.current_tenant_id', true)")
+                )
+                assert result.scalar() == tenant_id
+        finally:
+            clear_tenant_rls_context()
+
+
+@pytest.mark.requires_postgres
 class TestRLSPostgresPoolIsolation:
     """PostgreSQL-only tests — auto-skip on SQLite."""
 
