@@ -4,7 +4,7 @@
 
 ## Sessions: 24 total, 24 completed
 ## Active Patterns: 11
-## Last Updated: 2026-04-27
+## Last Updated: 2026-05-16
 
 ## Current Sprint
 **Launch Readiness — Production Hardening** — COMPLETE (2026-04-23)
@@ -14,6 +14,12 @@
 - Track 3 — nav-smoke + 14 treasury-suite specs + connector hub stubs: ✅ (commit `33b5cd7`)
 - Track 4 — hash-chain cron, k6 baseline doc, Vercel preview CORS, prod encryption validator, structured error handlers: ✅ (commit `c331c90`)
 - Track 5 — work items #22/#23 closed as superseded; #19/#20/#24 remain blocked on user/ops credentials
+
+## Recent Work (2026-05-16) — State-Drift Reconciliation
+
+Historian re-anchored after a ~19-day silent window. In-depth audit of 15 commits that landed on master between 2026-04-28 and 2026-05-13 (substantive: `fbc1eb1` enterprise audit hardening — bcrypt→Argon2id+pepper, FORCE RLS, `synex_kernel/` namespace; `3f8d747` POST /v1/seed/demo-reset; `d876e7c` POST /v1/positions/bulk; nine E2E spec rewrites; `0d34942` k6 JWT Bearer rewrite; engine_v1 mypy --strict fixes).
+
+Today's outputs: ADR-0020 (retroactive canonization of `fbc1eb1`), coverage CI gate raised 60→70 in `.github/workflows/ci.yml`, `work_items.blocked_reason` column added with items #19/#20/#24 reclassified `blocked` with explicit reasons, risk register cleaned (R-003 closed, R-005 archived, R-007 closed), 4 new runbooks under `docs/runbooks/`, new `backend/tests/test_routes_smoke.py`. Not re-verified in-session: exact post-cleanup row counts in `open_risks` and pytest pass against the new 70% gate.
 
 ## Recent Work (2026-04-27) — Sub-project A: Live ERP End-to-End COMPLETE
 

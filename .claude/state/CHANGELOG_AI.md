@@ -3088,3 +3088,15 @@ Fixed broken layouts across all 5 governance pages (Staging Queue, Ledger, Run V
 - **Cash Positions**: Tables wrapped in `overflowX: auto` with `minWidth` for horizontal scroll
 - **Hook**: Created `useBreakpoint.ts` with `useIsMobile` and `useIsSmallMobile`
 - **Validation**: tsc --noEmit clean, next build --no-lint pass (117 pages)
+
+
+## 2026-05-16 — State-drift reconciliation
+- **Audit**: in-depth review of 15 commits landed on master between 2026-04-28 and 2026-05-13 (historian was not invoked during that window — state drifted)
+- **ADR-0020 authored** (retroactive for commit `fbc1eb1`): bcrypt → Argon2id+pepper migration, FORCE RLS on tenanted tables, `synex_kernel/` namespace
+- **Coverage CI gate raised 60 → 70** in `.github/workflows/ci.yml`
+- **Schema**: added `work_items.blocked_reason` column; items #19 (Render/Vercel env rotation), #20 (IBKR TWS), #24 (close R-002 once IBKR live) moved from `in_progress`/`open` → `blocked` with explicit reasons
+- **Risk register cleanup**: R-003 (coverage) closed, R-005 (regulatory) archived, R-007 (master ahead) closed
+- **Runbooks (4 new)**: `docs/runbooks/{render-env-rotation,vercel-env-rotation,ibkr-live-cutover,deployment-and-oncall}.md`
+- **Tests**: added `backend/tests/test_routes_smoke.py`
+- **Edits**: `.github/workflows/ci.yml` (cov gate), `backend/pytest.ini` (comment update)
+- **Catch-up rollup** also inserted for 2026-05-13 covering the prior untracked window (POST /v1/seed/demo-reset `3f8d747`, POST /v1/positions/bulk `d876e7c`, enterprise audit hardening `fbc1eb1`, marketing rewrite `b734a03`, 9 E2E spec rewrites, k6 JWT Bearer rewrite `0d34942`, engine_v1 mypy --strict fixes, RISK-GIT-02 closed)
