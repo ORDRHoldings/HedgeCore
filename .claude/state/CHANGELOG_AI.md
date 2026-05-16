@@ -1,5 +1,21 @@
 # Changelog (AI-maintained)
 
+## 2026-05-16 — P1: RLS injection broken on asyncpg (set_config fix)
+
+- **Incident**: `/api/health` returned 503 from 2026-05-13 deploy through 2026-05-16 17:28Z. `TenantRLSAsyncSession` issued `SET LOCAL app.current_tenant_id = :tenant_id`; PostgreSQL rejects bind params in `SET` statements; asyncpg surfaced `PostgresSyntaxError` on every DB query. Three-day silent degradation because neither Sentry 5xx alerts nor Render auto-rollback were configured.
+- **Fix** (`151c591`, `backend/app/core/rls.py`): switched to `SELECT set_config('app.current_tenant_id', :tenant_id, true)`. Same transaction-local semantics; function form accepts bind parameters via extended protocol.
+- **Test updates** (`tests/test_rls_tenant_isolation.py`): assertions accept `set_config(...)` or `SET LOCAL` source patterns. Full backend suite green.
+- **Post-mortem**: `docs/incidents/2026-05-16-rls-set-local-bind-params.md`.
+- **Follow-up risks**:
+  - `RISK-CI-PG-01` — 130 `requires_postgres` tests dead in CI; add Postgres service container.
+  - `RISK-OPS-MON-01` — no 5xx alert, no auto-rollback; both directly enabled the 3-day silent failure.
+
+## 2026-05-16 — docs/test: launch-readiness commits
+
+- `6852a34` docs(state): reconcile 19-day drift; coverage 75% recorded.
+- `9bb4593` test(routes): 131-test route-layer smoke suite; CI `--cov-fail-under` ratcheted 60 → 70; ADR-0020 retroactively documents `fbc1eb1`.
+- `46057a9` docs(runbooks): Render env rotation, Vercel env rotation, IBKR live cutover, deployment & on-call.
+
 ## 2026-04-28 — test(e2e): rewrite 9 excluded specs + demo reset endpoint + seed data
 
 - `POST /api/v1/seed/demo-reset` endpoint: wipes non-WORM tables for demo company, re-seeds

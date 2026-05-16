@@ -33,3 +33,27 @@
 ## RISK-GIT-02: master ahead of origin — CLOSED
 - **Status**: CLOSED 2026-04-28 — master pushed regularly; latest HEAD `0d34942` on origin.
 - **Opened**: 2026-04-14 / **Closed**: 2026-04-28
+
+## RISK-CI-PG-01: requires_postgres tests do not run in CI
+- **Severity**: HIGH
+- **Component**: GitHub Actions backend test job
+- **Description**: 130 `requires_postgres`-marked tests auto-skip because CI uses `DATABASE_URL=sqlite+aiosqlite://`. The new route-smoke layer (`backend/tests/test_routes_smoke.py`, 2026-05-16) inherits the same gap. This is exactly how the `SET LOCAL` bind-param RLS bug (see `docs/incidents/2026-05-16-rls-set-local-bind-params.md`) shipped to prod and went undetected for 3 days.
+- **Mitigation**: Add a GitHub Actions job that spins up a `postgres:16` service container, runs Alembic migrations, then runs `pytest -m requires_postgres` against it.
+- **Status**: Open
+- **Opened**: 2026-05-16
+
+## RISK-OPS-MON-01: No backend 5xx alert + no Render auto-rollback
+- **Severity**: HIGH
+- **Component**: Sentry, Render service config
+- **Description**: 2026-05-16 incident exposed two simultaneous monitoring gaps: (a) Sentry has no rule firing on backend 5xx rate, so a fully degraded prod produced zero alerts for 3 days; (b) Render's "auto-rollback on failed health check" toggle is off, so a deploy that returns 503 on `/api/health` stays live indefinitely.
+- **Mitigation**: Wire `#alerts-backend` Sentry rule (>1% 5xx over 5min) and enable Render auto-rollback. Both are tracked as pre-launch gaps in `docs/runbooks/deployment-and-oncall.md` — incident shows they are no longer pre-launch, they are blocking.
+- **Status**: Open
+- **Opened**: 2026-05-16
+
+## RISK-RLS-PROD-01: RLS injection broken on asyncpg — CLOSED
+- **Severity**: P1 (production)
+- **Component**: `backend/app/core/rls.py`
+- **Description**: `TenantRLSAsyncSession` issued `SET LOCAL app.current_tenant_id = :tenant_id`. PostgreSQL rejects bind params in `SET` statements, so every DB query through the wrapped session raised `asyncpg.exceptions.PostgresSyntaxError`. `/api/health` returned 503 from 2026-05-13 through 2026-05-16.
+- **Resolution**: 2026-05-16 — `151c591` switched to `SELECT set_config('app.current_tenant_id', :tenant_id, true)`. Health restored within minutes of deploy.
+- **Status**: CLOSED. See `docs/incidents/2026-05-16-rls-set-local-bind-params.md`.
+- **Opened**: 2026-05-13 / **Closed**: 2026-05-16

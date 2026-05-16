@@ -15,6 +15,16 @@
 - Track 4 — hash-chain cron, k6 baseline doc, Vercel preview CORS, prod encryption validator, structured error handlers: ✅ (commit `c331c90`)
 - Track 5 — work items #22/#23 closed as superseded; #19/#20/#24 remain blocked on user/ops credentials
 
+## Recent Work (2026-05-16, 17:24Z) — P1 Incident: RLS injection broken on asyncpg
+
+`/api/health` was returning 503 in prod ("checks.db" = `asyncpg.exception…`). Diagnosed within minutes of the post-deploy smoke check after the launch-readiness commits landed: `TenantRLSAsyncSession.execute()` was issuing `SET LOCAL app.current_tenant_id = :tenant_id`, and PostgreSQL's grammar rejects bind parameters inside `SET` statements. asyncpg's extended query protocol surfaced this as `PostgresSyntaxError` on every DB query — meaning every authenticated DB-touching endpoint had been failing since `fbc1eb1` shipped on 2026-05-13.
+
+Root cause: the unit test (`test_inject_tenant_rls_executes_set_local`) used a mocked AsyncMock session, and the PG-only tests inlined UUIDs via f-string instead of bind params. CI runs against SQLite, so the production injection path was never exercised against a real driver.
+
+Forward fix: `151c591` — replaced `SET LOCAL <var> = :param` with `SELECT set_config('<var>', :param, true)`. Same transaction-local semantics, but `set_config()` is a function call so the bind protocol works. Health restored 17:28Z (~4 min after push).
+
+Post-mortem: `docs/incidents/2026-05-16-rls-set-local-bind-params.md`. Two new HIGH risks opened (RISK-CI-PG-01: no PG tests in CI; RISK-OPS-MON-01: no 5xx alert, no auto-rollback — both directly responsible for the 3-day silent degradation).
+
 ## Recent Work (2026-05-16) — State-Drift Reconciliation
 
 Historian re-anchored after a ~19-day silent window. In-depth audit of 15 commits that landed on master between 2026-04-28 and 2026-05-13 (substantive: `fbc1eb1` enterprise audit hardening — bcrypt→Argon2id+pepper, FORCE RLS, `synex_kernel/` namespace; `3f8d747` POST /v1/seed/demo-reset; `d876e7c` POST /v1/positions/bulk; nine E2E spec rewrites; `0d34942` k6 JWT Bearer rewrite; engine_v1 mypy --strict fixes).
