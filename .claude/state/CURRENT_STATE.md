@@ -4,7 +4,7 @@
 
 ## Sessions: 24 total, 24 completed
 ## Active Patterns: 11
-## Last Updated: 2026-05-16
+## Last Updated: 2026-05-17
 
 ## Current Sprint
 **Launch Readiness — Production Hardening** — COMPLETE (2026-04-23)
@@ -14,6 +14,19 @@
 - Track 3 — nav-smoke + 14 treasury-suite specs + connector hub stubs: ✅ (commit `33b5cd7`)
 - Track 4 — hash-chain cron, k6 baseline doc, Vercel preview CORS, prod encryption validator, structured error handlers: ✅ (commit `c331c90`)
 - Track 5 — work items #22/#23 closed as superseded; #19/#20/#24 remain blocked on user/ops credentials
+
+## Recent Work (2026-05-17) — fbc1eb1 follow-up audit
+
+Continued the post-incident audit of `fbc1eb1` for other PG-only landmines beyond the SET LOCAL bug:
+
+- **Migration 0036**: `FORCE ROW LEVEL SECURITY` is on `positions` and `calculation_runs`. Policies use `COALESCE(NULLIF(current_setting('app.current_tenant_id', true), ''), '_NO_TENANT')` — missing tenant context silently filters every row out (no error, just empty results). Catch is only via integration testing against PG.
+- **JWT auth path**: `core/dependencies.py::get_current_user` (lines 129–132) correctly injects tenant + bypass for superusers. Verified.
+- **API-key auth path**: `deps/api_key_auth.py::get_api_key_principal` and `middleware/api_key_auth.py` validate the key but **never inject tenant context**. Today this is **latent** — `get_api_key_principal` is only consumed by `/system/whoami/api-key` and `/system/db-tables`, neither of which reads RLS-protected tables. It becomes a P1 the moment an API-key dep is added to any business endpoint. Tracked as RISK-AUTH-RLS-01.
+- **Governance middleware** (`app/middleware/governance.py`): Imports `synex_kernel` from local repo path; fail-open via `_kernel_unavailable` flag if import fails. Wired in `main.py` at the expected index per `test_middleware_order.py` canonical order. Production import path is fine (synex_kernel is in the repo).
+- **Argon2id+pepper API-key verification**: `verify_api_key_header` reads `api_keys` (not RLS-protected), updates `last_used_at` (now wrapped in try/except). No new landmine.
+- **Voice agent**: Fail-closed on missing market rate (no more 17.24 fallback). Safer.
+
+No additional production fix shipped. Findings recorded; `RISK-CI-PG-01` re-classed to "Mitigated (advisory)" given `137c8a2` shipped the PG-in-CI job already.
 
 ## Recent Work (2026-05-16, 17:24Z) — P1 Incident: RLS injection broken on asyncpg
 

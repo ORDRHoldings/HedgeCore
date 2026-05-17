@@ -34,13 +34,13 @@
 - **Status**: CLOSED 2026-04-28 — master pushed regularly; latest HEAD `0d34942` on origin.
 - **Opened**: 2026-04-14 / **Closed**: 2026-04-28
 
-## RISK-CI-PG-01: requires_postgres tests do not run in CI
-- **Severity**: HIGH
+## RISK-CI-PG-01: requires_postgres tests do not run in CI — Mitigated (advisory)
+- **Severity**: HIGH → MEDIUM (advisory job lands findings without blocking merge)
 - **Component**: GitHub Actions backend test job
-- **Description**: 130 `requires_postgres`-marked tests auto-skip because CI uses `DATABASE_URL=sqlite+aiosqlite://`. The new route-smoke layer (`backend/tests/test_routes_smoke.py`, 2026-05-16) inherits the same gap. This is exactly how the `SET LOCAL` bind-param RLS bug (see `docs/incidents/2026-05-16-rls-set-local-bind-params.md`) shipped to prod and went undetected for 3 days.
-- **Mitigation**: Add a GitHub Actions job that spins up a `postgres:16` service container, runs Alembic migrations, then runs `pytest -m requires_postgres` against it.
-- **Status**: Open
-- **Opened**: 2026-05-16
+- **Description**: 130 `requires_postgres`-marked tests auto-skip because the main CI uses `DATABASE_URL=sqlite+aiosqlite://`. The new route-smoke layer (`backend/tests/test_routes_smoke.py`, 2026-05-16) inherits the same gap. This is exactly how the `SET LOCAL` bind-param RLS bug (see `docs/incidents/2026-05-16-rls-set-local-bind-params.md`) shipped to prod and went undetected for 3 days.
+- **Mitigation**: 2026-05-16 — `137c8a2` added the `backend-postgres` GitHub Actions job (`postgres:16` service container + Alembic upgrade + `pytest -m requires_postgres`) with `continue-on-error: true` while we audit which of the 130 marked tests need fixture/schema work. Promoting to hard-gate (flip `continue-on-error: false`) is itself a launch-readiness milestone.
+- **Status**: Mitigated (advisory). Promotion to hard gate is tracked as a separate launch-readiness item.
+- **Opened**: 2026-05-16 / **Mitigated**: 2026-05-16
 
 ## RISK-OPS-MON-01: No backend 5xx alert + no Render auto-rollback
 - **Severity**: HIGH
@@ -49,6 +49,19 @@
 - **Mitigation**: Wire `#alerts-backend` Sentry rule (>1% 5xx over 5min) and enable Render auto-rollback. Both are tracked as pre-launch gaps in `docs/runbooks/deployment-and-oncall.md` — incident shows they are no longer pre-launch, they are blocking.
 - **Status**: Open
 - **Opened**: 2026-05-16
+
+## RISK-AUTH-RLS-01: API-key auth path does not inject tenant RLS context
+- **Severity**: MEDIUM (latent — becomes P1 if API-key auth is wired into RLS-protected endpoints)
+- **Component**: `backend/app/deps/api_key_auth.py::get_api_key_principal`, `backend/app/middleware/api_key_auth.py`
+- **Description**: With `fbc1eb1` + migration 0036 enabling `FORCE ROW LEVEL SECURITY` on `positions` and `calculation_runs`, every query against those tables requires a transaction-local `app.current_tenant_id`. The JWT auth path in `core/dependencies.py::get_current_user` (lines 129–132) correctly calls `set_tenant_rls_context()` + `inject_tenant_rls()`. The API-key auth surfaces (`get_api_key_principal` dep + `APIKeyAuthMiddleware`) validate the key and attach a principal, but **never inject tenant context** — and the `ApiKey` model has no direct `company_id`, only `owner_user_id` (FK users.id, nullable, ON DELETE SET NULL).
+  - Today this is **latent**, not active: `get_api_key_principal` is only consumed by `/system/whoami/api-key` and `/system/db-tables` (both read `information_schema`, not RLS-protected tables); the schema-health endpoint uses its own `verify_api_key_header` path.
+  - It becomes a P1 the moment an API-key dependency is added to any business endpoint that reads positions or calculation_runs — those queries will silently return empty results because policy `COALESCE(NULLIF(current_setting('app.current_tenant_id', true), ''), '_NO_TENANT')` matches nothing.
+- **Mitigation options**:
+  1. Resolve tenant from `api_key.owner_user_id` → `users.company_id` and inject (requires design decision for `owner_user_id IS NULL` keys — system keys?).
+  2. Add a `company_id` column to `api_keys` (cleaner — keys are tenant-scoped by birth, decoupled from user lifecycle).
+  3. Add a guard: if any non-system route uses `get_api_key_principal` without `inject_tenant_rls`, raise at startup.
+- **Status**: Open (latent). Triage when adding API-key auth to any business endpoint.
+- **Opened**: 2026-05-17
 
 ## RISK-RLS-PROD-01: RLS injection broken on asyncpg — CLOSED
 - **Severity**: P1 (production)
