@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginAsDemo, navigateAuth } from '../../helpers/auth';
+import { loginAsDemo, navigateAuth } from '../helpers/auth';
 
 test.describe('Accounting / Accounting Connection', () => {
   test.beforeEach(async ({ page }) => {
