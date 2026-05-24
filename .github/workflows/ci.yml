@@ -160,7 +160,6 @@ jobs:
     needs: frontend
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev'
     continue-on-error: true
-    timeout-minutes: 20
 
     defaults:
       run:
@@ -187,6 +186,13 @@ jobs:
           NEXT_PUBLIC_API_URL: "https://hedgecore.onrender.com/api"
 
       - name: Run E2E tests
+        # Step-level timeout + continue-on-error so a timeout becomes a step
+        # failure (which the job's continue-on-error swallows) rather than a
+        # job cancellation. Job-level timeout-minutes converts to "cancelled",
+        # which poisons the overall workflow result regardless of
+        # continue-on-error. See RISK-CI-E2E-01.
+        timeout-minutes: 20
+        continue-on-error: true
         run: npx playwright test --project=chromium
         env:
           E2E_BASE_URL: "http://localhost:3000"
