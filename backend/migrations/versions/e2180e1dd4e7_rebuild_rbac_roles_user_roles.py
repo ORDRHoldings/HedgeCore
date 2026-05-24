@@ -19,6 +19,16 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema to rebuild RBAC and audit structures with UUID integrity."""
 
+    # The earlier chain (cde23b63d039 + 3450c02f9c01 + the refresh_tokens
+    # migration) created these three tables with user_id INTEGER. This
+    # migration rebuilds them with user_id UUID, so drop the legacy shape
+    # first. IF EXISTS keeps the path idempotent for fresh installs that
+    # never landed the earlier tables (e.g. when applied to a snapshot).
+    # CASCADE removes the legacy FKs cleanly.
+    op.execute("DROP TABLE IF EXISTS audit_logs CASCADE")
+    op.execute("DROP TABLE IF EXISTS auth_audit_logs CASCADE")
+    op.execute("DROP TABLE IF EXISTS refresh_tokens CASCADE")
+
     # --- AUDIT LOGS ---
     op.create_table(
         "audit_logs",
