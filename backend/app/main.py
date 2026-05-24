@@ -1903,6 +1903,18 @@ async def lifespan(app: FastAPI):
     logger.info("Scheduler registered — gdpr_anonymise at 01:00 UTC daily")
     logger.info("Scheduler registered — hash_chain_verify at 02:30 UTC daily")
 
+    # RISK-AUTH-RLS-01 startup guard: fail closed if API-key auth lands on a
+    # non-system route without injecting tenant RLS context. Runs last so it
+    # sees every router that has been mounted by this point.
+    try:
+        from app.deps.api_key_auth import assert_api_key_routes_safe
+        assert_api_key_routes_safe(app)
+        logger.info("API-key/RLS startup guard: clean (RISK-AUTH-RLS-01)")
+    except RuntimeError:
+        raise
+    except Exception as e:
+        logger.warning(f"API-key/RLS startup guard error (non-fatal): {e}")
+
     try:
 
         yield

@@ -122,3 +122,60 @@ def require_api_key_scopes(required_scopes: list[str]):
         return principal
 
     return scoped_dependency
+
+
+# Startup guard for RISK-AUTH-RLS-01. `get_api_key_principal` validates the key
+# but does NOT inject the tenant RLS context that `core/dependencies.py::
+# get_current_user` injects on the JWT path. With migration 0036 forcing RLS on
+# `positions` and `calculation_runs`, any business endpoint that gains this
+# dependency would silently return empty results because the RLS policy's
+# `current_setting('app.current_tenant_id', true)` would match no tenant.
+#
+# This allowlist contains the only routes that may use API-key auth without
+# RLS injection — diagnostic endpoints that don't read RLS-protected tables.
+# Adding API-key auth to any other route requires either (a) extending the
+# allowlist with a justification comment, or (b) adding RLS injection to the
+# auth path first. See `.claude/state/OPEN_RISKS.md` RISK-AUTH-RLS-01.
+API_KEY_AUTH_ALLOWLIST: frozenset[str] = frozenset({
+    "/api/system/whoami/api-key",  # returns key metadata only, no DB business query
+    "/api/system/db-tables",       # reads information_schema, not RLS-protected
+})
+
+
+def assert_api_key_routes_safe(app, allowlist: frozenset[str] = API_KEY_AUTH_ALLOWLIST) -> None:
+    """Fail closed if any route uses API-key auth without being allowlisted.
+
+    Walks every APIRoute's dependant graph for `get_api_key_principal`
+    (including nested under `require_api_key_scopes`-style closures). Any
+    occurrence on a path not in the allowlist raises RuntimeError, blocking
+    startup until the dependency is removed or the path is justified and added
+    to the allowlist.
+    """
+    from fastapi.routing import APIRoute
+
+    def _uses_api_key_auth(dependant) -> bool:
+        if dependant is None:
+            return False
+        if dependant.call is get_api_key_principal:
+            return True
+        for sub in dependant.dependencies:
+            if _uses_api_key_auth(sub):
+                return True
+        return False
+
+    violations: list[str] = []
+    for route in app.routes:
+        if not isinstance(route, APIRoute):
+            continue
+        if _uses_api_key_auth(getattr(route, "dependant", None)):
+            if route.path not in allowlist:
+                methods = sorted(route.methods) if route.methods else []
+                violations.append(f"{route.path} {methods}")
+
+    if violations:
+        raise RuntimeError(
+            "RISK-AUTH-RLS-01 guard: routes use API-key auth without RLS "
+            "injection. Either wire tenant RLS into the auth dependency "
+            "first, or extend API_KEY_AUTH_ALLOWLIST with justification. "
+            "Offending routes:\n  " + "\n  ".join(violations)
+        )

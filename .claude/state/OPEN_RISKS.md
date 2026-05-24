@@ -50,18 +50,18 @@
 - **Status**: Open
 - **Opened**: 2026-05-16
 
-## RISK-AUTH-RLS-01: API-key auth path does not inject tenant RLS context
-- **Severity**: MEDIUM (latent — becomes P1 if API-key auth is wired into RLS-protected endpoints)
+## RISK-AUTH-RLS-01: API-key auth path does not inject tenant RLS context — Mitigated (option 3)
+- **Severity**: MEDIUM → LOW (startup guard now fails closed if API-key auth lands on a non-allowlisted route)
 - **Component**: `backend/app/deps/api_key_auth.py::get_api_key_principal`, `backend/app/middleware/api_key_auth.py`
 - **Description**: With `fbc1eb1` + migration 0036 enabling `FORCE ROW LEVEL SECURITY` on `positions` and `calculation_runs`, every query against those tables requires a transaction-local `app.current_tenant_id`. The JWT auth path in `core/dependencies.py::get_current_user` (lines 129–132) correctly calls `set_tenant_rls_context()` + `inject_tenant_rls()`. The API-key auth surfaces (`get_api_key_principal` dep + `APIKeyAuthMiddleware`) validate the key and attach a principal, but **never inject tenant context** — and the `ApiKey` model has no direct `company_id`, only `owner_user_id` (FK users.id, nullable, ON DELETE SET NULL).
   - Today this is **latent**, not active: `get_api_key_principal` is only consumed by `/system/whoami/api-key` and `/system/db-tables` (both read `information_schema`, not RLS-protected tables); the schema-health endpoint uses its own `verify_api_key_header` path.
   - It becomes a P1 the moment an API-key dependency is added to any business endpoint that reads positions or calculation_runs — those queries will silently return empty results because policy `COALESCE(NULLIF(current_setting('app.current_tenant_id', true), ''), '_NO_TENANT')` matches nothing.
 - **Mitigation options**:
-  1. Resolve tenant from `api_key.owner_user_id` → `users.company_id` and inject (requires design decision for `owner_user_id IS NULL` keys — system keys?).
-  2. Add a `company_id` column to `api_keys` (cleaner — keys are tenant-scoped by birth, decoupled from user lifecycle).
-  3. Add a guard: if any non-system route uses `get_api_key_principal` without `inject_tenant_rls`, raise at startup.
-- **Status**: Open (latent). Triage when adding API-key auth to any business endpoint.
-- **Opened**: 2026-05-17
+  1. Resolve tenant from `api_key.owner_user_id` → `users.company_id` and inject (requires design decision for `owner_user_id IS NULL` keys — system keys?). — *not implemented*
+  2. Add a `company_id` column to `api_keys` (cleaner — keys are tenant-scoped by birth, decoupled from user lifecycle). — *not implemented*
+  3. ✅ **Shipped 2026-05-24**: `assert_api_key_routes_safe(app)` walks every APIRoute's dependant tree (including nested `require_api_key_scopes` closures) for `get_api_key_principal`. Anything outside `API_KEY_AUTH_ALLOWLIST = {"/api/system/whoami/api-key", "/api/system/db-tables"}` raises `RuntimeError` from `lifespan` at startup, blocking deployment. 7 unit tests cover direct dep, scoped dep, allowlist extension, and a regression boot of the real production app against its own guard. See `backend/app/deps/api_key_auth.py` + `backend/tests/test_api_key_rls_startup_guard.py`.
+- **Status**: Mitigated (option 3). Risk no longer latent — accidental wiring of API-key auth to a business endpoint now fails closed at startup rather than silently returning empty rows in prod. Options 1 and 2 remain available if API-key auth is ever needed on RLS-protected business routes.
+- **Opened**: 2026-05-17 / **Mitigated**: 2026-05-24
 
 ## RISK-CI-PG-02: backend-postgres alembic blocked by audit_logs duplicate-table
 - **Severity**: MEDIUM (advisory job — does not block merges)
