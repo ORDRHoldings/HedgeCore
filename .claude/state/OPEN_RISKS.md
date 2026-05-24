@@ -63,15 +63,25 @@
 - **Status**: Open (latent). Triage when adding API-key auth to any business endpoint.
 - **Opened**: 2026-05-17
 
+## RISK-CI-PG-02: backend-postgres alembic blocked by audit_logs duplicate-table
+- **Severity**: MEDIUM (advisory job — does not block merges)
+- **Component**: `.github/workflows/ci.yml::backend-postgres`, `backend/migrations/`
+- **Description**: With the alembic URL resolution fix (commit `69804bf`), the advisory `backend-postgres` job now connects to the postgres:16 service container. It fails at `alembic upgrade head` with `psycopg2.errors.DuplicateTable: relation "audit_logs" already exists`. Some migration in the chain is creating `audit_logs` via `op.create_table()` for a table that an earlier migration already created — the conflict only surfaces against a fresh postgres because SQLite (used by the main backend job) doesn't enforce the constraint the same way. Bisect required to find the duplicating revision.
+- **Mitigation**: Already advisory (`continue-on-error: true`). RISK-CI-PG-01 mitigation milestone already accounted for fixture/schema work this would surface.
+- **Followups**: bisect migration chain → either drop the duplicate `create_table` or guard with `IF NOT EXISTS` (more typical with `op.execute('CREATE TABLE IF NOT EXISTS ...')` pattern for legacy tables).
+- **Status**: Open (advisory). Blocking promotion of `backend-postgres` to hard gate (which is itself a launch-readiness milestone per RISK-CI-PG-01).
+- **Opened**: 2026-05-23
+
 ## RISK-CI-E2E-01: E2E Playwright suite has never actually run end-to-end in CI
 - **Severity**: HIGH (advisory — does not block merges while we audit)
 - **Component**: `.github/workflows/ci.yml::e2e`, `frontend/e2e/**/*.spec.ts`
 - **Description**: Two specs in `frontend/e2e/accounting/` imported `'../../helpers/auth'` (two levels up), resolving outside the `e2e/` tree to a non-existent path. Every CI run from at least 2026-05-13 failed fast on this missing module before any test could execute. Fixing the import path (commit 54c3559) exposed the next layer: the suite has 237 tests across 51 files targeting the live `hedgecore.onrender.com` backend, and cannot complete in the GitHub Actions runner window — runs sat in_progress past 30 min and had to be cancelled. **Bottom line: the E2E suite has not actually verified anything on master in 10+ days.**
-- **Mitigation**: 2026-05-23 — demoted `e2e` job to `continue-on-error: true` with a 20-minute timeout, same advisory pattern as `backend-postgres`. Unblocks master merges; logs the gap visibly in every run.
+- **Mitigation**: 2026-05-23 — demoted `e2e` job to `continue-on-error: true` with a step-level 20-minute timeout (commits `732fe8e` + `c1f153e`). Step-level (not job-level) timeout is required because GitHub Actions treats a cancelled job as poisoning the workflow result regardless of `continue-on-error`; step-level + step-level `continue-on-error` cleanly drops a timeout into the advisory path. Unblocks master merges; logs the gap visibly in every run.
+- **Status update 2026-05-23**: First post-demotion CI run (26350186757) actually completed E2E within the 20-min window with `conclusion=success` — likely runner-concurrency variance vs. the cancelled congested attempts. The audit work below remains valid: the suite is brittle (target=live prod URL, 237 tests serialized through one runner) and one green run does not certify it.
 - **Followups (separate work)**:
   1. Audit which of the 237 tests are genuinely E2E vs which should be component tests.
   2. Either spin up a CI-local backend (preferred) or split out a smoke subset that runs against the live URL.
-  3. Promote back to a hard gate once the suite is reliably green inside the runner window. Promotion is a launch-readiness milestone.
+  3. Promote back to a hard gate once the suite is reliably green inside the runner window across N consecutive runs. Promotion is a launch-readiness milestone.
 - **Status**: Mitigated (advisory). Open work item for E2E audit.
 - **Opened**: 2026-05-23
 
