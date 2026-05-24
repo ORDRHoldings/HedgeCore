@@ -1,11 +1,11 @@
 # ── Stage 1: deps builder ────────────────────────────────────────────────────
-FROM python:3.12-slim-bullseye AS builder
+FROM python:3.12-slim-bookworm AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     build-essential \
     ca-certificates \
  && rm -rf /var/lib/apt/lists/*
@@ -17,14 +17,14 @@ RUN pip install --upgrade pip && \
 
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────────────
-FROM python:3.12-slim-bullseye AS runtime
+FROM python:3.12-slim-bookworm AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app
 
 # Install curl for health-check
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
  && rm -rf /var/lib/apt/lists/*
