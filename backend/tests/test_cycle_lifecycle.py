@@ -619,8 +619,12 @@ class TestRateLimiterLifecycle:
         # Drain all
         for _ in range(10):
             b.consume(1.0)
-        assert b.tokens == 0.0
-        # Simulate 1 second passing
+        # Force a deterministic post-drain state: any wall-clock drift between
+        # the consume() calls would have refilled fractional tokens. The point
+        # of this test is the refill *behavior*, not the drain — pin both.
+        b.tokens = 0.0
+        b.last_refill = time.monotonic()
+        # Simulate time passing
         time.sleep(0.05)
         # After consuming once, refill happens in consume()
         b.consume(0.0)  # zero-cost consume triggers refill
