@@ -162,8 +162,18 @@ def upgrade() -> None:
     op.create_index("ix_refresh_tokens_replaced_by_jti", "refresh_tokens", ["replaced_by_jti"], unique=False)
 
     # --- USER EXTENSIONS ---
-    op.add_column("users", sa.Column("is_superuser", sa.Boolean(), nullable=False, server_default=sa.text("false")))
-    op.add_column("users", sa.Column("token_version", sa.Integer(), nullable=False, server_default="1"))
+    # is_superuser is already created by a1ed712e8018 (init users) and
+    # token_version by 3e9f47487b7f, so use ADD COLUMN IF NOT EXISTS for
+    # idempotency on fresh DBs. On a snapshot DB that pre-dates those columns
+    # (legacy prod), this still adds them.
+    op.execute(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_superuser BOOLEAN "
+        "NOT NULL DEFAULT false"
+    )
+    op.execute(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER "
+        "NOT NULL DEFAULT 1"
+    )
     # Remove deprecated columns safely if they exist
     with op.batch_alter_table("users", schema=None) as batch_op:
         for col in ["mfa_secret", "role", "created_at", "mfa_enabled"]:
