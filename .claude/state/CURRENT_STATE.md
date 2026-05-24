@@ -6,6 +6,24 @@
 ## Active Patterns: 11
 ## Last Updated: 2026-05-24
 
+## Recent Work (2026-05-24, late) — RISK-AUTH-RLS-02: Dashboard JWT Path RLS Injection
+
+Continuation of the RLS hardening arc that shipped RISK-AUTH-RLS-01 mitigation (option 3 startup guard) earlier in the day. While investigating the broader RLS surface beyond the API-key path, discovered that `app/api/routes/dashboard.py::_resolve_user` decodes JWTs directly without calling `set_tenant_rls_context()` — a parallel auth helper that predates `core/dependencies.py::get_current_user`. With migration 0036 forcing RLS on `positions` and `calculation_runs`, the policy `COALESCE(NULLIF(...,''), '00000000-...')` treats the unset contextvar as the NO_TENANT sentinel, so every dashboard aggregate query (summary, recent-runs, etc.) against those RLS-forced tables silently returned empty.
+
+Distinct from RISK-AUTH-RLS-01: that risk covered the *API-key* path (latent — only diagnostic routes used it). RLS-02 was *active* on JWT users in production.
+
+Commit: `27696c8` — `fix(rls): inject tenant context in dashboard JWT path — RISK-AUTH-RLS-02`
+- `app/api/routes/dashboard.py` — `_resolve_user` now calls `set_tenant_rls_context(tenant_id, bypass=is_superuser)` after the User lookup. Relies on `TenantRLSAsyncSession.execute()` to auto-inject on the next query (marker change). Explicit `inject_tenant_rls` deliberately omitted because it consumes mocked execute slots in existing dashboard route tests.
+- `backend/tests/test_dashboard_rls_injection.py` — 3 new regression tests: contextvar set to company_id, superuser bypass flag, contextvar stays cleared on 401-rejected path.
+- `.claude/state/OPEN_RISKS.md` — RISK-AUTH-RLS-02 entry, opened+closed same day.
+
+**Verification**:
+- Backend full suite: **5507 passed / 160 skipped / 0 failed** on SQLite (was 5504 — +3 new tests, 0 regressions)
+- Dashboard route tests: 49/49 (test_dashboard_routes + test_dashboard_rls_injection + test_api_key_rls_startup_guard)
+- CI: run `26376164714` still 3s instant-fail across all jobs — billing block continues; commit landed on origin/master at `27696c8`
+
+**Followups**: A complementary startup guard for "routes that read positions/calculation_runs but don't depend on `get_current_user`" would be the natural next defense layer. Consider hoisting `_resolve_user` into `core/dependencies.py` or replacing it with `Depends(get_current_user)` to eliminate the parallel auth helper.
+
 ## Recent Work (2026-05-24) — CI Repair Arc Continuation: Migration Fix + Smoke Job Wiring
 
 Continuation of the 2026-05-23 CI repair arc. Master CI ran green once on `c1f153e` (run 26350186757), exposing RISK-CI-PG-02 (audit_logs DuplicateTable) as the next advisory failure. Six commits this arc:
