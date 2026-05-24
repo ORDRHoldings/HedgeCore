@@ -19,17 +19,24 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema to rebuild RBAC and audit structures with UUID integrity."""
 
-    # The earlier chain (cde23b63d039 + 3450c02f9c01 + the refresh_tokens
-    # migration) created these three tables with user_id INTEGER. This
-    # migration rebuilds them with user_id UUID, so drop the legacy shape
-    # first. IF EXISTS keeps the path idempotent for fresh installs that
-    # never landed the earlier tables (e.g. when applied to a snapshot).
-    # CASCADE removes the legacy FKs cleanly.
+    # The earlier chain (cde23b63d039 + 3450c02f9c01 + an inferred earlier
+    # refresh_tokens revision) created these three tables already. This
+    # migration originally also called op.create_table for them — a
+    # DuplicateTable on fresh PG. Drop the legacy versions first; IF EXISTS
+    # keeps the path idempotent for snapshots that never landed them.
+    # CASCADE removes the legacy FKs cleanly. The rebuild keeps user_id as
+    # INTEGER (matching users.id at this point); 4dfe7c45fffe converts the
+    # whole graph to UUID in lock-step in the next revision.
     op.execute("DROP TABLE IF EXISTS audit_logs CASCADE")
     op.execute("DROP TABLE IF EXISTS auth_audit_logs CASCADE")
     op.execute("DROP TABLE IF EXISTS refresh_tokens CASCADE")
 
     # --- AUDIT LOGS ---
+    # user_id is INTEGER here to match users.id at this point in the chain.
+    # The next migration (4dfe7c45fffe) converts users.id and all referencing
+    # user_id columns (here, auth_audit_logs, refresh_tokens, user_roles) to
+    # UUID in lock-step. Creating UUID columns now would break the FK because
+    # users.id is still INTEGER until that later migration runs.
     op.create_table(
         "audit_logs",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
@@ -42,7 +49,7 @@ def upgrade() -> None:
         sa.Column("request_id", sa.String(length=64), nullable=False),
         sa.Column(
             "user_id",
-            sa.UUID(),
+            sa.Integer(),
             sa.ForeignKey("users.id", ondelete="SET NULL"),
             nullable=True,
         ),
@@ -61,12 +68,13 @@ def upgrade() -> None:
     op.create_index("ix_audit_logs_user_ts", "audit_logs", ["user_id", "ts"], unique=False)
 
     # --- AUTH AUDIT LOGS ---
+    # See audit_logs comment: user_id is INTEGER here; 4dfe7c45fffe converts.
     op.create_table(
         "auth_audit_logs",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column(
             "user_id",
-            sa.UUID(),
+            sa.Integer(),
             sa.ForeignKey("users.id", ondelete="SET NULL"),
             nullable=True,
         ),
@@ -128,13 +136,14 @@ def upgrade() -> None:
     op.create_index("ix_auth_audit_logs_user_created_at", "auth_audit_logs", ["user_id", "created_at"], unique=False)
 
     # --- REFRESH TOKENS ---
+    # See audit_logs comment: user_id is INTEGER here; 4dfe7c45fffe converts.
     op.create_table(
         "refresh_tokens",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("jti", sa.String(length=64), nullable=False),
         sa.Column(
             "user_id",
-            sa.UUID(),
+            sa.Integer(),
             sa.ForeignKey("users.id", ondelete="CASCADE"),
             nullable=False,
         ),
