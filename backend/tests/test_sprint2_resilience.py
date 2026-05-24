@@ -54,12 +54,16 @@ class TestTokenBucket:
         assert bucket.tokens == 10.0
 
     def test_consume_decrements_tokens(self):
-        bucket = TokenBucket(capacity=10, refill_rate_per_sec=1.0)
+        # refill_rate=0 so equality against a discrete token count is
+        # immune to wall-clock drift inside consume().
+        bucket = TokenBucket(capacity=10, refill_rate_per_sec=0.0)
         assert bucket.consume(1.0) is True
         assert bucket.tokens == 9.0
 
     def test_consume_exact_capacity(self):
-        bucket = TokenBucket(capacity=5, refill_rate_per_sec=1.0)
+        # See test_consume_decrements_tokens — pin refill_rate=0 to keep
+        # the post-drain assertion deterministic under CI load.
+        bucket = TokenBucket(capacity=5, refill_rate_per_sec=0.0)
         for _ in range(5):
             assert bucket.consume(1.0) is True
         assert bucket.tokens == 0.0
@@ -73,11 +77,17 @@ class TestTokenBucket:
 
     def test_refill_over_time(self):
         """Tokens refill at the configured rate over elapsed time."""
+        import time
+
         bucket = TokenBucket(capacity=10, refill_rate_per_sec=10.0)
         # Drain all tokens
         for _ in range(10):
             bucket.consume(1.0)
-        assert bucket.tokens == 0.0
+        # Pin the post-drain state — wall-clock drift across consume() calls
+        # leaves fractional tokens under CI load. The test is about refill,
+        # not drain.
+        bucket.tokens = 0.0
+        bucket.last_refill = time.monotonic()
 
         # Manually advance last_refill to simulate 1 second passing
         bucket.last_refill -= 1.0
