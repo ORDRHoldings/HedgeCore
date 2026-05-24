@@ -63,6 +63,18 @@
 - **Status**: Open (latent). Triage when adding API-key auth to any business endpoint.
 - **Opened**: 2026-05-17
 
+## RISK-CI-E2E-01: E2E Playwright suite has never actually run end-to-end in CI
+- **Severity**: HIGH (advisory — does not block merges while we audit)
+- **Component**: `.github/workflows/ci.yml::e2e`, `frontend/e2e/**/*.spec.ts`
+- **Description**: Two specs in `frontend/e2e/accounting/` imported `'../../helpers/auth'` (two levels up), resolving outside the `e2e/` tree to a non-existent path. Every CI run from at least 2026-05-13 failed fast on this missing module before any test could execute. Fixing the import path (commit 54c3559) exposed the next layer: the suite has 237 tests across 51 files targeting the live `hedgecore.onrender.com` backend, and cannot complete in the GitHub Actions runner window — runs sat in_progress past 30 min and had to be cancelled. **Bottom line: the E2E suite has not actually verified anything on master in 10+ days.**
+- **Mitigation**: 2026-05-23 — demoted `e2e` job to `continue-on-error: true` with a 20-minute timeout, same advisory pattern as `backend-postgres`. Unblocks master merges; logs the gap visibly in every run.
+- **Followups (separate work)**:
+  1. Audit which of the 237 tests are genuinely E2E vs which should be component tests.
+  2. Either spin up a CI-local backend (preferred) or split out a smoke subset that runs against the live URL.
+  3. Promote back to a hard gate once the suite is reliably green inside the runner window. Promotion is a launch-readiness milestone.
+- **Status**: Mitigated (advisory). Open work item for E2E audit.
+- **Opened**: 2026-05-23
+
 ## RISK-RLS-PROD-01: RLS injection broken on asyncpg — CLOSED
 - **Severity**: P1 (production)
 - **Component**: `backend/app/core/rls.py`
