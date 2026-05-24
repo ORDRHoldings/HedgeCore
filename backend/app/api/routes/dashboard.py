@@ -18,6 +18,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
+from app.core.rls import set_tenant_rls_context
 from app.core.security import decode_token
 from app.models.calculation_run import CalculationRun
 from app.models.execution_proposal import ExecutionProposal
@@ -56,6 +57,13 @@ async def _resolve_user(request: Request, db: AsyncSession) -> User:
     user = result.scalars().first()
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="Invalid or inactive user")
+    # RISK-AUTH-RLS-02: dashboard queries hit RLS-forced tables (positions,
+    # calculation_runs per migration 0036). Set the request-local contextvar;
+    # `TenantRLSAsyncSession.execute()` auto-injects it on the next query, so
+    # policies match this tenant instead of the NO_TENANT default.
+    tenant_id = str(user.company_id) if user.company_id else None
+    bypass_tenant_rls = bool(getattr(user, "is_superuser", False))
+    set_tenant_rls_context(tenant_id, bypass=bypass_tenant_rls)
     return user
 def _get_branch_code(user: User) -> str:
     """Return 3-letter branch code from user's branch if available."""

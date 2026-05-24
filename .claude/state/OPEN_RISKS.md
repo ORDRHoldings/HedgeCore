@@ -63,6 +63,16 @@
 - **Status**: Mitigated (option 3). Risk no longer latent — accidental wiring of API-key auth to a business endpoint now fails closed at startup rather than silently returning empty rows in prod. Options 1 and 2 remain available if API-key auth is ever needed on RLS-protected business routes.
 - **Opened**: 2026-05-17 / **Mitigated**: 2026-05-24
 
+## RISK-AUTH-RLS-02: dashboard JWT path bypassed RLS injection — Mitigated
+- **Severity**: HIGH (active silent-empty-results bug under migration 0036) → CLOSED
+- **Component**: `backend/app/api/routes/dashboard.py::_resolve_user`
+- **Description**: `dashboard.py` does not depend on `core/dependencies.py::get_current_user`. Instead it carries its own `_resolve_user(request, db)` helper that calls `decode_token` + a User lookup but **never sets the request-local RLS contextvar**. With migration 0036 forcing RLS on `positions` and `calculation_runs`, `TenantRLSAsyncSession.execute()` auto-injects from the contextvar — and the default is `None` → `set_config('app.current_tenant_id', '', true)` → policy `COALESCE(NULLIF(...,''), '00000000-...')` matches the NO_TENANT sentinel → all dashboard aggregates against positions/calculation_runs silently returned empty.
+  - Distinct from RISK-AUTH-RLS-01: RLS-01 covered the *API-key* path (latent). RLS-02 covered the *JWT* path on `/api/v1/dashboard/*` routes (active in production for any user with data).
+- **Mitigation**: 2026-05-24 — `_resolve_user` now calls `set_tenant_rls_context(tenant_id, bypass=is_superuser)` after the User lookup. `TenantRLSAsyncSession.execute()` re-injects on the next query because the marker changes (empty → real tenant). Explicit `inject_tenant_rls` was *not* added because the auto-inject path is sufficient and adding it consumes mocked execute slots in the existing dashboard route tests. 3 new regression tests in `backend/tests/test_dashboard_rls_injection.py` pin the contract: contextvar matches `user.company_id` after `_resolve_user` (tenant + superuser-bypass cases) and stays cleared on the 401-rejected path.
+- **Followups**: Consider hoisting `_resolve_user` into `core/dependencies.py` or replacing it with `Depends(get_current_user)` to eliminate the parallel auth helper entirely. The RLS-01 startup guard does not catch this class of gap (it only walks `get_api_key_principal`); a complementary guard for "routes that read positions/calculation_runs but don't go through `get_current_user`" would be the natural next defense layer.
+- **Status**: CLOSED (mitigated 2026-05-24). Tests: 5504+3 backend passing.
+- **Opened**: 2026-05-24 / **Closed**: 2026-05-24
+
 ## RISK-CI-PG-02: backend-postgres alembic blocked by audit_logs duplicate-table
 - **Severity**: MEDIUM (advisory job — does not block merges)
 - **Component**: `.github/workflows/ci.yml::backend-postgres`, `backend/migrations/`
