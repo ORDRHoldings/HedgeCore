@@ -80,8 +80,8 @@
 - **Status update 2026-05-23**: First post-demotion CI run (26350186757) actually completed E2E within the 20-min window with `conclusion=success` — likely runner-concurrency variance vs. the cancelled congested attempts. The audit work below remains valid: the suite is brittle (target=live prod URL, 237 tests serialized through one runner) and one green run does not certify it.
 - **Followups (separate work)**:
   1. Audit which of the 237 tests are genuinely E2E vs which should be component tests.
-  2. Either spin up a CI-local backend (preferred) or split out a smoke subset that runs against the live URL.
-  3. Promote back to a hard gate once the suite is reliably green inside the runner window across N consecutive runs. Promotion is a launch-readiness milestone.
+  2. ✅ Partial — 2026-05-24 (commits `008f830` + `97636e9`): split out a smoke subset. `frontend/playwright.config.ts` defines a `smoke` project (`testMatch: /e2e[\\/]smoke[\\/].*\.spec\.ts/`) that resolves to 44 tests (43 nav-smoke + 1 full-journey). CI workflow adds an advisory `e2e-smoke` job (10-min step timeout, `continue-on-error: true`) running `--project=smoke`. Still advisory — needs N consecutive green runs to prove stability before promotion. Spinning up a CI-local backend is the larger remaining sub-item.
+  3. Promote back to a hard gate once the suite is reliably green inside the runner window across N consecutive runs. Promotion is a launch-readiness milestone. Smoke job is the candidate ahead of the full chromium suite.
 - **Status**: Mitigated (advisory). Open work item for E2E audit.
 - **Opened**: 2026-05-23
 
