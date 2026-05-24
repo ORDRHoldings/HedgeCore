@@ -174,13 +174,13 @@ def upgrade() -> None:
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER "
         "NOT NULL DEFAULT 1"
     )
-    # Remove deprecated columns safely if they exist
-    with op.batch_alter_table("users", schema=None) as batch_op:
-        for col in ["mfa_secret", "role", "created_at", "mfa_enabled"]:
-            try:
-                batch_op.drop_column(col)
-            except Exception:
-                pass
+    # Remove deprecated columns safely if they exist.
+    # batch_alter_table defers DDL until the `with` block exits, so a
+    # try/except around batch_op.drop_column never catches a missing column —
+    # the exception fires when the batch flushes. Use raw DROP COLUMN IF
+    # EXISTS instead so it's truly idempotent on fresh PG.
+    for col in ("mfa_secret", "role", "created_at", "mfa_enabled"):
+        op.execute(f"ALTER TABLE users DROP COLUMN IF EXISTS {col}")
     # ### END COMMANDS ###
 
 
