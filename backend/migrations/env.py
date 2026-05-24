@@ -90,12 +90,19 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Force Alembic to use synchronous psycopg2 driver
-if getattr(settings, "db_url", None):
-    config.set_main_option(
-        "sqlalchemy.url",
-        settings.db_url.replace("+asyncpg", "+psycopg2")
-    )
+# Force Alembic to use synchronous psycopg2 driver.
+# Prefer DATABASE_URL (set by the runtime + CI) over settings.db_url, which
+# reads ASYNC_DATABASE_URL and silently falls back to a default DB_HOST that
+# doesn't exist outside docker-compose. CI only ever sets DATABASE_URL.
+_alembic_url = os.getenv("DATABASE_URL") or getattr(settings, "db_url", None)
+if _alembic_url:
+    _alembic_url = _alembic_url.replace("postgresql+asyncpg", "postgresql+psycopg2")
+    _alembic_url = _alembic_url.replace("postgres+asyncpg", "postgresql+psycopg2")
+    if _alembic_url.startswith("postgres://"):
+        _alembic_url = _alembic_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif _alembic_url.startswith("postgresql://") and "+psycopg2" not in _alembic_url:
+        _alembic_url = _alembic_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    config.set_main_option("sqlalchemy.url", _alembic_url)
 
 # Attach all models? metadata
 target_metadata = Base.metadata

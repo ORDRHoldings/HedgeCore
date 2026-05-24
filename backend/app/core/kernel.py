@@ -23,6 +23,7 @@ import os
 import time
 
 from sqlalchemy.orm import Session
+
 from synex_kernel.audit.chain import (
     append_event,
     create_genesis,
