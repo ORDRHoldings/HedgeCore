@@ -1,5 +1,24 @@
 # Changelog (AI-maintained)
 
+## 2026-05-25 — Backend dead-code sweep (post-RLS-02 hygiene)
+
+- **Motivation**: The RLS-02 mitigation C refactor surfaced one F841 in `dashboard.py` (`user_ids_sq` in `pending_approvals`). A broader sweep with `ruff check --select F401,F811,F841` found 17 dead variable assignments across the backend.
+- **Triage**: 8 removed across 7 files (`7ee8e7f`, `0fbe194`):
+  - `dashboard.py`: `user_ids_sq` (computed scoped user-id subquery, never joined)
+  - `auth.py` logout: `ua` from request headers (only `ip` was consumed downstream)
+  - `auth_passwordless.py`: `perm_codes` list comprehension (`roles`/`role_names` were used for session duration, but `perm_codes` itself was dead)
+  - `v1_company_settings.py`: `actor_id` and `actor_email` pre-commit snapshots (`emit_audit` accepts the User object directly; only `actor_company_id` was downstream-consumed)
+  - `v1_hedge_effectiveness.py`: `data_json_str` (the JSON serialization wasn't persisted; `source_hash` is computed from raw bytes)
+  - `pipeline_service.py`: `meta` binding (kept the `get_pair_meta(pair)` call for its ValueError side effect, just dropped the unused binding)
+  - `seed.py` demo-reset: `del_proposals` and `del_cl` rowcount captures (result dict has no `proposals_deleted`/`credit_limits_deleted` slots; rowcounts were unused)
+- **9 deliberate non-removals**:
+  - `engine_v1/{backtesting,liquidity_regime,nav_attribution_engine,scenarios_ext,waterfall}.py` — kernel modules under architecture freeze; F841s require ADR + quant-auditor review, not drive-by removal
+  - `posting_adapters/netsuite.py`: `base_url` and `payload` — intentional paper-mode scaffolding for the future live NetSuite REST call (RISK-ERP-01 still open; no live credentials)
+  - `v1_connectors.py`: `audit_session` — placeholder `async with` for best-effort audit on OAuth callback (no User context to attribute)
+  - `market.py`: `prev_close = s.mid` — semantically meaningful placeholder for the TwelveData prev_close gap (paired with the inline `# TwelveData doesn't give prev_close in /quote` comment)
+- **Tests**: 5514 passed / 160 skipped / 0 failed on SQLite (no regression). Ruff `F841` count: 17 → 9 (all 9 remaining are documented placeholders).
+- **Follow-up**: If RISK-ERP-01 lands live NetSuite credentials, `base_url`/`payload` become load-bearing; refactor that adapter end-to-end at that point rather than touching it now.
+
 ## 2026-05-24 (latest) — RISK-AUTH-RLS-02 mitigation C: root-cause elimination (dashboard refactor)
 
 - **Motivation**: The RLS-02 fix (mitigation A) closed the active bug; the canonical-auth startup guard (mitigation B) added structural defense. The remaining work was eliminating the parallel `_resolve_user` helper entirely so the allowlist exception could go away. Allowlist entries are exceptions to a security invariant — fewer is strictly better than more.
