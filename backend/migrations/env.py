@@ -135,6 +135,31 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        # Pre-create / widen alembic_version.version_num to VARCHAR(255).
+        # Default is VARCHAR(32); several revision IDs in this chain exceed
+        # 32 chars (e.g. `0013_add_sso_billing_to_companies` is 33 chars,
+        # `0028_tca_permissions` etc fit, but `0027_audit_lab_schema_extensions`
+        # is 32 — right at the limit). On fresh Postgres replay, the UPDATE
+        # alembic_version SET version_num='...' raises StringDataRightTruncation.
+        # Production tolerated this because `run_alembic_upgrade()` swallows
+        # the error and the chain heals on subsequent runs; CI advisory job
+        # crashes on first such overflow. RISK-CI-PG-02.
+        try:
+            connection.exec_driver_sql(
+                "CREATE TABLE IF NOT EXISTS alembic_version ("
+                "version_num VARCHAR(255) NOT NULL, "
+                "CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))"
+            )
+            connection.exec_driver_sql(
+                "ALTER TABLE alembic_version "
+                "ALTER COLUMN version_num TYPE VARCHAR(255)"
+            )
+            connection.commit()
+        except Exception as _exc:  # noqa: BLE001
+            # SQLite / other dialects don't need this and don't support
+            # the ALTER. Failure here is non-fatal — the original
+            # alembic-created table will be used.
+            _env_log.debug("alembic env.py: alembic_version widen skipped — %s", _exc)
         context.configure(
             connection=connection,
             target_metadata=target_metadata,

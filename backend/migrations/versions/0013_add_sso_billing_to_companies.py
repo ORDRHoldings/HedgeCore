@@ -33,22 +33,48 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("companies", sa.Column("sso_provider", sa.String(64), nullable=True))
-    op.add_column("companies", sa.Column("sso_domain", sa.String(255), nullable=True))
-    op.add_column("companies", sa.Column(
-        "stripe_customer_id", sa.String(128), nullable=True, unique=True
-    ))
-    op.add_column("companies", sa.Column(
-        "stripe_subscription_id", sa.String(128), nullable=True, unique=True
-    ))
-    op.add_column("companies", sa.Column(
-        "plan_tier", sa.String(32), nullable=False, server_default="starter"
-    ))
+    # Idempotent against h1a2b3c4d5e6_company_sso_billing_fields which already
+    # adds these same 5 columns earlier in the chain. The duplicate is a
+    # historical chain artifact (h1 was added later as a hotfix without
+    # noting 0013's existence). On fresh chain replay, h1 runs first and
+    # adds the columns; this migration must then no-op rather than crash
+    # on "column already exists". Raw SQL `IF NOT EXISTS` is the standard
+    # idempotent shape. RISK-CI-PG-02.
+    op.execute("""
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'companies') THEN
+        ALTER TABLE companies ADD COLUMN IF NOT EXISTS sso_provider VARCHAR(64);
+        ALTER TABLE companies ADD COLUMN IF NOT EXISTS sso_domain VARCHAR(255);
+        ALTER TABLE companies ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(128);
+        ALTER TABLE companies ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(128);
+        ALTER TABLE companies ADD COLUMN IF NOT EXISTS plan_tier VARCHAR(32) NOT NULL DEFAULT 'starter';
+        -- Unique constraints (only add if not present)
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_companies_stripe_customer_id') THEN
+            ALTER TABLE companies ADD CONSTRAINT uq_companies_stripe_customer_id UNIQUE (stripe_customer_id);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_companies_stripe_subscription_id') THEN
+            ALTER TABLE companies ADD CONSTRAINT uq_companies_stripe_subscription_id UNIQUE (stripe_subscription_id);
+        END IF;
+    END IF;
+END
+$$;
+    """)
 
 
 def downgrade() -> None:
-    op.drop_column("companies", "plan_tier")
-    op.drop_column("companies", "stripe_subscription_id")
-    op.drop_column("companies", "stripe_customer_id")
-    op.drop_column("companies", "sso_domain")
-    op.drop_column("companies", "sso_provider")
+    op.execute("""
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'companies') THEN
+        ALTER TABLE companies DROP CONSTRAINT IF EXISTS uq_companies_stripe_subscription_id;
+        ALTER TABLE companies DROP CONSTRAINT IF EXISTS uq_companies_stripe_customer_id;
+        ALTER TABLE companies DROP COLUMN IF EXISTS plan_tier;
+        ALTER TABLE companies DROP COLUMN IF EXISTS stripe_subscription_id;
+        ALTER TABLE companies DROP COLUMN IF EXISTS stripe_customer_id;
+        ALTER TABLE companies DROP COLUMN IF EXISTS sso_domain;
+        ALTER TABLE companies DROP COLUMN IF EXISTS sso_provider;
+    END IF;
+END
+$$;
+    """)

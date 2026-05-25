@@ -14,8 +14,12 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Idempotent against gg1a2b3c4d5e7_stub which pre-creates this table
+    # for alembic-in-isolation (legal_entities is FK-referenced by
+    # r1a2b3c4d5e6_add_debt_tables earlier in chain). CREATE/INDEX
+    # IF NOT EXISTS make both ops safe on fresh-chain replay.
     op.execute("""
-        CREATE TABLE legal_entities (
+        CREATE TABLE IF NOT EXISTS legal_entities (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             company_id UUID NOT NULL REFERENCES companies(id),
             parent_entity_id UUID REFERENCES legal_entities(id),
@@ -35,7 +39,7 @@ def upgrade() -> None:
             version INTEGER NOT NULL DEFAULT 1
         );
     """)
-    op.execute("CREATE INDEX ix_le_company_id ON legal_entities(company_id);")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_le_company_id ON legal_entities(company_id);")
 
 
 def downgrade() -> None:

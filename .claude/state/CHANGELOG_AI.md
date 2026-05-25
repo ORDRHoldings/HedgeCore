@@ -1,5 +1,31 @@
 # Changelog (AI-maintained)
 
+## 2026-05-25 (later9) — Stub migration `gg1a2b3c4d5e7` + chain content fixes (RISK-CI-PG-02 option-a)
+
+Implemented option (a) from the (later8) arc closure: a single mid-chain stub migration that pre-creates ORM-only tables so the alembic-in-isolation chain reaches further before the next content-bug crash. Together with three migration content fixes, this advanced the chain from "crashes at `h1a2b3c4d5e6`" (revision #28 / chain depth ~5) to "crashes at `0028_tca_permissions`" (revision #62 / chain depth ~40) — **~35 migrations of additional alembic-isolation headroom**.
+
+**Stub migration** (`gg1a2b3c4d5e7_stub_companies_for_alembic_isolation.py`, NEW): inserted between `g1a2b3c4d5e6` and `h1a2b3c4d5e6`. Creates five ORM-only tables with `CREATE TABLE IF NOT EXISTS`, matching the production `_ensure_tables()` schemas verbatim: `companies` (app/main.py:435-445), `legal_entities` (0017_legal_entities.py:17-36 — also serves as the out-of-order FK target for `r1a2b3c4d5e6_add_debt_tables`), `permissions` (app/main.py:551), `roles` (app/main.py:449-465), `role_permissions` (app/main.py:565-575). Downgrade is intentional no-op (dropping cascades destroy 50%+ of the schema). Production is unaffected — `_ensure_tables` already creates these, so the stub is a no-op there.
+
+**Migration content fixes**:
+- `h1a2b3c4d5e6_company_sso_billing_fields.py`: `down_revision` rewired to `gg1a2b3c4d5e7` (was `g1a2b3c4d5e6`).
+- `0013_add_sso_billing_to_companies.py`: made idempotent via `DO $$ BEGIN ... ADD COLUMN IF NOT EXISTS ... + IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname=...) THEN ALTER TABLE ... ADD CONSTRAINT ...`. Reason: `h1a2b3c4d5e6` and `0013_add_sso_billing_to_companies` add the same 5 columns (`sso_provider`, `sso_domain`, `stripe_customer_id`, `stripe_subscription_id`, `plan_tier`) to `companies` — historical chain artifact (h1 added later as hotfix without noting 0013).
+- `0017_legal_entities.py`: `CREATE TABLE` → `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX` → `CREATE INDEX IF NOT EXISTS`. Reason: the stub now pre-creates this table.
+- `t1a2b3c4d5e6_add_ir_debt_permissions.py`: structural bug fix. Migration inserted `uuid4()` into `permissions.id`, but `permissions.id` is `SERIAL INTEGER` per ORM (`app/models/permission.py:57`) and `_ensure_tables()` (`app/main.py:553`). Crash: `psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type integer: "b5e0aada-..."`. Fix: omit `id` from the INSERT, let SERIAL auto-assign. Production tolerated this via `run_alembic_upgrade()` exception-swallow + `_seed_permissions()` populating data idempotently.
+
+**Environment fix** (`migrations/env.py`): widen `alembic_version.version_num` to `VARCHAR(255)` before running migrations. Default is `VARCHAR(32)`; `0013_add_sso_billing_to_companies` is 33 chars and overflows. Production tolerated via `run_alembic_upgrade()` swallow + chain healing on next run.
+
+**End-to-end verification on probe2 PG** (port 5499, dropped/recreated `public` schema):
+- Before this arc: chain crashed immediately at `h1a2b3c4d5e6` on `relation "companies" does not exist`.
+- After this arc: chain advanced ~35 migrations; new crash at `0028_tca_permissions` line 29 — `column "name" of relation "permissions" does not exist [SQL: INSERT INTO permissions (id, name, description, created_at) VALUES (...UUID..., 'tca.read', ...)]`. **Three migrations** (`0028_tca_permissions`, `0030_counterparty_permissions`, `0032_regulatory_permissions`) have wrong `permissions` schema — they reference a `name` column that does not exist (canonical column is `codename`) AND insert UUIDs into `permissions.id` (which is SERIAL). These are **migration content bugs** identical to t1's pattern, not chain-structural issues.
+
+**Diminishing-returns inflection — STOPPING**. The pattern from here forward is: each remaining advisory crash is an individual migration content bug requiring per-migration content fixing (wrong column names, UUID/SERIAL mismatches, missing FK targets). Fixing 3 more (0028/0030/0032) likely surfaces a 4th class of crashes downstream. The cost-benefit has flipped: stubs amortize over many migrations; individual content fixes do not. The durable solution remains the `17a1cc0` workflow refactor — production is already protected; the advisory CI gate's marginal value does not justify continued per-migration work.
+
+**Verification**:
+- SQLite full suite: route-smoke 131 tests pass (no regression in changed migrations).
+- `alembic heads`: `0036_force_rls_tenant_context (head)` — single head intact.
+
+**RISK-CI-PG-02 status**: still open, but materially reduced. Arc-3 closure. Remaining work tracked under RISK-CI-PG-02 followup.
+
 ## 2026-05-25 (later8) — Guard `g1a2b3c4d5e6_audit_lab_integrity` for ORM-only tables
 
 Continuation of the RISK-CI-PG-02 chain audit. Investigation that started against `auth_audit_logs` revealed the prior CHANGELOG (later6) characterization was inaccurate: the `3450c02f9c01` migration declares `user_id INTEGER` referencing `users.id INTEGER` at the chain point where it runs — both sides are integer when the FK is created, and `4dfe7c45fffe_migrate_users_id_to_uuid.py` correctly converts both sides to UUID (including the FK drop/recreate at lines 51, 94-96 and the integer→uuid type conversion guarded by `IF data_type='integer'` at lines 78-81). The auth_audit_logs chain is structurally sound. **Correcting the (later6) claim**: the migration is not broken.
