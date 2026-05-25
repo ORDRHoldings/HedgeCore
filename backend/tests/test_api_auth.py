@@ -49,14 +49,14 @@ async def test_auth_lifecycle(async_client):
     password = "StrongPassw0rd!"
 
     # --- Register ---
-    r = await async_client.post("/auth/register", json={"email": email, "password": password})
+    r = await async_client.post("/api/auth/register", json={"email": email, "password": password})
     assert r.status_code == 201, r.text
     data = r.json()
     user_id = UUID(data["id"])
 
     # --- Login ---
     form = {"username": email, "password": password}
-    r = await async_client.post("/auth/login", data=form)
+    r = await async_client.post("/api/auth/login", data=form)
     assert r.status_code == 200, r.text
     tokens = r.json()
     access_token = tokens["access_token"]
@@ -64,14 +64,14 @@ async def test_auth_lifecycle(async_client):
 
     # --- /me ---
     headers = {"Authorization": f"Bearer {access_token}"}
-    r = await async_client.get("/auth/me", headers=headers)
+    r = await async_client.get("/api/auth/me", headers=headers)
     assert r.status_code == 200, r.text
     me = r.json()
     assert me["email"] == email
     assert me["id"] == str(user_id)
 
     # --- Refresh ---
-    r = await async_client.post("/auth/refresh", json={"refresh_token": refresh_token})
+    r = await async_client.post("/api/auth/refresh", json={"refresh_token": refresh_token})
     assert r.status_code == 200, r.text
     new_pair = r.json()
     assert new_pair["access_token"] != access_token
@@ -79,7 +79,7 @@ async def test_auth_lifecycle(async_client):
 
     # --- Logout ---
     headers = {"Authorization": f"Bearer {new_pair['access_token']}"}
-    r = await async_client.post("/auth/logout", headers=headers)
+    r = await async_client.post("/api/auth/logout", headers=headers)
     assert r.status_code == 200, r.text
     assert r.json()["detail"] == "Logged out successfully"
 
@@ -92,10 +92,10 @@ async def test_register_duplicate_email(async_client):
     email = f"dup_{uuid.uuid4().hex[:6]}@example.com"
     password = "StrongPassw0rd!"
 
-    r1 = await async_client.post("/auth/register", json={"email": email, "password": password})
+    r1 = await async_client.post("/api/auth/register", json={"email": email, "password": password})
     assert r1.status_code == 201, r1.text
 
-    r2 = await async_client.post("/auth/register", json={"email": email, "password": password})
+    r2 = await async_client.post("/api/auth/register", json={"email": email, "password": password})
     assert r2.status_code == 400
     assert "already" in r2.json()["detail"].lower()
 
@@ -105,7 +105,7 @@ async def test_login_invalid_credentials(async_client):
     email = f"nonexistent_{uuid.uuid4().hex[:6]}@example.com"
     password = "wrongpassword"
     form = {"username": email, "password": password}
-    r = await async_client.post("/auth/login", data=form)
+    r = await async_client.post("/api/auth/login", data=form)
     assert r.status_code == 401
     assert "Invalid credentials" in r.json()["detail"]
 
@@ -113,19 +113,19 @@ async def test_login_invalid_credentials(async_client):
 async def test_me_invalid_token(async_client):
     """Accessing /me with an invalid token returns 401."""
     headers = {"Authorization": "Bearer invalid.token.value"}
-    r = await async_client.get("/auth/me", headers=headers)
+    r = await async_client.get("/api/auth/me", headers=headers)
     assert r.status_code == 401
 
 
 async def test_refresh_invalid_token(async_client):
     """Refreshing with invalid token returns 401."""
-    r = await async_client.post("/auth/refresh", json={"refresh_token": "bad.token"})
+    r = await async_client.post("/api/auth/refresh", json={"refresh_token": "bad.token"})
     assert r.status_code == 401
 
 
 async def test_logout_missing_token(async_client):
     """Logout without token must return 401."""
-    r = await async_client.post("/auth/logout")
+    r = await async_client.post("/api/auth/logout")
     assert r.status_code == 401
 
 
@@ -137,11 +137,11 @@ async def test_token_uuid_consistency(async_client):
     email = f"uuid_check_{uuid.uuid4().hex[:6]}@example.com"
     password = "StrongPassw0rd!"
 
-    r = await async_client.post("/auth/register", json={"email": email, "password": password})
+    r = await async_client.post("/api/auth/register", json={"email": email, "password": password})
     assert r.status_code in (201, 400)
 
     form = {"username": email, "password": password}
-    r = await async_client.post("/auth/login", data=form)
+    r = await async_client.post("/api/auth/login", data=form)
     assert r.status_code == 200
     data = r.json()
     access = data["access_token"]

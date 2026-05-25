@@ -46,7 +46,7 @@ async def cleanup_db():
 
 async def _register_user(client, email="test@hedgecalc.ai", password="StrongPass123!"):
     """Helper for user registration (returns created user payload)."""
-    res = await client.post("/auth/register", json={"email": email, "password": password})
+    res = await client.post("/api/auth/register", json={"email": email, "password": password})
     assert res.status_code == 201, res.text
     data = res.json()
     assert "email" in data and data["email"] == email
@@ -57,7 +57,7 @@ async def _register_user(client, email="test@hedgecalc.ai", password="StrongPass
 async def _login_user(client, email="test@hedgecalc.ai", password="StrongPass123!"):
     """Helper for login (form-based OAuth2PasswordRequestForm)."""
     res = await client.post(
-        "/auth/login",
+        "/api/auth/login",
         data={"username": email, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -112,7 +112,7 @@ async def test_login_rejects_invalid_password(client):
     """Ensure invalid passwords are rejected."""
     await _register_user(client)
     res = await client.post(
-        "/auth/login",
+        "/api/auth/login",
         data={"username": "test@hedgecalc.ai", "password": "WrongPass"},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
@@ -127,7 +127,7 @@ async def test_refresh_rotates_token_and_revokes_old(client):
     initial = await _login_user(client)
     old_refresh = initial["refresh_token"]
 
-    res = await client.post("/auth/refresh", json={"refresh_token": old_refresh})
+    res = await client.post("/api/auth/refresh", json={"refresh_token": old_refresh})
     assert res.status_code == 200, res.text
     new_tokens = res.json()
     assert new_tokens["refresh_token"] != old_refresh
@@ -146,7 +146,7 @@ async def test_refresh_rotates_token_and_revokes_old(client):
 async def test_refresh_rejects_invalid_token(client):
     """Ensure invalid refresh tokens are rejected (normalized message)."""
     bad_token = "this.is.not.a.valid.jwt"
-    res = await client.post("/auth/refresh", json={"refresh_token": bad_token})
+    res = await client.post("/api/auth/refresh", json={"refresh_token": bad_token})
     assert res.status_code == 401
     # Normalize both legacy and new wording
     assert any(msg in res.text for msg in ["Invalid refresh token", "Invalid or malformed token"])
@@ -155,7 +155,7 @@ async def test_refresh_rejects_invalid_token(client):
 @pytest.mark.asyncio
 async def test_me_endpoint_requires_access_token(client):
     """Ensure /auth/me requires valid access token."""
-    res = await client.get("/auth/me")
+    res = await client.get("/api/auth/me")
     assert res.status_code == 401
 
 
@@ -166,7 +166,7 @@ async def test_me_endpoint_returns_user_profile(client):
     tokens = await _login_user(client)
     access_token = tokens["access_token"]
 
-    res = await client.get("/auth/me", headers={"Authorization": f"Bearer {access_token}"})
+    res = await client.get("/api/auth/me", headers={"Authorization": f"Bearer {access_token}"})
     assert res.status_code == 200, res.text
     payload = res.json()
     assert payload["email"] == "test@hedgecalc.ai"
@@ -198,7 +198,7 @@ async def test_single_session_policy(client):
     await _register_user(client)
     first_tokens = await _login_user(client)
     second = await client.post(
-        "/auth/login",
+        "/api/auth/login",
         data={"username": "test@hedgecalc.ai", "password": "StrongPass123!"},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
