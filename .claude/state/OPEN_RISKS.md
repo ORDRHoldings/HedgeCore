@@ -74,22 +74,28 @@
 - **Status**: CLOSED — root cause eliminated, structural guard in place. Tests: 5514 passed / 160 skipped / 0 failed on SQLite (was 5507; net +7).
 - **Opened**: 2026-05-24 / **Closed**: 2026-05-24
 
-## RISK-CI-PG-02: backend-postgres alembic chain fails on fresh PG — two migrations now guarded; chain still breaks at `b7d2e4f1a9c3`
+## RISK-CI-PG-02: backend-postgres alembic chain fails on fresh PG — root cause is architectural (chain assumes `_ensure_tables` runs first)
 - **Severity**: MEDIUM (advisory job — does not block merges)
-- **Component**: `.github/workflows/ci.yml::backend-postgres`, `backend/migrations/versions/*.py`
+- **Component**: `.github/workflows/ci.yml::backend-postgres`, `backend/migrations/versions/*.py`, `backend/app/core/db.py::_ensure_tables`
+- **Root cause (identified 2026-05-25)**: The migration chain was authored assuming `Base.metadata.create_all` (via `_ensure_tables()`) runs first and the chain alters/augments that schema. Many tables (`positions`, `execution_proposals`, `policy_instances`, `audit_transactions`, …) have **no `CREATE TABLE` migration anywhere in the chain** — they exist purely in the ORM. In production this is fine: `app/main.py` runs `run_alembic_upgrade()` non-fatally first (catches all exceptions per `app/core/db_migrations.py` lines 63–66), then `_ensure_tables()` brings the schema up via `create_all`. The advisory CI job runs alembic in isolation against a fresh `postgres:16`, so the chain crashes the moment it tries to ALTER an ORM-only table.
 - **History**:
-  - 2026-05-23 — opened for `psycopg2.errors.DuplicateTable: relation "audit_logs" already exists`. Four follow-ups to `e2180e1dd4e7` (`830f4ee`, `15fd8fe`, `0943701`, `fe025cf`) added defensive `DROP TABLE IF EXISTS` ahead of the rebuild. Resolved.
-  - 2026-05-25 — refined; next failure at `4dfe7c45fffe` (`CannotCoerce: cannot cast type integer to uuid`).
-  - 2026-05-25 (this entry) — two migrations now defensively guarded; chain still breaks downstream.
-- **Fixes shipped 2026-05-25**:
-  1. `4dfe7c45fffe_migrate_users_id_to_uuid.py` — entire upgrade body wrapped in `DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='id' AND data_type='integer') THEN … END IF; END $$;`. Every `ALTER COLUMN user_id TYPE uuid USING user_id::uuid` (invalid syntax) replaced with per-column `IF data_type='integer' THEN ALTER ... USING NULL::uuid`. On empty fresh DBs this types-checks. On already-migrated DBs the outer guard short-circuits the whole block. Verified locally on `postgres:16`.
-  2. `a3f8c1d2e4b5_phase0_worm_tables_and_request_context.py` — Python `for stmt in [...]: try: op.execute(stmt) except Exception: pass` (broken — PG transactions don't reset on Python-caught errors, every subsequent ALTER fails with "current transaction is aborted") replaced with `DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_class WHERE relname='positions') THEN ALTER TABLE positions ADD COLUMN IF NOT EXISTS ...; END IF; END $$;` guard.
-- **Remaining blockers (not yet fixed)**: After applying the two fixes above and resetting via `DROP SCHEMA public CASCADE; CREATE SCHEMA public;`, the chain next fails at `b7d2e4f1a9c3` on `ALTER TABLE positions ADD COLUMN IF NOT EXISTS policy_revision_id UUID` — same pattern: migration assumes the `positions` table exists when it hasn't been created yet in this chain order. A grep of the full chain suggests many migrations carry the same "ALTER table that doesn't exist yet" pattern. A clean end-to-end fresh-DB run is multi-day audit work — explicitly deferred.
-- **Why production tolerates this**: `app/main.py` runs `run_alembic_upgrade()` non-fatally — `except Exception as e: logger.warning(f"Alembic runner skipped (non-fatal): {e}")` (`app/core/db_migrations.py` lines 63–66). `_ensure_tables()` then runs and brings the schema to current via `Base.metadata.create_all`. The advisory CI job runs alembic in isolation, so the silent prod-time tolerance doesn't carry over.
-- **Production-state caveat (load-bearing before any future fix lands)**: production must be at or past `4dfe7c45fffe` (master head is `0036_force_rls_tenant_context` and dashboards work, which transitively requires UUID `users.id`). All fixes must be no-ops on already-migrated DBs (the `information_schema` / `pg_class` guards do this).
-- **Mitigation**: Already advisory (`continue-on-error: true`). RISK-CI-PG-01 mitigation milestone already accounted for fixture/schema work this would surface.
-- **Followups**: (a) Audit every migration that touches a table created in an earlier revision — guard with `pg_class` existence checks. (b) Once the chain is fully fresh-DB-clean, promote `backend-postgres` to hard gate.
-- **Status**: Open (advisory). Two migrations guarded; downstream chain still breaks. Full chain audit deferred as multi-day work.
+  - 2026-05-23 — opened for `audit_logs` duplicate. Resolved by four follow-ups to `e2180e1dd4e7`.
+  - 2026-05-25 — refined; root cause identified as the architectural pattern above.
+  - 2026-05-25 (this entry) — 5 migrations now defensively guarded with `pg_class` / `information_schema` existence checks. Chain progresses substantially further on fresh PG (verified locally) but still doesn't reach head — `audit_transactions` is the next ORM-only table.
+- **Fixes shipped 2026-05-25** (commits `24dfb84` + this one):
+  1. `4dfe7c45fffe_migrate_users_id_to_uuid.py` — `DO $$ IF data_type='integer' THEN … END IF; END $$;` wrapper + `USING NULL::uuid` (invalid `integer::uuid` syntax replaced).
+  2. `a3f8c1d2e4b5_phase0_worm_tables_and_request_context.py` — Python try/except replaced with `DO $$ IF EXISTS pg_class WHERE relname='positions' THEN … END IF; END $$;` (Python try/except cannot reset poisoned PG transactions).
+  3. `b7d2e4f1a9c3_phase1_policy_revisions_and_4eyes.py` — section 2 positions ALTERs wrapped in same `pg_class` guard.
+  4. `k1a2b3c4d5e6_rls_positions_calculation_runs.py` — positions ENABLE RLS + 3 CREATE POLICY wrapped in `pg_class` guard.
+  5. `0036_force_rls_tenant_context.py` — positions ALTER POLICY (×3) + DROP/CREATE POLICY + FORCE RLS wrapped in `pg_class` guard.
+  6. `f81cffe7f9ee_perf_composite_indexes.py` — `op.create_index` for positions + execution_proposals replaced with PG raw `DO $$ IF EXISTS … CREATE INDEX … END IF; END $$;`; calculation_runs + audit_events unguarded (created in chain by `a3f8c1d2e4b5`). SQLite path preserved via dialect branch.
+  7. `c9f3a2b1d4e5_policy_instance_unique_active_constraint.py` — entire body wrapped in `pg_class` guard for `policy_instances`.
+  8. `f1a2b3c4d5e6_replace_policy_active_index_typed_sentinel.py` — early-return on `policy_instances` missing.
+- **Why each guard is safe**: every guard is a no-op on production-state DBs (where `_ensure_tables` ran first so the table exists, or where the migration was previously applied). The guards only short-circuit on fresh-PG-alembic-in-isolation paths.
+- **Remaining (not yet fixed)**: chain still breaks on `audit_transactions` and likely several more ORM-only tables downstream. The truly correct architectural fix is a CI workflow change: either (a) make `backend-postgres` run `Base.metadata.create_all` via a pre-step (mirrors production exactly), or (b) split it into two advisory jobs — `pytest-pg` (uses `_ensure_tables`) and `alembic-chain-pg` (pure alembic against the goal of getting the chain clean). One-migration-at-a-time guarding is reaching diminishing returns.
+- **Mitigation**: Already advisory (`continue-on-error: true`). RISK-CI-PG-01 milestone covers the larger fixture/schema audit.
+- **Followups**: (a) Workflow refactor to mirror production sequence (`_ensure_tables` first, then alembic — production parity). (b) Complete the migration guard sweep for remaining ORM-only tables when prioritized. (c) Promote `backend-postgres` to hard gate once one of the above paths is closed.
+- **Status**: Open (advisory). 8 migrations now defensively guarded. Architectural root cause identified. Real fix is a CI workflow change, not more migration guards.
 - **Opened**: 2026-05-23  /  **Last update**: 2026-05-25
 
 ## RISK-CI-E2E-01: E2E Playwright suite has never actually run end-to-end in CI

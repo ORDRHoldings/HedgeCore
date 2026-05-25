@@ -21,10 +21,18 @@ def upgrade() -> None:
     # preserving existing route compatibility.
     # RLS provides defence-in-depth for any future non-owner DB roles.
     # Primary tenant isolation is enforced at the application layer.
+    #
+    # Idempotency: in a pure-alembic chain (advisory CI), `positions` doesn't
+    # exist yet — it's created later by `_ensure_tables()` from the ORM. Guard
+    # all positions-touching statements with a pg_class existence check.
+    # See RISK-CI-PG-02 for the chain-wide pattern.
 
     # positions
-    op.execute("ALTER TABLE positions ENABLE ROW LEVEL SECURITY;")
     op.execute("""
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'positions') THEN
+        ALTER TABLE positions ENABLE ROW LEVEL SECURITY;
         CREATE POLICY positions_tenant_isolation_select
         ON positions FOR SELECT
         USING (
@@ -33,8 +41,6 @@ def upgrade() -> None:
                 '00000000-0000-0000-0000-000000000000'
             )
         );
-    """)
-    op.execute("""
         CREATE POLICY positions_tenant_isolation_insert
         ON positions FOR INSERT
         WITH CHECK (
@@ -43,8 +49,6 @@ def upgrade() -> None:
                 '00000000-0000-0000-0000-000000000000'
             )
         );
-    """)
-    op.execute("""
         CREATE POLICY positions_tenant_isolation_update
         ON positions FOR UPDATE
         USING (
@@ -53,9 +57,13 @@ def upgrade() -> None:
                 '00000000-0000-0000-0000-000000000000'
             )
         );
+    END IF;
+END
+$$;
     """)
 
-    # calculation_runs
+    # calculation_runs (created by a3f8c1d2e4b5 — earlier in the chain — so it
+    # always exists at this point; no guard needed).
     op.execute("ALTER TABLE calculation_runs ENABLE ROW LEVEL SECURITY;")
     op.execute("""
         CREATE POLICY calc_runs_tenant_isolation_select

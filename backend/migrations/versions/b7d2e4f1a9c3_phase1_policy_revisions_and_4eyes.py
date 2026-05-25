@@ -83,18 +83,25 @@ def upgrade() -> None:
     """)
 
     # ?? 2. Policy version pinning columns ??????????????????????????????????
-    # positions: add policy_revision_id
+    # positions: add policy_revision_id. On a fresh PG chain the `positions`
+    # table is created by a later migration, so the ALTER must be guarded by
+    # a pg_class existence check (mirrors a3f8c1d2e4b5's lifecycle ALTERs).
+    # See RISK-CI-PG-02 for the broader pattern across the chain.
     op.execute("""
-        ALTER TABLE positions
-        ADD COLUMN IF NOT EXISTS policy_revision_id UUID
-    """)
-    op.execute("""
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'positions') THEN
+        ALTER TABLE positions ADD COLUMN IF NOT EXISTS policy_revision_id UUID;
         CREATE INDEX IF NOT EXISTS ix_positions_policy_revision
             ON positions (policy_revision_id)
-        WHERE policy_revision_id IS NOT NULL
+        WHERE policy_revision_id IS NOT NULL;
+    END IF;
+END
+$$;
     """)
 
-    # calculation_runs: add policy_revision_id (replaces the orphan policy_hash column)
+    # calculation_runs is created in a3f8c1d2e4b5 (immediate predecessor), so
+    # the table exists by definition at this point. No guard needed.
     op.execute("""
         ALTER TABLE calculation_runs
         ADD COLUMN IF NOT EXISTS policy_revision_id VARCHAR(64)

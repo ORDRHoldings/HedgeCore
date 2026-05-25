@@ -62,6 +62,16 @@ def upgrade() -> None:
     if not _is_postgres():
         return  # non-Postgres: service-layer enforcement only
 
+    # `policy_instances` is ORM-only (created by `_ensure_tables`, not by any
+    # migration in this chain). Skip the entire revision if it doesn't exist
+    # yet; `_ensure_tables` will provide the up-to-date schema and a future
+    # alembic stamp can record this revision as applied. See RISK-CI-PG-02.
+    table_exists = op.get_bind().execute(
+        sa.text("SELECT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'policy_instances')")
+    ).scalar_one()
+    if not table_exists:
+        return
+
     pg_ver = _pg_version_num()
 
     # Step 1: Drop the old expression/text-cast index from migration c9f3a2b1d4e5

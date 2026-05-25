@@ -1,5 +1,20 @@
 # Changelog (AI-maintained)
 
+## 2026-05-25 (later3) — RISK-CI-PG-02 broadened: 3 more migrations guarded + architectural root cause identified
+
+- **Probing result**: After the earlier two fixes shipped (`24dfb84`), local re-probe against fresh `postgres:16` advanced the chain past `4dfe7c45fffe` and `a3f8c1d2e4b5`, then failed at `b7d2e4f1a9c3` on `ALTER TABLE positions ADD COLUMN policy_revision_id`. The root cause crystallized: **the migration chain was authored assuming `_ensure_tables()` runs first**. Many tables (`positions`, `execution_proposals`, `policy_instances`, `audit_transactions`, …) have no `CREATE TABLE` migration anywhere in the chain — they exist purely in the ORM. In production the sequence is "alembic non-fatally → `_ensure_tables` finishes"; the advisory CI job runs alembic in isolation and crashes the moment it ALTERs an ORM-only table.
+- **Three more migrations guarded** (same `pg_class` / `information_schema` idiom):
+  - `b7d2e4f1a9c3_phase1_policy_revisions_and_4eyes.py` — section 2 positions ALTERs wrapped in `DO $$ IF EXISTS pg_class WHERE relname='positions' THEN … END IF; END $$;`. calculation_runs path unguarded (created in chain by `a3f8c1d2e4b5`, always exists).
+  - `k1a2b3c4d5e6_rls_positions_calculation_runs.py` — positions ENABLE RLS + 3 CREATE POLICY wrapped in same guard.
+  - `0036_force_rls_tenant_context.py` — positions ALTER POLICY ×3 + DROP/CREATE POLICY + FORCE RLS wrapped in same guard.
+  - `f81cffe7f9ee_perf_composite_indexes.py` — `op.create_index` for positions + execution_proposals replaced with PG raw `DO $$ IF EXISTS … CREATE INDEX … END IF; END $$;`; calculation_runs + audit_events unguarded. SQLite path preserved via dialect branch (uses `op.create_index` since SQLite tests rely on `_ensure_tables` for table creation anyway).
+  - `c9f3a2b1d4e5_policy_instance_unique_active_constraint.py` — entire body wrapped in `pg_class` guard for `policy_instances`.
+  - `f1a2b3c4d5e6_replace_policy_active_index_typed_sentinel.py` — early-return on missing `policy_instances`.
+- **Re-probed chain state**: after applying all 5 new guards + the previous 2, the chain still fails at `audit_transactions` (another ORM-only table). At this point the diminishing-returns assessment is firm: one-migration-at-a-time guarding cannot finish the job because there are at minimum N more ORM-only tables touched downstream. The architecturally correct fix is a CI workflow change to mirror production sequence (`_ensure_tables` first, then alembic) or split the advisory job into two distinct validation goals (pytest-pg vs alembic-chain-pg).
+- **All guards are no-ops on production state**: the `pg_class` / `information_schema` predicates evaluate true on production (where `_ensure_tables` already ran) so the original ALTERs fire as before. Production is at or past `0036_force_rls_tenant_context`, so this is verified-load-bearing.
+- **Tests**: 5514 passed / 160 skipped / 0 failed on SQLite (no regression after the 3 new guards + the earlier 2). SQLite ignores PG-specific DO blocks but the dialect branch in `f81cffe7f9ee` preserves the `op.create_index` path.
+- **State sync**: `OPEN_RISKS.md::RISK-CI-PG-02` rewritten to lead with the architectural root cause; full list of 8 guarded migrations recorded; remaining work recommendation is the CI workflow refactor.
+
 ## 2026-05-25 (later2) — RISK-CI-PG-02 partial fix: two migrations defensively guarded
 
 - **Motivation**: Earlier today's probe identified `4dfe7c45fffe` as the next blocker after the `audit_logs` duplicate was resolved. With production at or past `4dfe7c45fffe` (master head is `0036_force_rls_tenant_context`), defensive guards on historical migrations are safe — the `information_schema` / `pg_class` checks short-circuit on already-migrated DBs.

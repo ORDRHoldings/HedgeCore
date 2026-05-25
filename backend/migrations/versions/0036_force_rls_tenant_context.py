@@ -46,28 +46,36 @@ def upgrade() -> None:
     positions_clause = _tenant_match("company_id")
     calc_runs_clause = f"({_tenant_match('company_id')} OR company_id IS NULL)"
 
+    # Positions block — in a pure-alembic chain (advisory CI), `positions` and
+    # its policies don't exist yet because they come from `_ensure_tables` and
+    # `k1a2b3c4d5e6` respectively, neither of which is guaranteed to have
+    # produced concrete state in pure alembic-mode. Guard with a pg_class
+    # existence check. See RISK-CI-PG-02.
     op.execute(f"""
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'positions') THEN
         ALTER POLICY positions_tenant_isolation_select
         ON positions
-        USING {positions_clause}
-    """)
-    op.execute(f"""
+        USING {positions_clause};
         ALTER POLICY positions_tenant_isolation_insert
         ON positions
-        WITH CHECK {positions_clause}
-    """)
-    op.execute(f"""
+        WITH CHECK {positions_clause};
         ALTER POLICY positions_tenant_isolation_update
         ON positions
-        USING {positions_clause}
-    """)
-    op.execute("DROP POLICY IF EXISTS positions_tenant_isolation_delete ON positions")
-    op.execute(f"""
+        USING {positions_clause};
+        DROP POLICY IF EXISTS positions_tenant_isolation_delete ON positions;
         CREATE POLICY positions_tenant_isolation_delete
         ON positions FOR DELETE
-        USING {positions_clause}
+        USING {positions_clause};
+        ALTER TABLE positions FORCE ROW LEVEL SECURITY;
+    END IF;
+END
+$$;
     """)
 
+    # calculation_runs is created by a3f8c1d2e4b5 — earlier in chain — so
+    # exists by definition. No guard needed.
     op.execute(f"""
         ALTER POLICY calc_runs_tenant_isolation_select
         ON calculation_runs
@@ -79,7 +87,6 @@ def upgrade() -> None:
         WITH CHECK {calc_runs_clause}
     """)
 
-    op.execute("ALTER TABLE positions FORCE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE calculation_runs FORCE ROW LEVEL SECURITY")
 
 

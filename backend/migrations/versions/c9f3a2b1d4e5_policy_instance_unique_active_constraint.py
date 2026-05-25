@@ -32,27 +32,33 @@ def _is_postgres() -> bool:
 
 def upgrade() -> None:
     if _is_postgres():
-        # Remove existing active instances that would violate the constraint
-        # (should never exist in a healthy deployment, but guard against it)
+        # `policy_instances` is ORM-only — created by `_ensure_tables` from the
+        # ORM, not by any migration in this chain. Guard with pg_class so the
+        # advisory CI alembic-in-isolation run skips cleanly (the table will
+        # then be created from the ORM at app startup with current schema).
+        # See RISK-CI-PG-02.
         op.execute("""
-            -- Deactivate duplicate active instances, keeping the most recent per scope
-            UPDATE policy_instances
-            SET is_active = FALSE
-            WHERE id NOT IN (
-                SELECT DISTINCT ON (company_id, COALESCE(branch_id::text, 'NULL'))
-                    id
-                FROM policy_instances
-                WHERE is_active = TRUE
-                ORDER BY company_id, COALESCE(branch_id::text, 'NULL'), activated_at DESC
-            )
-            AND is_active = TRUE
-        """)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'policy_instances') THEN
+        -- Deactivate duplicate active instances, keeping the most recent per scope
+        UPDATE policy_instances
+        SET is_active = FALSE
+        WHERE id NOT IN (
+            SELECT DISTINCT ON (company_id, COALESCE(branch_id::text, 'NULL'))
+                id
+            FROM policy_instances
+            WHERE is_active = TRUE
+            ORDER BY company_id, COALESCE(branch_id::text, 'NULL'), activated_at DESC
+        )
+        AND is_active = TRUE;
 
-        # Create unique partial index: at most one is_active=TRUE per (company_id, branch_id)
-        op.execute("""
-            CREATE UNIQUE INDEX IF NOT EXISTS uix_policy_instances_one_active_per_scope
-                ON policy_instances (company_id, COALESCE(branch_id::text, ''))
-                WHERE is_active = TRUE
+        CREATE UNIQUE INDEX IF NOT EXISTS uix_policy_instances_one_active_per_scope
+            ON policy_instances (company_id, COALESCE(branch_id::text, ''))
+            WHERE is_active = TRUE;
+    END IF;
+END
+$$;
         """)
 
 
