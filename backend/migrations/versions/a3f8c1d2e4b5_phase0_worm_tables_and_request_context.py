@@ -124,20 +124,27 @@ def upgrade() -> None:
     """)
 
     # ?? 3. Position lifecycle columns (idempotent) ????????????????????????
-    for stmt in [
-        "ALTER TABLE positions ADD COLUMN IF NOT EXISTS execution_status VARCHAR(20) NOT NULL DEFAULT 'NEW'",
-        "ALTER TABLE positions ADD COLUMN IF NOT EXISTS policy_id UUID",
-        "ALTER TABLE positions ADD COLUMN IF NOT EXISTS last_run_id VARCHAR(64)",
-        "ALTER TABLE positions ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ",
-        "ALTER TABLE positions ADD COLUMN IF NOT EXISTS execution_ref VARCHAR(128)",
-        "ALTER TABLE positions ADD COLUMN IF NOT EXISTS hedge_amount NUMERIC(20,6)",
-        "ALTER TABLE positions ADD COLUMN IF NOT EXISTS hedge_rate NUMERIC(20,8)",
-        "ALTER TABLE positions ADD COLUMN IF NOT EXISTS rejection_reason VARCHAR(512)",
-    ]:
-        try:
-            op.execute(stmt)
-        except Exception:
-            pass  # Column already exists -- safe to ignore
+    # On a fresh PG run via alembic, the `positions` table doesn't exist yet
+    # — it's created by a later migration. The original try/except pattern
+    # worked on SQLite but PostgreSQL poisons the whole transaction on any
+    # error inside it (even Python-caught ones cause "current transaction is
+    # aborted"). Wrap in a DO-block with a pg_class existence guard.
+    op.execute("""
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'positions') THEN
+        ALTER TABLE positions ADD COLUMN IF NOT EXISTS execution_status VARCHAR(20) NOT NULL DEFAULT 'NEW';
+        ALTER TABLE positions ADD COLUMN IF NOT EXISTS policy_id UUID;
+        ALTER TABLE positions ADD COLUMN IF NOT EXISTS last_run_id VARCHAR(64);
+        ALTER TABLE positions ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ;
+        ALTER TABLE positions ADD COLUMN IF NOT EXISTS execution_ref VARCHAR(128);
+        ALTER TABLE positions ADD COLUMN IF NOT EXISTS hedge_amount NUMERIC(20,6);
+        ALTER TABLE positions ADD COLUMN IF NOT EXISTS hedge_rate NUMERIC(20,8);
+        ALTER TABLE positions ADD COLUMN IF NOT EXISTS rejection_reason VARCHAR(512);
+    END IF;
+END
+$$;
+    """)
 
     # ?? 4. DB-level WORM rules (PostgreSQL only) ??????????????????????????
     # These PostgreSQL RULEs make it impossible to UPDATE or DELETE rows

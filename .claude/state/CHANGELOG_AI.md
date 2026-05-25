@@ -1,5 +1,15 @@
 # Changelog (AI-maintained)
 
+## 2026-05-25 (later2) — RISK-CI-PG-02 partial fix: two migrations defensively guarded
+
+- **Motivation**: Earlier today's probe identified `4dfe7c45fffe` as the next blocker after the `audit_logs` duplicate was resolved. With production at or past `4dfe7c45fffe` (master head is `0036_force_rls_tenant_context`), defensive guards on historical migrations are safe — the `information_schema` / `pg_class` checks short-circuit on already-migrated DBs.
+- **Migration 1 — `4dfe7c45fffe_migrate_users_id_to_uuid.py`**: entire upgrade wrapped in `DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='id' AND data_type='integer') THEN … END IF; END $$;`. Every `ALTER COLUMN user_id TYPE uuid USING user_id::uuid` (invalid syntax: PG rejects `integer::uuid` at plan time even on empty tables) replaced with per-column `IF data_type='integer' THEN ALTER ... USING NULL::uuid` guards. Verified locally on `postgres:16`.
+- **Migration 2 — `a3f8c1d2e4b5_phase0_worm_tables_and_request_context.py`**: original Python `for stmt in [...]: try: op.execute(stmt) except Exception: pass` for the positions lifecycle column ALTERs was broken — PostgreSQL transactions don't reset on Python-caught errors; the first missing-table failure poisons every subsequent statement with "current transaction is aborted". Replaced with `DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_class WHERE relname='positions') THEN ALTER TABLE positions ADD COLUMN IF NOT EXISTS ...; END IF; END $$;`.
+- **Remaining**: After applying both fixes and resetting via `DROP SCHEMA public CASCADE`, the chain still fails at `b7d2e4f1a9c3` on `ALTER TABLE positions ADD COLUMN IF NOT EXISTS policy_revision_id UUID` — same pattern of assuming a table that hasn't been created yet in this chain order. Probing the full chain reveals many migrations share this "ALTER a table that doesn't exist yet" shape. A clean end-to-end fresh-DB run is multi-day audit work and is **explicitly deferred**.
+- **Why ship the partials**: each fix is correct in isolation, no-op on already-migrated DBs, and removes two known broken transitions from the chain. The advisory CI job is `continue-on-error: true` so failures don't block merges; landing partials shortens the eventual full-fix work.
+- **Tests**: SQLite suite still green (no regression — SQLite doesn't execute these PG-specific guards).
+- **State sync**: `OPEN_RISKS.md::RISK-CI-PG-02` updated with the two fixes shipped and the downstream blocker.
+
 ## 2026-05-25 (later) — RISK-CI-PG-02 root-cause probe: bug location refined
 
 - **Probe**: Spun up disposable `postgres:16` (port 55433) and ran `alembic upgrade head` end-to-end against a clean DB.
