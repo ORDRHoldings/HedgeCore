@@ -10,6 +10,17 @@ Items 1, 7, 9 from Audit Lab institutional upgrade:
   - FK on audit_reports.company_id → companies(id)
   - Composite indexes for trade_date, pair, finding_type, severity
   - bid_rate/ask_rate columns on market_snapshots
+
+Guards (RISK-CI-PG-02):
+  audit_transactions, audit_findings, audit_reports, and market_snapshots
+  are ORM-only tables — created by `_ensure_tables()` (Base.metadata.create_all)
+  at app startup, never by any migration in the chain. Production tolerates
+  this because `run_alembic_upgrade()` swallows exceptions non-fatally and
+  `_ensure_tables()` finalises the schema afterward. The advisory
+  backend-postgres CI job runs alembic in isolation and crashes on the first
+  ORM-only ALTER unless guarded. Each block is wrapped in a `pg_class`
+  existence check so this migration is a no-op on alembic-in-isolation and
+  unchanged behavior on production state.
 """
 
 from alembic import op
@@ -23,71 +34,109 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # ── Item 1: FK constraints ──────────────────────────────────────────────
-    op.create_foreign_key(
-        "fk_audit_transactions_company",
-        "audit_transactions", "companies",
-        ["company_id"], ["id"],
-        ondelete="CASCADE",
-    )
-    op.create_foreign_key(
-        "fk_audit_findings_company",
-        "audit_findings", "companies",
-        ["company_id"], ["id"],
-        ondelete="CASCADE",
-    )
-    op.create_foreign_key(
-        "fk_audit_reports_company",
-        "audit_reports", "companies",
-        ["company_id"], ["id"],
-        ondelete="CASCADE",
-    )
+    # ── Item 1: FK + indexes for audit_transactions ─────────────────────────
+    op.execute("""
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'audit_transactions') THEN
+        ALTER TABLE audit_transactions
+            ADD CONSTRAINT fk_audit_transactions_company
+            FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE;
+        CREATE INDEX ix_audit_transactions_trade_date
+            ON audit_transactions (dataset_id, trade_date);
+        CREATE INDEX ix_audit_transactions_pair
+            ON audit_transactions (dataset_id, currency_sold, currency_bought);
+    END IF;
+END
+$$;
+    """)
 
-    # ── Item 1: Composite indexes ───────────────────────────────────────────
-    op.create_index(
-        "ix_audit_transactions_trade_date",
-        "audit_transactions",
-        ["dataset_id", "trade_date"],
-    )
-    op.create_index(
-        "ix_audit_transactions_pair",
-        "audit_transactions",
-        ["dataset_id", "currency_sold", "currency_bought"],
-    )
-    op.create_index(
-        "ix_audit_findings_type",
-        "audit_findings",
-        ["run_id", "finding_type"],
-    )
-    op.create_index(
-        "ix_audit_findings_severity",
-        "audit_findings",
-        ["company_id", "severity"],
-    )
+    # ── Item 1: FK for audit_findings ───────────────────────────────────────
+    op.execute("""
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'audit_findings') THEN
+        ALTER TABLE audit_findings
+            ADD CONSTRAINT fk_audit_findings_company
+            FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE;
+        CREATE INDEX ix_audit_findings_type
+            ON audit_findings (run_id, finding_type);
+        CREATE INDEX ix_audit_findings_severity
+            ON audit_findings (company_id, severity);
+    END IF;
+END
+$$;
+    """)
+
+    # ── Item 1: FK for audit_reports ────────────────────────────────────────
+    op.execute("""
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'audit_reports') THEN
+        ALTER TABLE audit_reports
+            ADD CONSTRAINT fk_audit_reports_company
+            FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE;
+    END IF;
+END
+$$;
+    """)
 
     # ── Item 9: bid/ask columns on market_snapshots ─────────────────────────
-    op.add_column(
-        "market_snapshots",
-        sa.Column("bid_rate", sa.Float(), nullable=True),
-    )
-    op.add_column(
-        "market_snapshots",
-        sa.Column("ask_rate", sa.Float(), nullable=True),
-    )
+    op.execute("""
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'market_snapshots') THEN
+        ALTER TABLE market_snapshots ADD COLUMN IF NOT EXISTS bid_rate DOUBLE PRECISION;
+        ALTER TABLE market_snapshots ADD COLUMN IF NOT EXISTS ask_rate DOUBLE PRECISION;
+    END IF;
+END
+$$;
+    """)
 
 
 def downgrade() -> None:
-    # Remove bid/ask columns
-    op.drop_column("market_snapshots", "ask_rate")
-    op.drop_column("market_snapshots", "bid_rate")
+    # All downgrades guarded — symmetrical with upgrade.
+    op.execute("""
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'market_snapshots') THEN
+        ALTER TABLE market_snapshots DROP COLUMN IF EXISTS ask_rate;
+        ALTER TABLE market_snapshots DROP COLUMN IF EXISTS bid_rate;
+    END IF;
+END
+$$;
+    """)
 
-    # Remove indexes
-    op.drop_index("ix_audit_findings_severity", "audit_findings")
-    op.drop_index("ix_audit_findings_type", "audit_findings")
-    op.drop_index("ix_audit_transactions_pair", "audit_transactions")
-    op.drop_index("ix_audit_transactions_trade_date", "audit_transactions")
+    op.execute("""
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'audit_findings') THEN
+        DROP INDEX IF EXISTS ix_audit_findings_severity;
+        DROP INDEX IF EXISTS ix_audit_findings_type;
+        ALTER TABLE audit_findings DROP CONSTRAINT IF EXISTS fk_audit_findings_company;
+    END IF;
+END
+$$;
+    """)
 
-    # Remove FK constraints
-    op.drop_constraint("fk_audit_reports_company", "audit_reports", type_="foreignkey")
-    op.drop_constraint("fk_audit_findings_company", "audit_findings", type_="foreignkey")
-    op.drop_constraint("fk_audit_transactions_company", "audit_transactions", type_="foreignkey")
+    op.execute("""
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'audit_transactions') THEN
+        DROP INDEX IF EXISTS ix_audit_transactions_pair;
+        DROP INDEX IF EXISTS ix_audit_transactions_trade_date;
+        ALTER TABLE audit_transactions DROP CONSTRAINT IF EXISTS fk_audit_transactions_company;
+    END IF;
+END
+$$;
+    """)
+
+    op.execute("""
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'audit_reports') THEN
+        ALTER TABLE audit_reports DROP CONSTRAINT IF EXISTS fk_audit_reports_company;
+    END IF;
+END
+$$;
+    """)

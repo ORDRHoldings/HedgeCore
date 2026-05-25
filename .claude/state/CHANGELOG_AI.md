@@ -1,5 +1,19 @@
 # Changelog (AI-maintained)
 
+## 2026-05-25 (later8) — Guard `g1a2b3c4d5e6_audit_lab_integrity` for ORM-only tables
+
+Continuation of the RISK-CI-PG-02 chain audit. Investigation that started against `auth_audit_logs` revealed the prior CHANGELOG (later6) characterization was inaccurate: the `3450c02f9c01` migration declares `user_id INTEGER` referencing `users.id INTEGER` at the chain point where it runs — both sides are integer when the FK is created, and `4dfe7c45fffe_migrate_users_id_to_uuid.py` correctly converts both sides to UUID (including the FK drop/recreate at lines 51, 94-96 and the integer→uuid type conversion guarded by `IF data_type='integer'` at lines 78-81). The auth_audit_logs chain is structurally sound. **Correcting the (later6) claim**: the migration is not broken.
+
+The true blocker that surfaces immediately after `auth_audit_logs` in the alembic-in-isolation crash sequence is `g1a2b3c4d5e6_audit_lab_integrity.py`. It ALTERs four ORM-only tables (`audit_transactions`, `audit_findings`, `audit_reports`, `market_snapshots`) — none of these are created by any migration; all four come from `Base.metadata.create_all` in `_ensure_tables()`. Production tolerates this via the `run_alembic_upgrade()` exception-swallow + `_ensure_tables` finalization sequence; alembic-in-isolation does not.
+
+- **Change**: rewrote `g1a2b3c4d5e6_audit_lab_integrity.py` from `op.create_foreign_key`/`op.create_index`/`op.add_column` calls into four raw-SQL `DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_class WHERE relname = '...') THEN ... END IF; END $$;` blocks, one per ORM-only table. Pattern matches `0036_force_rls_tenant_context.py` and the wider `24dfb84` / `0cba136` guard sweep. Downgrade symmetrical. The `pg_class` existence check evaluates at the SQL planner level so a missing table cleanly short-circuits instead of poisoning the alembic transaction with `current transaction is aborted, commands ignored`.
+
+- **Verification**: full SQLite suite → **5514 passed / 160 skipped / 0 failed** (baseline maintained). `alembic heads` returns `0036_force_rls_tenant_context (head)` — single head intact. SQLite path doesn't execute the PG-specific `DO $$` blocks (conftest uses `Base.metadata.create_all`, not alembic).
+
+- **RISK-CI-PG-02 status**: still open. This commit drains one more migration off the alembic-in-isolation blocker list. The architectural fix (`17a1cc0` workflow refactor — alembic + `_ensure_tables` + stamp) is the durable solution; individual migration guards are belt-and-suspenders for the `f81cffe7f9ee` → `g1a2b3c4d5e6` → `b7d2e4f1a9c3` chain segment that runs before the workflow's `_ensure_tables` step.
+
+- **Memory worth keeping**: the CHANGELOG (later6) error itself is worth recording — when documenting a "broken migration", verify the migration body against the chain point at which it actually runs, not against the model's current type. ORM types reflect post-chain end state; migration bodies must be evaluated against the pre-state of the schema at that revision.
+
 ## 2026-05-25 (later7) — PG-suite drain: NullPool engine, UPSERT bootstrap, Py3.12 Enum fix, CORS env-isolation
 
 Continuation of the RISK-CI-PG-02 followup drain. Five commits this arc; tree pushed to `origin/master` at `466eb43`. Took the advisory `backend-postgres` job from the previously-documented 83 failures / 5 errors shape down toward the first PG-clean shape (final 4 failures here were not a fixture/auth class — they were env-var bleed across suites).
