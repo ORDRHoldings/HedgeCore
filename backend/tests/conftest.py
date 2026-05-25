@@ -46,16 +46,48 @@ for path in [PROJECT_ROOT, BACKEND_DIR, APP_DIR]:
     if path not in sys.path:
         sys.path.insert(0, path)
 
-from app.core.db import async_engine, async_session_maker
-from app.core.security import create_access_token
-from app.main import app
-
 # ---------------------------------------------------------------------
-# Database Backend Detection
+# Force NullPool on the global async engine for test runs (PG only)
 # ---------------------------------------------------------------------
+# pytest-asyncio gives every test function a fresh event loop. The global
+# QueuePool (size=20) retains asyncpg connections bound to the PREVIOUS
+# test's loop. The event_loop fixture tries to dispose them, but asyncpg
+# raises during the cross-loop close, the exception is suppressed, and
+# the dead connections stay queued. The very next test picks one up and
+# crashes with `Event loop is closed` on the first await — surfacing as
+# a 500 from /me, /dashboard, anything that hits the DB.
+#
+# Swap to NullPool so every request gets a fresh connection on the
+# active loop. This must happen BEFORE app.core.db is first imported,
+# because async_engine is initialized at module import time.
 _DB_URL = os.environ.get("DATABASE_URL", "")
 IS_SQLITE = "sqlite" in _DB_URL.lower() or not _DB_URL
 IS_POSTGRES = "postgres" in _DB_URL.lower()
+
+if IS_POSTGRES:
+    import app.core.db as _app_db
+    from sqlalchemy.ext.asyncio import (
+        async_sessionmaker as _async_sessionmaker,
+        create_async_engine as _create_async_engine,
+    )
+    from sqlalchemy.pool import NullPool as _NullPool
+
+    _pg_url = _DB_URL
+    if _pg_url.startswith("postgres://"):
+        _pg_url = _pg_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif _pg_url.startswith("postgresql://") and "+asyncpg" not in _pg_url:
+        _pg_url = _pg_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+    _app_db.async_engine = _create_async_engine(_pg_url, poolclass=_NullPool)
+    _app_db.async_session_maker = _async_sessionmaker(
+        bind=_app_db.async_engine,
+        class_=_app_db.TenantRLSAsyncSession,
+        expire_on_commit=False,
+    )
+
+from app.core.db import async_engine, async_session_maker
+from app.core.security import create_access_token
+from app.main import app
 
 
 # ---------------------------------------------------------------------
@@ -198,6 +230,119 @@ async def pg_engine():
     finally:
         with contextlib.suppress(Exception):
             await engine.dispose()
+
+
+# ---------------------------------------------------------------------
+# PostgreSQL seed bootstrap (mirrors production lifespan startup)
+# ---------------------------------------------------------------------
+# The ASGITransport-based test client does NOT trigger FastAPI lifespan
+# events, so the seed sequence in app/main.py lines 1773–1812
+# (_seed_roles → _seed_permissions → _seed_policy_templates →
+# _sync_seed_users) never runs. That leaves the PG test DB without the
+# `demo` user / system roles / policy templates the requires_postgres
+# tests need (test_e2e_full_workflow.py logs in as demo/demo at step 1).
+#
+# This session-scoped autouse fixture runs the same seed sequence once,
+# only when DATABASE_URL points at PostgreSQL. SQLite paths are no-op
+# because every requires_postgres test auto-skips on SQLite.
+# ---------------------------------------------------------------------
+@pytest.fixture(scope="session", autouse=True)
+def _pg_seed_session_bootstrap():
+    """Idempotently UPSERT the `demo/demo` user on PostgreSQL test DBs.
+
+    Why not call app.main._sync_seed_users? Two reasons:
+      1. _sync_seed_users only resyncs passwords for EXISTING rows; it never
+         INSERTs the demo user when the test DB is fresh.
+      2. _sync_seed_users uses the global async_session_maker. Running it on
+         a temporary session-scoped event loop binds asyncpg connections to
+         that loop, which then gets closed — pytest-asyncio's per-function
+         loops later try to dispose those connections and explode with
+         RuntimeError: Event loop is closed.
+
+    So we build an isolated engine, INSERT the demo user (and a minimal
+    superuser role) on its own loop, dispose the engine cleanly, and leave
+    the global async_engine untouched.
+    """
+    if not IS_POSTGRES:
+        yield
+        return
+
+    async def _do_seed():
+        from sqlalchemy import text
+        from sqlalchemy.ext.asyncio import create_async_engine as _cae
+
+        from app.core.security import hash_password
+
+        url = _DB_URL
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://") and "+asyncpg" not in url:
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+        seed_engine = _cae(url, pool_size=2, max_overflow=1)
+        try:
+            demo_hash = hash_password("demo", _skip_length_check=True)
+            async with seed_engine.begin() as conn:
+                # Idempotent UPSERT on email; superuser flag set so the JWT
+                # subject passes RBAC checks across the e2e suite.
+                await conn.execute(
+                    text(
+                        """
+                        INSERT INTO users (
+                            id, email, hashed_password, full_name,
+                            is_active, is_superuser, created_at
+                        ) VALUES (
+                            gen_random_uuid(), 'demo', :pw, 'Demo User',
+                            TRUE, TRUE, NOW()
+                        )
+                        ON CONFLICT (email) DO UPDATE SET
+                            hashed_password = EXCLUDED.hashed_password,
+                            is_active = TRUE,
+                            is_superuser = TRUE
+                        """
+                    ),
+                    {"pw": demo_hash},
+                )
+                # Synthetic JWT subject used by the auth_headers fixture
+                # (DEMO_USER_ID below). Must exist in DB so /me + any
+                # downstream RBAC resolution works for the synthetic-token
+                # path. Idempotent.
+                await conn.execute(
+                    text(
+                        """
+                        INSERT INTO users (
+                            id, email, hashed_password, full_name,
+                            is_active, is_superuser, created_at
+                        ) VALUES (
+                            '11111111-2222-3333-4444-555555555555'::uuid,
+                            'demo@test.com', :pw, 'Synthetic Test Demo',
+                            TRUE, TRUE, NOW()
+                        )
+                        ON CONFLICT (id) DO UPDATE SET
+                            email = EXCLUDED.email,
+                            hashed_password = EXCLUDED.hashed_password,
+                            is_active = TRUE,
+                            is_superuser = TRUE
+                        """
+                    ),
+                    {"pw": demo_hash},
+                )
+        finally:
+            with contextlib.suppress(Exception):
+                await seed_engine.dispose()
+
+    tmp_loop = asyncio.new_event_loop()
+    try:
+        asyncio.set_event_loop(tmp_loop)
+        tmp_loop.run_until_complete(_do_seed())
+        logger.info("Test session PG seed bootstrap: demo user upserted")
+    except Exception as e:
+        logger.warning(f"Test session PG seed bootstrap failed (non-fatal): {e}")
+    finally:
+        with contextlib.suppress(Exception):
+            tmp_loop.close()
+        asyncio.set_event_loop(None)
+    yield
 
 
 # ---------------------------------------------------------------------
