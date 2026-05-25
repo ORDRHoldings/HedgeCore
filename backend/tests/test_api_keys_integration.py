@@ -18,7 +18,7 @@ Requires:
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from httpx import AsyncClient, ASGITransport
 
 from app.main import app
@@ -66,7 +66,7 @@ async def test_create_api_key(db_session):
         name="Test Key 1",
         scopes=["read:data"],
         owner_user_id=None,
-        expires_at=datetime.utcnow() + timedelta(days=7),
+        expires_at=datetime.now(UTC) + timedelta(days=7),
     )
 
     assert isinstance(token, str)
@@ -158,7 +158,7 @@ async def test_expired_key_fails_verification(db_session):
         name="Expired Key",
         scopes=["read:data"],
         owner_user_id=None,
-        expires_at=datetime.utcnow() - timedelta(seconds=5),
+        expires_at=datetime.now(UTC) - timedelta(seconds=5),
     )
 
     verified = await verify_api_key_header(db_session, token, required_scopes=["read:data"])
@@ -170,6 +170,6 @@ async def test_expired_key_fails_verification(db_session):
 # ---------------------------------------------------------------------
 async def test_admin_guard_requires_jwt(async_client):
     """Ensure admin-only endpoints return 401 when missing JWT."""
-    resp = await async_client.get("/admin/api-keys")
+    resp = await async_client.get("/api/admin/api-keys")
     assert resp.status_code == 401
     assert "Unauthorized" in resp.text or "Missing" in resp.text

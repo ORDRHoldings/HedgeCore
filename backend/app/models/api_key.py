@@ -118,7 +118,9 @@ class ApiKey(Base):
     @property
     def is_active(self) -> bool:
         """Check if the API key is active and not expired."""
-        if str(self.status).lower() != "active":
+        # Python 3.12: str(ApiKeyStatus.ACTIVE) == "ApiKeyStatus.ACTIVE", not "active".
+        status_value = self.status.value if isinstance(self.status, ApiKeyStatus) else str(self.status)
+        if status_value.lower() != "active":
             return False
         if self.expires_at:
             _now = datetime.now(UTC)

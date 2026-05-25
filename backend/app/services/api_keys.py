@@ -182,7 +182,15 @@ async def verify_api_key_header(
     if not api_key:
         return None
 
-    if str(api_key.status).lower() != ApiKeyStatus.ACTIVE.value.lower():
+    # Python 3.12 changed Enum.__str__ — a `class Foo(str, Enum)` member now
+    # stringifies as "Foo.MEMBER" instead of the value. Compare via .value
+    # when we have an enum member, fall back to str() for raw DB strings.
+    status_value = (
+        api_key.status.value
+        if isinstance(api_key.status, ApiKeyStatus)
+        else str(api_key.status)
+    )
+    if status_value.lower() != ApiKeyStatus.ACTIVE.value.lower():
         return None
 
     expires_at = api_key.expires_at
