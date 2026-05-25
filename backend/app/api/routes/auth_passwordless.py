@@ -203,8 +203,7 @@ async def verify_passwordless(
     # Build roles/permissions
     roles = await rbac_service.get_user_roles(db, user.id)
     role_names = [r.name for r in roles]
-    permissions = await rbac_service.get_user_permissions(db, user.id)
-    perm_codes = [p.codename for p in permissions]
+    await rbac_service.get_user_permissions(db, user.id)
 
     session_duration = get_session_duration_for_roles(role_names)
     access_token = create_access_token(

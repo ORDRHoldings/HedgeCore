@@ -275,7 +275,6 @@ async def upload_dataset(
     rows, warnings = _parse_effectiveness_csv(raw_bytes)
 
     company_id = current_user.company_id
-    data_json_str = json.dumps(rows, sort_keys=True, default=str)
     source_hash = hashlib.sha256(raw_bytes).hexdigest()
 
     dataset = HedgeEffectivenessDataset(

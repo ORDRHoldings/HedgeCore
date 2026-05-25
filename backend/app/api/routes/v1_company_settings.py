@@ -165,8 +165,6 @@ async def update_company_settings(
     company_name    = company.name
     company_slug    = company.slug
     actor_company_id = current_user.company_id
-    actor_id        = current_user.id
-    actor_email     = current_user.email
 
     await session.commit()
 

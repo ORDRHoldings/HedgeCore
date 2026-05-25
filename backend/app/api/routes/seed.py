@@ -1203,13 +1203,13 @@ async def reset_demo_data(
 
     try:
         # ── 1. Wipe non-WORM tables ──────────────────────────────────────────
-        del_proposals = await db.execute(
+        await db.execute(
             sa_delete(ExecutionProposal).where(ExecutionProposal.company_id == COMPANY_ID)
         )
         del_positions = await db.execute(
             sa_delete(Position).where(Position.company_id == COMPANY_ID)
         )
-        del_cl = await db.execute(
+        await db.execute(
             sa_delete(CreditLimit).where(CreditLimit.tenant_id == COMPANY_ID)
         )
         del_cp = await db.execute(

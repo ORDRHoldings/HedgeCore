@@ -763,8 +763,8 @@ def sandbox_calculate_multi(
     run_id = str(uuid.uuid4())
     trace_events: list[TraceEvent] = []
 
-    # Validate pair
-    meta = get_pair_meta(pair)  # raises ValueError for unsupported pairs
+    # Validate pair (raises ValueError for unsupported pairs)
+    get_pair_meta(pair)
 
     # Parse inputs
     try:

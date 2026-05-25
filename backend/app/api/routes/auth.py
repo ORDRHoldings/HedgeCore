@@ -800,8 +800,6 @@ async def logout(request: Request, db: AsyncSession = Depends(get_session)) -> d
 
     ip = request.client.host if request.client else None
 
-    ua = request.headers.get("user-agent")
-
     try:
 
         token = _extract_bearer_token(request)
