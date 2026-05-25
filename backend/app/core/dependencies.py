@@ -199,3 +199,127 @@ async def get_session_with_rls(
     tenant_id = str(current_user.company_id) if current_user.company_id else None
     await inject_tenant_rls(db, tenant_id, bypass=bool(getattr(current_user, "is_superuser", False)))
     yield db
+
+
+# Companion guard to `assert_api_key_routes_safe` (in app/deps/api_key_auth.py).
+# Where that guard catches `get_api_key_principal` on non-allowlisted routes,
+# this one catches the inverse: any route that has *neither* `get_current_user`
+# nor `get_api_key_principal` in its dependant tree must be explicitly listed
+# as a no-auth-needed route. This is the structural defense that would have
+# caught RISK-AUTH-RLS-02 (dashboard's `_resolve_user` JWT path) at startup
+# rather than letting it silently empty RLS-forced tables in production.
+#
+# Each entry MUST have a justification comment. Reviewers are expected to
+# challenge new additions — adding a route here is a security decision.
+NO_AUTH_ROUTE_ALLOWLIST: frozenset[str] = frozenset({
+    # ── Root + OpenAPI docs ────────────────────────────────────────────────
+    "/",
+    "/api/docs",
+    "/api/redoc",
+
+    # ── Health / system diagnostics (no business data) ─────────────────────
+    "/api/health",
+    "/api/kernel/health",
+    "/api/system/health",
+    "/api/system/health/deep",
+    "/api/system/schema-health",  # API-key gated via APIKeyAuthMiddleware
+
+    # ── Auth issuance (these endpoints *produce* tokens; cannot require one) ─
+    "/api/auth/login",
+    "/api/auth/logout",
+    "/api/auth/refresh",
+    "/api/auth/register",
+    "/api/auth/me",  # decodes JWT directly; safe — does not read RLS-forced tables
+    "/api/auth/passwordless/start",
+    "/api/auth/passwordless/verify",
+    "/api/auth/sso/callback",
+    "/api/v1/signup",
+
+    # ── Webhooks (auth via shared secret / signature, not JWT) ─────────────
+    "/api/v1/billing/webhook",
+    "/api/v1/connectors/oauth/callback",
+    "/api/v1/connectors/{provider}/webhook",
+
+    # ── Public market data (read-only quotes; API-key middleware-gated) ────
+    "/api/v1/market-data/live/equity-quotes",
+    "/api/v1/market-data/live/fx-change",
+    "/api/v1/market-data/live/fx-rates",
+    "/api/v1/market-data/live/macro",
+    "/api/v1/market-data/live/quote",
+    "/api/v1/market/fx/rates",
+    "/api/v1/market/sectors",
+    "/api/v1/public/chart-data/{symbol}",
+
+    # ── Seed / demo-reset (gated by APIKeyAuthMiddleware, X-API-Key) ───────
+    "/api/v1/seed/company",
+    "/api/v1/seed/demo-reset",
+    "/api/v1/seed/migrate-schema",
+    "/api/v1/seed/reset-passwords",
+
+    # ── Stateless engine endpoint (no DB write; RBAC enforced internally) ──
+    "/api/hedge/run",
+
+    # ── Dashboard (RISK-AUTH-RLS-02 — uses local `_resolve_user` which sets
+    #    RLS context after JWT decode; safe at runtime but bypasses the
+    #    canonical dependency. Tracked as deferred refactor in OPEN_RISKS.) ──
+    "/api/v1/dashboard/aggregate",
+    "/api/v1/dashboard/branch-comparison",
+    "/api/v1/dashboard/pending-approvals",
+    "/api/v1/dashboard/pipeline-status",
+    "/api/v1/dashboard/recent-runs",
+    "/api/v1/dashboard/summary",
+    "/api/v1/dashboard/team-activity",
+})
+
+
+def assert_routes_have_canonical_auth(
+    app,
+    allowlist: frozenset[str] = NO_AUTH_ROUTE_ALLOWLIST,
+) -> None:
+    """Fail closed if any route lacks both canonical auth dependencies.
+
+    Every APIRoute must satisfy one of:
+      1. `get_current_user` is in its dependant tree (JWT path), OR
+      2. `get_api_key_principal` is in its dependant tree (API-key path), OR
+      3. The route's path is in NO_AUTH_ROUTE_ALLOWLIST with justification.
+
+    This is the structural complement to `assert_api_key_routes_safe`. Together
+    they pin both ends of the auth surface: API-key auth cannot land on a
+    non-diagnostic route (RLS-01), and no route can quietly skip the canonical
+    auth path that injects RLS context (RLS-02).
+    """
+    from fastapi.routing import APIRoute
+
+    from app.deps.api_key_auth import get_api_key_principal
+
+    def _has_dep(dependant, target) -> bool:
+        if dependant is None:
+            return False
+        if dependant.call is target:
+            return True
+        for sub in dependant.dependencies:
+            if _has_dep(sub, target):
+                return True
+        return False
+
+    violations: list[str] = []
+    for route in app.routes:
+        if not isinstance(route, APIRoute):
+            continue
+        dep = getattr(route, "dependant", None)
+        if _has_dep(dep, get_current_user) or _has_dep(dep, get_api_key_principal):
+            continue
+        if route.path in allowlist:
+            continue
+        methods = sorted(route.methods) if route.methods else []
+        violations.append(f"{route.path} {methods}")
+
+    if violations:
+        raise RuntimeError(
+            "RISK-AUTH-RLS-02 guard: routes lack both canonical auth "
+            "dependencies (`get_current_user`, `get_api_key_principal`) and "
+            "are not in NO_AUTH_ROUTE_ALLOWLIST. Either wire the canonical "
+            "auth dependency, or add the path to NO_AUTH_ROUTE_ALLOWLIST "
+            "with a justification comment. Offending routes:\n  "
+            + "\n  ".join(violations)
+        )

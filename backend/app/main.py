@@ -1915,6 +1915,20 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"API-key/RLS startup guard error (non-fatal): {e}")
 
+    # RISK-AUTH-RLS-02 companion guard: every APIRoute must depend on
+    # `get_current_user` or `get_api_key_principal`, OR be explicitly
+    # listed in `NO_AUTH_ROUTE_ALLOWLIST` with justification. Catches the
+    # parallel-auth-helper class of bug that bypassed RLS injection on
+    # `/api/v1/dashboard/*` before commit 27696c8.
+    try:
+        from app.core.dependencies import assert_routes_have_canonical_auth
+        assert_routes_have_canonical_auth(app)
+        logger.info("Canonical-auth startup guard: clean (RISK-AUTH-RLS-02)")
+    except RuntimeError:
+        raise
+    except Exception as e:
+        logger.warning(f"Canonical-auth startup guard error (non-fatal): {e}")
+
     try:
 
         yield
