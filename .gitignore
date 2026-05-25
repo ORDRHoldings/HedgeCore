@@ -42,6 +42,9 @@ frontend/.next/
 frontend/dist/
 frontend/build/
 
+# Stray Next.js build output (Windows IDEs sometimes run `next` from repo root)
+/.next/
+
 # Infra temp
 infra/.terraform/
 
