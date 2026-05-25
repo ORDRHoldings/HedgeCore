@@ -14,6 +14,18 @@ The true blocker that surfaces immediately after `auth_audit_logs` in the alembi
 
 - **Memory worth keeping**: the CHANGELOG (later6) error itself is worth recording — when documenting a "broken migration", verify the migration body against the chain point at which it actually runs, not against the model's current type. ORM types reflect post-chain end state; migration bodies must be evaluated against the pre-state of the schema at that revision.
 
+**End-to-end verification against fresh PG (probe2, port 5499)**: dropped/recreated `public` schema, ran `alembic upgrade head` against the empty database. The chain advanced past `g1a2b3c4d5e6` (guard worked — `audit_transactions`/`audit_findings`/`audit_reports`/`market_snapshots` skipped cleanly without poisoning the alembic transaction) and next crashed at `h1a2b3c4d5e6_company_sso_billing_fields.py` line 18: `relation "companies" does not exist [SQL: ALTER TABLE companies ADD COLUMN sso_provider VARCHAR(64)]`. `companies` is also ORM-only — created by `Base.metadata.create_all` in `_ensure_tables()`, never by any migration. **12 migrations** in the chain reference `companies` (g1a2b3c4d5e6, h1a2b3c4d5e6, 0010_add_webhooks, 0013_add_sso_billing_to_companies, 0014_journal_entries_gl, 0017_legal_entities, 0018_bank_connections, 0027_transaction_cost_estimates, 0029_counterparty_tables, 0031_regulatory_submissions, r1a2b3c4d5e6_add_debt_tables, s1a2b3c4d5e6_add_ir_risk_tables). Per the (0cba136) explicit guidance — **diminishing returns reached**; the durable solution remains the `17a1cc0` workflow refactor (`alembic upgrade head` non-fatal → `_ensure_tables()` → `alembic stamp head`).
+
+**Arc closure**: stopping the per-migration guard sweep. `17a1cc0`'s workflow already tolerates the `companies` crash exactly as it tolerates earlier ORM-only-table crashes — the `set +e/-e` brackets make the alembic step non-fatal and `_ensure_tables()` finalises the schema regardless. Promoting `backend-postgres` to a hard gate would require either:
+  (a) a single migration that pre-creates bare-bones (id + FK structure) for all ORM-only tables before any ALTER references them (architecturally clean; ~1-day write), or
+  (b) ~10 more individual guard commits matching this one's pattern (belt-and-suspenders; bounded but tedious).
+
+Neither is in scope for this arc. The work item lives under RISK-CI-PG-02 followup.
+
+**Probe2 state restored**: dropped schema → rebuilt via `_ensure_tables()` → `alembic stamp head` → back to head (`0036_force_rls_tenant_context`). Consistent with prior `later5`/`later7` probe state.
+
+Commits: `d3c46ed` (g1a2b3c4d5e6 guard) — pushed to `origin/master`.
+
 ## 2026-05-25 (later7) — PG-suite drain: NullPool engine, UPSERT bootstrap, Py3.12 Enum fix, CORS env-isolation
 
 Continuation of the RISK-CI-PG-02 followup drain. Five commits this arc; tree pushed to `origin/master` at `466eb43`. Took the advisory `backend-postgres` job from the previously-documented 83 failures / 5 errors shape down toward the first PG-clean shape (final 4 failures here were not a fixture/auth class — they were env-var bleed across suites).

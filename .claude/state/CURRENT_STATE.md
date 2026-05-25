@@ -16,7 +16,11 @@ One commit this arc. Reframe note: investigation that started as the "auth_audit
 
 **RISK-CI-PG-02 status**: still open (advisory). The architectural fix in `17a1cc0` (workflow refactor) remains the durable solution; this guard is one more brick on the alembic-in-isolation path. Promotion to hard gate still pending N consecutive green CI runs once billing returns.
 
-**Repo state**: master + this guard commit, working tree clean after state-file commit. SQLite baseline unchanged.
+**End-to-end probe verification (fresh PG)**: against `pg-ci-probe2` (port 5499), schema dropped and `alembic upgrade head` rerun. Chain advanced past `g1a2b3c4d5e6` (guard verified working — audit_* tables cleanly skipped). Next crash at `h1a2b3c4d5e6_company_sso_billing_fields.py`: `relation "companies" does not exist`. `companies` is the next ORM-only table in the crash sequence; 12 migrations in the chain reference it. Per (0cba136) explicit guidance, diminishing-returns reached on per-migration guards. The `17a1cc0` workflow refactor already tolerates this crash class via `set +e` + `_ensure_tables()` finalization. Promoting `backend-postgres` to hard gate now requires either a single "stub-ORM-tables" pre-migration (~1-day write) or ~10 more guard commits — both out of scope this arc.
+
+**Probe state**: restored via `_ensure_tables()` + `alembic stamp head`. At head (`0036_force_rls_tenant_context`).
+
+**Repo state**: master at `d3c46ed`, working tree clean. SQLite baseline 5514 / 160 / 0 unchanged.
 
 ## Recent Work (2026-05-25, later7) — PG-suite Drain Arc: NullPool, UPSERT bootstrap, Py3.12 Enum, CORS env-isolation
 
