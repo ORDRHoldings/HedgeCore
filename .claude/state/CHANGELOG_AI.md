@@ -1,5 +1,22 @@
 # Changelog (AI-maintained)
 
+## 2026-05-24 (late) — RISK-AUTH-RLS-02: dashboard JWT path bypassed RLS injection
+
+- **Gap**: `app/api/routes/dashboard.py::_resolve_user` is a parallel auth helper that decodes JWTs without depending on `core/dependencies.py::get_current_user`. It never called `set_tenant_rls_context()`. Migration 0036 forces RLS on `positions` and `calculation_runs`; with the contextvar unset, policy `COALESCE(NULLIF(...,''), '00000000-...')` matches the NO_TENANT sentinel. All 7 `/api/v1/dashboard/*` endpoints silently returned empty data from RLS-forced tables in production. Distinct from RISK-AUTH-RLS-01: that was the latent *API-key* path; RLS-02 was the *active* JWT path for any user with data.
+- **Fix** (`27696c8`, `backend/app/api/routes/dashboard.py`): `_resolve_user` now calls `set_tenant_rls_context(tenant_id, bypass=is_superuser)` after the User lookup. Relies on `TenantRLSAsyncSession.execute()` auto-inject on next query when the marker changes. Explicit `inject_tenant_rls` deliberately omitted (would consume mocked execute slots in existing dashboard route tests).
+- **Regression coverage** (`backend/tests/test_dashboard_rls_injection.py`): 3 tests pin the contract — contextvar matches `user.company_id`, superuser sets bypass=True, 401-rejected path leaves contextvar cleared.
+- **State sync** (`be98059`): `.claude/state/CURRENT_STATE.md` recorded the arc; `.claude/state/OPEN_RISKS.md` entry opened+closed same day.
+- **Tests**: 5507 passed / 160 skipped / 0 failed on SQLite (was 5504; +3 new tests, 0 regressions). 2:06 runtime.
+- **CI**: run `26376164714` still 3s instant-fail across all jobs — GitHub Actions billing block continues (5th probe this session). Work landed on origin/master.
+- **Followups**: Consider replacing `_resolve_user` with `Depends(get_current_user)` to eliminate the parallel helper entirely. A complementary startup guard for "routes that read positions/calculation_runs but don't depend on `get_current_user`" would prevent this class of drift from recurring.
+
+## 2026-05-24 — RISK-AUTH-RLS-01: API-key auth path RLS startup guard (option 3)
+
+- **Gap**: `get_api_key_principal` validates the API key but doesn't inject tenant RLS. Latent — only `/api/system/whoami/api-key` and `/api/system/db-tables` consumed it (neither reads RLS-protected tables), but accidental wiring to a business endpoint would silently empty `positions`/`calculation_runs` queries under migration 0036.
+- **Fix** (`3040945`, `backend/app/deps/api_key_auth.py`): `assert_api_key_routes_safe(app)` walks every APIRoute's dependant tree (including nested `require_api_key_scopes` closures) for `get_api_key_principal`. Anything outside `API_KEY_AUTH_ALLOWLIST = {"/api/system/whoami/api-key", "/api/system/db-tables"}` raises `RuntimeError` from `lifespan` at startup, blocking deployment. Called from `app.main` lifespan immediately before `yield`.
+- **Regression coverage** (`backend/tests/test_api_key_rls_startup_guard.py`): 7 tests — empty app, direct dep on unlisted path, scoped dep on unlisted path, custom allowlist, canonical allowlist regression, real production app boots against its own guard, violation-message methods rendering.
+- **Severity**: MEDIUM → LOW. Accidental wiring of API-key auth to a business endpoint now fails closed at startup rather than silently returning empty rows.
+
 ## 2026-05-16 — P1: RLS injection broken on asyncpg (set_config fix)
 
 - **Incident**: `/api/health` returned 503 from 2026-05-13 deploy through 2026-05-16 17:28Z. `TenantRLSAsyncSession` issued `SET LOCAL app.current_tenant_id = :tenant_id`; PostgreSQL rejects bind params in `SET` statements; asyncpg surfaced `PostgresSyntaxError` on every DB query. Three-day silent degradation because neither Sentry 5xx alerts nor Render auto-rollback were configured.
