@@ -304,23 +304,40 @@ def _pg_seed_session_bootstrap():
                     {"pw": demo_hash},
                 )
                 # Synthetic JWT subject used by the auth_headers fixture
-                # (DEMO_USER_ID below). Must exist in DB so /me + any
-                # downstream RBAC resolution works for the synthetic-token
-                # path. Idempotent.
+                # (DEMO_USER_ID/DEMO_COMPANY_ID below). The user must exist
+                # in the DB so /me + RBAC resolution works on the
+                # synthetic-token path, and it must carry a company_id so
+                # tenant-scoped routes (analytics, audit_lab) don't blow
+                # up when they cast company_id -> 'None'. Idempotent.
+                await conn.execute(
+                    text(
+                        """
+                        INSERT INTO companies (id, name, slug, is_active, created_at)
+                        VALUES (
+                            '11111111-1111-1111-1111-111111111111'::uuid,
+                            'Synthetic Test Co', 'synthetic-test-co',
+                            TRUE, NOW()
+                        )
+                        ON CONFLICT (id) DO NOTHING
+                        """
+                    )
+                )
                 await conn.execute(
                     text(
                         """
                         INSERT INTO users (
-                            id, email, hashed_password, full_name,
+                            id, email, hashed_password, full_name, company_id,
                             is_active, is_superuser, created_at
                         ) VALUES (
                             '11111111-2222-3333-4444-555555555555'::uuid,
                             'demo@test.com', :pw, 'Synthetic Test Demo',
+                            '11111111-1111-1111-1111-111111111111'::uuid,
                             TRUE, TRUE, NOW()
                         )
                         ON CONFLICT (id) DO UPDATE SET
                             email = EXCLUDED.email,
                             hashed_password = EXCLUDED.hashed_password,
+                            company_id = EXCLUDED.company_id,
                             is_active = TRUE,
                             is_superuser = TRUE
                         """

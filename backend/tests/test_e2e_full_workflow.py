@@ -291,5 +291,5 @@ async def test_e2e_11_unauthenticated_rejected(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_e2e_11_health_check_public(client: AsyncClient):
     """Health endpoint is publicly accessible."""
-    r = await client.get("/health")
+    r = await client.get("/api/health")
     assert r.status_code == 200
