@@ -1,5 +1,17 @@
 # Changelog (AI-maintained)
 
+## 2026-05-25 (later6) — Stale `/auth/*` paths corrected to `/api/auth/*` in two PG-only auth suites
+
+Drilling into the 83 failures from `later5`'s verification: the auth lifecycle tests all 404'd because their paths predated the `api_router` mount under `/api`. Path fix applied; uncovers a deeper schema gap worth recording.
+
+- **Change**: `backend/tests/test_auth.py` (8 paths) + `backend/tests/test_api_auth.py` (13 paths) — `Edit` with `replace_all` on `"/auth/` → `"/api/auth/`. Routes have always been mounted at `/api/auth/...` (auth.py:66 `prefix="/auth"` + api/__init__.py:40 `api_router.include_router(auth_router)` + main.py:2281 `app.include_router(api_router, prefix="/api")`). The tests had stale references that produced 404 instead of 201/200/401 — every assertion failed on status code mismatch, and the `RuntimeError: Event loop is closed` teardown noise from asyncpg + pytest-asyncio hid the real cause underneath.
+- **Verification**: against the same fresh `postgres:16` from `later5`, `test_auth.py` went from 5 errors → 1 passed + 4 errors. The remaining 4 are blocked on a different issue: `relation "auth_audit_logs" does not exist`.
+- **Schema gap discovered (not fixed in this entry)**: `auth_audit_logs` (table for the `AuthAuditLog` ORM model in `app/models/auth_audit_log.py`) is owned by alembic migration `3450c02f9c01_include_auth_audit_logs_correct_base.py`. The migration itself is broken — it declares `user_id INTEGER` referencing `users.id UUID` (incompatible FK after `4dfe7c45fffe_migrate_users_id_to_uuid.py`). The table is also absent from `_ensure_tables`' raw DDL in `app/main.py` (lines 425–1640). So whether alembic crashes mid-chain (CI advisory path) or runs cleanly, the table is either never created or created with broken types. This is a pre-existing condition; the `later5` bootstrap fix doesn't worsen or help it. To be addressed under the RISK-CI-PG-02 followup backlog when the broader 83-fail drain begins. The architecturally cleanest fix is fixing migration `3450c02f9c01` to use UUID and ensuring it actually runs in the production chain (currently masked because production has `auth_audit_logs` from an earlier hand-rolled schema or a never-recorded path).
+- **Tests not yet touched**: `test_e2e_full_workflow.py` (0 stale paths, already uses `/api/`).
+- **State sync**: this entry only — `OPEN_RISKS.md` not updated since RISK-CI-PG-02 already correctly characterizes the broader "ORM-only tables not in alembic chain" architectural issue; `auth_audit_logs` is one more instance of the same class.
+
+Commit: `6ce656d` (pushed to `origin/master`).
+
 ## 2026-05-25 (later5) — RISK-CI-PG-02 fix verified end-to-end against fresh PG 16
 
 Local verification of the workflow refactor from `later4`. Spun up a fresh `postgres:16` container on port 5499 and ran the exact three-step bootstrap the CI workflow runs. Result: all three steps complete successfully and `pytest -m requires_postgres` runs against the resulting schema for the first time.
