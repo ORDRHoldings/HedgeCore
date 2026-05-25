@@ -1,6 +1,16 @@
 # Changelog (AI-maintained)
 
-## 2026-05-25 (later4) — RISK-CI-PG-02 primary fix: CI workflow mirrors production bootstrap sequence
+## 2026-05-25 (later5) — RISK-CI-PG-02 fix verified end-to-end against fresh PG 16
+
+Local verification of the workflow refactor from `later4`. Spun up a fresh `postgres:16` container on port 5499 and ran the exact three-step bootstrap the CI workflow runs. Result: all three steps complete successfully and `pytest -m requires_postgres` runs against the resulting schema for the first time.
+
+- **Step 1 (`alembic upgrade head` with `set +e`)** — alembic crashes at `audit_transactions` (ORM-only table), but the bracketed `set +e` makes the failure non-fatal exactly as production's `db_migrations.py:63-66` does. Several migrations succeed before the crash (last logged: "UUID migration complete using pgcrypto.gen_random_uuid()"). Pipe-mask gotcha noted: a one-liner `... | tail -15; ALEMBIC_EXIT=$?` captures `tail`'s exit code, not alembic's — but the CI workflow uses newlines, not pipes, so it captures correctly.
+- **Step 2 (`from app.main import _ensure_tables; asyncio.run(...)`)** — completes with "Database tables ensured", fills the ORM-only tables alembic couldn't reach. Schema bootstrap advisory lock (`ordr_schema_bootstrap_v1`) acquired and released cleanly. Boot-time logging is loud (~40s of module-loading noise) but harmless — same path production uses.
+- **Step 3 (`alembic stamp head`)** — `0036_force_rls_tenant_context (head)` recorded as the active revision.
+- **Suite run**: `python -m pytest tests/ -m requires_postgres --maxfail=999` against the bootstrapped PG → **66 passed, 83 failed, 5 errors, 5520 deselected (1m22s)**. Pre-fix, the entire job died in setup. The 83 failures are pre-existing test fixture issues (mostly auth/tenant-isolation/`support_*` table issues) — they were hidden by the alembic crash. The CI fix doesn't make tests pass; it makes the failures legible.
+- **Implication**: The first real CI run after billing restores will show the same 66P/83F/5E shape on the advisory `backend-postgres` job. That's the correct outcome — `continue-on-error: true` keeps it from blocking master while we work down the 83-fail list. Promotion to hard gate (`continue-on-error: false`) is gated on that count reaching zero.
+
+
 
 - **Change**: `.github/workflows/ci.yml::backend-postgres` replaces the brittle `alembic upgrade head` step with a production-mirror three-step bootstrap:
   ```
