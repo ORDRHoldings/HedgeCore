@@ -6,6 +6,22 @@
 ## Active Patterns: 11
 ## Last Updated: 2026-05-24
 
+## Recent Work (2026-05-24, latest) — RISK-AUTH-RLS-02 Mitigation C: Dashboard Refactor (Root-Cause Elimination)
+
+Followup to mitigation B that finally retires the parallel `_resolve_user` helper. With the startup guard in place, the structural defense was firm — but the allowlist still carried 7 dashboard exceptions tagged "deferred refactor". This arc closes that deferred work.
+
+Commit: `81d0064` — `refactor(dashboard): use Depends(get_current_user); delete _resolve_user (RISK-AUTH-RLS-02 followup)`
+
+- `backend/app/api/routes/dashboard.py` — all 7 endpoints (`summary`, `recent-runs`, `pending-approvals`, `team-activity`, `branch-comparison`, `pipeline-status`, `aggregate`) now take `user: User = Depends(get_current_user)`. `_extract_bearer` and `_resolve_user` deleted entirely (~25 LOC removed).
+- `backend/app/core/dependencies.py` — `NO_AUTH_ROUTE_ALLOWLIST` shrunk from 42 → 35 entries (the 7 dashboard paths removed).
+- `backend/tests/test_dashboard_rls_injection.py` — rewritten to call `get_current_user` directly (the 3 existing scenarios) + new structural test asserting every dashboard route has `Depends(get_current_user)` in its dependant tree.
+- `backend/tests/test_dashboard_routes.py` — mock `side_effect` sequences updated for the 2 extra `set_config` execute slots `inject_tenant_rls` consumes; 3 obsolete `_extract_bearer` tests deleted.
+- `backend/tests/test_canonical_auth_startup_guard.py` — canonical-paths test now pins `/api/hedge/run` instead of `/api/v1/dashboard/summary`.
+
+**Verification**: 5514 passed / 160 skipped / 0 failed on SQLite (was 5507; net +7). 56/56 across the 4 affected test files. Production app boots clean against its own canonical-auth guard.
+
+**Status**: Pushed to `origin/master` at `81d0064`. RLS-02 now mitigated three ways — runtime fix (A), structural startup guard (B), root cause eliminated (C). No deferred items remain on this risk.
+
 ## Recent Work (2026-05-24, later) — RISK-AUTH-RLS-02 Mitigation B: Canonical-Auth Startup Guard
 
 Hardening follow-up to the RLS-02 fix. The dashboard `_resolve_user` patch closed the active bug, but the underlying structural gap (a route quietly skipping the canonical `get_current_user` dep) had no automated check. The RLS-01 guard catches only the API-key direction. Without a complementary check, the next parallel auth helper would silently empty RLS-forced queries again.
