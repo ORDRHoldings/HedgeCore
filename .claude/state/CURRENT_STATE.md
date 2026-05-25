@@ -6,6 +6,20 @@
 ## Active Patterns: 11
 ## Last Updated: 2026-05-24
 
+## Recent Work (2026-05-24, later) — RISK-AUTH-RLS-02 Mitigation B: Canonical-Auth Startup Guard
+
+Hardening follow-up to the RLS-02 fix. The dashboard `_resolve_user` patch closed the active bug, but the underlying structural gap (a route quietly skipping the canonical `get_current_user` dep) had no automated check. The RLS-01 guard catches only the API-key direction. Without a complementary check, the next parallel auth helper would silently empty RLS-forced queries again.
+
+Commit: `4607acc` — `feat(auth): startup guard for canonical auth deps (RISK-AUTH-RLS-02 mitigation)`
+
+- `backend/app/core/dependencies.py` — `NO_AUTH_ROUTE_ALLOWLIST` (42 routes, categorized: root/docs, health, auth issuance, signature-auth webhooks, public market data, seed/demo, the stateless engine endpoint, and the 7 dashboard routes pending refactor) + `assert_routes_have_canonical_auth(app, allowlist)` walking every APIRoute's dependant tree.
+- `backend/app/main.py` — guard wired into `lifespan` after the existing RLS-01 guard; `RuntimeError` from the guard propagates and blocks deployment, other exceptions are non-fatal warnings to avoid bricking startup on an unrelated import issue.
+- `backend/tests/test_canonical_auth_startup_guard.py` — 9 tests including `test_real_main_app_passes_guard` (regression boot of the production app against its own guard with the shipped allowlist).
+
+**Verification**: 19/19 tests pass across the three guard files (`test_canonical_auth_startup_guard` 9 + `test_api_key_rls_startup_guard` 7 + `test_dashboard_rls_injection` 3). Production app boots clean against its own guard.
+
+**Status**: Pushed to `origin/master` at `4607acc`. CI billing block continues — local validation only. `OPEN_RISKS.md` and `CHANGELOG_AI.md` updated.
+
 ## Recent Work (2026-05-24, late) — RISK-AUTH-RLS-02: Dashboard JWT Path RLS Injection
 
 Continuation of the RLS hardening arc that shipped RISK-AUTH-RLS-01 mitigation (option 3 startup guard) earlier in the day. While investigating the broader RLS surface beyond the API-key path, discovered that `app/api/routes/dashboard.py::_resolve_user` decodes JWTs directly without calling `set_tenant_rls_context()` — a parallel auth helper that predates `core/dependencies.py::get_current_user`. With migration 0036 forcing RLS on `positions` and `calculation_runs`, the policy `COALESCE(NULLIF(...,''), '00000000-...')` treats the unset contextvar as the NO_TENANT sentinel, so every dashboard aggregate query (summary, recent-runs, etc.) against those RLS-forced tables silently returned empty.
