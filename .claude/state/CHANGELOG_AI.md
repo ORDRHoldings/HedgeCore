@@ -1,5 +1,15 @@
 # Changelog (AI-maintained)
 
+## 2026-05-25 (later) — RISK-CI-PG-02 root-cause probe: bug location refined
+
+- **Probe**: Spun up disposable `postgres:16` (port 55433) and ran `alembic upgrade head` end-to-end against a clean DB.
+- **Findings**:
+  - The original audit_logs `DuplicateTable` failure (RISK opened 2026-05-23) is **resolved**. The four `e2180e1dd4e7` follow-ups committed 2026-05-23/24 (`830f4ee`, `15fd8fe`, `0943701`, `fe025cf`) added defensive `DROP TABLE IF EXISTS ... CASCADE` ahead of the rebuild plus idempotent `ADD/DROP COLUMN IF [NOT] EXISTS` for `users`. The chain progresses cleanly past index 011.
+  - The chain now fails one revision later at **`4dfe7c45fffe`** (`migrate users.id to uuid`) with `psycopg2.errors.CannotCoerce: cannot cast type integer to uuid` on `ALTER TABLE user_roles ALTER COLUMN user_id TYPE uuid USING user_id::uuid`. PostgreSQL validates the USING expression type even when the source table is empty — `integer::uuid` is never valid syntax.
+  - Why production never noticed: `run_alembic_upgrade()` in `app/core/db_migrations.py` swallows exceptions non-fatally (lines 63–66). `_ensure_tables()` then brings the schema up via `Base.metadata.create_all`. The CI advisory job runs alembic in isolation, so the production-time tolerance doesn't carry over.
+- **No code change this commit** — refining the RISK requires understanding production's `alembic_version` row before editing a 7-month-old shipped migration. Drive-by edits to historical migrations risk breaking the next prod boot if anyone toggles `RUN_ALEMBIC_ON_STARTUP=true`. Documented working fix candidate in `OPEN_RISKS.md::RISK-CI-PG-02` (information_schema guard pattern, mirrors `e2180e1dd4e7`'s defensive style).
+- **State sync**: `OPEN_RISKS.md::RISK-CI-PG-02` retitled and refined with the new bug location + production-state caveat.
+
 ## 2026-05-25 — Backend dead-code sweep (post-RLS-02 hygiene)
 
 - **Motivation**: The RLS-02 mitigation C refactor surfaced one F841 in `dashboard.py` (`user_ids_sq` in `pending_approvals`). A broader sweep with `ruff check --select F401,F811,F841` found 17 dead variable assignments across the backend.

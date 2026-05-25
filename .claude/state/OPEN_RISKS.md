@@ -74,14 +74,19 @@
 - **Status**: CLOSED — root cause eliminated, structural guard in place. Tests: 5514 passed / 160 skipped / 0 failed on SQLite (was 5507; net +7).
 - **Opened**: 2026-05-24 / **Closed**: 2026-05-24
 
-## RISK-CI-PG-02: backend-postgres alembic blocked by audit_logs duplicate-table
+## RISK-CI-PG-02: backend-postgres alembic chain fails on fresh PG — audit_logs duplicate likely resolved; user_roles int→uuid cast is the next blocker
 - **Severity**: MEDIUM (advisory job — does not block merges)
-- **Component**: `.github/workflows/ci.yml::backend-postgres`, `backend/migrations/`
-- **Description**: With the alembic URL resolution fix (commit `69804bf`), the advisory `backend-postgres` job now connects to the postgres:16 service container. It fails at `alembic upgrade head` with `psycopg2.errors.DuplicateTable: relation "audit_logs" already exists`. Some migration in the chain is creating `audit_logs` via `op.create_table()` for a table that an earlier migration already created — the conflict only surfaces against a fresh postgres because SQLite (used by the main backend job) doesn't enforce the constraint the same way. Bisect required to find the duplicating revision.
+- **Component**: `.github/workflows/ci.yml::backend-postgres`, `backend/migrations/versions/4dfe7c45fffe_migrate_users_id_to_uuid.py`
+- **Description**: Originally opened (2026-05-23) for `psycopg2.errors.DuplicateTable: relation "audit_logs" already exists` at `alembic upgrade head` on a fresh postgres:16. Four follow-up commits to `e2180e1dd4e7_rebuild_rbac_roles_user_roles.py` (`830f4ee`, `15fd8fe`, `0943701`, `fe025cf`, all 2026-05-23 → 2026-05-24) added defensive `DROP TABLE IF EXISTS audit_logs/auth_audit_logs/refresh_tokens CASCADE` ahead of the rebuild plus `ADD COLUMN IF NOT EXISTS` / `DROP COLUMN IF EXISTS` for `users`. Local reproduction 2026-05-25 against `postgres:16` confirms the chain now progresses past the audit_logs section and **fails one revision later at `4dfe7c45fffe`** with `psycopg2.errors.CannotCoerce: cannot cast type integer to uuid` on `ALTER TABLE user_roles ALTER COLUMN user_id TYPE uuid USING user_id::uuid` (line 40). PostgreSQL validates the USING expression's type even when the source table is empty; `integer::uuid` is never a valid cast.
+- **Why production tolerates this**: `app/main.py` runs `run_alembic_upgrade()` non-fatally — `except Exception as e: logger.warning(f"Alembic runner skipped (non-fatal): {e}")` (`app/core/db_migrations.py` lines 63–66). `_ensure_tables()` then runs and brings the schema to current via `Base.metadata.create_all`. The advisory CI job runs alembic in isolation, so the silent prod-time tolerance doesn't carry over.
+- **Working fix candidates** (verified `USING NULL::uuid` on empty PG table at probe time):
+  - For each of the 4 `ALTER COLUMN ... TYPE uuid USING user_id::uuid` lines in `4dfe7c45fffe`: gate with `DO $$ ... IF data_type = 'integer' THEN ALTER ... USING NULL::uuid; END IF; END $$;`. On fresh DBs the tables are empty so `NULL::uuid` is safe; on snapshot DBs already past UUID conversion the guard skips.
+  - Or: wrap the entire body in a single `DO $$ BEGIN IF (SELECT data_type FROM information_schema.columns WHERE table_name='users' AND column_name='id') = 'integer' THEN ... END IF; END $$;`. Simpler — one guard for the whole block. Symmetrical with `e2180e1dd4e7`'s defensive pattern.
+- **Production-state caveat (load-bearing before any fix lands)**: production must be at or past `4dfe7c45fffe` (master head is `0036_force_rls_tenant_context` and dashboards work, which transitively requires UUID `users.id`). The fix needs to be no-op on already-migrated DBs (the `information_schema` guard does this), and the fix author needs to verify `alembic_version` on Render prod before merging.
 - **Mitigation**: Already advisory (`continue-on-error: true`). RISK-CI-PG-01 mitigation milestone already accounted for fixture/schema work this would surface.
-- **Followups**: bisect migration chain → either drop the duplicate `create_table` or guard with `IF NOT EXISTS` (more typical with `op.execute('CREATE TABLE IF NOT EXISTS ...')` pattern for legacy tables).
-- **Status**: Open (advisory). Blocking promotion of `backend-postgres` to hard gate (which is itself a launch-readiness milestone per RISK-CI-PG-01).
-- **Opened**: 2026-05-23
+- **Followups**: (a) Wrap `4dfe7c45fffe` ALTER blocks in `information_schema` guards. (b) Audit the full chain against a fresh `postgres:16` to find the next failure (likely more migrations have non-idempotent ALTERs). (c) Once the chain is fully fresh-DB-clean, promote `backend-postgres` to hard gate.
+- **Status**: Open (advisory). Bug location refined from "audit_logs duplicate" to "user_roles user_id integer→uuid cast". Audit_logs duplicate believed resolved by the four `e2180e1dd4e7` follow-ups.
+- **Opened**: 2026-05-23  /  **Refined**: 2026-05-25
 
 ## RISK-CI-E2E-01: E2E Playwright suite has never actually run end-to-end in CI
 - **Severity**: HIGH (advisory — does not block merges while we audit)
