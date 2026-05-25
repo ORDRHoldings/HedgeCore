@@ -154,7 +154,12 @@ company_id::text = COALESCE(
 
 **Rule:** any route that reads `positions` or `calculation_runs` must depend on `get_current_user`, or mirror its RLS injection explicitly: `set_tenant_rls_context(tenant_id, bypass=user.is_superuser)`. Do **not** add an explicit `await inject_tenant_rls(db, ...)` if existing tests use `AsyncMock(side_effect=[...])` — it consumes 2 mocked execute slots and breaks pre-allocated sequences.
 
-`assert_api_key_routes_safe(app)` (in `app/deps/api_key_auth.py`) is the existing startup guard for the API-key path; a complementary guard for "RLS-forced table readers without `get_current_user`" is a known gap.
+Two startup guards enforce this structurally (both fire from `app/main.py` lifespan):
+
+1. `assert_api_key_routes_safe(app)` — `app/deps/api_key_auth.py`. Walks every `APIRoute`'s dependant graph; any route using `get_api_key_principal` that isn't in `API_KEY_AUTH_ALLOWLIST` blocks startup.
+2. `assert_routes_have_canonical_auth(app)` — `app/core/dependencies.py`. The structural inverse: every route must have `get_current_user` OR `get_api_key_principal` in its dependant tree, OR be explicitly listed in `NO_AUTH_ROUTE_ALLOWLIST` with a justification comment. This is the guard that would have caught RISK-AUTH-RLS-02 (dashboard's `_resolve_user`) at startup instead of in production three days later.
+
+Adding a new no-auth route requires editing the allowlist with a one-line justification — reviewers are expected to challenge new entries.
 
 ### 9.2 Schema drift (ORM vs prod DB)
 
