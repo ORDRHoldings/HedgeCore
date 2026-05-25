@@ -93,7 +93,7 @@ A task is **DONE** only when all of the following hold:
 
 Do **not** mark items `[PENDING BROWSER CONFIRMATION]` and wait — that blocks sprints indefinitely. Perform the browser check autonomously, escalate only if broken.
 
-Current backend baseline (2026-05-24): **5507 passed / 160 skipped / 0 failed** on SQLite. CI coverage gate: 70% minimum (target: 75%+).
+Current backend baseline (2026-05-25): **5514 passed / 160 skipped / 0 failed** on SQLite. CI coverage gate: 70% minimum (target: 75%+).
 
 ---
 
