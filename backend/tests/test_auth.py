@@ -32,10 +32,31 @@ pytestmark = pytest.mark.requires_postgres
 
 @pytest.fixture(scope="function", autouse=True)
 async def cleanup_db():
-    """Ensure a clean DB state before each test run."""
+    """Ensure a clean DB state for THIS test's user accounts.
+
+    Wholesale `DELETE FROM users` violates FK constraints from positions /
+    audit_events / etc. that the e2e suite leaves behind (and that the
+    session-bootstrap demo user owns). Only purge the auth fixtures this
+    file creates: the test email patterns below.
+    """
+    test_emails = (
+        "test@hedgecalc.ai",
+        "bob@hedgecalc.ai",
+        "dup@hedgecalc.ai",
+        "exp@hedgecalc.ai",
+        "single@hedgecalc.ai",
+    )
     async with async_session_maker() as session:
-        await session.execute(RefreshToken.__table__.delete())
-        await session.execute(User.__table__.delete())
+        await session.execute(
+            RefreshToken.__table__.delete().where(
+                RefreshToken.user_id.in_(
+                    select(User.id).where(User.email.in_(test_emails))
+                )
+            )
+        )
+        await session.execute(
+            User.__table__.delete().where(User.email.in_(test_emails))
+        )
         await session.commit()
     yield
 

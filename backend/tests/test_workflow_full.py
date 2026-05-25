@@ -298,8 +298,16 @@ class TestPositionCRUD:
             assert response.status_code in (201, 422, 500), \
                 f"Expected route to be reachable, got {response.status_code}: {response.text}"
         except Exception as exc:
-            # SQLite demo DB has no tables — exception means auth passed, route was reached
-            if "no such table" in str(exc).lower() or "operationalerror" in type(exc).__name__.lower():
+            # Any DB-level error means auth passed and the handler executed --
+            # SQLite "no such table", PG FK / integrity violations, etc.
+            exc_name = type(exc).__name__.lower()
+            db_error_signals = (
+                "no such table" in str(exc).lower()
+                or "operationalerror" in exc_name
+                or "integrityerror" in exc_name
+                or "foreignkey" in str(exc).lower()
+            )
+            if db_error_signals:
                 pass  # DB error confirms auth was bypassed and route was reached
             elif not reached_handler:
                 raise  # unexpected exception before handler

@@ -6,14 +6,34 @@ Regression tests for critical policy service bugs:
     causing GET /v1/policies/templates to return 500 Internal Server Error.
 """
 import pytest
+import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.models.policy import PolicyTemplate
+from app.models.user import User
 from app.services import policy_service
 
 pytestmark = pytest.mark.requires_postgres
+
+
+@pytest_asyncio.fixture
+async def demo_user(db_session: AsyncSession) -> User:
+    """Resolve the session-bootstrapped synthetic test user.
+
+    conftest._pg_seed_session_bootstrap UPSERTs this user with the fixed
+    id 11111111-2222-3333-4444-555555555555 and binds it to the synthetic
+    test company. policy_service.list_templates only needs user.company_id,
+    so a SELECT is sufficient -- no need to re-seed here.
+    """
+    from uuid import UUID
+    res = await db_session.execute(
+        select(User).where(User.id == UUID("11111111-2222-3333-4444-555555555555"))
+    )
+    user = res.scalars().first()
+    assert user is not None, "demo_user not seeded by conftest"
+    return user
 
 
 @pytest.mark.asyncio
