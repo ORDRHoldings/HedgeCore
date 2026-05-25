@@ -1,5 +1,19 @@
 # Changelog (AI-maintained)
 
+## 2026-05-25 (later4) — RISK-CI-PG-02 primary fix: CI workflow mirrors production bootstrap sequence
+
+- **Change**: `.github/workflows/ci.yml::backend-postgres` replaces the brittle `alembic upgrade head` step with a production-mirror three-step bootstrap:
+  ```
+  set +e; python -m alembic upgrade head; ALEMBIC_EXIT=$?; set -e
+  python -c "import asyncio; from app.main import _ensure_tables; asyncio.run(_ensure_tables())"
+  python -m alembic stamp head
+  ```
+- **Why this is the right fix**: directly mirrors production's `app/main.py` startup contract — `run_alembic_upgrade()` (which swallows exceptions per `app/core/db_migrations.py:63-66`) followed by `_ensure_tables()` (which fills ORM-only tables via `Base.metadata.create_all`). The advisory CI was previously the *only* place running alembic in isolation, which guaranteed divergence from production for every ORM-only table.
+- **Migration guards demoted to belt-and-suspenders**: the 8 guards from `24dfb84` + `0cba136` remain in place. They're now redundant for the CI advisory path but still correct on production (no-ops on already-migrated state) and useful for any future alembic-in-isolation use case (local dev, ad-hoc probes).
+- **Local verification**: `from app.main import _ensure_tables` imports cleanly with only `DATABASE_URL` + `JWT_SECRET` + `ENV=test` set (the exact env the CI step provides). Full SQLite test suite still green (5514 pass / 160 skip / 0 fail) — no behavioral change for SQLite paths.
+- **What's still pending**: actual fresh-PG-runner verification — CI is currently billing-blocked. Once CI is restored, the `backend-postgres` job should reach `pytest -m requires_postgres` without crashing in the bootstrap step. Promotion to hard gate (`continue-on-error: false`) is a separate launch-readiness milestone after N consecutive green runs.
+- **State sync**: `OPEN_RISKS.md::RISK-CI-PG-02` updated — followup (a) marked done; status downgraded from "Open (advisory)" to "Mitigated (advisory)".
+
 ## 2026-05-25 (later3) — RISK-CI-PG-02 broadened: 3 more migrations guarded + architectural root cause identified
 
 - **Probing result**: After the earlier two fixes shipped (`24dfb84`), local re-probe against fresh `postgres:16` advanced the chain past `4dfe7c45fffe` and `a3f8c1d2e4b5`, then failed at `b7d2e4f1a9c3` on `ALTER TABLE positions ADD COLUMN policy_revision_id`. The root cause crystallized: **the migration chain was authored assuming `_ensure_tables()` runs first**. Many tables (`positions`, `execution_proposals`, `policy_instances`, `audit_transactions`, …) have no `CREATE TABLE` migration anywhere in the chain — they exist purely in the ORM. In production the sequence is "alembic non-fatally → `_ensure_tables` finishes"; the advisory CI job runs alembic in isolation and crashes the moment it ALTERs an ORM-only table.

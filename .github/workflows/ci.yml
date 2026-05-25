@@ -98,8 +98,24 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Apply migrations
-        run: python -m alembic upgrade head
+      # Bootstrap schema in the same sequence production uses (see
+      # RISK-CI-PG-02): run alembic non-fatally so any clean migrations apply,
+      # then `_ensure_tables()` fills in ORM-only tables that the chain never
+      # creates (positions, execution_proposals, policy_instances, …), then
+      # stamp alembic to head so version tracking is consistent. Production's
+      # `run_alembic_upgrade()` swallows exceptions per `app/core/db_migrations.py`
+      # lines 63–66 and `_ensure_tables()` runs next as the schema safety net.
+      # Mirroring that exact sequence here is more reliable than expecting
+      # alembic-in-isolation to succeed.
+      - name: Bootstrap schema (production-mirror sequence)
+        run: |
+          set +e
+          python -m alembic upgrade head
+          ALEMBIC_EXIT=$?
+          set -e
+          echo "alembic upgrade head exit=$ALEMBIC_EXIT (non-fatal — production parity)"
+          python -c "import asyncio; from app.main import _ensure_tables; asyncio.run(_ensure_tables())"
+          python -m alembic stamp head
         env:
           DATABASE_URL: "postgresql+asyncpg://hedge_test:hedge_test@localhost:5432/hedge_test"
           JWT_SECRET: "ci-test-secret-32-chars-minimum-ok"

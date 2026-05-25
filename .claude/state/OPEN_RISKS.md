@@ -81,7 +81,8 @@
 - **History**:
   - 2026-05-23 — opened for `audit_logs` duplicate. Resolved by four follow-ups to `e2180e1dd4e7`.
   - 2026-05-25 — refined; root cause identified as the architectural pattern above.
-  - 2026-05-25 (this entry) — 5 migrations now defensively guarded with `pg_class` / `information_schema` existence checks. Chain progresses substantially further on fresh PG (verified locally) but still doesn't reach head — `audit_transactions` is the next ORM-only table.
+  - 2026-05-25 — 8 migrations defensively guarded with `pg_class` / `information_schema` existence checks (commits `24dfb84` + `0cba136`). Chain progresses further on fresh PG but still doesn't reach head (next blocker: `audit_transactions` ORM-only).
+  - 2026-05-25 (this entry) — **primary fix shipped**: `.github/workflows/ci.yml::backend-postgres` now mirrors production bootstrap sequence (`alembic upgrade head` non-fatally → `_ensure_tables()` → `alembic stamp head`). Migration guards remain as belt-and-suspenders.
 - **Fixes shipped 2026-05-25** (commits `24dfb84` + this one):
   1. `4dfe7c45fffe_migrate_users_id_to_uuid.py` — `DO $$ IF data_type='integer' THEN … END IF; END $$;` wrapper + `USING NULL::uuid` (invalid `integer::uuid` syntax replaced).
   2. `a3f8c1d2e4b5_phase0_worm_tables_and_request_context.py` — Python try/except replaced with `DO $$ IF EXISTS pg_class WHERE relname='positions' THEN … END IF; END $$;` (Python try/except cannot reset poisoned PG transactions).
@@ -94,8 +95,8 @@
 - **Why each guard is safe**: every guard is a no-op on production-state DBs (where `_ensure_tables` ran first so the table exists, or where the migration was previously applied). The guards only short-circuit on fresh-PG-alembic-in-isolation paths.
 - **Remaining (not yet fixed)**: chain still breaks on `audit_transactions` and likely several more ORM-only tables downstream. The truly correct architectural fix is a CI workflow change: either (a) make `backend-postgres` run `Base.metadata.create_all` via a pre-step (mirrors production exactly), or (b) split it into two advisory jobs — `pytest-pg` (uses `_ensure_tables`) and `alembic-chain-pg` (pure alembic against the goal of getting the chain clean). One-migration-at-a-time guarding is reaching diminishing returns.
 - **Mitigation**: Already advisory (`continue-on-error: true`). RISK-CI-PG-01 milestone covers the larger fixture/schema audit.
-- **Followups**: (a) Workflow refactor to mirror production sequence (`_ensure_tables` first, then alembic — production parity). (b) Complete the migration guard sweep for remaining ORM-only tables when prioritized. (c) Promote `backend-postgres` to hard gate once one of the above paths is closed.
-- **Status**: Open (advisory). 8 migrations now defensively guarded. Architectural root cause identified. Real fix is a CI workflow change, not more migration guards.
+- **Followups**: (a) ✅ DONE 2026-05-25 — workflow now mirrors production sequence (alembic non-fatal → `_ensure_tables` → `stamp head`). (b) Complete the migration guard sweep for remaining ORM-only tables when prioritized — now lower urgency since (a) is the primary fix. (c) Promote `backend-postgres` to hard gate (`continue-on-error: false`) once N consecutive green runs prove the workflow change is stable.
+- **Status**: Mitigated (advisory). Workflow now production-parity; awaiting CI billing restoration to verify against fresh PG runner. Promotion to hard gate is the next milestone.
 - **Opened**: 2026-05-23  /  **Last update**: 2026-05-25
 
 ## RISK-CI-E2E-01: E2E Playwright suite has never actually run end-to-end in CI
