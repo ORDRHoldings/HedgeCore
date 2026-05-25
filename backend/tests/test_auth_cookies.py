@@ -57,40 +57,66 @@ class TestRtCookieSecurity:
 
 @pytest.mark.requires_postgres
 class TestCorsConfig:
-    """Verify CORS settings allow credentials with explicit origins."""
+    """Verify CORS settings allow credentials with explicit origins.
+
+    These assert the CODE DEFAULTS in app/core/config.py — not the live
+    cfg_module.settings instance, which is shared global state that may
+    be mutated by other suites in the PG run (e.g. e2e suites that set
+    ENV/DATABASE_URL at module-import time). Reading the class field
+    defaults bypasses that contamination while still catching real
+    regressions to the defaults themselves.
+    """
+
+    @staticmethod
+    def _fresh_settings_class():
+        """Reimport the Settings class with CORS env vars cleared.
+
+        Snapshots and pops any CORS_* env vars so the reloaded Settings
+        falls back to its declared class-level defaults, then restores
+        the original env on return.
+        """
+        import importlib
+        cors_keys = (
+            "CORS_ALLOW_ORIGINS",
+            "CORS_ALLOW_CREDENTIALS",
+            "CORS_ALLOW_METHODS",
+            "CORS_ALLOW_HEADERS",
+            "CORS_EXPOSE_HEADERS",
+            "CORS_ALLOW_VERCEL_PREVIEWS",
+        )
+        snapshot = {k: os.environ.pop(k) for k in cors_keys if k in os.environ}
+        try:
+            import app.core.config as cfg_module
+            importlib.reload(cfg_module)
+            return cfg_module.Settings()
+        finally:
+            for k, v in snapshot.items():
+                os.environ[k] = v
 
     def test_cors_allow_credentials_is_true(self):
         """allow_credentials must be True for httpOnly cookie flow."""
-        import importlib
-        import app.core.config as cfg_module
-        importlib.reload(cfg_module)
-        assert cfg_module.settings.CORS_ALLOW_CREDENTIALS is True
+        settings = self._fresh_settings_class()
+        assert settings.CORS_ALLOW_CREDENTIALS is True
 
     def test_cors_no_wildcard_origin(self):
         """Wildcard '*' is incompatible with allow_credentials=True."""
-        import importlib
-        import app.core.config as cfg_module
-        importlib.reload(cfg_module)
-        assert "*" not in cfg_module.settings.CORS_ALLOW_ORIGINS, (
+        settings = self._fresh_settings_class()
+        assert "*" not in settings.CORS_ALLOW_ORIGINS, (
             "CORS_ALLOW_ORIGINS must not contain '*' when allow_credentials=True"
         )
 
     def test_cors_includes_localhost(self):
         """Dev origin must be in default CORS origins."""
-        import importlib
-        import app.core.config as cfg_module
-        importlib.reload(cfg_module)
-        origins = cfg_module.settings.CORS_ALLOW_ORIGINS
+        settings = self._fresh_settings_class()
+        origins = settings.CORS_ALLOW_ORIGINS
         assert any("localhost:3000" in o for o in origins), (
             "http://localhost:3000 must be in default CORS_ALLOW_ORIGINS"
         )
 
     def test_cors_allow_headers_explicit(self):
         """Headers must be explicit (not wildcard) for credentials."""
-        import importlib
-        import app.core.config as cfg_module
-        importlib.reload(cfg_module)
-        headers = cfg_module.settings.CORS_ALLOW_HEADERS
+        settings = self._fresh_settings_class()
+        headers = settings.CORS_ALLOW_HEADERS
         assert "*" not in headers, (
             "CORS_ALLOW_HEADERS must not be '*' when allow_credentials=True"
         )
