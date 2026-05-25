@@ -271,7 +271,6 @@ async def pending_approvals(
     has_all_branches = (
         "reports.view_all_branches" in permissions or user.is_superuser
     )
-    user_ids_sq = _scoped_user_ids(user, has_all_branches)
 
     try:
         q = (
