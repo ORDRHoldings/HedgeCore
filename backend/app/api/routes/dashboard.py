@@ -13,13 +13,12 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
-from app.core.rls import set_tenant_rls_context
-from app.core.security import decode_token
+from app.core.dependencies import get_current_user
 from app.models.calculation_run import CalculationRun
 from app.models.execution_proposal import ExecutionProposal
 from app.models.ledger import LedgerEntry
@@ -31,40 +30,13 @@ from app.services import rbac_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/dashboard", tags=["dashboard"])
-# ?????????????????????????????????????????????????????????????????????????????
-# Auth / Scope Helpers
-# ?????????????????????????????????????????????????????????????????????????????
 
-def _extract_bearer(request: Request) -> str:
-    auth = request.headers.get("authorization", "")
-    if not auth.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="Missing bearer token")
-    return auth.split(" ", 1)[1].strip()
-async def _resolve_user(request: Request, db: AsyncSession) -> User:
-    """Decode JWT, look up user, return User ORM object."""
-    from sqlalchemy.orm import selectinload
-    token = _extract_bearer(request)
-    payload = decode_token(token, expected_type="access")
-    sub = payload.get("sub")
-    if not sub:
-        raise HTTPException(status_code=401, detail="Invalid token payload")
-    user_id = UUID(str(sub))
-    result = await db.execute(
-        select(User)
-        .options(selectinload(User.branch), selectinload(User.company))
-        .where(User.id == user_id)
-    )
-    user = result.scalars().first()
-    if not user or not user.is_active:
-        raise HTTPException(status_code=401, detail="Invalid or inactive user")
-    # RISK-AUTH-RLS-02: dashboard queries hit RLS-forced tables (positions,
-    # calculation_runs per migration 0036). Set the request-local contextvar;
-    # `TenantRLSAsyncSession.execute()` auto-injects it on the next query, so
-    # policies match this tenant instead of the NO_TENANT default.
-    tenant_id = str(user.company_id) if user.company_id else None
-    bypass_tenant_rls = bool(getattr(user, "is_superuser", False))
-    set_tenant_rls_context(tenant_id, bypass=bypass_tenant_rls)
-    return user
+# Auth + RLS injection are handled by Depends(get_current_user) (see
+# app/core/dependencies.py). It validates the access token, loads the active
+# user, and sets the tenant RLS contextvar so `TenantRLSAsyncSession.execute()`
+# auto-injects `app.current_tenant_id` on the next query. This eliminates the
+# RISK-AUTH-RLS-02 class of bug — there is no parallel auth helper here.
+
 def _get_branch_code(user: User) -> str:
     """Return 3-letter branch code from user's branch if available."""
     try:
@@ -102,16 +74,14 @@ def _scoped_user_ids(user: User, all_branches: bool):
 
 @router.get("/summary", tags=["dashboard"])
 async def dashboard_summary(
-    request: Request,
     db: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """
     Returns KPIs and context scoped to the current user's authority:
     - If user has reports.view_all_branches: company-wide aggregates
     - Else: branch-scoped aggregates
     """
-    user = await _resolve_user(request, db)
-
     try:
         # Resolve permissions
         permissions = await rbac_service.get_permissions_by_user(db, user.id)
@@ -215,15 +185,13 @@ async def dashboard_summary(
 
 @router.get("/recent-runs", tags=["dashboard"])
 async def recent_runs(
-    request: Request,
     db: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> list[dict[str, Any]]:
     """
     Returns last 10 proposals for the current user.
     Empty list when no proposals exist.
     """
-    user = await _resolve_user(request, db)
-
     try:
         # Query calculation runs for the user's company (most recent first)
         q = (
@@ -285,14 +253,13 @@ async def recent_runs(
 
 @router.get("/pending-approvals", tags=["dashboard"])
 async def pending_approvals(
-    request: Request,
     db: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> list[dict[str, Any]]:
     """
     Returns staging artifacts awaiting approval, scoped to user's company/branch.
     Requires permission: pipeline.approve
     """
-    user = await _resolve_user(request, db)
     permissions = await rbac_service.get_permissions_by_user(db, user.id)
 
     if "pipeline.approve" not in permissions and not user.is_superuser:
@@ -341,14 +308,13 @@ async def pending_approvals(
 
 @router.get("/team-activity", tags=["dashboard"])
 async def team_activity(
-    request: Request,
     db: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> list[dict[str, Any]]:
     """
     Returns last 20 audit events scoped to user's branch or company-wide.
     Requires permission: audit.view_branch or audit.view_all
     """
-    user = await _resolve_user(request, db)
     permissions = await rbac_service.get_permissions_by_user(db, user.id)
 
     if (
@@ -412,14 +378,13 @@ async def team_activity(
 
 @router.get("/branch-comparison", tags=["dashboard"])
 async def branch_comparison(
-    request: Request,
     db: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """
     Per-branch exposure, coverage and proposal summary for the caller's company.
     Superusers / reports.view_all_branches users see all branches; others see their own.
     """
-    user = await _resolve_user(request, db)
     permissions = await rbac_service.get_permissions_by_user(db, user.id)
     has_all = "reports.view_all_branches" in permissions or user.is_superuser
 
@@ -489,14 +454,12 @@ async def branch_comparison(
 
 @router.get("/pipeline-status", tags=["dashboard"])
 async def pipeline_status(
-    request: Request,
     db: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """
     Tri-state pipeline counts (Sandbox → Staging → Ledger) for the caller's company.
     """
-    user = await _resolve_user(request, db)
-
     sandbox_total_q = (
         select(func.count())
         .select_from(CalculationRun)
@@ -562,15 +525,13 @@ async def pipeline_status(
 
 @router.get("/aggregate", tags=["dashboard"])
 async def dashboard_aggregate(
-    request: Request,
     db: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """
     Returns summary KPIs, recent runs, and pending approvals in a single response.
     Runs sub-queries concurrently. Falls back gracefully on partial failure.
     """
-    user = await _resolve_user(request, db)
-
     async def _summary() -> dict[str, Any]:
         try:
             permissions = await rbac_service.get_permissions_by_user(db, user.id)

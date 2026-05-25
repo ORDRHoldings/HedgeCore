@@ -10,7 +10,11 @@ Coverage targets:
   - GET /api/v1/dashboard/team-activity
   - GET /api/v1/dashboard/aggregate
 
-Auth mechanism: _extract_bearer() + _resolve_user() (custom, not standard dep).
+Auth mechanism: Depends(get_current_user) (canonical JWT dep from
+                app/core/dependencies.py). It validates the token, loads the
+                user, then calls inject_tenant_rls (2 set_config execute calls)
+                before the route body runs. Mock sequences must account for
+                those 2 slots between the user lookup and the first route query.
 DB mocking: app.dependency_overrides[get_session] with an async generator that
             yields the mock AsyncMock session.
 
@@ -85,8 +89,10 @@ def _make_user(
 
 def _make_db_session_with_user(user: MagicMock) -> AsyncMock:
     """
-    AsyncMock session where the FIRST execute call (user lookup in _resolve_user)
-    returns the given user, and all subsequent calls return 0 / empty lists.
+    AsyncMock session where the FIRST execute call (user lookup in
+    get_current_user) returns the given user, and all subsequent calls return
+    0 / empty lists. The 40-slot tail covers the 2 set_config execute calls
+    from inject_tenant_rls plus every downstream route query under test.
     """
     # First result: user lookup via select(User).where(User.id == user_id)
     user_result = MagicMock()
@@ -445,8 +451,12 @@ class TestRecentRuns:
         empty_result.scalars.return_value.all.return_value = []
         empty_result.scalar.return_value = 0
 
+        # Sequence: user lookup → 2 set_config calls from inject_tenant_rls in
+        # get_current_user → run query → position query (no positions) → ...
         db = AsyncMock()
-        db.execute = AsyncMock(side_effect=[user_result, run_result] + [empty_result] * 10)
+        db.execute = AsyncMock(
+            side_effect=[user_result, empty_result, empty_result, run_result] + [empty_result] * 10
+        )
 
         with _with_session(db):
             transport = ASGITransport(app=app)
@@ -796,36 +806,11 @@ class TestDashboardAggregate:
 class TestHelpers:
     """Verify helper functions in isolation without network overhead."""
 
-    def test_extract_bearer_raises_on_missing_header(self):
-        """_extract_bearer raises HTTPException(401) when Authorization header absent."""
-        from fastapi import HTTPException
-        from app.api.routes.dashboard import _extract_bearer
-
-        request = MagicMock()
-        request.headers = {}
-        with pytest.raises(HTTPException) as exc_info:
-            _extract_bearer(request)
-        assert exc_info.value.status_code == 401
-
-    def test_extract_bearer_raises_on_wrong_scheme(self):
-        """_extract_bearer raises HTTPException(401) for non-Bearer schemes."""
-        from fastapi import HTTPException
-        from app.api.routes.dashboard import _extract_bearer
-
-        request = MagicMock()
-        request.headers = {"authorization": "Basic abc123"}
-        with pytest.raises(HTTPException) as exc_info:
-            _extract_bearer(request)
-        assert exc_info.value.status_code == 401
-
-    def test_extract_bearer_returns_raw_token(self):
-        """_extract_bearer strips 'Bearer ' prefix and returns the token string."""
-        from app.api.routes.dashboard import _extract_bearer
-
-        request = MagicMock()
-        request.headers = {"authorization": "Bearer mytoken123"}
-        result = _extract_bearer(request)
-        assert result == "mytoken123"
+    # The dashboard router previously carried its own `_extract_bearer` /
+    # `_resolve_user` helpers (RISK-AUTH-RLS-02 — the parallel auth helper
+    # that silently skipped RLS injection). Those helpers have been deleted;
+    # the equivalent behavior is covered by tests against
+    # `app/core/dependencies.py::get_current_user` (the canonical JWT dep).
 
     def test_get_branch_code_returns_hq_default_when_no_branch(self):
         """_get_branch_code returns 'HQ' when branch is None."""

@@ -118,7 +118,7 @@ def test_canonical_paths_in_default_allowlist():
         "/api/health",
         "/api/auth/login",
         "/api/v1/billing/webhook",
-        "/api/v1/dashboard/summary",  # tracked as deferred refactor
+        "/api/hedge/run",
     }
     assert expected.issubset(NO_AUTH_ROUTE_ALLOWLIST), (
         f"Missing canonical paths from NO_AUTH_ROUTE_ALLOWLIST: "

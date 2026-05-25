@@ -258,17 +258,6 @@ NO_AUTH_ROUTE_ALLOWLIST: frozenset[str] = frozenset({
 
     # ── Stateless engine endpoint (no DB write; RBAC enforced internally) ──
     "/api/hedge/run",
-
-    # ── Dashboard (RISK-AUTH-RLS-02 — uses local `_resolve_user` which sets
-    #    RLS context after JWT decode; safe at runtime but bypasses the
-    #    canonical dependency. Tracked as deferred refactor in OPEN_RISKS.) ──
-    "/api/v1/dashboard/aggregate",
-    "/api/v1/dashboard/branch-comparison",
-    "/api/v1/dashboard/pending-approvals",
-    "/api/v1/dashboard/pipeline-status",
-    "/api/v1/dashboard/recent-runs",
-    "/api/v1/dashboard/summary",
-    "/api/v1/dashboard/team-activity",
 })
 
 
