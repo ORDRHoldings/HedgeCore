@@ -1,5 +1,39 @@
 # Current Sprint
 
+Phase: **Production Hardening — Post-Launch Readiness**
+Status: Active (no feature sprint open). 44 commits 2026-04-28 → 2026-05-25.
+Started: 2026-04-28 (post-Sub-project-B shipment)
+Updated: 2026-05-25
+
+## Active Phase — Production Hardening
+
+No feature sprint is open. Work is risk-driven: each arc closes one entry in `OPEN_RISKS.md`. The phase is "make the platform safe to take traffic," not "build new functionality." A new feature sprint should be declared only after the open HIGH risks below close.
+
+### Arcs landed this phase
+
+| Arc | Range | Risk closed/mitigated | Highlights |
+|-----|-------|-----------------------|-----------|
+| CI repair | 2026-05-13 → 2026-05-24 | RISK-RLS-PROD-01 (closed), RISK-CI-E2E-01 (mitigated advisory), RISK-CI-PG-02 (opened+mitigated) | Master green again; e2e + e2e-smoke jobs wired with step-level timeouts; `audit_logs` rebuild migrations + 8 defensive guards for ORM-only tables. |
+| RLS hardening | 2026-05-24 | RISK-AUTH-RLS-01 (mitigated), RISK-AUTH-RLS-02 (closed in 3 mitigations) | Startup guards on both auth surfaces; dashboard `_resolve_user` refactored away entirely. |
+| CI architectural fix | 2026-05-25 | RISK-CI-PG-02 (followup a — done) | `backend-postgres` workflow now mirrors production bootstrap sequence (`alembic upgrade head` non-fatal → `_ensure_tables` → `stamp head`). |
+| Doc accuracy | 2026-05-25 | n/a — hygiene | CLAUDE.md "known gap" note rewritten; test baseline 5507 → 5514. |
+
+### Open at start of next session
+
+| Risk | Severity | Why it still blocks confidence in prod |
+|------|----------|----------------------------------------|
+| RISK-OPS-MON-01 | HIGH | No 5xx Sentry alert; no Render auto-rollback. Directly caused the 2026-05-13 → 2026-05-16 silent RLS outage. External dashboard config required. |
+| RISK-CI-E2E-01 | HIGH (advisory) | 237-test Playwright suite has never finished in the runner window. Smoke job (44 tests) wired but not yet promoted to hard gate. |
+| RISK-CI-PG-01 | MEDIUM (advisory) | 130 `requires_postgres` tests still run on a `continue-on-error: true` job. Workflow refactor above unblocks promotion; awaits N consecutive green runs once CI billing restored. |
+| RISK-INF-01 | MEDIUM | Render `hedgecore-keepalive` cron in IaC but blueprint sync pending. |
+| RISK-ERP-01 | MEDIUM | No live ERP credentials on any tenant — posting adapters run paper mode. |
+
+The phase exits when the three HIGH/advisory-HIGH risks above either close or have an explicit accept-and-ship plan signed off.
+
+---
+
+## Past Sprint — Production Readiness + E2E Coverage → Sub-project B: Slack/Teams Notifications
+
 Sprint: Production Readiness + E2E Coverage → Sub-project B: Slack/Teams Notifications
 Status: COMPLETE + SHIPPED (last shipped 2026-04-27 Sub-project B)
 Started: 2026-04-22
