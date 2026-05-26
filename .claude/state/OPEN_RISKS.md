@@ -34,13 +34,14 @@
 - **Status**: CLOSED 2026-04-28 — master pushed regularly; latest HEAD `0d34942` on origin.
 - **Opened**: 2026-04-14 / **Closed**: 2026-04-28
 
-## RISK-CI-PG-01: requires_postgres tests do not run in CI — Mitigated (advisory)
-- **Severity**: HIGH → MEDIUM (advisory job lands findings without blocking merge)
+## RISK-CI-PG-01: requires_postgres tests do not run in CI — Drained (hard-gate-ready)
+- **Severity**: HIGH → MEDIUM (advisory job lands findings without blocking merge) → LOW (drain complete, awaiting hard-gate flip)
 - **Component**: GitHub Actions backend test job
 - **Description**: 130 `requires_postgres`-marked tests auto-skip because the main CI uses `DATABASE_URL=sqlite+aiosqlite://`. The new route-smoke layer (`backend/tests/test_routes_smoke.py`, 2026-05-16) inherits the same gap. This is exactly how the `SET LOCAL` bind-param RLS bug (see `docs/incidents/2026-05-16-rls-set-local-bind-params.md`) shipped to prod and went undetected for 3 days.
-- **Mitigation**: 2026-05-16 — `137c8a2` added the `backend-postgres` GitHub Actions job (`postgres:16` service container + Alembic upgrade + `pytest -m requires_postgres`) with `continue-on-error: true` while we audit which of the 130 marked tests need fixture/schema work. Promoting to hard-gate (flip `continue-on-error: false`) is itself a launch-readiness milestone.
-- **Status**: Mitigated (advisory). Promotion to hard gate is tracked as a separate launch-readiness item.
-- **Opened**: 2026-05-16 / **Mitigated**: 2026-05-16
+- **Mitigation A**: 2026-05-16 — `137c8a2` added the `backend-postgres` GitHub Actions job (`postgres:16` service container + Alembic upgrade + `pytest -m requires_postgres`) with `continue-on-error: true` while we audit which of the 130 marked tests need fixture/schema work.
+- **Mitigation B (drain)**: 2026-05-25 (later10) — five fixes shipped (env.py `transaction_per_migration`, three permission migration content fixes, `_ensure_tables` auth_audit_logs + users.created_at/token_version, CORS test JWT_SECRET isolation). End-to-end on probe2 PG: `pytest tests/ -m requires_postgres` → **154 passed / 5520 deselected / 0 failed in 164s**. Marker-filtered subset is clean against production-mirror PG.
+- **Status**: Drained. Pending: N consecutive green CI runs (once billing returns) → flip `continue-on-error: false` to promote `backend-postgres` to hard gate.
+- **Opened**: 2026-05-16 / **Drained**: 2026-05-25
 
 ## RISK-OPS-MON-01: No backend 5xx alert + no Render auto-rollback
 - **Severity**: HIGH

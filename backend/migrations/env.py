@@ -164,6 +164,15 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
+            # Commit each migration independently so that an upstream
+            # crash (e.g. 0028 permissions content bug — RISK-CI-PG-02)
+            # does NOT roll back already-applied upstream migrations
+            # such as b1f2a3c4d5e6 (pipeline tables: proposals,
+            # staging_artifacts, ledger_entries, …). Production tolerates
+            # the crash via run_alembic_upgrade() heal-on-retry; CI's
+            # advisory bootstrap stamps head after the partial run, so
+            # per-migration commits maximize chain reach in one pass.
+            transaction_per_migration=True,
         )
         with context.begin_transaction():
             context.run_migrations()

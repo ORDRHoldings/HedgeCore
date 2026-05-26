@@ -600,6 +600,45 @@ async def _ensure_tables():
 
 
 
+        # ?? Auth audit log + ENUMs (alembic chain crashes before its migration runs in CI-isolation) ??
+        """DO $$ BEGIN
+            CREATE TYPE auth_event_type AS ENUM (
+                'LOGIN_SUCCESS','LOGIN_FAIL','REGISTER_SUCCESS','REGISTER_FAIL',
+                'REFRESH_SUCCESS','REFRESH_FAIL','LOGOUT','ME');
+        EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+        """DO $$ BEGIN
+            CREATE TYPE auth_event_status AS ENUM ('SUCCESS','FAIL');
+        EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+        """DO $$ BEGIN
+            CREATE TYPE auth_reason_code AS ENUM (
+                'OK','EMAIL_ALREADY_EXISTS','EMAIL_NOT_FOUND','INVALID_PASSWORD',
+                'ACCOUNT_DISABLED','TOKEN_EXPIRED','TOKEN_REVOKED','TOKEN_INVALID',
+                'ROTATION_REVOKED_PREVIOUS','SERVER_ERROR');
+        EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+        # If an older alembic chain created the enum without 'ME', add it (PG 12+ supports IF NOT EXISTS).
+        """DO $$ BEGIN
+            ALTER TYPE auth_event_type ADD VALUE IF NOT EXISTS 'ME';
+        EXCEPTION WHEN undefined_object THEN NULL; END $$""",
+        """CREATE TABLE IF NOT EXISTS auth_audit_logs (
+            id SERIAL PRIMARY KEY,
+            user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+            event_type auth_event_type NOT NULL,
+            status auth_event_status NOT NULL,
+            reason_code auth_reason_code,
+            request_id VARCHAR(64),
+            route VARCHAR(255),
+            method VARCHAR(16),
+            ip_address VARCHAR(64),
+            user_agent TEXT,
+            message TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_auth_audit_logs_user_id ON auth_audit_logs(user_id)",
+        "CREATE INDEX IF NOT EXISTS ix_auth_audit_logs_event_type ON auth_audit_logs(event_type)",
+        "CREATE INDEX IF NOT EXISTS ix_auth_audit_logs_request_id ON auth_audit_logs(request_id)",
+        "CREATE INDEX IF NOT EXISTS ix_auth_audit_logs_created_at ON auth_audit_logs(created_at)",
+        "CREATE INDEX IF NOT EXISTS ix_auth_audit_logs_user_created_at ON auth_audit_logs(user_id, created_at)",
+        "CREATE INDEX IF NOT EXISTS ix_auth_audit_logs_event_created_at ON auth_audit_logs(event_type, created_at)",
+
         # ?? L-11: MFA — TOTP secret store (append-only per user) ??
         """CREATE TABLE IF NOT EXISTS user_mfa (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -623,6 +662,17 @@ async def _ensure_tables():
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS job_title VARCHAR(128)",
 
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS ui_preferences JSONB",
+
+        # Init migration a1ed712e8018 created users without these — they're in the canonical
+        # ORM model (app/models/user.py) but not in any alembic ADD COLUMN migration.
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()",
+
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 1",
+
+        # Migration 3e9f47487b7f adds token_version then explicitly REMOVES the server_default,
+        # leaving INSERTs that omit the column to fail with NotNullViolation. Restore the default
+        # to keep production-mirror seed code (which omits token_version) working idempotently.
+        "ALTER TABLE users ALTER COLUMN token_version SET DEFAULT 1",
 
         # ?? companies — SSO + billing columns added post-initial-schema ??
         "ALTER TABLE companies ADD COLUMN IF NOT EXISTS sso_provider VARCHAR(64)",

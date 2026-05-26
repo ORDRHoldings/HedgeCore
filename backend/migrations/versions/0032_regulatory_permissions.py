@@ -19,19 +19,21 @@ depends_on = None
 
 
 PERMS = [
-    ("regulatory.read", "Read regulatory submissions and TR acknowledgments"),
-    ("regulatory.submit", "Create and submit regulatory reports to trade repositories"),
-    ("regulatory.acknowledge", "Record TR acknowledgments, rejections, and failures"),
+    ("regulatory.read", "regulatory", "read", "Read regulatory submissions and TR acknowledgments"),
+    ("regulatory.submit", "regulatory", "submit", "Create and submit regulatory reports to trade repositories"),
+    ("regulatory.acknowledge", "regulatory", "acknowledge", "Record TR acknowledgments, rejections, and failures"),
 ]
 
 
 def upgrade() -> None:
+    # permissions.id is SERIAL INTEGER; codename (not name) is the canonical key.
     now = datetime.now(UTC)
-    for name, desc in PERMS:
+    for codename, module, action, desc in PERMS:
         op.execute(sa.text(
-            "INSERT INTO permissions (id, name, description, created_at) "
-            "VALUES (:id, :name, :desc, :now) ON CONFLICT (name) DO NOTHING"
-        ).bindparams(id=uuid.uuid4(), name=name, desc=desc, now=now))
+            "INSERT INTO permissions (codename, module, action, description, created_at) "
+            "VALUES (:codename, :module, :action, :desc, :now) "
+            "ON CONFLICT (codename) DO NOTHING"
+        ).bindparams(codename=codename, module=module, action=action, desc=desc, now=now))
 
     # admin + compliance officer + treasurer get full access
     # risk_analyst + trader + viewer get read-only
@@ -43,23 +45,23 @@ def upgrade() -> None:
         ("trader", ["regulatory.read"]),
         ("viewer", ["regulatory.read"]),
     ]
-    for role_name, perm_names in role_grants:
-        for pn in perm_names:
+    for role_name, perm_codenames in role_grants:
+        for pc in perm_codenames:
             op.execute(sa.text("""
                 INSERT INTO role_permissions (role_id, permission_id)
                 SELECT r.id, p.id
                 FROM roles r, permissions p
-                WHERE r.name = :role AND p.name = :perm
+                WHERE r.name = :role AND p.codename = :perm
                 ON CONFLICT DO NOTHING
-            """).bindparams(role=role_name, perm=pn))
+            """).bindparams(role=role_name, perm=pc))
 
 
 def downgrade() -> None:
-    names = [p[0] for p in PERMS]
+    codenames = [p[0] for p in PERMS]
     op.execute(sa.text(
         "DELETE FROM role_permissions WHERE permission_id IN "
-        "(SELECT id FROM permissions WHERE name = ANY(:names))"
-    ).bindparams(names=names))
+        "(SELECT id FROM permissions WHERE codename = ANY(:codenames))"
+    ).bindparams(codenames=codenames))
     op.execute(sa.text(
-        "DELETE FROM permissions WHERE name = ANY(:names)"
-    ).bindparams(names=names))
+        "DELETE FROM permissions WHERE codename = ANY(:codenames)"
+    ).bindparams(codenames=codenames))

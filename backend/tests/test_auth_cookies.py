@@ -74,6 +74,12 @@ class TestCorsConfig:
         Snapshots and pops any CORS_* env vars so the reloaded Settings
         falls back to its declared class-level defaults, then restores
         the original env on return.
+
+        Also guarantees a valid JWT_SECRET during reload: other suites
+        (e.g. test_e2e_policy_lifecycle.py) set JWT_SECRET at module-
+        import time to a redacted 25-char marker that fails the >=32
+        validator. We swap in a >=32-char placeholder for the duration
+        of the reload, then restore the original.
         """
         import importlib
         cors_keys = (
@@ -85,6 +91,8 @@ class TestCorsConfig:
             "CORS_ALLOW_VERCEL_PREVIEWS",
         )
         snapshot = {k: os.environ.pop(k) for k in cors_keys if k in os.environ}
+        jwt_snapshot = os.environ.get("JWT_SECRET")
+        os.environ["JWT_SECRET"] = "test-secret-key-for-ci-at-least-32-chars-long"
         try:
             import app.core.config as cfg_module
             importlib.reload(cfg_module)
@@ -92,6 +100,10 @@ class TestCorsConfig:
         finally:
             for k, v in snapshot.items():
                 os.environ[k] = v
+            if jwt_snapshot is None:
+                os.environ.pop("JWT_SECRET", None)
+            else:
+                os.environ["JWT_SECRET"] = jwt_snapshot
 
     def test_cors_allow_credentials_is_true(self):
         """allow_credentials must be True for httpOnly cookie flow."""

@@ -1,5 +1,41 @@
 # Changelog (AI-maintained)
 
+## 2026-05-25 (later10) — PG marker-suite drain: 83 → 0 fails (RISK-CI-PG-01 hard-gate-ready)
+
+Continuation of the (later9) arc. End-to-end verified against probe2 PG (port 5499, `hedge_test:hedge_test@localhost:5499/hedge_test`) with the canonical advisory job command: `pytest tests/ -m requires_postgres`.
+
+**Result**: `154 passed, 5520 deselected, 0 failed in 164s`. Up from "4 failed / 150 passed" baseline at end of (later9). Marker-filtered PG suite is now clean — the `backend-postgres` CI job can be flipped from `continue-on-error: true` to a hard gate (RISK-CI-PG-01 mitigation step).
+
+**Five fixes shipped in this drain bundle**:
+
+1. **`migrations/env.py`** — added `transaction_per_migration=True` to `context.configure()`. Default alembic wraps the entire chain in one transaction; a single migration crash rolls back every prior migration. Per-migration commits maximize chain reach in one pass, which is what the hybrid bootstrap (alembic-non-fatal → `_ensure_tables` → stamp head) relies on. Production already tolerates the crash via `run_alembic_upgrade()` swallow; CI's advisory bootstrap stamps head after the partial run.
+
+2. **`migrations/versions/0028_tca_permissions.py` / `0030_counterparty_permissions.py` / `0032_regulatory_permissions.py`** — same structural bug as `t1a2b3c4d5e6` (later9): each migration inserted UUIDs into `permissions.id` (SERIAL INTEGER) and used `name` column (canonical is `codename`). Rewrote to use `INSERT INTO permissions (codename, module, action, description, created_at) ... ON CONFLICT (codename) DO NOTHING`, dropping `id` so SERIAL auto-assigns. Role grants now join on `p.codename` instead of `p.name`. Production tolerated this via `run_alembic_upgrade()` swallow + `_seed_permissions()` populating data idempotently.
+
+3. **`app/main.py::_ensure_tables`** — added `auth_audit_logs` table + 3 PG ENUM types (`auth_event_type`, `auth_event_status`, `auth_reason_code`) + 6 indexes. The original migration (`3450c02f9c01_include_auth_audit_logs_correct_base`) runs late in the chain; when alembic-in-isolation crashes earlier, `_ensure_tables` (which runs after) never created the table. ENUM creation uses `DO $$ BEGIN CREATE TYPE ... EXCEPTION WHEN duplicate_object THEN NULL; END $$` (PG lacks `CREATE TYPE IF NOT EXISTS`). Also added `ALTER TYPE auth_event_type ADD VALUE IF NOT EXISTS 'ME'` for the canonical enum widening.
+
+4. **`app/main.py::_ensure_tables`** — added two ALTERs for `users`: `ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()` and `ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 1`. The init migration `a1ed712e8018_init_users` creates `users` without either column; the canonical ORM model (`app/models/user.py`) requires both. Also `ALTER COLUMN token_version SET DEFAULT 1` — migration `3e9f47487b7f` explicitly strips the server default after adding the column, leaving `INSERT`s that omit `token_version` to fail with `NotNullViolation` (which broke the conftest demo-user seed).
+
+5. **`tests/test_auth_cookies.py::TestCorsConfig::_fresh_settings_class`** — snapshot+restore `JWT_SECRET` around the `importlib.reload(cfg_module)`. The 4 residual fails at end of (later9) were `pydantic_core.ValidationError`: `test_e2e_policy_lifecycle.py:30` sets `os.environ["JWT_SECRET"] = "***REDACTED_JWT_SECRET***"` (25 chars) at module-import time without cleanup. The validator on `JWT_SECRET` demands ≥32 chars and raises on reload. The redacted string is a git-scrub marker that can't be lengthened; localized fix in the consumer is lower-risk than refactoring the polluter into a proper `monkeypatch` fixture.
+
+**Verification**:
+- **PG marker subset (probe2)**: 154 passed / 5520 deselected / 0 failed in 164s.
+- **PG full suite (probe2)**: re-validated to surface that test_support_*, test_workflow_full, test_auth all carry `requires_postgres` so they're properly scoped under the advisory job command.
+- **SQLite smoke**: `pytest tests/test_auth_cookies.py tests/test_routes_smoke.py` → 138 passed / 4 skipped (PG-only CorsConfig) — no regression on the fast loop.
+- **`alembic heads`**: `0036_force_rls_tenant_context (head)` — single head intact.
+
+**Gotchas worth carrying forward** (drain pass yielded):
+1. **Alembic transactional DDL on PG**: default wraps entire chain in one transaction; `transaction_per_migration=True` is the right structural fix for any chain whose tail content may legitimately fail in CI-isolated bootstrap.
+2. **PG ENUM idempotency**: `DO $$ BEGIN CREATE TYPE ... EXCEPTION WHEN duplicate_object THEN NULL; END $$` — there is no `CREATE TYPE IF NOT EXISTS` syntax. `ALTER TYPE ... ADD VALUE IF NOT EXISTS` exists since PG 12.
+3. **`permissions` canonical schema**: `id SERIAL PRIMARY KEY` (NOT UUID), `codename UNIQUE` (NOT `name`). Three migrations in a row had the same bug — pattern hunt the next time a migration touches `permissions`.
+4. **Module-level `os.environ[...] = ...` is contamination**: any test module that mutates env at import-time leaks state through every other test in the run. Wrap in `@pytest.fixture(autouse=True)` with `monkeypatch.setenv` instead. Localized snapshot/restore in the *consumer* is a defensible workaround when the polluter can't be touched (e.g., git-scrub markers).
+5. **Bash pipe-eats-exit**: `cmd 2>&1 | tail -N; EXIT=$?` captures `tail`'s exit (0), not `cmd`'s. Without the pipe, the captured exit is correct.
+6. **`pytest.ini addopts = -x -q --tb=short`**: forces stop-at-first-failure. Override with `-o addopts=` for full-suite drain triage.
+
+**RISK-CI-PG-01 status**: Drain complete. Marker-filtered PG suite green on probe2 (production-mirror). Ready to propose `continue-on-error: false` flip on the `backend-postgres` GitHub Actions job once N consecutive green runs are observed under real CI (currently blocked on org billing — see CI billing-block memory).
+
+**RISK-CI-PG-02 status**: still open (advisory), unchanged this arc. The chain still has content bugs beyond `0036` that surface only on alembic-in-isolation; production-mirror bootstrap (`set +e; alembic upgrade head; _ensure_tables; alembic stamp head`) handles them transparently. Promotion of the marker subset (RISK-CI-PG-01) to hard gate is decoupled from RISK-CI-PG-02 closure.
+
 ## 2026-05-25 (later9) — Stub migration `gg1a2b3c4d5e7` + chain content fixes (RISK-CI-PG-02 option-a)
 
 Implemented option (a) from the (later8) arc closure: a single mid-chain stub migration that pre-creates ORM-only tables so the alembic-in-isolation chain reaches further before the next content-bug crash. Together with three migration content fixes, this advanced the chain from "crashes at `h1a2b3c4d5e6`" (revision #28 / chain depth ~5) to "crashes at `0028_tca_permissions`" (revision #62 / chain depth ~40) — **~35 migrations of additional alembic-isolation headroom**.
