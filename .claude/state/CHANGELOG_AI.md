@@ -1,5 +1,31 @@
 # Changelog (AI-maintained)
 
+## 2026-05-26 (later11) — RISK-CI-PG-02 CLOSED: alembic chain reaches head in isolation
+
+Verification-only arc — no code changes. The (later10) drain bundle structurally closed RISK-CI-PG-02 without anyone noticing; this arc confirmed it end-to-end and updated state.
+
+**Verification on probe2 PG** (port 5499, `hedge_test@localhost:5499`):
+
+1. `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` — fresh state.
+2. `alembic upgrade head` — **completes cleanly** at `0036_force_rls_tenant_context (head)`. No crashes. (Compare: (later9) crashed at `0028`; (later8) crashed at `h1a2b3c4d5e6`; pre-stub-arc crashed at `g1a2b3c4d5e6`.)
+3. `_ensure_tables()` — idempotent, fills ORM-only tables. Completes in ~10s.
+4. `pytest tests/ -m requires_postgres -o addopts=` → **154 passed / 5520 deselected / 0 failed in 112s**. (Faster than later10's 164s because the chain pre-built more schema this time.)
+
+**Why this closed**:
+
+- (later9) stub migration `gg1a2b3c4d5e7` pre-created the 5 most upstream ORM-only tables (`companies`, `legal_entities`, `permissions`, `roles`, `role_permissions`) — eliminated the chain's first crash class.
+- (later9) `0013` + `0017` idempotency, `h1.down_revision` rewire, `migrations/env.py` `alembic_version.version_num` widen — eliminated chain-structural crashes.
+- (later10) `env.py transaction_per_migration=True` — per-migration commits stop one bad migration from rolling back the entire chain.
+- (later10) `0028/0030/0032 permissions` content fixes (UUID-into-SERIAL + nonexistent `name` column → canonical `codename` + auto-SERIAL) — eliminated the last three crashes on the chain.
+
+**Architectural impact**: the workflow's `set +e; alembic upgrade head; ALEMBIC_EXIT=$?; set -e` pattern remains as defense-in-depth, but is no longer load-bearing — the chain runs to completion. Production tolerated partial-chain crashes via the same swallow pattern (`run_alembic_upgrade()` in `app/core/db_migrations.py:63-66`), so this closure mirrors that behavior.
+
+**State updates**:
+- `OPEN_RISKS.md::RISK-CI-PG-02` → status CLOSED 2026-05-26.
+- `CURRENT_STATE.md` → later11 entry.
+
+**No commit needed beyond state updates** — the actual code that closed the risk landed in (later10) commit `06afb09`.
+
 ## 2026-05-25 (later10) — PG marker-suite drain: 83 → 0 fails (RISK-CI-PG-01 hard-gate-ready)
 
 Continuation of the (later9) arc. End-to-end verified against probe2 PG (port 5499, `hedge_test:hedge_test@localhost:5499/hedge_test`) with the canonical advisory job command: `pytest tests/ -m requires_postgres`.
