@@ -1,5 +1,42 @@
 # Changelog (AI-maintained)
 
+## 2026-05-27 (later15) — Frontend jest drain: 75/75 suites, 3155/3155 tests
+
+Closed the last four failing jest suites surfaced by the full sweep after the DEV-KEY-1 work in later14. Same root pattern across the cascade: drive-by deletions hidden inside commits whose subject lines didn't advertise the deletion.
+
+Commit `9cd342d` fix(frontend-tests): drain remaining jest failures (5 suites green).
+
+1. **DEV-KEY-1 cascade** — positionClient.ts and runsClient.ts had the same env-var-primary regression as policyClient.ts (which 6356f5a already restored). All three were silently broken by `fbc1eb1` ("Harden enterprise audit controls"). Now all three read `NEXT_PUBLIC_HEDGECALC_API_KEY` first in every env and fall back to `hc_api_key` localStorage only in dev. `positionIngest.test.ts` populates the env var in `beforeAll`/`afterAll`.
+
+2. **Report Studio catalog alignment (35 presets, 11 categories)** — the catalog grew to add the MULTI_CURRENCY category (T31–T35) but the tests asserted the old 30-preset / 10-category contract. Test counts updated; `template_id` regex relaxed to accept `T35_G10_CARRY`'s digit-in-name. DISCLOSURES section added to all five new presets (governance contract: every preset must carry DISCLOSURES). `generateComplianceNarrative` "no deviations" branch was typed `FINDING` while recommending continued monitoring — corrected to `RECOMMENDATION`. `VALID_PARAGRAPH_TYPES` test constant updated to mirror the shipped union (OVERVIEW/ANALYSIS/FINDING/METHODOLOGY/RECOMMENDATION/DISCLAIMER). `reportWorkflow.test.ts` "narrative completeness" check now recognises structural-content sections (AUDIT_EVENTS, EXECUTION_LOG, POLICY_RATIONALE, …) in evidence-driven presets like T23_AUDIT_PACK that legitimately have no analytical-narrative section.
+
+3. **Obsolete test housekeeping** — three orphaned suites deleted:
+   - `policy/policyEngine.test.ts` — left as a 0-byte stub by `5c33dbc` which nuked 1812 lines of API contract tests in a "remove dead routes" commit. Security path is now covered by `policyEngine.hardening.test.ts`.
+   - `market/marketOverviewUx.test.ts` — referenced deleted `src/app/market-overview/page.tsx` (removed during the 3-page market consolidation in `243febf`).
+   - `market/marketIntelligenceUx.test.ts` — source-string grep tests for an old layout; page was refactored to a tab/component tree. File-content greps don't survive refactors.
+
+Files touched:
+- `frontend/src/api/positionClient.ts`, `runsClient.ts` — DEV-KEY-1 env-var primary
+- `frontend/src/__tests__/position/positionIngest.test.ts` — env-var setup
+- `frontend/src/constants/reportPresets.ts` — DISCLOSURES added to T31–T35
+- `frontend/src/utils/reportNarratives.ts` — FINDING → RECOMMENDATION semantic fix
+- `frontend/src/__tests__/reports/{reportPresets,reportNarratives,reportWorkflow}.test.ts`
+- `frontend/src/__tests__/market/marketOverviewUx.test.ts` — deleted
+- `frontend/src/__tests__/market/marketIntelligenceUx.test.ts` — deleted
+- `frontend/src/__tests__/policy/policyEngine.test.ts` — deleted (empty stub)
+
+Result:
+```
+Test Suites: 75 passed, 75 total
+Tests:       3155 passed, 3155 total
+```
+
+Typecheck `npx tsc --noEmit` clean.
+
+### Pattern note for future agents
+
+When a commit's diffstat shows large line deletions outside the scope the subject advertises (e.g. "remove dead routes" deleting 1812 lines of test code, "harden audit controls" deleting an env-var lookup), treat it as a probable drive-by deletion. The hardening test pack — which is what surfaced the DEV-KEY-1 regression in the first place — is exactly the structural defense for this class of bug. Don't trust the commit subject; read the diff.
+
 ## 2026-05-27 (later14) — Auth-guard hydration race fix: 3 pages bounced authenticated users back to login
 
 Playwright sweep found that hard navigation to `/trade-history` from a just-logged-in browser session redirected to `/auth/login`. Root cause: the guard was `if (!user) router.push("/auth/login")` — fires on first render while `AuthProvider` is still hydrating (`user` is `null` until `/auth/me` resolves on mount). Same race affected `/hedge-monitor` (uses `!user`) and `/staging/[staging_id]` (uses `!token`).
