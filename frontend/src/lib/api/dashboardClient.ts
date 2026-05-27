@@ -68,6 +68,20 @@ export async function dashboardFetch(
   token: string,
   options?: RequestInit,
 ): Promise<Response> {
+  // Guard against the doubled-prefix bug: API_BASE already ends in "/api"
+  // in production (https://hedgecore.onrender.com/api). Callers must pass
+  // paths starting at "/v1/...", "/auth/...", "/health", etc. — never
+  // "/api/v1/...". A leading "/api/" here would resolve to "/api/api/..."
+  // and 404. Fail loud in dev/preview so the bug surfaces immediately
+  // instead of silently 404'ing in production.
+  if (path.startsWith("/api/")) {
+    const msg = `dashboardFetch: path must not start with "/api/" — API_BASE already includes it. Got "${path}".`;
+    if (process.env.NODE_ENV !== "production") {
+      throw new Error(msg);
+    }
+    console.error(msg);
+  }
+
   const method = (options?.method ?? "GET").toUpperCase();
   const csrfHeaders: Record<string, string> = {};
   if (!CSRF_SAFE_METHODS.has(method)) {
