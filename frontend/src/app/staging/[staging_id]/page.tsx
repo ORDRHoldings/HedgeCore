@@ -447,7 +447,7 @@ function ActionButton({
 export default function ProposalDetailPage() {
   const params      = useParams<{ staging_id: string }>();
   const router      = useRouter();
-  const { token }   = useAuth();
+  const { token, isLoading: authLoading } = useAuth();
 
   const proposalId  = params?.staging_id ?? "";
 
@@ -467,10 +467,12 @@ export default function ProposalDetailPage() {
   const [secondApprovalNotes,  setSecondApprovalNotes]  = useState("");
   const [showSecondApproveForm,setShowSecondApproveForm]= useState(false);
 
-  // Auth guard
+  // Auth guard — wait for AuthProvider hydration before bouncing.
   useEffect(() => {
-    if (!token && typeof window !== "undefined") router.push("/auth/login");
-  }, [token, router]);
+    if (!authLoading && !token && typeof window !== "undefined") {
+      router.push("/auth/login");
+    }
+  }, [authLoading, token, router]);
 
   // Auto-dismiss success banner
   useEffect(() => {

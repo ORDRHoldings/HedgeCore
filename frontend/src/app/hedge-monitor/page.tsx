@@ -156,7 +156,7 @@ export default function HedgeMonitorPage() {
   const isMobile = useIsMobile();
   const _planAllowed = usePlanRedirect("professional");
   const router = useRouter();
-  const { user, token } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
 
   const [positions, setPositions]   = useState<Position[]>([]);
   const [proposals, setProposals]   = useState<Proposal[]>([]);
@@ -165,10 +165,10 @@ export default function HedgeMonitorPage() {
   const [error, setError]           = useState<string | null>(null);
   const [utcTime, setUtcTime]       = useState(() => new Date().toUTCString().slice(17, 25));
 
-  // Auth guard
+  // Auth guard — wait for AuthProvider hydration before bouncing.
   useEffect(() => {
-    if (!user) router.push("/auth/login");
-  }, [user, router]);
+    if (!authLoading && !user) router.push("/auth/login");
+  }, [authLoading, user, router]);
 
   // Live UTC clock
   useEffect(() => {

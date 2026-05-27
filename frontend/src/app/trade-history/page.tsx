@@ -133,7 +133,7 @@ export default function TradeHistoryPage() {
   const isMobile = useIsMobile();
   const _planAllowed = usePlanRedirect("professional");
   const router = useRouter();
-  const { user, token } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
 
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -142,10 +142,12 @@ export default function TradeHistoryPage() {
   const [sortKey, setSortKey]     = useState<SortKey>("newest");
   const [integrityStatus, setIntegrityStatus] = useState<"idle" | "checking" | "valid" | "broken">("idle");
 
-  // Auth guard
+  // Auth guard — wait for AuthProvider hydration before bouncing.
+  // Without authLoading the guard fires on first render while user is
+  // still null, kicking authenticated users back to /auth/login.
   useEffect(() => {
-    if (!user) router.push("/auth/login");
-  }, [user, router]);
+    if (!authLoading && !user) router.push("/auth/login");
+  }, [authLoading, user, router]);
 
   // Single load function — receives endpoint as parameter
   const load = useCallback(
