@@ -46,13 +46,19 @@ class TestRtCookieSecurity:
         importlib.reload(auth_module)
         assert auth_module._RT_COOKIE_SAMESITE == "lax"
 
-    def test_samesite_strict_in_production(self, monkeypatch):
-        """samesite=strict in production for CSRF protection."""
+    def test_samesite_none_in_production(self, monkeypatch):
+        """samesite=none in production so cross-origin Vercel→Render
+        refresh cookie transmission works. CSRF protection is preserved
+        by the double-submit cookie pattern (X-CSRF-Token header) and by
+        Bearer-token auth on mutation routes; Secure=True is enforced
+        alongside SameSite=None per spec.
+        """
         monkeypatch.setenv("ENV", "production")
         import importlib
         import app.api.routes.auth as auth_module
         importlib.reload(auth_module)
-        assert auth_module._RT_COOKIE_SAMESITE == "strict"
+        assert auth_module._RT_COOKIE_SAMESITE == "none"
+        assert auth_module._RT_COOKIE_SECURE is True
 
 
 @pytest.mark.requires_postgres

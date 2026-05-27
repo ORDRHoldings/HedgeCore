@@ -40,7 +40,9 @@ logger = logging.getLogger(__name__)
 
 _IS_PRODUCTION = os.getenv("ENV", "dev").strip().lower() == "production"
 _RT_COOKIE_SECURE = _IS_PRODUCTION
-_RT_COOKIE_SAMESITE = "strict" if _IS_PRODUCTION else "lax"
+# SameSite=None for cross-origin Vercel→Render cookie transmission.
+# See backend/app/api/routes/auth.py for rationale.
+_RT_COOKIE_SAMESITE = "none" if _IS_PRODUCTION else "lax"
 _RT_COOKIE_PATH = "/api/auth/refresh"
 
 router = APIRouter(prefix="/auth/passwordless", tags=["auth-passwordless"])

@@ -14,10 +14,15 @@ import logging
 import os
 from uuid import UUID
 
-# Cookie security flags — env-aware so local dev works over HTTP
+# Cookie security flags — env-aware so local dev works over HTTP.
+# SameSite=None (+ Secure) is required for cross-origin SPA: the Vercel
+# frontend (ordr-terminal.vercel.app) calls the Render backend
+# (hedgecore.onrender.com), so rt + csrf_token cookies must be sent on
+# cross-site requests. SameSite=Strict silently drops them and breaks
+# every silent /auth/refresh on page load.
 _IS_PRODUCTION = os.getenv("ENV", "dev").strip().lower() == "production"
 _RT_COOKIE_SECURE = _IS_PRODUCTION           # False on localhost (HTTP), True in prod (HTTPS)
-_RT_COOKIE_SAMESITE = "strict" if _IS_PRODUCTION else "lax"
+_RT_COOKIE_SAMESITE = "none" if _IS_PRODUCTION else "lax"
 _RT_COOKIE_PATH = "/api/auth/refresh"        # Full path matching the refresh endpoint mount
 
 import fastapi.security as fastapi_security
