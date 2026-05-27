@@ -27,8 +27,10 @@ import type {
    ============================================================ */
 
 describe("INDICATOR_SCHEMA structure", () => {
-  it("contains 28 indicator schemas", () => {
-    expect(INDICATOR_SCHEMA).toHaveLength(28);
+  it("contains the expected number of indicator schemas", () => {
+    // Schema grew over time (28 → 81). Lock the count to the current
+    // value to detect *future* accidental changes, not as a contract.
+    expect(INDICATOR_SCHEMA).toHaveLength(81);
   });
 
   it("has unique ids", () => {
@@ -106,14 +108,14 @@ describe("INDICATOR_SCHEMA structure", () => {
     }
   });
 
-  it("overlay count is 18", () => {
+  it("overlay count locked", () => {
     const overlays = INDICATOR_SCHEMA.filter((s) => s.category === "overlay");
-    expect(overlays).toHaveLength(18);
+    expect(overlays).toHaveLength(33);
   });
 
-  it("subpane count is 10", () => {
+  it("subpane count locked", () => {
     const subpanes = INDICATOR_SCHEMA.filter((s) => s.category === "subpane");
-    expect(subpanes).toHaveLength(10);
+    expect(subpanes).toHaveLength(48);
   });
 });
 
