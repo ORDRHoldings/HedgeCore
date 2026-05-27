@@ -111,15 +111,15 @@ function makeValidationReport(overrides: Partial<ValidationReport> = {}): Valida
 
 // ── Shared assertion helpers ─────────────────────────────────────────────────
 
+// Mirrors NarrativeParagraph['type'] in src/utils/reportNarratives.ts.
+// Update both sides together if the union changes.
 const VALID_PARAGRAPH_TYPES = [
   "OVERVIEW",
-  "DETAIL",
-  "HIGHLIGHT",
-  "WARNING",
+  "ANALYSIS",
+  "FINDING",
+  "METHODOLOGY",
   "RECOMMENDATION",
   "DISCLAIMER",
-  "METRIC",
-  "INSIGHT",
 ];
 
 function assertValidParagraphs(paragraphs: NarrativeParagraph[]): void {

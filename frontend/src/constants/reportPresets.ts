@@ -648,6 +648,7 @@ const T31_MULTICCY_OVERVIEW = tmpl(
     sec("EXPOSURE_DECOMPOSITION",  "Exposure by Currency Pair", {}),
     sec("HEDGE_PLAN_TABLE",        "Pair-Level Hedge Coverage",  {}),
     sec("CUSTOM_NARRATIVE",        "NDF Portfolio Summary",      { ai_assisted: true }),
+    sec("DISCLOSURES",             "Disclosures",                {}),
   ],
   { required_inputs: ["positions", "market_snapshot"], export: "PDF" as ExportFormat, tags: ["multicurrency", "portfolio", "ndf", "g10", "em", "hedge"], pages: 4 }
 );
@@ -666,6 +667,7 @@ const T32_NDF_PORTFOLIO = tmpl(
     sec("HEDGE_PLAN_TABLE",   "NDF Fixing Schedule",      {}),
     sec("EXECUTION_LOG",      "Roll Ladder",              {}),
     sec("CUSTOM_NARRATIVE",   "Settlement Risk Narrative", { ai_assisted: true }),
+    sec("DISCLOSURES",        "Disclosures",               {}),
   ],
   { required_inputs: ["positions", "market_snapshot"], export: "PDF" as ExportFormat, tags: ["ndf", "em", "fixing", "settlement", "roll", "brl", "cop", "inr", "krw"], pages: 5 }
 );
@@ -684,6 +686,7 @@ const T33_CROSS_CCY_CORR = tmpl(
     sec("EXPOSURE_DECOMPOSITION", "Diversification Benefit",        {}),
     sec("STRESS_TEST_RESULTS",   "Factor Attribution",              {}),
     sec("CUSTOM_NARRATIVE",      "Portfolio Diversification Commentary", { ai_assisted: true }),
+    sec("DISCLOSURES",           "Disclosures",                     {}),
   ],
   { required_inputs: ["positions", "market_snapshot"], export: "PDF" as ExportFormat, tags: ["correlation", "multicurrency", "diversification", "factor", "var", "risk"], pages: 4 }
 );
@@ -702,6 +705,7 @@ const T34_EM_RISK_PACK = tmpl(
     sec("STRESS_TEST_RESULTS",  "EM Pair Stress Results",    {}),
     sec("SCENARIO_SENSITIVITY", "Liquidity Risk by Pair",    {}),
     sec("MACRO_OVERLAY",        "EM Political Risk Overlay", { ai_assisted: true }),
+    sec("DISCLOSURES",          "Disclosures",               {}),
   ],
   { required_inputs: ["positions", "market_snapshot", "scenarios"], export: "PDF" as ExportFormat, tags: ["em", "stress", "political", "liquidity", "scenario", "brl", "mxn", "inr", "crisis"], pages: 6 }
 );
@@ -720,6 +724,7 @@ const T35_G10_CARRY = tmpl(
     sec("HEDGE_EFFICIENCY",     "Carry Cost vs Coverage",      {}),
     sec("HEDGE_PLAN_TABLE",     "Interest Rate Differentials", {}),
     sec("CUSTOM_NARRATIVE",     "Carry Strategy Commentary",   { ai_assisted: true }),
+    sec("DISCLOSURES",          "Disclosures",                 {}),
   ],
   { required_inputs: ["positions", "market_snapshot"], export: "PDF" as ExportFormat, tags: ["g10", "carry", "forward", "interest_rate", "eurusd", "usdjpy", "roll"], pages: 4 }
 );

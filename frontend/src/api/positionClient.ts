@@ -11,6 +11,9 @@ import type { TradeRow, FuturesCurrency } from "./types";
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
 function getApiKey(): string {
+  // DEV-KEY-1: env var primary in every environment; localStorage is a dev-only
+  // fallback. Production fails closed if neither is configured.
+  if (process.env.NEXT_PUBLIC_HEDGECALC_API_KEY) return process.env.NEXT_PUBLIC_HEDGECALC_API_KEY;
   if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
     const stored = localStorage.getItem("hc_api_key");
     if (stored) return stored;
@@ -19,6 +22,7 @@ function getApiKey(): string {
 }
 
 function authHeaders(token?: string): Record<string, string> {
+  // DEV-KEY-1: omit X-API-Key entirely when empty (sending "" trips some gateways).
   const headers: Record<string, string> = {};
   const apiKey = getApiKey();
   if (apiKey) headers["X-API-Key"] = apiKey;

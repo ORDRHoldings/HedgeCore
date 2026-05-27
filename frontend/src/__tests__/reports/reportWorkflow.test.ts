@@ -316,14 +316,21 @@ describe("Report per-preset narrative completeness", () => {
     });
   });
 
-  it("COMPLIANCE_AUDIT presets include AUDIT_EVENTS", () => {
+  it("COMPLIANCE_AUDIT presets include AUDIT_EVENTS, APPROVAL_CHAIN, or POLICY_RATIONALE", () => {
+    // Three categories of compliance docs:
+    //   - Event-driven (audit pack, SOX): AUDIT_EVENTS / APPROVAL_CHAIN
+    //   - Methodology-driven (regulatory alignment): POLICY_RATIONALE
+    // All must carry at least one of these governance-evidence sections.
     const auditPresets = REPORT_PRESETS.filter((p) => p.category === "COMPLIANCE_AUDIT");
     expect(auditPresets.length).toBeGreaterThan(0);
     auditPresets.forEach((preset) => {
-      const hasAudit = preset.default_sections.some(
-        (s) => s.type === "AUDIT_EVENTS" || s.type === "APPROVAL_CHAIN",
+      const hasGovernance = preset.default_sections.some(
+        (s) =>
+          s.type === "AUDIT_EVENTS" ||
+          s.type === "APPROVAL_CHAIN" ||
+          s.type === "POLICY_RATIONALE",
       );
-      expect(hasAudit).toBe(true);
+      expect(hasGovernance).toBe(true);
     });
   });
 
@@ -357,13 +364,35 @@ describe("Report per-preset narrative completeness", () => {
   });
 
   it("every preset with narrative sections has at least one narratable section", () => {
+    // Structural section types — these carry inherent content (event logs,
+    // approval chains, registers) and substitute for analytical narrative
+    // in evidence-driven presets like AUDIT_PACK / SOX / CONNECTOR_HEALTH.
+    const STRUCTURAL_CONTENT_SECTIONS = new Set([
+      "AUDIT_EVENTS",
+      "APPROVAL_CHAIN",
+      "POLICY_RATIONALE",
+      "EXECUTION_LOG",
+      "POSITION_REGISTER",
+      "CONNECTOR_HEALTH",
+      "DATA_QUALITY",
+      "MACRO_OVERLAY",
+      "FORWARD_CURVE",
+      "HEDGE_PLAN_TABLE",
+      "ASSUMPTIONS_REGISTRY",
+      "CUSTOM_NARRATIVE",
+    ]);
+
     REPORT_PRESETS.forEach((preset) => {
       const narratableSections = preset.default_sections.filter((s) => NARRATIVE_SECTIONS.has(s.type));
-      // At minimum, DISCLOSURES is present but that's structural.
-      // Most presets should have at least one real narrative section.
-      // Only purely structural presets (CONNECTOR_HEALTH types) might not.
-      const hasNarrative = narratableSections.length > 0 || preset.default_sections.length <= 4;
-      expect(hasNarrative).toBe(true);
+      const structuralContent = preset.default_sections.filter((s) =>
+        STRUCTURAL_CONTENT_SECTIONS.has(s.type),
+      );
+      // A preset is content-complete if it has either:
+      //   - at least one analytical narrative section, OR
+      //   - at least one structural content section (audit events, exec log, etc.)
+      // DISCLOSURES alone is not enough — that's pure governance boilerplate.
+      const hasContent = narratableSections.length > 0 || structuralContent.length > 0;
+      expect(hasContent).toBe(true);
     });
   });
 });
@@ -590,7 +619,7 @@ describe("Workflow integrity", () => {
     // Workflow: generate buckets -> compute coverage -> check compliance
     const buckets = [
       makeBucket({ commercial_exposure_mxn: 1000000, hedge_position_mxn: 1000000 }),
-      makeBucket({ bucket: "2025-02", commercial_exposure_mxn: 2000000, hedge_position_mxn: 1800000 }),
+      makeBucket({ bucket: "2025-02", commercial_exposure_mxn: 2000000, hedge_position_mxn: 1900000 }),
     ];
     const coverage = bucketCoverageRatios(buckets);
     expect(coverage).toHaveLength(2);

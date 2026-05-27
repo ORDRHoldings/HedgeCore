@@ -69,6 +69,16 @@ const RAW_API_POSITION = {
   rejection_reason: null,
 };
 
+// DEV-KEY-1: positionClient resolves the API key from NEXT_PUBLIC_HEDGECALC_API_KEY
+// in every environment; production fails closed when unset. Tests must populate
+// it so the X-API-Key header contract can be asserted.
+const ORIGINAL_API_KEY = process.env.NEXT_PUBLIC_HEDGECALC_API_KEY;
+beforeAll(() => { process.env.NEXT_PUBLIC_HEDGECALC_API_KEY = "test-api-key"; });
+afterAll(() => {
+  if (ORIGINAL_API_KEY === undefined) delete process.env.NEXT_PUBLIC_HEDGECALC_API_KEY;
+  else process.env.NEXT_PUBLIC_HEDGECALC_API_KEY = ORIGINAL_API_KEY;
+});
+
 beforeEach(() => { jest.resetAllMocks(); });
 
 // ===========================================================================

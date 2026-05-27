@@ -35,7 +35,7 @@ const VALID_EXPORT_FORMATS: ExportFormat[] = [
 const VALID_CATEGORIES: ReportCategory[] = [
   "EXECUTIVE_BOARD", "TREASURY_FX", "RISK_COMMITTEE", "POLICY_PACK",
   "EXECUTION_PACK", "SCENARIO_STRESS", "EXPOSURE_DECOMP", "DATA_QUALITY",
-  "CONNECTOR_HEALTH", "COMPLIANCE_AUDIT",
+  "CONNECTOR_HEALTH", "COMPLIANCE_AUDIT", "MULTI_CURRENCY",
 ];
 
 const VALID_AUDIENCES: ReportAudience[] = [
@@ -50,28 +50,37 @@ const VALID_MODULES: ReportModule[] = [
 // ─── Catalog integrity ────────────────────────────────────────────────────────
 
 describe("REPORT_PRESETS catalog", () => {
-  test("exports exactly 30 presets", () => {
-    expect(REPORT_PRESETS).toHaveLength(30);
+  // Catalog grew over time. RPT-001..RPT-030 are the institutional core; T31..T35
+  // were added later for multi-currency. Counts are locked here so a future
+  // accidental drop in coverage gets caught — not as an architectural contract.
+  const RPT_CORE_COUNT = 30;
+  const MULTI_CCY_COUNT = 5;
+  const TOTAL_COUNT = RPT_CORE_COUNT + MULTI_CCY_COUNT;
+
+  test(`exports exactly ${TOTAL_COUNT} presets`, () => {
+    expect(REPORT_PRESETS).toHaveLength(TOTAL_COUNT);
   });
 
   test("all template_ids are unique", () => {
     const ids = REPORT_PRESETS.map(t => t.template_id);
     const uniqueIds = new Set(ids);
-    expect(uniqueIds.size).toBe(30);
+    expect(uniqueIds.size).toBe(TOTAL_COUNT);
   });
 
-  test("template_ids follow RPT-NNN format", () => {
+  test("template_ids follow RPT-NNN or T-NN_NAME format", () => {
     REPORT_PRESETS.forEach(t => {
-      expect(t.template_id).toMatch(/^RPT-\d{3}$/);
+      expect(t.template_id).toMatch(/^(RPT-\d{3}|T\d{2}_[A-Z0-9_]+)$/);
     });
   });
 
-  test("template_ids are RPT-001 through RPT-030", () => {
+  test("RPT-001 through RPT-030 are all present", () => {
     const expected = new Set(
-      Array.from({ length: 30 }, (_, i) => `RPT-${String(i + 1).padStart(3, "0")}`)
+      Array.from({ length: RPT_CORE_COUNT }, (_, i) => `RPT-${String(i + 1).padStart(3, "0")}`)
     );
     const actual = new Set(REPORT_PRESETS.map(t => t.template_id));
-    expect(actual).toEqual(expected);
+    for (const id of expected) {
+      expect(actual.has(id)).toBe(true);
+    }
   });
 
   test("all presets have non-empty name, short_name, description", () => {
@@ -257,14 +266,18 @@ describe("Preset category validity", () => {
 // ─── REPORT_CATEGORIES metadata ───────────────────────────────────────────────
 
 describe("REPORT_CATEGORIES metadata", () => {
-  test("exports exactly 10 categories", () => {
-    expect(REPORT_CATEGORIES).toHaveLength(10);
+  // 10 institutional categories + MULTI_CURRENCY (added with T31..T35).
+  const CATEGORY_COUNT = 11;
+  const TOTAL_PRESET_COUNT = 35;
+
+  test(`exports exactly ${CATEGORY_COUNT} categories`, () => {
+    expect(REPORT_CATEGORIES).toHaveLength(CATEGORY_COUNT);
   });
 
   test("all category keys are unique", () => {
     const keys = REPORT_CATEGORIES.map(c => c.key);
     const uniqueKeys = new Set(keys);
-    expect(uniqueKeys.size).toBe(10);
+    expect(uniqueKeys.size).toBe(CATEGORY_COUNT);
   });
 
   test("all categories have non-empty label and description", () => {
@@ -274,9 +287,9 @@ describe("REPORT_CATEGORIES metadata", () => {
     });
   });
 
-  test("total category count sums to 30", () => {
+  test(`total category count sums to ${TOTAL_PRESET_COUNT}`, () => {
     const total = REPORT_CATEGORIES.reduce((sum, c) => sum + c.count, 0);
-    expect(total).toBe(30);
+    expect(total).toBe(TOTAL_PRESET_COUNT);
   });
 
   test("each category count >= 1", () => {

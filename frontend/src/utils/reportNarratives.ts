@@ -764,7 +764,7 @@ export function generateComplianceNarrative(
           `governance requirements across all ${totalChecks} compliance checks. ` +
           `No remediation actions are required at this time. Continued monitoring ` +
           `is recommended as positions approach maturity and cashflow forecasts are updated.`,
-        type: 'FINDING',
+        type: 'RECOMMENDATION',
       });
     }
   }
