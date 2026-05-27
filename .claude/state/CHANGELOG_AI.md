@@ -1,5 +1,56 @@
 # Changelog (AI-maintained)
 
+## 2026-05-26 (later12) — Cross-origin SPA fixes: SameSite=None cookies + doubled `/api/api/` prefix drained
+
+**Two-commit arc** unblocking the Vercel ↔ Render production deploy. Browser-verified end-to-end via Playwright.
+
+### Commit 1 — `64fb748` fix(auth): SameSite=None on rt+csrf cookies for cross-origin SPA
+
+Frontend (`ordr-terminal.vercel.app`) and backend (`hedgecore.onrender.com`) live on different eTLD+1, so the `rt` (refresh) and `csrf_token` cookies must use `SameSite=None; Secure` to survive cross-site requests. Previous setting (`Strict`) silently dropped them on every page load → `POST /api/auth/refresh` returned 401 → users were treated as logged out → Intelligence and other pages spun on "Loading…" forever.
+
+Files touched:
+- `backend/app/api/routes/auth.py` — `_RT_COOKIE_SAMESITE = "none" if production else "lax"`, `_RT_COOKIE_SECURE = production`.
+- `backend/app/api/routes/auth_passwordless.py` — same constants (kept in sync).
+- `backend/tests/test_auth_cookies.py` — `test_samesite_strict_in_production` → `test_samesite_none_in_production`, asserts both `SAMESITE == "none"` AND `SECURE is True`.
+
+Browser-verified after Render auto-deploy: `Set-Cookie: rt=...; SameSite=none; Secure` and `csrf_token=...; SameSite=none; Secure` both present on the live `/api/auth/login` response.
+
+### Commit 2 — `79bb0f0` fix(frontend): drop doubled `/api/` prefix on backend client paths
+
+`API_BASE` resolves to `https://hedgecore.onrender.com/api` in production (set via `NEXT_PUBLIC_API_URL` on Vercel). Multiple frontend clients still prepended `/api/v1/...` to that base → requests hit `/api/api/v1/...` → 404. Surfaced via Playwright network log after commit 1 unblocked auth.
+
+Files touched (9):
+- `frontend/src/lib/api/intelligenceClient.ts` — 4 paths
+- `frontend/src/lib/api/regulatorySubmissionClient.ts` — 10 paths
+- `frontend/src/lib/api/naturalHedgingClient.ts` — 3 paths
+- `frontend/src/lib/api/hedgeTemplatesClient.ts` — 7 paths
+- `frontend/src/lib/api/customReportTemplatesClient.ts` — 6 paths
+- `frontend/src/components/reports/ReportsContainer.tsx` — policies/active
+- `frontend/src/app/hedge-effectiveness/page.tsx` — binder export
+- `frontend/src/components/dashboard/widgets/MultiPairExposureWidget.tsx` — migrated from raw `fetch()` to `dashboardFetch` + `/v1/positions/exposure`
+- `frontend/src/components/dashboard/smb/SmbRateCard.tsx` — same-origin Next.js `/api/market/fx/rates` reverted to raw `fetch()` (it had been incorrectly routed through `dashboardFetch`, which would double-prefix)
+
+### Browser verification (Playwright, Vercel deploy `dpl_AGpwkWHvADbY6yWR1tqaxR72yW9T`)
+
+Network log after authenticated load of `/intelligence`:
+
+```
+POST /api/auth/refresh              → 200   (SameSite=None cookies sent)
+GET  /api/auth/me                   → 200   (user hydrated)
+GET  /api/v1/company/settings       → 200   (correct path)
+GET  /api/v1/intelligence/settings  → 402   (correct path; Payment Required = expected because ANTHROPIC_API_KEY not yet set on Render)
+```
+
+No more `/api/api/...` 404s. The 402 is the backend cleanly rejecting Intelligence because the AI add-on tier is gated by `ANTHROPIC_API_KEY`, which remains on the original Render env-var checklist (task #11) for the user to set in the Render dashboard.
+
+Screenshot: `.claude/state/e2e-screenshots-2026-05-26/intelligence-after-prefix-fix.png`.
+
+### Why this is structural, not cosmetic
+
+The `dashboardFetch` contract ("path starts at `/v1/...`, NOT `/api/v1/...`") is documented in `frontend/src/lib/api/dashboardClient.ts` but wasn't enforced by typing or lint, so the bug propagated silently across 8 files for as long as those clients existed under the cross-origin deployment. A future hardening could add a runtime guard in `dashboardFetch` that throws if `path.startsWith("/api/")` — but that's out of scope for this arc.
+
+---
+
 ## 2026-05-26 (later11) — RISK-CI-PG-02 CLOSED: alembic chain reaches head in isolation
 
 Verification-only arc — no code changes. The (later10) drain bundle structurally closed RISK-CI-PG-02 without anyone noticing; this arc confirmed it end-to-end and updated state.
