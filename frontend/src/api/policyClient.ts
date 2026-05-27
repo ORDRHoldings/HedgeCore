@@ -9,6 +9,11 @@ import type { QuestionnaireAnswers, AIPolicyResult, AIPolicyRecommendation } fro
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
 function getApiKey(): string {
+  // DEV-KEY-1: env var is the primary source in every environment so the
+  // built bundle authenticates without needing localStorage primed by the user.
+  if (process.env.NEXT_PUBLIC_HEDGECALC_API_KEY) return process.env.NEXT_PUBLIC_HEDGECALC_API_KEY;
+  // localStorage override is dev-only — fail-closed in prod so a stale browser
+  // key cannot silently authenticate against the live API.
   if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
     const stored = localStorage.getItem("hc_api_key");
     if (stored) return stored;
@@ -17,6 +22,8 @@ function getApiKey(): string {
 }
 
 function authHeaders(token?: string): Record<string, string> {
+  // DEV-KEY-1: omit X-API-Key entirely when empty — sending "" is semantically
+  // wrong and trips some gateways.
   const headers: Record<string, string> = {};
   const apiKey = getApiKey();
   if (apiKey) headers["X-API-Key"] = apiKey;
