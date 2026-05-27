@@ -153,7 +153,7 @@ export default function HedgeTemplatesPage() {
       </div>
 
       {/* Cards grid */}
-      {filtered === null ? (
+      {filtered === null && error ? null : filtered === null ? (
         <div style={{ color: S.textSec, padding: 20, fontFamily: S.fontMono, fontSize: 12 }}>
           Loading templates…
         </div>
