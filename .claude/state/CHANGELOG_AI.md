@@ -1,5 +1,29 @@
 # Changelog (AI-maintained)
 
+## 2026-05-26 (later13) — Broken-link drain: `/positions`, `/hedge-plan`, `/login`, `/upgrade` → canonical routes
+
+Continuation of the production sweep after later12. Playwright surfaced two RSC prefetch 404s on `/portfolio` (`/positions` and `/hedge-plan` — neither route exists; canonical is `/position-desk` and `/hedge-desk`). A new auditor script (`scripts/find_broken_hrefs.py`) walks every `href=`/`router.push()`/`router.replace()` literal in `frontend/src` against the actual `app/` route directory and reports cross-references that don't resolve. Run found 5 dead targets across 6 files; all fixed.
+
+Commit `da99127` fix(routes): drain broken hrefs/router.push targets to canonical paths.
+
+Files touched:
+- `frontend/src/app/portfolio/page.tsx` — 3 sites (`/positions` ×2 → `/position-desk`, `/hedge-plan` → `/hedge-desk`)
+- `frontend/src/components/quickstart/QuickStartWindow.tsx` — `ctaHref: "/positions"` → `/position-desk`
+- `frontend/src/app/signup/page.tsx` — `"/login"` (×2) → `"/auth/login"` (success CTA + footer link)
+- `frontend/src/app/staging/[staging_id]/page.tsx` — auth-guard `router.push("/login")` → `/auth/login`
+- `frontend/src/app/settings/notifications/page.tsx` — sub-plan-tier `router.replace("/upgrade")` → `/pricing`
+- `frontend/src/components/Nav.tsx` — legacy nav (unused, but `/hedges` → `/hedge-desk` for hygiene)
+- `scripts/find_broken_hrefs.py` — auditor, kept in repo so this class of bug remains discoverable
+
+### Browser verification after deploy `da99127`
+
+- `/portfolio` — console clean (previously: 2× RSC 404)
+- `/portfolio-multi`, `/run-viewer`, `/audit-lab`, `/market`, `/admin`, `/committee-pack`, `/ledger`, `/erp-sync`, `/staging` — all clean
+- `/connectors` — single 401 on `/v1/connectors/runs?limit=50` (auth token expiry, not code)
+- `/cash-positions` — single 403 on `/v1/cash/positions/consolidated` (RBAC, demo account lacks the permission; not code)
+
+No further broken routes detected by the auditor scan.
+
 ## 2026-05-26 (later12) — Cross-origin SPA fixes: SameSite=None cookies + doubled `/api/api/` prefix drained
 
 **Two-commit arc** unblocking the Vercel ↔ Render production deploy. Browser-verified end-to-end via Playwright.
