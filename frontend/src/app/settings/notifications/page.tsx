@@ -67,7 +67,7 @@ function NotificationsPageInner() {
   useEffect(() => {
     if (!user || !token) return;
     if (!["professional", "enterprise", "intelligence"].includes(user.plan_tier)) {
-      router.replace("/upgrade");
+      router.replace("/pricing");
       return;
     }
     listWebhooks(token)

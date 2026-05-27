@@ -457,7 +457,7 @@ export default function SignupPage() {
               You may now log in with your admin credentials.
             </div>
             <button
-              onClick={() => router.push("/login")}
+              onClick={() => router.push("/auth/login")}
               style={{
                 padding: "10px 24px",
                 background: "var(--accent-primary, #3b82f6)",
@@ -484,7 +484,7 @@ export default function SignupPage() {
         <div style={{ marginTop: 20, fontSize: 13, color: "var(--text-muted)" }}>
           Already have an account?{" "}
           <a
-            href="/login"
+            href="/auth/login"
             style={{
               color: "var(--accent-primary, #3b82f6)",
               textDecoration: "none",

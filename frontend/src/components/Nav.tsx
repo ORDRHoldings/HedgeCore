@@ -16,7 +16,7 @@ export default function Nav() {
           <Link href="/dashboard" className="text-sm text-gray-600 hover:text-gray-900">
             Dashboard
           </Link>
-          <Link href="/hedges" className="text-sm text-gray-600 hover:text-gray-900">
+          <Link href="/hedge-desk" className="text-sm text-gray-600 hover:text-gray-900">
             Hedges
           </Link>
           <Link href="/market-intelligence" className="text-sm text-blue-600 hover:text-blue-900 font-medium">

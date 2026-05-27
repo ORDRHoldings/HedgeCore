@@ -469,7 +469,7 @@ export default function ProposalDetailPage() {
 
   // Auth guard
   useEffect(() => {
-    if (!token && typeof window !== "undefined") router.push("/login");
+    if (!token && typeof window !== "undefined") router.push("/auth/login");
   }, [token, router]);
 
   // Auto-dismiss success banner

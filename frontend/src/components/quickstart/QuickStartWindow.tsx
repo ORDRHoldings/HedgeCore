@@ -223,7 +223,7 @@ const STEPS: StepDef[] = [
     title:        "Add FX Exposures",
     description:  "Enter AR/AP positions to define your FX exposure",
     ctaLabel:     "→ Position Desk",
-    ctaHref:      "/positions",
+    ctaHref:      "/position-desk",
     ctaAriaLabel: "Go to Position Desk to add FX exposures",
   },
   {

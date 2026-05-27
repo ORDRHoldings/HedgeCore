@@ -304,7 +304,7 @@ export default function PortfolioPage() {
               <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
                 No position data. Add positions in the Exposures desk first.
               </div>
-              <Link href="/positions" style={{
+              <Link href="/position-desk" style={{
                 display: "inline-block", marginTop: 12,
                 fontFamily: S.fontMono, fontSize: 11, color: S.cyan, textDecoration: "none",
               }}>GO TO EXPOSURES →</Link>
@@ -416,8 +416,8 @@ export default function PortfolioPage() {
               QUICK ACTIONS
             </div>
             {[
-              { href: "/positions",      label: "Manage Positions" },
-              { href: "/hedge-plan",     label: "Generate Hedge Plan" },
+              { href: "/position-desk",  label: "Manage Positions" },
+              { href: "/hedge-desk",     label: "Generate Hedge Plan" },
               { href: "/audit-lab",      label: "Audit Lab" },
               { href: "/sandbox",        label: "Scenario Studio" },
             ].map((a) => (
