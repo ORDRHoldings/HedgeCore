@@ -5,14 +5,14 @@
  * Covers all 5 lifecycle permutations:
  *  1. No positions           → "Add Exposure"       href="/position-desk"
  *  2. NEW positions          → "02 — Policy Desk"   href="/policies?tab=assign"
- *  3. POLICY_ASSIGNED        → "03 — Hedge Desk"    href="/hedge-desk"
- *  4. READY_TO_EXECUTE       → "04 — Execution Desk" href="/execution-desk"
+ *  3. POLICY_ASSIGNED        → "03 — Calculate"     href="/hedge-desk"
+ *  4. READY_TO_EXECUTE       → "04 — Execute"       href="/hedge-desk"
  *  5. All HEDGED             → "All Complete"       href="/dashboard"
  *
  * Edge cases:
  *  - Null/undefined positions array
  *  - Mixed statuses (priority order validated)
- *  - Inactive positions (is_active=false) excluded
+ *  - Inactive positions (is_active=false) excluded; null/undefined → active
  *  - No activePolicy forces policy-desk even with non-NEW statuses
  */
 
@@ -100,11 +100,11 @@ describe("2. NEW positions → Policy Desk", () => {
 // 3. POLICY_ASSIGNED positions → Hedge Desk
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe("3. POLICY_ASSIGNED → Hedge Desk", () => {
-  it("returns Hedge Desk when all positions have policy and need a run", () => {
+describe("3. POLICY_ASSIGNED → Calculate (Hedge Desk)", () => {
+  it("returns Calculate when all positions have policy and need a run", () => {
     const positions = [makePos("POLICY_ASSIGNED"), makePos("POLICY_ASSIGNED")];
     const result = getPipelineNextStep(positions, POLICY, COLORS);
-    expect(result.label).toBe("03 — Hedge Desk");
+    expect(result.label).toBe("03 — Calculate");
     expect(result.href).toBe("/hedge-desk");
     expect(result.readiness).toBe("READY");
     expect(result.color).toBe(COLORS.cyan);
@@ -113,7 +113,7 @@ describe("3. POLICY_ASSIGNED → Hedge Desk", () => {
   it("reason mentions the count of positions needing a run", () => {
     const positions = [makePos("POLICY_ASSIGNED"), makePos("HEDGED")];
     const result = getPipelineNextStep(positions, POLICY, COLORS);
-    expect(result.label).toBe("03 — Hedge Desk");
+    expect(result.label).toBe("03 — Calculate");
     expect(result.reason).toContain("1");
   });
 
@@ -128,12 +128,12 @@ describe("3. POLICY_ASSIGNED → Hedge Desk", () => {
 // 4. READY_TO_EXECUTE positions → Execution Desk
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe("4. READY_TO_EXECUTE → Execution Desk", () => {
-  it("returns Execution Desk when positions are ready to execute", () => {
+describe("4. READY_TO_EXECUTE → Execute (Hedge Desk)", () => {
+  it("returns Execute when positions are ready to execute", () => {
     const positions = [makePos("READY_TO_EXECUTE")];
     const result = getPipelineNextStep(positions, POLICY, COLORS);
-    expect(result.label).toBe("04 — Execution Desk");
-    expect(result.href).toBe("/execution-desk");
+    expect(result.label).toBe("04 — Execute");
+    expect(result.href).toBe("/hedge-desk");
     expect(result.readiness).toBe("READY");
     expect(result.color).toBe(COLORS.pass);
   });
@@ -144,10 +144,10 @@ describe("4. READY_TO_EXECUTE → Execution Desk", () => {
     expect(result.reason).toContain("2");
   });
 
-  it("READY_TO_EXECUTE + HEDGED → Execution Desk (HEDGED is terminal, READY takes priority)", () => {
+  it("READY_TO_EXECUTE + HEDGED → Execute (HEDGED is terminal, READY takes priority)", () => {
     const positions = [makePos("READY_TO_EXECUTE"), makePos("HEDGED")];
     const result = getPipelineNextStep(positions, POLICY, COLORS);
-    expect(result.href).toBe("/execution-desk");
+    expect(result.href).toBe("/hedge-desk");
   });
 });
 
@@ -202,9 +202,9 @@ describe("6. Priority order — first failing condition wins", () => {
     expect(getPipelineNextStep(positions, POLICY, COLORS).href).toBe("/hedge-desk");
   });
 
-  it("only READY_TO_EXECUTE and HEDGED → Execution Desk", () => {
+  it("only READY_TO_EXECUTE and HEDGED → Execute (Hedge Desk)", () => {
     const positions = [makePos("READY_TO_EXECUTE"), makePos("HEDGED")];
-    expect(getPipelineNextStep(positions, POLICY, COLORS).href).toBe("/execution-desk");
+    expect(getPipelineNextStep(positions, POLICY, COLORS).href).toBe("/hedge-desk");
   });
 });
 
@@ -223,13 +223,14 @@ describe("7. Inactive position exclusion", () => {
     expect(result.href).toBe("/dashboard");
   });
 
-  it("is_active=null is treated as inactive", () => {
+  it("is_active=null is treated as active (only false excludes)", () => {
     const positions: PipelinePosition[] = [
       { execution_status: "NEW", is_active: null },
       { execution_status: "HEDGED", is_active: true },
     ];
     const result = getPipelineNextStep(positions, POLICY, COLORS);
-    expect(result.href).toBe("/dashboard");
+    // NEW with null is_active is still active → unpoliciedCount=1 → Policy Desk
+    expect(result.href).toBe("/policies?tab=assign");
   });
 
   it("is_active=undefined is treated as active (default)", () => {
