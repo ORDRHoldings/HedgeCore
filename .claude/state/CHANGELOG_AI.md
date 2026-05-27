@@ -1,5 +1,27 @@
 # Changelog (AI-maintained)
 
+## 2026-05-27 (later14) — Auth-guard hydration race fix: 3 pages bounced authenticated users back to login
+
+Playwright sweep found that hard navigation to `/trade-history` from a just-logged-in browser session redirected to `/auth/login`. Root cause: the guard was `if (!user) router.push("/auth/login")` — fires on first render while `AuthProvider` is still hydrating (`user` is `null` until `/auth/me` resolves on mount). Same race affected `/hedge-monitor` (uses `!user`) and `/staging/[staging_id]` (uses `!token`).
+
+Commit `7baeb5b` fix(auth-guard): wait for AuthProvider hydration before redirecting.
+
+Pattern fix (applied to all three):
+
+```tsx
+const { user, isLoading: authLoading } = useAuth();
+useEffect(() => {
+  if (!authLoading && !user) router.push("/auth/login");
+}, [authLoading, user, router]);
+```
+
+Files touched:
+- `frontend/src/app/trade-history/page.tsx`
+- `frontend/src/app/hedge-monitor/page.tsx`
+- `frontend/src/app/staging/[staging_id]/page.tsx`
+
+Verified post-deploy: re-login → navigate `/trade-history` → stays on `/trade-history` (previously: 302 to `/auth/login`). No other pages with the same guard pattern remain (`grep -nE '!(user|token).*router\.push'` is empty except for the fixed sites).
+
 ## 2026-05-26 (later13) — Broken-link drain: `/positions`, `/hedge-plan`, `/login`, `/upgrade` → canonical routes
 
 Continuation of the production sweep after later12. Playwright surfaced two RSC prefetch 404s on `/portfolio` (`/positions` and `/hedge-plan` — neither route exists; canonical is `/position-desk` and `/hedge-desk`). A new auditor script (`scripts/find_broken_hrefs.py`) walks every `href=`/`router.push()`/`router.replace()` literal in `frontend/src` against the actual `app/` route directory and reports cross-references that don't resolve. Run found 5 dead targets across 6 files; all fixed.
