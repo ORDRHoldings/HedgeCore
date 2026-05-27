@@ -155,6 +155,18 @@ jobs:
       - name: Contrast check
         run: node scripts/check-contrast.mjs
 
+      # Structural defense for two regression classes:
+      #   (a) Broken router.push / href targets — see later13 (/positions →
+      #       404 because canonical is /position-desk).
+      #   (b) Auth-guard hydration race — see later14 (Trade History bounced
+      #       authenticated users back to /auth/login because guard fired
+      #       before AuthProvider hydrated).
+      # The script auto-detects both classes from source. Hard gate from
+      # day one because the codebase is already clean (verified 2026-05-27).
+      - name: Frontend route + auth-guard audit
+        run: python scripts/find_broken_hrefs.py
+        working-directory: ${{ github.workspace }}
+
       - name: Next.js build
         run: npx next build
         env:
