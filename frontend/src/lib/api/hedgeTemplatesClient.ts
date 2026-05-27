@@ -1,7 +1,7 @@
 // frontend/src/lib/api/hedgeTemplatesClient.ts
 //
 // Hedge Templates Library API client (P2-C).
-// Backend mounts router at /api/v1/hedge-templates/*.
+// Backend mounts router at /v1/hedge-templates/*.
 
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 
@@ -93,13 +93,13 @@ export async function listTemplates(
   if (opts.include_inactive) params.set("include_inactive", "true");
   const q = params.toString();
   return _fetchJson<TemplateListResponse>(
-    `/api/v1/hedge-templates${q ? `?${q}` : ""}`,
+    `/v1/hedge-templates${q ? `?${q}` : ""}`,
     token,
   );
 }
 
 export async function getTemplate(token: string, id: string): Promise<HedgeTemplate> {
-  return _fetchJson<HedgeTemplate>(`/api/v1/hedge-templates/${id}`, token);
+  return _fetchJson<HedgeTemplate>(`/v1/hedge-templates/${id}`, token);
 }
 
 export async function createTemplate(
@@ -112,7 +112,7 @@ export async function createTemplate(
     instrument_mix: InstrumentLeg[];
   },
 ): Promise<HedgeTemplate> {
-  return _fetchJson<HedgeTemplate>("/api/v1/hedge-templates", token, {
+  return _fetchJson<HedgeTemplate>("/v1/hedge-templates", token, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -130,7 +130,7 @@ export async function updateTemplate(
     is_active: boolean;
   }>,
 ): Promise<HedgeTemplate> {
-  return _fetchJson<HedgeTemplate>(`/api/v1/hedge-templates/${id}`, token, {
+  return _fetchJson<HedgeTemplate>(`/v1/hedge-templates/${id}`, token, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -138,14 +138,14 @@ export async function updateTemplate(
 }
 
 export async function deleteTemplate(token: string, id: string): Promise<void> {
-  await _fetchJson<void>(`/api/v1/hedge-templates/${id}`, token, { method: "DELETE" });
+  await _fetchJson<void>(`/v1/hedge-templates/${id}`, token, { method: "DELETE" });
 }
 
 export async function applyTemplate(
   token: string, templateId: string, positionId: string,
 ): Promise<ApplyResponse> {
   return _fetchJson<ApplyResponse>(
-    `/api/v1/hedge-templates/${templateId}/apply`, token,
+    `/v1/hedge-templates/${templateId}/apply`, token,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

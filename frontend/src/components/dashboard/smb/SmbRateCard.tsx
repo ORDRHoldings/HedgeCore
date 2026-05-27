@@ -5,7 +5,6 @@
  */
 import { useEffect, useState } from "react";
 import { Activity } from "lucide-react";
-import { dashboardFetch } from "@/lib/api/dashboardClient";
 
 const S = {
   fontUI: "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -38,7 +37,9 @@ export default function SmbRateCard({ token }: Props) {
 
   useEffect(() => {
     const fetch_ = () => {
-      dashboardFetch("/api/market/fx/rates", token)
+      // Same-origin Next.js route (Vercel) — keep raw fetch, do NOT route to backend.
+      void token;
+      fetch("/api/market/fx/rates")
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           if (!d) return;

@@ -2,7 +2,7 @@
 //
 // Natural Hedging Optimizer API client.
 //
-// Backend mounts router at /api/v1/natural-hedging/*.
+// Backend mounts router at /v1/natural-hedging/*.
 
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 
@@ -89,7 +89,7 @@ export async function analyzeExposures(
   exposures: Record<string, number>,
   fx_rates?: Record<string, number>,
 ): Promise<NettingResult> {
-  return _fetchJson<NettingResult>("/api/v1/natural-hedging/analyze", token, {
+  return _fetchJson<NettingResult>("/v1/natural-hedging/analyze", token, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ exposures, fx_rates: fx_rates ?? null }),
@@ -103,7 +103,7 @@ export async function analyzeFromPositions(
   statuses?: string[],
 ): Promise<FromPositionsResponse> {
   return _fetchJson<FromPositionsResponse>(
-    "/api/v1/natural-hedging/from-positions",
+    "/v1/natural-hedging/from-positions",
     token,
     {
       method: "POST",

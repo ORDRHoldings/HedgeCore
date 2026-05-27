@@ -2,7 +2,7 @@
 //
 // Regulatory Submissions API client.
 //
-// Backend mounts router at /api/v1/regulatory-submissions/*.
+// Backend mounts router at /v1/regulatory-submissions/*.
 
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 
@@ -102,7 +102,7 @@ export async function createSubmission(
   token: string,
   body: SubmissionCreateRequest,
 ): Promise<RegulatorySubmission> {
-  return _fetchJson<RegulatorySubmission>("/api/v1/regulatory-submissions", token, {
+  return _fetchJson<RegulatorySubmission>("/v1/regulatory-submissions", token, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -120,8 +120,8 @@ export async function listSubmissions(
   if (filters.limit) params.set("limit", String(filters.limit));
   const qs = params.toString();
   const url = qs
-    ? `/api/v1/regulatory-submissions?${qs}`
-    : "/api/v1/regulatory-submissions";
+    ? `/v1/regulatory-submissions?${qs}`
+    : "/v1/regulatory-submissions";
   return _fetchJson<RegulatorySubmission[]>(url, token);
 }
 
@@ -129,11 +129,11 @@ export async function getSubmission(
   token: string,
   id: string,
 ): Promise<RegulatorySubmission> {
-  return _fetchJson<RegulatorySubmission>(`/api/v1/regulatory-submissions/${id}`, token);
+  return _fetchJson<RegulatorySubmission>(`/v1/regulatory-submissions/${id}`, token);
 }
 
 export async function getStats(token: string): Promise<SubmissionStats> {
-  return _fetchJson<SubmissionStats>("/api/v1/regulatory-submissions/stats", token);
+  return _fetchJson<SubmissionStats>("/v1/regulatory-submissions/stats", token);
 }
 
 export async function markSubmitted(
@@ -142,7 +142,7 @@ export async function markSubmitted(
   submittedAt?: string,
 ): Promise<RegulatorySubmission> {
   return _fetchJson<RegulatorySubmission>(
-    `/api/v1/regulatory-submissions/${id}/submit`,
+    `/v1/regulatory-submissions/${id}/submit`,
     token,
     {
       method: "POST",
@@ -158,7 +158,7 @@ export async function acknowledge(
   body: AcknowledgmentRequest,
 ): Promise<RegulatorySubmission> {
   return _fetchJson<RegulatorySubmission>(
-    `/api/v1/regulatory-submissions/${id}/acknowledge`,
+    `/v1/regulatory-submissions/${id}/acknowledge`,
     token,
     {
       method: "POST",
@@ -174,7 +174,7 @@ export async function rejectSubmission(
   body: RejectionRequest,
 ): Promise<RegulatorySubmission> {
   return _fetchJson<RegulatorySubmission>(
-    `/api/v1/regulatory-submissions/${id}/reject`,
+    `/v1/regulatory-submissions/${id}/reject`,
     token,
     {
       method: "POST",
@@ -190,7 +190,7 @@ export async function markFailed(
   body: RejectionRequest,
 ): Promise<RegulatorySubmission> {
   return _fetchJson<RegulatorySubmission>(
-    `/api/v1/regulatory-submissions/${id}/mark-failed`,
+    `/v1/regulatory-submissions/${id}/mark-failed`,
     token,
     {
       method: "POST",

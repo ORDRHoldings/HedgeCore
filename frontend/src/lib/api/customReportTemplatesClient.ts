@@ -1,7 +1,7 @@
 // frontend/src/lib/api/customReportTemplatesClient.ts
 //
 // Custom Report Templates API client (P2-B).
-// Backend mounts router at /api/v1/custom-report-templates/*.
+// Backend mounts router at /v1/custom-report-templates/*.
 
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import type { SectionType, SectionStatus, ReportCategory, ReportAudience } from "@/types/reportTypes";
@@ -90,7 +90,7 @@ export async function listCustomReportTemplates(
   if (opts.include_inactive) params.set("include_inactive", "true");
   const q = params.toString();
   return _fetchJson<CustomReportTemplateListResponse>(
-    `/api/v1/custom-report-templates${q ? `?${q}` : ""}`,
+    `/v1/custom-report-templates${q ? `?${q}` : ""}`,
     token,
   );
 }
@@ -99,7 +99,7 @@ export async function getCustomReportTemplate(
   token: string, id: string,
 ): Promise<CustomReportTemplate> {
   return _fetchJson<CustomReportTemplate>(
-    `/api/v1/custom-report-templates/${id}`, token,
+    `/v1/custom-report-templates/${id}`, token,
   );
 }
 
@@ -107,7 +107,7 @@ export async function createCustomReportTemplate(
   token: string, body: CustomReportTemplateCreateBody,
 ): Promise<CustomReportTemplate> {
   return _fetchJson<CustomReportTemplate>(
-    "/api/v1/custom-report-templates", token,
+    "/v1/custom-report-templates", token,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -120,7 +120,7 @@ export async function updateCustomReportTemplate(
   token: string, id: string, body: CustomReportTemplateUpdateBody,
 ): Promise<CustomReportTemplate> {
   return _fetchJson<CustomReportTemplate>(
-    `/api/v1/custom-report-templates/${id}`, token,
+    `/v1/custom-report-templates/${id}`, token,
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -133,7 +133,7 @@ export async function deleteCustomReportTemplate(
   token: string, id: string,
 ): Promise<void> {
   await _fetchJson<void>(
-    `/api/v1/custom-report-templates/${id}`, token,
+    `/v1/custom-report-templates/${id}`, token,
     { method: "DELETE" },
   );
 }

@@ -5067,7 +5067,7 @@ function RunsTab({ runs, onNavigateRun, onDeleteRuns, token }: { runs: Run[]; on
     if (downloadingId) return;
     setDownloadingId(runId);
     try {
-      const data = await dashboardFetch(`/api/v1/hedge-effectiveness/runs/${runId}/export`, token);
+      const data = await dashboardFetch(`/v1/hedge-effectiveness/runs/${runId}/export`, token);
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");

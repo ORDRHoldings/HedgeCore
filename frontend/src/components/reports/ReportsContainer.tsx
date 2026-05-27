@@ -217,7 +217,7 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
 
   useEffect(() => {
     if (!token) return;
-    dashboardFetch("/api/v1/policies/active", token)
+    dashboardFetch("/v1/policies/active", token)
       .then((data: unknown) => {
         if (data && typeof data === "object" && "hedge_ratios" in data)
           setActivePolicy(data as PolicyConfig);

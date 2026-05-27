@@ -5,6 +5,7 @@ import { Globe } from "lucide-react";
 import type { WidgetProps } from "@/lib/widgets/widgetRegistry";
 import { PAIR_REGISTRY } from "@/constants/pairRegistry";
 import GuidedEmptyState from "@/components/ui/GuidedEmptyState";
+import { dashboardFetch } from "@/lib/api/dashboardClient";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -40,27 +41,27 @@ export default function MultiPairExposureWidget({ token, user: _user, onRemove }
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const loadData = useCallback(async () => {
+    if (!token) {
+      setExposures([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      // Try to load real position data from the positions endpoint
-      // Fall back to demo data derived from pairRegistry
-      const res = await fetch("/api/v1/positions/exposure", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-
+      const res = await dashboardFetch("/v1/positions/exposure", token);
       if (res.ok) {
         const data = await res.json() as { exposures?: PairExposure[] };
         if (data.exposures && data.exposures.length > 0) {
           setExposures(data.exposures);
           setLastUpdated(new Date());
+          setLoading(false);
           return;
         }
       }
     } catch {
-      // Fall through to demo data
+      /* fall through */
     }
 
-    // No real data available
     setExposures([]);
     setLastUpdated(new Date());
     setLoading(false);

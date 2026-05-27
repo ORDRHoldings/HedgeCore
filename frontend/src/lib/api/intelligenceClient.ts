@@ -34,7 +34,7 @@ export interface IntelligenceSettingsResponse {
 }
 
 export async function queryIntelligence(q: string, token: string): Promise<QueryResponse> {
-  return _fetchJson<QueryResponse>("/api/v1/intelligence/query", token, {
+  return _fetchJson<QueryResponse>("/v1/intelligence/query", token, {
     method: "POST",
     body: JSON.stringify({ q }),
   });
@@ -45,21 +45,21 @@ export async function draftCommentary(
   report_id: string,
   token: string,
 ): Promise<CommentaryResponse> {
-  return _fetchJson<CommentaryResponse>("/api/v1/intelligence/commentary", token, {
+  return _fetchJson<CommentaryResponse>("/v1/intelligence/commentary", token, {
     method: "POST",
     body: JSON.stringify({ report_type, report_id }),
   });
 }
 
 export async function getIntelligenceSettings(token: string): Promise<IntelligenceSettingsResponse> {
-  return _fetchJson<IntelligenceSettingsResponse>("/api/v1/intelligence/settings", token);
+  return _fetchJson<IntelligenceSettingsResponse>("/v1/intelligence/settings", token);
 }
 
 export async function patchIntelligenceSettings(
   enabled: boolean,
   token: string,
 ): Promise<IntelligenceSettingsResponse> {
-  return _fetchJson<IntelligenceSettingsResponse>("/api/v1/intelligence/settings", token, {
+  return _fetchJson<IntelligenceSettingsResponse>("/v1/intelligence/settings", token, {
     method: "PATCH",
     body: JSON.stringify({ enabled }),
   });
