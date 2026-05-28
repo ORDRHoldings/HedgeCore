@@ -48,7 +48,8 @@
 - **Component**: Sentry, Render service config
 - **Description**: 2026-05-16 incident exposed two simultaneous monitoring gaps: (a) Sentry has no rule firing on backend 5xx rate, so a fully degraded prod produced zero alerts for 3 days; (b) Render's "auto-rollback on failed health check" toggle is off, so a deploy that returns 503 on `/api/health` stays live indefinitely.
 - **Mitigation**: Wire `#alerts-backend` Sentry rule (>1% 5xx over 5min) and enable Render auto-rollback. Both are tracked as pre-launch gaps in `docs/runbooks/deployment-and-oncall.md` — incident shows they are no longer pre-launch, they are blocking.
-- **Status**: Open
+- **Mitigation step 1 (2026-05-27, later17)**: `docs/runbooks/ops-monitoring.md` shipped — concrete step-by-step for both the Sentry rule and the Render auto-rollback toggle. Dashboard work remains; runbook converts "wire it" into a 6-step checklist.
+- **Status**: Open (runbook landed; dashboard wiring still pending)
 - **Opened**: 2026-05-16
 
 ## RISK-AUTH-RLS-01: API-key auth path does not inject tenant RLS context — Mitigated (option 3)

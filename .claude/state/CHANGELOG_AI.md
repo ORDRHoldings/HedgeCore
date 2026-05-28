@@ -1,5 +1,27 @@
 # Changelog (AI-maintained)
 
+## 2026-05-27 (later17) — Ops-floor IaC: OPENAI_API_KEY_V wired + ops-monitoring runbook landed
+
+Closes the code-side half of the audit's §4.1 ops floor. Two artefacts landed:
+
+1. **`render.yaml`** — added `OPENAI_API_KEY_V` env var declaration to both `hedgecore` (production) and `hedgecore-preview` services, sourced from the respective `hedgecore-secrets` / `hedgecore-preview-secrets` env groups. Without this declaration the Voice Terminal `/v1/voice/token` endpoint returns 503 because `os.environ.get("OPENAI_API_KEY_V", "")` resolves to empty. Inline comment explains the contract for future readers. Value population is dashboard-only (cannot be committed to source).
+
+2. **`docs/runbooks/ops-monitoring.md`** — new runbook that converts the standing RISK-OPS-MON-01 "wire Sentry + Render auto-rollback" into a 6-section step-by-step checklist:
+   - §1 Sentry backend 5xx alert (>1% over 5min)
+   - §2 Sentry frontend deploy regression alert
+   - §3 Render auto-rollback toggle on `/api/health` (both services)
+   - §4 Vercel `ANTHROPIC_API_KEY` audit
+   - §5 `OPENAI_API_KEY_V` population in `hedgecore-secrets`
+   - §6 Verification checklist + how to flip RISK-OPS-MON-01 to Mitigated
+
+The runbook quotes the 2026-05-13 → 2026-05-16 silent RLS outage as the motivating incident — Sentry + auto-rollback are the second line of defense behind the now-shipped structural guards (`assert_routes_have_canonical_auth`, `assert_api_key_routes_safe`).
+
+**RISK-OPS-MON-01 status**: still HIGH/Open. Runbook landing is mitigation step 1; dashboard wiring remains. Updated OPEN_RISKS entry to reflect partial progress.
+
+**No backend / no engine changes** — pure ops-readiness work. No test runs needed.
+
+**Repo state**: master at `df6aa79` pre-arc; this commit lands on top.
+
 ## 2026-05-27 (later16) — RISK-CI-E2E-01: structural triage of 51 Playwright specs
 
 Read every spec under `frontend/e2e/**/*.spec.ts` to answer the open question on RISK-CI-E2E-01 followup #1: "which of the 237 tests are genuinely E2E vs which should be component tests?"

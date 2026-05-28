@@ -59,6 +59,11 @@ services:
         fromGroup: hedgecore-secrets
       - key: VOICE_CLAUDE_MODEL
         value: "claude-sonnet-4-6"
+      # OpenAI Realtime API key for Voice Terminal (/v1/voice/token mints
+      # ephemeral keys against this). Without it, /v1/voice/token returns 503
+      # and the Voice Terminal UI is dead. Populated in hedgecore-secrets env group.
+      - key: OPENAI_API_KEY_V
+        fromGroup: hedgecore-secrets
       - key: FINNHUB_API_KEY
         fromGroup: hedgecore-secrets
       - key: ALLOW_INDICATIVE_FALLBACK
@@ -111,6 +116,9 @@ services:
         value: "true"
       - key: SYNEX_CORE_URL
         value: https://synex-core.onrender.com
+      # Voice Terminal parity with production — see comment in production block.
+      - key: OPENAI_API_KEY_V
+        fromGroup: hedgecore-preview-secrets
       - key: REDIS_URL
         fromService:
           type: redis
