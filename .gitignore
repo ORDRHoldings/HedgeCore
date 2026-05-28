@@ -68,6 +68,7 @@ backend/LOG/
 frontend/e2e-*.png
 frontend/e2e-*.json
 frontend/e2e-screenshots/
+.claude/state/e2e-screenshots-*/
 frontend/test-results/
 frontend/render_*.png
 frontend/render_*.mjs
