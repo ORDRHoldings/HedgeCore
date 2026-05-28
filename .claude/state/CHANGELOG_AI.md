@@ -1,5 +1,31 @@
 # Changelog (AI-maintained)
 
+## 2026-05-27 (later18) — Compliance docs refreshed: SOC2 controls matrix + Type II readiness attestation
+
+Brought both customer-facing compliance docs current with the work shipped since 2026-04-25 (last attestation refresh) and 2026-03-28 (original controls matrix date). The 2026-05-13 → 2026-05-16 P1 RLS incident, the RLS structural defense layer (migration 0036 + two startup guards), and the just-landed `docs/runbooks/ops-monitoring.md` are now reflected in both documents.
+
+**`docs/compliance/soc2-controls-matrix.md`** changes:
+- Header date bumped 2026-03-28 → 2026-05-27; Type II observation period now gated on closing RISK-OPS-MON-01
+- New row **CC6.3a — Tenant isolation (RLS, structural)** citing migration `0036_force_rls_tenant_context`, `TenantRLSAsyncSession`, and the two startup guards (`assert_routes_have_canonical_auth`, `assert_api_key_routes_safe`)
+- **CC7.2** demoted to Partial — Sentry DSN wired but alert rules pending (cites RISK-OPS-MON-01 + runbook)
+- **CC7.5** marked Implemented (with named gap) — cites 2026-05-13 incident as operating evidence; 4-min recovery time after detection
+- New **Recent control-strengthening history** table — dated entries for 2026-05-13 (mig 0036), 2026-05-16 (incident resolution), 2026-05-25 (RISK-CI-PG-02 close), 2026-05-27 (ops-monitoring runbook)
+- Gap list extended: RISK-OPS-MON-01 + engineering-rules formalization
+
+**`docs/trust-center/soc2-readiness-attestation.md`** changes:
+- Refreshed-on date bumped to 2026-05-27 (was overdue — last "next review" was 2026-05-25); next review 2026-06-27
+- Header "what changed since last refresh" block added — names the three material changes
+- **CC6.3** evidence expanded with DB-level FORCE RLS + startup-guard structural defense
+- **CC7.2** flipped ✓ → ◐ Partial with honest "alert rules pending" cite
+- **CC7.3, CC7.5** updated with operating evidence from 2026-05-13 incident
+- Open-gaps list: 7 → 8 (added RISK-OPS-MON-01 as gap #8, explicitly called out as the only gap with material customer-facing impact)
+
+**Honesty over polish.** The refresh adds an open gap (RISK-OPS-MON-01) rather than concealing it. Customer security teams reading the attestation will see the same picture engineering sees — and will see that we're closing the gap with a documented checklist, not hand-waving.
+
+**No backend / no engine changes.** Pure compliance/docs refresh. No tests needed.
+
+**Repo state**: master at `24c1f20` (later17 commit); this lands on top.
+
 ## 2026-05-27 (later17) — Ops-floor IaC: OPENAI_API_KEY_V wired + ops-monitoring runbook landed
 
 Closes the code-side half of the audit's §4.1 ops floor. Two artefacts landed:
