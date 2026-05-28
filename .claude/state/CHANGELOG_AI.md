@@ -1,5 +1,28 @@
 # Changelog (AI-maintained)
 
+## 2026-05-27 (later16) — RISK-CI-E2E-01: structural triage of 51 Playwright specs
+
+Read every spec under `frontend/e2e/**/*.spec.ts` to answer the open question on RISK-CI-E2E-01 followup #1: "which of the 237 tests are genuinely E2E vs which should be component tests?"
+
+**Bucket distribution** (full table in `OPEN_RISKS.md`):
+- **E2E_GENUINE — 5 files (~68 tests)**: `audit-lab-workflow.spec.ts` (45K, 48 tests, full upload→config→run→compare flow), `audit_lab_e2e.spec.ts` (24K, 4 multi-step runs), `hedge_desk_e2e_full.spec.ts` (18K, 7-step pipeline gated on `E2E_FULL=1`), `hedge_execution_flow.spec.ts` (2.7K, multi-page risk gate verification), `position_lifecycle.spec.ts` (18K, state machine + persistence).
+- **SMOKE_PAGE_PAINT — 31 files (~143 tests)**: dominated by `treasury-suite/*` (12 single-route specs, ~570–970 bytes each) and the `treasury-suite.spec.ts` umbrella (19 routes). All structurally identical to `nav-smoke.spec.ts` — one `page.goto` + body-visible/no-error assertion.
+- **COMPONENT_LEVEL — ~5 files**: `quickstart_window.spec.ts`, `quickstart_accessibility.spec.ts`, `theme-system.spec.ts`, `governance.spec.ts` (API interception only). Frontend-only state — candidates for jest+@testing-library/react migration.
+- **BRITTLE_ORPHAN — bucket unreliable, deferred**: subagent triage flagged 10 files as orphans, including `happy_path.spec.ts` and `invalid_input.spec.ts`. Per-file verification showed both are **canonical replacement tests** (target `/position-desk` confirmed in later13) — the subagent misread the "Replaces legacy test that used non-existent /policy-desk" comment header as a self-deprecation signal when it actually documents *the migration to the canonical route*. The drive-by-deletions playbook (`feedback_drive_by_deletions.md`) applies recursively to test-file triage. No deletions executed this arc.
+
+**Actionable outputs**:
+1. **Now**: triage table written to `OPEN_RISKS.md` followup #1; per-file verification gate added to followup #4.
+2. **Additive (deferred until billing returns)**: widen `frontend/playwright.config.ts` smoke project `testMatch` to include `treasury-suite/*`, `dashboard/*`, `market/*`, `governance/governance-suite.spec.ts`. Non-destructive — leaves the full chromium suite intact; only expands the smoke project's coverage. Defer until the existing 44-test smoke run has demonstrated N consecutive green runs in real CI.
+3. **Substantial follow-up arc (not this session)**: per-file verification of each candidate BRITTLE_ORPHAN, each COMPONENT_LEVEL migration to jest+RTL, each SMOKE_PAGE_PAINT promotion or consolidation.
+
+**No code changes this arc** — analysis is the deliverable. The triage is durable and the BRITTLE_ORPHAN false-positive is now part of the team's playbook.
+
+**Repo state**: master at `1a67e4c` (gitignore screenshot rule). Working tree clean.
+
+## 2026-05-27 — chore: ignore .claude/state/e2e-screenshots-*/ artefacts
+
+Commit `1a67e4c`. Mirrors the existing `frontend/e2e-screenshots/` ignore rule. Verification screenshots from agent sessions (date-stamped under `.claude/state/`) have never been committed historically — formalised the local-only convention.
+
 ## 2026-05-27 (later15) — Frontend jest drain: 75/75 suites, 3155/3155 tests
 
 Closed the last four failing jest suites surfaced by the full sweep after the DEV-KEY-1 work in later14. Same root pattern across the cascade: drive-by deletions hidden inside commits whose subject lines didn't advertise the deletion.
