@@ -2,7 +2,7 @@
 
 **Audience:** IT, security, architecture review boards (ARBs), CISOs
 **Format:** One-pager — convert to PDF for distribution
-**Date:** 2026-04-25 · Version 1.0
+**Date:** 2026-05-27 · Version 1.1 (RLS structural-defense disclosure added)
 
 ---
 
@@ -121,8 +121,8 @@ Redis is intentionally fail-open: a Redis outage falls through silently to the u
 | **Frontend → Backend** | JWT Bearer, CSRF double-submit, rate limit | Application middleware |
 | **Backend → Database** | Private network (Render), AES-256 at rest, parameterized queries | Render-managed + ORM |
 | **Backend → External APIs** | OAuth 2.0 / API keys, per-tenant Fernet for credentials | Application |
-| **Tenant ↔ Tenant** | Row-level tenant isolation (tenant_id on every table); Enterprise tier supports dedicated DB | Application + DB schema |
-| **User ↔ Permission** | RBAC: 9 roles × 41 permissions × hierarchy 0–15; fail-closed | Dependency injection |
+| **Tenant ↔ Tenant** | PostgreSQL `FORCE ROW LEVEL SECURITY` on tenant-scoped tables; `app.current_tenant_id` set per-transaction via `set_config()`; no-tenant requests match sentinel → empty result, not "everything"; Enterprise tier supports dedicated DB | **DB schema (RLS policies)** + Application (session injection) |
+| **User ↔ Permission** | RBAC: 9 roles × 41 permissions × hierarchy 0–15; fail-closed; two app-startup guards reject any route missing canonical auth or sitting outside the API-key allowlist | Dependency injection + structural startup guards |
 | **Maker ↔ Checker** | Same user cannot make + check; SoD enforced in code | Application |
 
 ---

@@ -3,7 +3,7 @@
 **Purpose:** Pre-filled responses to the standard procurement security questionnaires. Copy/paste answers into SIG Lite, CAIQ v4, VSAQ, or custom RFIs.
 
 **Reviewed by:** [Compliance lead name + date]
-**Last updated:** 2026-04-25
+**Last updated:** 2026-05-27
 
 > **Usage:** When a prospect's procurement team sends a questionnaire, find the matching question domain below, copy the response, adjust to their phrasing, and attach the linked evidence document. Maintain a log of every send + change in `docs/internal/sales/questionnaire-log.md`.
 
@@ -53,7 +53,7 @@
 > JWT (HS256) with 30-minute access tokens and 7-day refresh tokens. Passwords are bcrypt-hashed with cost factor 12. SAML 2.0 / OIDC SSO available on Enterprise tier. MFA via TOTP available on all tiers.
 
 **C2. Authorization model.**
-> Role-Based Access Control with 9 roles, 41 permissions, hierarchy levels 0–15. Fail-closed by default (missing permission = denied). Separation of Duties enforced for sensitive workflows (maker/checker on hedge proposals).
+> Role-Based Access Control with 9 roles, 41 permissions, hierarchy levels 0–15. Fail-closed by default (missing permission = denied). Separation of Duties enforced for sensitive workflows (maker/checker on hedge proposals). **Two app-startup guards (`assert_routes_have_canonical_auth` + `assert_api_key_routes_safe`) walk the FastAPI route graph at boot and refuse to start if any route is missing canonical authentication or sits outside the API-key allowlist — preventing the "parallel auth helper bypasses tenant context" class of bug structurally rather than via review.**
 
 **C3. Session management.**
 > Stateless JWT-based sessions. Refresh-token rotation on each refresh. CSRF double-submit cookie + header protection on all state-changing operations.
@@ -111,7 +111,7 @@
 > EU customers: data resident in Frankfurt (eu-central-1). North American customers: us-east-1. No cross-region replication without customer consent.
 
 **D10. Multi-tenancy isolation.**
-> Logical isolation via tenant ID on every row. Enterprise tier offers dedicated database instance for full physical isolation.
+> **Database-level enforcement** via PostgreSQL `FORCE ROW LEVEL SECURITY` on tenant-scoped tables (`positions`, `calculation_runs`, and downstream tables). The application sets `app.current_tenant_id` per-transaction via `set_config()`; RLS policies match this value against `company_id` on every row. A request that arrives without a valid tenant context matches the sentinel `NO_TENANT` value and returns empty — not "everything" — making accidental cross-tenant reads structurally impossible at the database layer, not just the application layer. Enterprise tier additionally offers a dedicated database instance for full physical isolation.
 
 ---
 
@@ -184,7 +184,7 @@
 > Immutable audit logs (WORM tables) provide tamper-evident forensic trail. Application logs retained 90 days. Engagement with external forensics provider on retainer for serious incidents.
 
 **H4. Tabletop exercises.**
-> Quarterly tabletop exercises with engineering team. Annual full-team drill.
+> Quarterly tabletop exercises with engineering team. Annual full-team drill. **Operating evidence**: 2026-05-13 → 2026-05-16 production P1 incident (RLS `SET LOCAL` bind-parameter rejection) was detected on post-deploy smoke, root-caused in two minutes, and resolved 4 minutes after detection. Full post-mortem committed the same day. The incident also surfaced a real monitoring gap (RISK-OPS-MON-01 — Sentry 5xx alert rule not yet configured); closeout plan is documented in `docs/runbooks/ops-monitoring.md`.
 
 **H5. Bug bounty / responsible disclosure.**
 > security@ordrtreasuryfx.com with PGP key. Public disclosure policy. No formal bug bounty program currently (planned post-Series A).

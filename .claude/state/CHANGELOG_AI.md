@@ -1,5 +1,26 @@
 # Changelog (AI-maintained)
 
+## 2026-05-27 (later19) — Sales collateral refreshed: security questionnaire + reference architecture
+
+Brought the two highest-stakes prospect-facing security docs current with the RLS structural defense layer + 2026-05-13 operating evidence. These are the docs enterprise procurement teams literally cut-and-paste from in their RFI responses, so understating the security story here costs deals.
+
+**`docs/internal/sales/security-questionnaire.md`** changes:
+- **Last updated** 2026-04-25 → 2026-05-27
+- **C2 Authorization model**: added the two startup guards (`assert_routes_have_canonical_auth`, `assert_api_key_routes_safe`) as structural defense against the parallel-auth-helper bypass class of bug
+- **D10 Multi-tenancy isolation**: flipped from "logical isolation via tenant ID" (understatement — that was the pre-mig-0036 story) to **DB-level FORCE RLS** with explicit sentinel-match-empty semantics. This is the strongest current security claim and was missing entirely from the previous version.
+- **H4 Tabletop exercises**: added the 2026-05-13 → 2026-05-16 P1 incident as operating evidence — detected on post-deploy smoke, root-caused in 2 min, resolved 4 min after detection. Includes honest cite of RISK-OPS-MON-01 + the ops-monitoring runbook.
+
+**`docs/internal/sales/reference-architecture.md`** changes:
+- **Date / Version** bumped: 2026-04-25 v1.0 → 2026-05-27 v1.1 (RLS structural-defense disclosure added)
+- **Security boundaries** table — "Tenant ↔ Tenant" row rewritten to name the DB-level enforcement (`FORCE ROW LEVEL SECURITY`, `set_config`, sentinel match) instead of the application-only "tenant_id on every table" story; Enforcement column flipped from "Application + DB schema" to "**DB schema (RLS policies)** + Application (session injection)"
+- "User ↔ Permission" row — added "two app-startup guards reject any route missing canonical auth or sitting outside the API-key allowlist"; Enforcement column adds "+ structural startup guards"
+
+**Honesty principle preserved.** The H4 update names RISK-OPS-MON-01 explicitly rather than leaving the impression that all monitoring is operating. Customer security teams that read both the questionnaire and the readiness attestation will see the same gap in both places.
+
+**No code changes.** Pure docs refresh. No tests needed.
+
+**Repo state**: master at `d43a3a9` (later18); this commit lands on top.
+
 ## 2026-05-27 (later18) — Compliance docs refreshed: SOC2 controls matrix + Type II readiness attestation
 
 Brought both customer-facing compliance docs current with the work shipped since 2026-04-25 (last attestation refresh) and 2026-03-28 (original controls matrix date). The 2026-05-13 → 2026-05-16 P1 RLS incident, the RLS structural defense layer (migration 0036 + two startup guards), and the just-landed `docs/runbooks/ops-monitoring.md` are now reflected in both documents.
