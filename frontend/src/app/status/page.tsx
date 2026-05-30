@@ -249,6 +249,19 @@ export default function StatusPage() {
             Last checked: just now
           </div>
         </div>
+
+        {/* ── Illustrative-data disclaimer ── */}
+        <div style={{
+          marginTop: 14, padding: "12px 18px", borderRadius: 8,
+          background: "#F1F5F9", border: "1px solid #E2E8F0",
+          fontFamily: F.mono, fontSize: 11, lineHeight: 1.6,
+          color: C.textMuted,
+        }}>
+          The component states and 90-day uptime figures shown below are
+          published service-level targets and a reference template — they are
+          not yet driven by a live telemetry feed. Real-time incident
+          automation is tracked under RISK-OPS-MON-01.
+        </div>
       </section>
 
       {/* ── Components ── */}
