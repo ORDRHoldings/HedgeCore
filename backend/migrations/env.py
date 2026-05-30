@@ -48,40 +48,21 @@ def _safe_import(module_name: str) -> None:
     except Exception as _exc:  # noqa: BLE001
         _env_log.warning("alembic env.py: could not import %s — %s", module_name, _exc)
 
-_safe_import("app.models.api_key")
-_safe_import("app.models.api_key_audit")
-_safe_import("app.models.audit_event")
-_safe_import("app.models.audit_lab")
-_safe_import("app.models.audit_log")
-_safe_import("app.models.auth_audit_log")
-_safe_import("app.models.calculation_run")
-_safe_import("app.models.connector")
-_safe_import("app.models.equity_snapshot")
-_safe_import("app.models.execution_proposal")
-_safe_import("app.models.hedge_effectiveness")
-_safe_import("app.models.intelligence")
-_safe_import("app.models.import_batch")
-_safe_import("app.models.ledger")
-_safe_import("app.models.market_data")
-_safe_import("app.models.market_snapshot")
-_safe_import("app.models.options_snapshot")
-_safe_import("app.models.organization")
-_safe_import("app.models.permission")
-_safe_import("app.models.policy")
-_safe_import("app.models.policy_favorite")
-_safe_import("app.models.policy_revision")
-_safe_import("app.models.position")
-_safe_import("app.models.proposal")
-_safe_import("app.models.rbac")
-_safe_import("app.models.refresh_token")
-_safe_import("app.models.report_schedule")
-_safe_import("app.models.saved_report")
-_safe_import("app.models.staging")
-_safe_import("app.models.support_ticket")
-_safe_import("app.models.user_mfa")
-_safe_import("app.models.user_watchlist")
-_safe_import("app.models.debt")
-_safe_import("app.models.ir_risk")
+# Auto-discover EVERY module under app.models so Base.metadata reflects the
+# full schema. This replaces a hand-maintained _safe_import() list that had
+# drifted out of sync with app/models/ (≈15 treasury models — cash*,
+# counterparty, journal_entry, payment, settlement_event, treasury_transaction,
+# transaction_cost_estimate, regulatory_submission, bank_statement, webhook —
+# were missing, so `alembic revision --autogenerate` could emit destructive
+# drop/create ops for them). Walking the package keeps autogenerate complete
+# for all current and future models. See ADR-0021.
+import pkgutil as _pkgutil
+import app.models as _models_pkg
+
+for _m in _pkgutil.iter_modules(_models_pkg.__path__):
+    if _m.name == "__init__":
+        continue
+    _safe_import(f"app.models.{_m.name}")
 
 # -------------------------------------------------------------------
 # ?? Alembic configuration
