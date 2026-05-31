@@ -69,6 +69,39 @@ higher-risk migration change and is **explicitly out of scope for this ADR's
 implementation**; it requires its own change with a Postgres-backed verification run
 (the SQLite CI path cannot exercise the WORM triggers).
 
+#### Empirical drift measurement (2026-05-30, fresh Postgres)
+
+`alembic upgrade head` was run against a fresh Postgres database (isolated scratch DB,
+dropped after) to measure the real drift — a test the source audit never performed:
+
+- **The chain completes to head `0036_force_rls_tenant_context` (exit 0)** and builds
+  **58 tables** — including every treasury table the audit claimed was "raw-DDL only"
+  (`counterparties`, `cash_forecast_items`, `journal_entries`, `payment_instructions`,
+  `transaction_cost_estimates`, `regulatory_submissions`, `settlement_events`, …). The
+  audit's "~40 tables exist only in `_ensure_tables`" and "baseline is a no-op stamp"
+  claims are **largely false**.
+- **Exactly 24 tables are genuinely `_ensure_tables`-only** (absent from every migration):
+  `audit_datasets`, `audit_findings`, `audit_reports`, `audit_runs`, `audit_transactions`,
+  `branches`, `connector_run_errors`, `connector_runs`, `decision_proposals`,
+  `decision_runs`, `departments`, `execution_packets`, `hedge_effectiveness_datasets`,
+  `hedge_effectiveness_runs`, `import_batches`, `market_snapshots`, `policy_instances`,
+  `policy_templates`, **`positions`**, `report_schedules`, `saved_reports`,
+  `support_tickets`, `ticket_events`, `user_policy_favorites`, `user_watchlists`.
+- **Critical:** the core `positions` table is in that set — it is created only by
+  `_ensure_tables`. Migration `0036` force-applies RLS to `positions` behind an
+  `IF EXISTS (SELECT 1 FROM pg_class WHERE relname='positions')` guard, so on a
+  pure-Alembic database `positions` is never created **and its RLS forcing silently
+  no-ops**. `_ensure_tables` (`RUN_SCHEMA_BOOTSTRAP_ON_STARTUP`) is therefore genuinely
+  load-bearing today; it must not be removed before the baseline migration lands.
+- **PG version floor:** migration `4dfe7c45fffe` calls `gen_random_uuid()`, built-in only
+  on **PostgreSQL 13+** (prod is PG17 ✓). On PG ≤12 the chain needs
+  `CREATE EXTENSION pgcrypto` first. The baseline migration should add an explicit
+  `CREATE EXTENSION IF NOT EXISTS pgcrypto` for portability.
+
+The follow-up reconciliation is thus a **precisely bounded** task: migrate these 24 named
+tables (with their WORM triggers / RLS for `positions`) into a versioned baseline, then
+reduce `_ensure_tables()` to column-drift guards.
+
 ## Consequences
 
 **Positive**
