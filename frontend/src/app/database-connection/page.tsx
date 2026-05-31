@@ -500,6 +500,20 @@ export default function DatabaseConnectionPage() {
 
         {/* Main Content */}
         <div style={{ flex: 1, padding: isMobile ? 12 : 32, maxWidth: "1800px", margin: "0 auto", width: "100%" }}>
+          {/* Simulated-preview disclaimer — this wizard demonstrates the
+              mapping/validation/governance flow against an in-browser sample
+              dataset. "Test Connection" does not open a live socket; live
+              database ingestion is a roadmap connector. */}
+          <div style={{
+            marginBottom: 20, padding: "12px 16px", borderRadius: 4,
+            background: S.bgPanel, border: `1px solid ${S.rim}`,
+            fontFamily: S.fontMono, fontSize: 11, lineHeight: 1.6,
+            color: S.secondary,
+          }}>
+            SIMULATED PREVIEW — this connection wizard runs against a built-in
+            sample dataset to demonstrate the mapping, validation and governance
+            workflow. It does not establish a live database connection.
+          </div>
           {/* LEVEL 1: Connection Tab */}
           {activeTab === "connection" && (
             <ConnectionTab
