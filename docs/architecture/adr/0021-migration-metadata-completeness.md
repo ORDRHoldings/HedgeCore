@@ -98,9 +98,31 @@ dropped after) to measure the real drift — a test the source audit never perfo
   `CREATE EXTENSION pgcrypto` first. The baseline migration should add an explicit
   `CREATE EXTENSION IF NOT EXISTS pgcrypto` for portability.
 
-The follow-up reconciliation is thus a **precisely bounded** task: migrate these 24 named
+The follow-up reconciliation is thus a **precisely bounded** task: migrate these 25 named
 tables (with their WORM triggers / RLS for `positions`) into a versioned baseline, then
 reduce `_ensure_tables()` to column-drift guards.
+
+#### Implementation status — migration `0037_baseline_residual_tables`
+
+Implemented on branch `feat/alembic-baseline-residual-tables`. The migration extracts the
+115 DDL statements for the 25 residual tables **verbatim** from `_ensure_tables` (via AST,
+no hand-transcription) and re-applies the canonical `positions` tenant-RLS (enable + 4
+policies with the `0036` clause + FORCE) that `0036` skips on a pure-alembic chain.
+
+Verified on a fresh Postgres (PG12 + `pgcrypto`):
+- `alembic upgrade head` → single head `0037`, exit 0, **83 tables** (was 58); all 25
+  residual tables present.
+- `positions`: `relrowsecurity = t` **and** `relforcerowsecurity = t`, with all 4
+  `positions_tenant_isolation_*` policies — tenant isolation intact.
+- Reversible + idempotent: `downgrade -1` drops all 25 (→0), re-`upgrade` restores with
+  `positions` forced; statements are `IF NOT EXISTS`, safe to co-run with `_ensure_tables`
+  during transition.
+- `tests/test_db_migrations.py` + route smoke: pass.
+
+**Gating before merge (not yet done):** verification on **PG17** (prod parity — PG12 was a
+local proxy) and the **RLS integration test suite** (tenant-isolation behaviour, not just
+schema shape). `_ensure_tables` must remain until this lands and a follow-up reduces it to
+column-drift guards.
 
 ## Consequences
 
