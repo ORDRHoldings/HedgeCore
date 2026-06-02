@@ -1,14 +1,17 @@
-"""0037 baseline: create residual _ensure_tables-only tables in Alembic.
+"""0037 baseline: residual tables + column-patches into Alembic.
 
-Creates the 25 tables that previously existed only in app/main.py::_ensure_tables()
-(verified empirically 2026-05-30 — see ADR-0021), so `alembic upgrade head` alone
-builds the full schema. Statements are extracted verbatim from _ensure_tables; all are
-idempotent (CREATE ... IF NOT EXISTS), so this is safe to run alongside the existing
-_ensure_tables bridge during the transition.
+Makes `alembic upgrade head` build the full WORKING schema independent of
+app/main.py::_ensure_tables() (verified empirically — see ADR-0021):
+  - creates the 25 tables that existed only in _ensure_tables (incl. `positions`),
+  - applies the 43 ADD COLUMN IF NOT EXISTS patches that _ensure_tables adds to
+    alembic-managed tables (users.company_id/created_at, companies.plan_tier,
+    execution_proposals.*, roles.hierarchy_level, etc.) — without which auth/users
+    queries 500 on a pure-alembic schema,
+  - re-applies the positions tenant-RLS that 0036 skips when positions is absent.
 
-Includes the positions tenant-RLS that 0036 force-applies behind an IF EXISTS guard
-(skipped in a pure-alembic chain because positions did not exist). This migration
-creates positions, then enables + forces RLS with the canonical tenant clause.
+All statements are extracted VERBATIM from _ensure_tables (raw_ddl) via AST in
+original order, and are idempotent (IF NOT EXISTS), so this is safe to co-run with
+the _ensure_tables bridge during the transition.
 
 Revision ID: 0037_baseline_residual_tables
 Revises: 0036_force_rls_tenant_context
@@ -27,11 +30,27 @@ _POS_CLAUSE = (
     "   NULLIF(current_setting('app.current_tenant_id', true), ''), '" + _NO_TENANT + "') )"
 )
 
-# Verbatim DDL for the 25 residual tables, extracted from
-# app/main.py::_ensure_tables (raw_ddl), preserving original order.
-_RESIDUAL_DDL = [
+# Verbatim DDL extracted from app/main.py::_ensure_tables (raw_ddl), original order:
+# the 25 residual tables + ADD COLUMN patches on alembic-managed tables.
+_BASELINE_DDL = [
     "CREATE TABLE IF NOT EXISTS branches (\n\n            id UUID PRIMARY KEY,\n\n            company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,\n\n            name VARCHAR(255) NOT NULL, code VARCHAR(32) NOT NULL,\n\n            region VARCHAR(128), timezone VARCHAR(64) DEFAULT 'UTC',\n\n            is_active BOOLEAN NOT NULL DEFAULT TRUE,\n\n            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n            UNIQUE(company_id, code))",
     'CREATE TABLE IF NOT EXISTS departments (\n\n            id UUID PRIMARY KEY,\n\n            branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,\n\n            name VARCHAR(255) NOT NULL, code VARCHAR(32) NOT NULL,\n\n            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n            UNIQUE(branch_id, code))',
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE SET NULL',
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES branches(id) ON DELETE SET NULL',
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id) ON DELETE SET NULL',
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS job_title VARCHAR(128)',
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS ui_preferences JSONB',
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()',
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 1',
+    'ALTER TABLE companies ADD COLUMN IF NOT EXISTS sso_provider VARCHAR(64)',
+    'ALTER TABLE companies ADD COLUMN IF NOT EXISTS sso_domain VARCHAR(255)',
+    'ALTER TABLE companies ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(128) UNIQUE',
+    'ALTER TABLE companies ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(128) UNIQUE',
+    "ALTER TABLE companies ADD COLUMN IF NOT EXISTS plan_tier VARCHAR(32) NOT NULL DEFAULT 'starter'",
+    'ALTER TABLE companies ADD COLUMN IF NOT EXISTS intelligence_enabled BOOLEAN NOT NULL DEFAULT FALSE',
+    'ALTER TABLE roles ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE',
+    'ALTER TABLE roles ADD COLUMN IF NOT EXISTS hierarchy_level INTEGER NOT NULL DEFAULT 10',
+    'ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_system BOOLEAN NOT NULL DEFAULT FALSE',
     "CREATE TABLE IF NOT EXISTS positions (\n\n            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n\n            company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,\n\n            branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,\n\n            created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,\n\n            record_id VARCHAR(128) NOT NULL,\n\n            entity VARCHAR(255) NOT NULL,\n\n            flow_type VARCHAR(4) NOT NULL,\n\n            currency VARCHAR(3) NOT NULL,\n\n            amount NUMERIC(20,6) NOT NULL,\n\n            value_date VARCHAR(10) NOT NULL,\n\n            status VARCHAR(16) NOT NULL DEFAULT 'CONFIRMED',\n\n            description VARCHAR(512),\n\n            is_active BOOLEAN NOT NULL DEFAULT TRUE,\n\n            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n            CONSTRAINT positions_currency_length CHECK (char_length(currency) = 3),\n\n            CONSTRAINT positions_amount_positive CHECK (amount > 0),\n\n            CONSTRAINT positions_flow_type_enum CHECK (flow_type IN ('AR', 'AP')),\n\n            CONSTRAINT positions_status_enum CHECK (status IN ('CONFIRMED', 'FORECAST')),\n\n            UNIQUE(company_id, record_id))",
     'CREATE INDEX IF NOT EXISTS ix_positions_scope ON positions(company_id, branch_id, is_active)',
     'CREATE INDEX IF NOT EXISTS ix_positions_currency ON positions(company_id, currency)',
@@ -63,8 +82,31 @@ _RESIDUAL_DDL = [
     'CREATE INDEX IF NOT EXISTS ix_connector_runs_user  ON connector_runs(triggered_by, started_at)',
     'CREATE TABLE IF NOT EXISTS connector_run_errors (\n\n            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n\n            run_id UUID NOT NULL REFERENCES connector_runs(id) ON DELETE CASCADE,\n\n            row_number INTEGER,\n\n            field_name VARCHAR(128),\n\n            error_message TEXT NOT NULL,\n\n            raw_data JSONB)',
     'CREATE INDEX IF NOT EXISTS ix_connector_run_errors_run ON connector_run_errors(run_id)',
+    'ALTER TABLE calculation_runs ADD COLUMN IF NOT EXISTS policy_revision_id VARCHAR(64)',
     'ALTER TABLE positions ADD COLUMN IF NOT EXISTS policy_revision_id UUID',
     'CREATE INDEX IF NOT EXISTS ix_positions_policy_revision ON positions(policy_revision_id)',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS proposed_by_email VARCHAR(255)',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approved_by_email VARCHAR(255)',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approval_notes TEXT',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approval_hash VARCHAR(64)',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS execution_ref VARCHAR(128)',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS rejection_reason TEXT',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()',
+    'ALTER TABLE staging_artifacts ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approver_required BOOLEAN NOT NULL DEFAULT FALSE',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approver_id UUID',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approver_email VARCHAR(128)',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approved_at TIMESTAMPTZ',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approval_notes VARCHAR(1024)',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approval_hash VARCHAR(64)',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS risk_decision_hash VARCHAR(64)',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS risk_verdict VARCHAR(32)',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS actual_fill_rate FLOAT',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS actual_fill_notional FLOAT',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS slippage_bps FLOAT',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS fill_timestamp VARCHAR(64)',
+    'ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS fill_hash VARCHAR(64)',
     "CREATE TABLE IF NOT EXISTS support_tickets (\n    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    company_id UUID NOT NULL,\n    branch_id UUID,\n    submitted_by UUID NOT NULL,\n    submitted_by_email VARCHAR(255),\n    ticket_ref VARCHAR(16) NOT NULL,\n    subject VARCHAR(255) NOT NULL,\n    description TEXT NOT NULL,\n    severity VARCHAR(4) NOT NULL DEFAULT 'S3',\n    category VARCHAR(32) NOT NULL DEFAULT 'other',\n    status VARCHAR(16) NOT NULL DEFAULT 'OPEN',\n    resolution_notes TEXT,\n    diagnostics_bundle JSONB,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    resolved_at TIMESTAMPTZ,\n    CONSTRAINT ck_ticket_severity CHECK (severity IN ('S0','S1','S2','S3','S4')),\n    CONSTRAINT ck_ticket_status CHECK (status IN ('OPEN','IN_PROGRESS','RESOLVED','CLOSED')),\n    UNIQUE(company_id, ticket_ref))",
     'CREATE INDEX IF NOT EXISTS ix_tickets_tenant ON support_tickets(company_id, created_at)',
     'CREATE INDEX IF NOT EXISTS ix_tickets_status ON support_tickets(company_id, status)',
@@ -89,6 +131,9 @@ _RESIDUAL_DDL = [
     'CREATE INDEX IF NOT EXISTS ix_report_schedules_user ON report_schedules(user_id, created_at)',
     'CREATE INDEX IF NOT EXISTS ix_report_schedules_company ON report_schedules(company_id, is_active)',
     'CREATE INDEX IF NOT EXISTS ix_report_schedules_next_run ON report_schedules(is_active, next_run_at)',
+    'ALTER TABLE staging_artifacts ADD COLUMN IF NOT EXISTS company_id UUID',
+    'ALTER TABLE proposals ADD COLUMN IF NOT EXISTS company_id UUID',
+    'ALTER TABLE ledger_entries ADD COLUMN IF NOT EXISTS company_id UUID',
     'CREATE TABLE IF NOT EXISTS audit_datasets (\n    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,\n    period_start DATE NOT NULL,\n    period_end DATE NOT NULL,\n    source_filename TEXT NOT NULL,\n    source_hash TEXT NOT NULL,\n    row_count INTEGER NOT NULL,\n    currency_pairs JSONB,\n    created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    UNIQUE(company_id, source_hash))',
     'CREATE INDEX IF NOT EXISTS ix_audit_datasets_company ON audit_datasets(company_id, created_at)',
     'CREATE TABLE IF NOT EXISTS audit_transactions (\n    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    dataset_id UUID NOT NULL REFERENCES audit_datasets(id) ON DELETE CASCADE,\n    company_id UUID NOT NULL,\n    row_index INTEGER NOT NULL,\n    trade_date DATE,\n    value_date DATE,\n    currency_sold TEXT,\n    currency_bought TEXT,\n    amount_sold NUMERIC,\n    amount_bought NUMERIC,\n    effective_rate NUMERIC,\n    counterparty TEXT,\n    fee_amount NUMERIC,\n    fee_currency TEXT,\n    reference TEXT,\n    row_hash TEXT NOT NULL,\n    parse_warnings JSONB,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())',
@@ -143,20 +188,18 @@ _RESIDUAL_DDL = [
     'DO $$ BEGIN\n  CREATE TRIGGER trg_execution_packets_no_delete\n    BEFORE DELETE ON execution_packets\n    FOR EACH ROW EXECUTE FUNCTION execution_packets_worm();\nEXCEPTION WHEN duplicate_object THEN NULL; END $$',
     "CREATE TABLE IF NOT EXISTS user_watchlists (\n    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,\n    name VARCHAR(255) NOT NULL DEFAULT 'My Watchlist',\n    symbols JSONB NOT NULL DEFAULT '[]',\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    CONSTRAINT uix_user_watchlists_user_name UNIQUE (user_id, name))",
     'CREATE INDEX IF NOT EXISTS ix_user_watchlists_user ON user_watchlists(user_id)',
+    "ALTER TABLE webhook_endpoints ADD COLUMN IF NOT EXISTS channel_type VARCHAR(16) NOT NULL DEFAULT 'generic'",
     "CREATE TABLE IF NOT EXISTS import_batches (\n    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    company_id UUID NOT NULL,\n    created_by UUID NOT NULL,\n    filename VARCHAR(512) NOT NULL,\n    file_hash VARCHAR(64) NOT NULL,\n    file_size_bytes INTEGER NOT NULL DEFAULT 0,\n    row_count INTEGER NOT NULL DEFAULT 0,\n    valid_count INTEGER NOT NULL DEFAULT 0,\n    error_count INTEGER NOT NULL DEFAULT 0,\n    duplicate_count INTEGER NOT NULL DEFAULT 0,\n    created_count INTEGER NOT NULL DEFAULT 0,\n    status VARCHAR(20) NOT NULL DEFAULT 'UPLOADED',\n    column_mapping JSONB,\n    validation_errors JSONB,\n    created_position_ids JSONB,\n    raw_preview JSONB,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    validated_at TIMESTAMPTZ,\n    committed_at TIMESTAMPTZ)",
     'CREATE INDEX IF NOT EXISTS ix_import_batches_company ON import_batches(company_id)',
 ]
 
 
 def upgrade() -> None:
-    for stmt in _RESIDUAL_DDL:
+    for stmt in _BASELINE_DDL:
         op.execute(stmt)
-    # positions tenant-RLS (self-contained; mirrors k1a2b3c4d5e6 + 0036 final state)
     op.execute("ALTER TABLE positions ENABLE ROW LEVEL SECURITY")
-    op.execute("DROP POLICY IF EXISTS positions_tenant_isolation_select ON positions")
-    op.execute("DROP POLICY IF EXISTS positions_tenant_isolation_insert ON positions")
-    op.execute("DROP POLICY IF EXISTS positions_tenant_isolation_update ON positions")
-    op.execute("DROP POLICY IF EXISTS positions_tenant_isolation_delete ON positions")
+    for _cmd in ("select","insert","update","delete"):
+        op.execute(f"DROP POLICY IF EXISTS positions_tenant_isolation_{_cmd} ON positions")
     op.execute(f"CREATE POLICY positions_tenant_isolation_select ON positions FOR SELECT USING {_POS_CLAUSE}")
     op.execute(f"CREATE POLICY positions_tenant_isolation_insert ON positions FOR INSERT WITH CHECK {_POS_CLAUSE}")
     op.execute(f"CREATE POLICY positions_tenant_isolation_update ON positions FOR UPDATE USING {_POS_CLAUSE}")
@@ -165,6 +208,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Drop only the residual tables; ADD COLUMN patches on pre-existing alembic
+    # tables are left in place (harmless, and reversing them risks data loss).
     op.execute("DROP TABLE IF EXISTS audit_datasets CASCADE")
     op.execute("DROP TABLE IF EXISTS audit_findings CASCADE")
     op.execute("DROP TABLE IF EXISTS audit_reports CASCADE")
