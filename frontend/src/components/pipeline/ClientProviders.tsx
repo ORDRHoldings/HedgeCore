@@ -39,10 +39,13 @@ import { Menu, X } from "lucide-react";
 const VoiceTerminal = dynamic(() => import("../voice/VoiceTerminal"), { ssr: false });
 
 // Public routes: no sidebar, no voice, full viewport
+// "/" is a server-side redirect to /dashboard (see app/page.tsx); kept here as a
+// harmless no-op for the brief client transition. Umbrella marketing routes were
+// removed when the marketing site moved to its own repo.
 const PUBLIC_ROUTES = ["/", "/market"];
 
 // Marketing route prefixes: no sidebar, no voice (matched via startsWith)
-const MARKETING_PREFIXES = ["/products", "/solutions", "/pricing", "/about", "/contact"];
+const MARKETING_PREFIXES: string[] = [];
 
 // Auth pages where the voice assistant should NOT appear
 const AUTH_PREFIXES = ["/auth", "/login", "/register"];
