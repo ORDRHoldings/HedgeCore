@@ -24,7 +24,7 @@ export const POLISOPHIC: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "Polisophic is ORDR Terminal's geopolitical and macro risk intelligence layer. It aggregates real-time data from Yahoo Finance and Finnhub to surface the contextual risk environment in which FX hedging decisions are made. It is an intelligence context tool — not a trading signal or a price-source for execution.",
+          body: "Polisophic is ORDR Treasury's geopolitical and macro risk intelligence layer. It aggregates real-time data from Yahoo Finance and Finnhub to surface the contextual risk environment in which FX hedging decisions are made. It is an intelligence context tool — not a trading signal or a price-source for execution.",
         },
         {
           type: "table",

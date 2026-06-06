@@ -567,7 +567,7 @@ function SupportPageInner() {
           {/* Stat grid */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
             {[
-              { label: "PLATFORM", value: "ORDR Terminal v2.0.0" },
+              { label: "PLATFORM", value: "ORDR Treasury v2.0.0" },
               {
                 label: "BACKEND",
                 value: backendHealth === "checking" ? "CHECKING..." : backendHealth === "online" ? "ONLINE" : "OFFLINE",

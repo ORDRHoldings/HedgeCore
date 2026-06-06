@@ -105,7 +105,7 @@ export default function TerminalPage() {
     logInit.current = true;
     const n = positions.length;
     setLog([
-      mkLine("ORDR Terminal v1.0.0 initialised", "ok"),
+      mkLine("ORDR Treasury v1.0.0 initialised", "ok"),
       mkLine("Hedge engine connected · Engine v1.0.0", "ok"),
       mkLine(`Position feed loaded · ${n} position${n !== 1 ? "s" : ""}`, "info"),
       mkLine(`Policy engine: ${result ? "custom" : "DEMO"} active`, "info"),

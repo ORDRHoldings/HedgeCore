@@ -660,7 +660,7 @@ export default function StagingListPage() {
             fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
             letterSpacing: "0.04em", flexShrink: 0, flexWrap: "wrap",
           }}>
-            <span>ORDR Terminal · Staging Queue</span>
+            <span>ORDR Treasury · Staging Queue</span>
             <span style={{ color: S.rim }}>·</span>
             <span>Governance Pipeline v1</span>
             <span style={{ flex: 1 }} />

@@ -254,7 +254,7 @@ export function generateIBKRPayload(
     account,
     currency: "USD",
     transactTime: new Date().toISOString(),
-    text: `ORDR Terminal hedge for ${pos.entity}`,
+    text: `ORDR Treasury hedge for ${pos.entity}`,
   }));
 
   const totalNotional = positions.reduce((sum, p) => sum + Math.abs(p.amount), 0);
@@ -573,7 +573,7 @@ export function generateIBKRPayloadFromTickets(
       account,
       currency: "USD",
       transactTime: new Date().toISOString(),
-      text: `ORDR Terminal: ${t.side} ${t.contracts}×${t.symbol} ${t.currency} hedge, settle ${t.settlementMonth}`,
+      text: `ORDR Treasury: ${t.side} ${t.contracts}×${t.symbol} ${t.currency} hedge, settle ${t.settlementMonth}`,
     }));
 
   const totalContracts = orders.reduce((sum, o) => sum + o.orderQty, 0);

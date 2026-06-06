@@ -15,7 +15,7 @@ export const AUDIT_HELP: ModuleHelp = {
       verified: true,
       codeRefs: [{ file: "backend/app/models/audit_event.py" }],
       content:
-        "The ORDR Terminal maintains an immutable, append-only audit log of every material system action. Each record is cryptographically linked to the preceding record via a SHA-256 hash chain, creating a tamper-evident sequence that spans the entire lifetime of the system.\n\n" +
+        "The ORDR Treasury maintains an immutable, append-only audit log of every material system action. Each record is cryptographically linked to the preceding record via a SHA-256 hash chain, creating a tamper-evident sequence that spans the entire lifetime of the system.\n\n" +
         "If any historical record is modified, deleted, or reordered, the hash chain breaks at that point. Any reader with access to the GENESIS hash (64 zeroes) can independently recompute the entire chain from raw data and detect any discrepancy without trusting the application layer.\n\n" +
         "The audit trail records 8 event types: position lifecycle transitions, proposal submissions, approval grants, ledger commits, policy revisions, user logins, API key creation, and hash chain verification runs. Every event captures the acting user, their tenant, the full payload, and the UTC timestamp to microsecond precision.\n\n" +
         "The audit_events table is a WORM (Write Once, Read Many) table. The database role that the application uses has INSERT and SELECT grants on audit_events but no UPDATE or DELETE grants. This means even a compromised application credential cannot silently alter the record.",
@@ -275,7 +275,7 @@ export const AUDIT_HELP: ModuleHelp = {
           "The following regulatory mappings are provided for orientation only. Confirm applicability with your legal counsel and compliance team before citing in filings or external audit reports.",
       },
       content:
-        "The ORDR Terminal's hash-chained audit trail is designed to satisfy tamper-evidence requirements under multiple regulatory frameworks applicable to institutional treasury operations.\n\n" +
+        "The ORDR Treasury's hash-chained audit trail is designed to satisfy tamper-evidence requirements under multiple regulatory frameworks applicable to institutional treasury operations.\n\n" +
         "**ISDA Master Agreement / MRA**: The ISDA Master Repurchase Agreement requires counterparties to maintain records sufficient to demonstrate the terms and history of each transaction. The hash chain provides a court-admissible record of every proposal, approval, and ledger commitment with cryptographic proof that the record has not been altered.\n\n" +
         "**FINRA Rule 17a-4**: Requires broker-dealers to preserve electronic records in a non-rewriteable, non-erasable format (WORM). The combination of database-level permission controls and the SHA-256 chain satisfies the technical requirements of 17a-4(f)(2)(ii)(A) for records that cannot be overwritten or erased.\n\n" +
         "**Independent Verification**: A qualified external examiner with read-only database access can independently recompute the entire audit chain from the GENESIS event (prev_hash = 64 zeroes) using only the raw event data, without any access to application code or secrets. This is the strongest available form of tamper-evidence for digital records.\n\n" +

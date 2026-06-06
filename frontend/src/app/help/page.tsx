@@ -1344,7 +1344,7 @@ function HelpPageContent() {
           letterSpacing: "0.04em",
           flexShrink: 0,
         }}>
-          <span>ORDR Terminal</span>
+          <span>ORDR Treasury</span>
           <span style={{ color: S.rim }}>·</span>
           <span>Platform Help &amp; Documentation</span>
           <span style={{ color: S.rim }}>·</span>

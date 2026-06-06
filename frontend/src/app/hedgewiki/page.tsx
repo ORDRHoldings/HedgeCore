@@ -689,7 +689,7 @@ export default function HedgeWiki() {
         fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
         letterSpacing: "0.04em", flexShrink: 0,
       }}>
-        <span>ORDR Terminal · HedgeWiki</span>
+        <span>ORDR Treasury · HedgeWiki</span>
         <span style={{ color: S.rim }}>·</span>
         <span>Versioned Governance Knowledge Graph</span>
         <span style={{ color: S.rim }}>·</span>

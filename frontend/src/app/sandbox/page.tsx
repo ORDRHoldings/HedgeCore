@@ -372,7 +372,7 @@ function WidgetMode({ currency, notional, tab }: { currency: string; notional: n
         fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, background: S.sub,
         display: "flex", justifyContent: "space-between",
       }}>
-        <span>HedgeCore ORDR Terminal · Free simulation engine</span>
+        <span>HedgeCore ORDR Treasury · Free simulation engine</span>
         <span>Not investment advice · All values indicative</span>
       </div>
     </div>

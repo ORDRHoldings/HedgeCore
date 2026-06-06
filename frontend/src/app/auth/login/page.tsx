@@ -601,7 +601,7 @@ export default function LoginPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/ordr-logo-horizontal.png"
-            alt="ORDR Terminal"
+            alt="ORDR Treasury"
             style={{
               width: 152, height: "auto",
               display: "block", margin: "0 auto",

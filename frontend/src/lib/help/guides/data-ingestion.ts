@@ -4,7 +4,7 @@ export const DATA_INGESTION: GuideDoc = {
   id: "data-ingestion",
   title: "Data Ingestion",
   summary:
-    "How to load FX exposure positions into ORDR Terminal: CSV upload, manual entry, ERP connector, field validation requirements, and the audit trail created for each import.",
+    "How to load FX exposure positions into ORDR Treasury: CSV upload, manual entry, ERP connector, field validation requirements, and the audit trail created for each import.",
   path: "/position-desk",
   icon: "Upload",
   lastReviewed: "2026-02-28",
@@ -19,7 +19,7 @@ export const DATA_INGESTION: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "Data ingestion is the first step of the ORDR Terminal workflow: loading FX exposure positions that represent your company's foreign currency obligations or receivables. Positions are the source objects that drive policy assignment, hedge calculation, and ultimately ledger commitment.",
+          body: "Data ingestion is the first step of the ORDR Treasury workflow: loading FX exposure positions that represent your company's foreign currency obligations or receivables. Positions are the source objects that drive policy assignment, hedge calculation, and ultimately ledger commitment.",
         },
         {
           type: "table",
@@ -207,7 +207,7 @@ export const DATA_INGESTION: GuideDoc = {
             {
               n: 2,
               label: "Create a new connector",
-              detail: "Select the source type, enter connection credentials, and configure the field mapping between source columns and ORDR Terminal position fields.",
+              detail: "Select the source type, enter connection credentials, and configure the field mapping between source columns and ORDR Treasury position fields.",
             },
             {
               n: 3,
@@ -324,7 +324,7 @@ export const DATA_INGESTION: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "ORDR Terminal enforces strict data governance rules on position records to ensure complete lineage from initial ingestion through to the final ledger entry.",
+          body: "ORDR Treasury enforces strict data governance rules on position records to ensure complete lineage from initial ingestion through to the final ledger entry.",
         },
         {
           type: "table",
@@ -347,7 +347,7 @@ export const DATA_INGESTION: GuideDoc = {
           type: "callout",
           callout: {
             type: "regulatory",
-            text: "Under EMIR reporting requirements, firms must maintain records sufficient to demonstrate the economic rationale for each hedge. ORDR Terminal's data lineage from position import through to ledger commit provides this documentation chain.",
+            text: "Under EMIR reporting requirements, firms must maintain records sufficient to demonstrate the economic rationale for each hedge. ORDR Treasury's data lineage from position import through to ledger commit provides this documentation chain.",
           },
         },
       ],

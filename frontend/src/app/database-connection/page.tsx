@@ -2955,7 +2955,7 @@ function Footer() {
         color: S.tertiary,
         letterSpacing: "0.06em",
       }}>
-        {clock} — ORDR Terminal · Database Connection Module · 4-Level Architecture
+        {clock} — ORDR Treasury · Database Connection Module · 4-Level Architecture
       </span>
     </footer>
   

@@ -214,7 +214,7 @@ export const POLICY_ENGINE_GUIDE: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "IFRS 9 requires that hedge effectiveness be measured prospectively and retrospectively. ORDR Terminal implements the dollar-offset quantitative test using the 80%–125% bright-line prescribed by the standard.",
+          body: "IFRS 9 requires that hedge effectiveness be measured prospectively and retrospectively. ORDR Treasury implements the dollar-offset quantitative test using the 80%–125% bright-line prescribed by the standard.",
         },
         {
           type: "formula",

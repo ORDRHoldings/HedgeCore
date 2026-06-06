@@ -357,7 +357,7 @@ export default function LedgerListPage() {
         letterSpacing: "0.04em", flexShrink: 0,
         flexWrap: isMobile ? "wrap" : "nowrap",
       }}>
-        <span>ORDR Terminal · Immutable Ledger</span>
+        <span>ORDR Treasury · Immutable Ledger</span>
         <span style={{ color: S.rim }}>·</span>
         <span>WORM Append-Only · SHA-256 Hash Chain</span>
         <div style={{ flex: 1 }} />

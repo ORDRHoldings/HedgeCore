@@ -4,7 +4,7 @@ export const TROUBLESHOOTING: GuideDoc = {
   id: "troubleshooting",
   title: "Troubleshooting",
   summary:
-    "Quick reference for diagnosing and recovering from common ORDR Terminal issues: backend connectivity, SIM DATA fallback, authentication failures, engine errors, and audit chain integrity alerts.",
+    "Quick reference for diagnosing and recovering from common ORDR Treasury issues: backend connectivity, SIM DATA fallback, authentication failures, engine errors, and audit chain integrity alerts.",
   path: "/troubleshooting",
   icon: "⚠",
   lastReviewed: "2026-02-28",
@@ -230,7 +230,7 @@ export const TROUBLESHOOTING: GuideDoc = {
             {
               n: 5,
               label: "Contact support",
-              detail: "Contact ORDR Terminal support with: (1) the affected event IDs, (2) the exported audit trail JSON, (3) the incident log. Do not attempt to repair the hash chain — this would constitute further tampering.",
+              detail: "Contact ORDR Treasury support with: (1) the affected event IDs, (2) the exported audit trail JSON, (3) the incident log. Do not attempt to repair the hash chain — this would constitute further tampering.",
             },
             {
               n: 6,

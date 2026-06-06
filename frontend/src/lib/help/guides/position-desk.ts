@@ -56,7 +56,7 @@ export const POSITION_DESK_GUIDE: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "Every position in ORDR Terminal moves through a defined lifecycle. Status transitions are one-directional and audit-logged. No position can be deleted — positions that will not be hedged are transitioned to REJECTED.",
+          body: "Every position in ORDR Treasury moves through a defined lifecycle. Status transitions are one-directional and audit-logged. No position can be deleted — positions that will not be hedged are transitioned to REJECTED.",
         },
         {
           type: "table",
@@ -361,7 +361,7 @@ export const POSITION_DESK_GUIDE: GuideDoc = {
         {
           type: "table",
           table: {
-            headers: ["IFRS 9 Requirement", "ORDR Terminal Implementation"],
+            headers: ["IFRS 9 Requirement", "ORDR Treasury Implementation"],
             rows: [
               ["Designation documentation", "Policy instance creation timestamp serves as the designation date. Policy revision WORM table is the designation record."],
               ["Hedged item identification", "Position record (entity_name, currency_pair, notional_amount, settlement_date)"],
@@ -376,12 +376,12 @@ export const POSITION_DESK_GUIDE: GuideDoc = {
           type: "callout",
           callout: {
             type: "regulatory",
-            text: "IFRS 9 §6.4.1 requires prospective effectiveness testing at inception and ongoing retrospective testing. The 80%–125% bright-line is tested at each reporting date. ORDR Terminal computes this ratio in mathEngine.ts; if the ratio falls outside this range, the hedging relationship must be dedesignated.",
+            text: "IFRS 9 §6.4.1 requires prospective effectiveness testing at inception and ongoing retrospective testing. The 80%–125% bright-line is tested at each reporting date. ORDR Treasury computes this ratio in mathEngine.ts; if the ratio falls outside this range, the hedging relationship must be dedesignated.",
           },
         },
         {
           type: "text",
-          body: "Quarterly effectiveness testing should be conducted by running the effectiveness calculation for each open hedging relationship and reviewing the output against the 80%–125% band. Results should be exported and retained in the treasury committee pack. ORDR Terminal provides the calculation infrastructure; the formal designation documentation responsibility remains with the treasury function.",
+          body: "Quarterly effectiveness testing should be conducted by running the effectiveness calculation for each open hedging relationship and reviewing the output against the 80%–125% band. Results should be exported and retained in the treasury committee pack. ORDR Treasury provides the calculation infrastructure; the formal designation documentation responsibility remains with the treasury function.",
         },
       ],
     },

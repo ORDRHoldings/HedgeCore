@@ -362,7 +362,7 @@ export default function PhaseExecute({
           }}>
             <AlertTriangleIcon size={14} color={T.amber} style={{ flexShrink: 0, marginTop: 1 }} />
             <span style={{ fontFamily: T.fontUI, fontSize: 12, color: T.amber, lineHeight: "1.5" }}>
-              ORDR Terminal will execute these trade tickets via IBKR Gateway. Review all tickets carefully before confirming.
+              ORDR Treasury will execute these trade tickets via IBKR Gateway. Review all tickets carefully before confirming.
             </span>
           </div>
         )}
