@@ -179,7 +179,7 @@ export const REPORTS_HELP: ModuleHelp = {
       callout: {
         type: "info",
         text:
-          "The ORDR Terminal uses the Garman-Kohlhagen extension of Black-Scholes for FX options, incorporating domestic and foreign risk-free rates. The equations below show the canonical Black-Scholes form; the GK extension replaces S with S·e^(−r_f·T).",
+          "The ORDR Treasury uses the Garman-Kohlhagen extension of Black-Scholes for FX options, incorporating domestic and foreign risk-free rates. The equations below show the canonical Black-Scholes form; the GK extension replaces S with S·e^(−r_f·T).",
       },
       formulas: [
         {

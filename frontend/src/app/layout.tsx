@@ -8,8 +8,8 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: {
-    default: "ORDR Terminal \u2014 Institutional FX Treasury Platform",
-    template: "%s | ORDR Terminal",
+    default: "ORDR Treasury \u2014 Institutional FX Hedge Platform",
+    template: "%s | ORDR Treasury",
   },
   description:
     "Enterprise-grade FX hedge calculation, governance, and audit platform for institutional treasury teams. Deterministic risk engine, 4-eyes approval, WORM audit trail.",
@@ -24,17 +24,17 @@ export const metadata: Metadata = {
     "corporate treasury",
     "FX governance",
     "hedge effectiveness",
-    "ORDR Terminal",
+    "ORDR Treasury",
   ],
-  authors: [{ name: "ORDR Terminal", url: "https://orderterminal.com" }],
-  creator: "ORDR Terminal",
+  authors: [{ name: "ORDR Treasury", url: "https://orderterminal.com" }],
+  creator: "ORDR Treasury",
   metadataBase: new URL("https://ordr-terminal.vercel.app"),
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://ordr-terminal.vercel.app",
-    siteName: "ORDR Terminal",
-    title: "ORDR Terminal \u2014 Institutional FX Treasury Platform",
+    siteName: "ORDR Treasury",
+    title: "ORDR Treasury \u2014 Institutional FX Hedge Platform",
     description:
       "Enterprise FX hedge calculation, governance, and audit. Deterministic engine, 4-eyes approval, WORM audit trail. Built for institutional treasury.",
     images: [
@@ -42,13 +42,13 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "ORDR Terminal \u2014 Institutional FX Treasury Platform",
+        alt: "ORDR Treasury \u2014 Institutional FX Hedge Platform",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ORDR Terminal \u2014 Institutional FX Treasury Platform",
+    title: "ORDR Treasury \u2014 Institutional FX Hedge Platform",
     description:
       "Enterprise FX hedge calculation, governance, and audit platform for institutional treasury teams.",
     images: ["/og-image.png"],

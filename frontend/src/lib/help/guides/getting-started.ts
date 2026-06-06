@@ -4,16 +4,16 @@ export const GETTING_STARTED: GuideDoc = {
   id: "getting-started",
   title: "Getting Started",
   summary:
-    "Introduction to ORDR Terminal: institutional FX hedge governance, the tri-state pipeline, authentication, role-based access, and the audit trail that begins on first login.",
+    "Introduction to ORDR Treasury: institutional FX hedge governance, the tri-state pipeline, authentication, role-based access, and the audit trail that begins on first login.",
   path: "/dashboard",
   icon: "BookOpen",
   lastReviewed: "2026-02-28",
   relatedIds: ["dashboard-widgets", "position-desk", "policy-engine", "execution-pipeline"],
   sections: [
-    // ─── L1: What is ORDR Terminal? ──────────────────────────────────────────
+    // ─── L1: What is ORDR Treasury? ──────────────────────────────────────────
     {
       id: "getting-started-what-is-ordr",
-      heading: "What is ORDR Terminal?",
+      heading: "What is ORDR Treasury?",
       level: "L1",
       verified: true,
       codeRefs: [
@@ -23,13 +23,13 @@ export const GETTING_STARTED: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "ORDR Terminal is an institutional FX hedge calculation and governance platform. It provides a deterministic, audit-safe workflow for corporate treasury teams managing foreign-exchange exposure: from raw position ingestion through policy assignment, engine-driven hedge recommendation, four-eyes approval, and immutable ledger commit.",
+          body: "ORDR Treasury is an institutional FX hedge calculation and governance platform. It provides a deterministic, audit-safe workflow for corporate treasury teams managing foreign-exchange exposure: from raw position ingestion through policy assignment, engine-driven hedge recommendation, four-eyes approval, and immutable ledger commit.",
         },
         {
           type: "callout",
           callout: {
             type: "info",
-            text: "v1 scope: ORDR Terminal is deterministic and governance-focused. It does not include ML/auto-learning, broker execution connectivity, or stateful pricing feeds.",
+            text: "v1 scope: ORDR Treasury is deterministic and governance-focused. It does not include ML/auto-learning, broker execution connectivity, or stateful pricing feeds.",
           },
         },
         {
@@ -59,7 +59,7 @@ export const GETTING_STARTED: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "Before using ORDR Terminal you need: (1) a user account with a role assigned by an administrator, (2) a supported browser (Chromium-based or Firefox, desktop viewport), and (3) network access to the deployed instance.",
+          body: "Before using ORDR Treasury you need: (1) a user account with a role assigned by an administrator, (2) a supported browser (Chromium-based or Firefox, desktop viewport), and (3) network access to the deployed instance.",
         },
         {
           type: "field-dict",
@@ -114,7 +114,7 @@ export const GETTING_STARTED: GuideDoc = {
             {
               n: 1,
               label: "Navigate to the login page",
-              detail: "Open /auth/login. You will see the ORDR Terminal login screen with email and password fields.",
+              detail: "Open /auth/login. You will see the ORDR Treasury login screen with email and password fields.",
             },
             {
               n: 2,
@@ -224,7 +224,7 @@ export const GETTING_STARTED: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "ORDR Terminal uses JWT HS256 for session authentication and bcrypt for password storage. API key authentication is available for programmatic access.",
+          body: "ORDR Treasury uses JWT HS256 for session authentication and bcrypt for password storage. API key authentication is available for programmatic access.",
         },
         {
           type: "table",
@@ -265,7 +265,7 @@ export const GETTING_STARTED: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "ORDR Terminal implements role-based access control with 9 roles, 41 permissions across 11 modules, and a hierarchy_level 0-15 that governs override rights. Every API endpoint and UI action is gated by at least one permission check.",
+          body: "ORDR Treasury implements role-based access control with 9 roles, 41 permissions across 11 modules, and a hierarchy_level 0-15 that governs override rights. Every API endpoint and UI action is gated by at least one permission check.",
         },
         {
           type: "table",
@@ -325,7 +325,7 @@ export const GETTING_STARTED: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "Every action in ORDR Terminal — login, position creation, policy assignment, calculation run, approval, rejection, ledger commit — is appended to the audit_events table. This table is WORM (Write Once Read Many): rows are never updated or deleted.",
+          body: "Every action in ORDR Treasury — login, position creation, policy assignment, calculation run, approval, rejection, ledger commit — is appended to the audit_events table. This table is WORM (Write Once Read Many): rows are never updated or deleted.",
         },
         {
           type: "callout",
@@ -371,7 +371,7 @@ export const GETTING_STARTED: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "ORDR Terminal is designed to support the governance requirements of EMIR, MiFID II, IFRS 9, and equivalent jurisdictional frameworks. The following controls are enforced at the system level, not as configuration options.",
+          body: "ORDR Treasury is designed to support the governance requirements of EMIR, MiFID II, IFRS 9, and equivalent jurisdictional frameworks. The following controls are enforced at the system level, not as configuration options.",
         },
         {
           type: "table",
@@ -392,7 +392,7 @@ export const GETTING_STARTED: GuideDoc = {
           type: "callout",
           callout: {
             type: "regulatory",
-            text: "IFRS 9 requires that a hedging relationship be documented at inception and that effectiveness is tested prospectively and retrospectively. ORDR Terminal's policy revision WORM table provides the inception documentation; the 80%–125% bright-line test provides the quantitative effectiveness gate.",
+            text: "IFRS 9 requires that a hedging relationship be documented at inception and that effectiveness is tested prospectively and retrospectively. ORDR Treasury's policy revision WORM table provides the inception documentation; the 80%–125% bright-line test provides the quantitative effectiveness gate.",
           },
         },
         {

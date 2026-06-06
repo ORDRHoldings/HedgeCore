@@ -4,7 +4,7 @@ export const GOVERNANCE: GuideDoc = {
   id: "governance",
   title: "Governance & Audit",
   summary:
-    "ORDR Terminal's three governance pillars: SHA-256 hash-chained audit trail, 41-permission RBAC, and 4-eyes segregation of duties on all material transactions. All controls are enforced at the system level and cannot be bypassed by any role.",
+    "ORDR Treasury's three governance pillars: SHA-256 hash-chained audit trail, 41-permission RBAC, and 4-eyes segregation of duties on all material transactions. All controls are enforced at the system level and cannot be bypassed by any role.",
   path: "/audit-trail",
   icon: "🔒",
   lastReviewed: "2026-02-28",
@@ -24,7 +24,7 @@ export const GOVERNANCE: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "ORDR Terminal is built on three non-negotiable governance pillars. These controls are implemented at the database and application layer — they are not configuration options and cannot be disabled by any user role, including admin.",
+          body: "ORDR Treasury is built on three non-negotiable governance pillars. These controls are implemented at the database and application layer — they are not configuration options and cannot be disabled by any user role, including admin.",
         },
         {
           type: "table",
@@ -275,7 +275,7 @@ export const GOVERNANCE: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "Three tables in ORDR Terminal carry WORM (Write Once Read Many) semantics: audit_events, calculation_runs, and policy_revisions. A fourth table, ledger_entries, is protected by a PostgreSQL BEFORE UPDATE OR DELETE trigger that raises an exception on any mutation attempt.",
+          body: "Three tables in ORDR Treasury carry WORM (Write Once Read Many) semantics: audit_events, calculation_runs, and policy_revisions. A fourth table, ledger_entries, is protected by a PostgreSQL BEFORE UPDATE OR DELETE trigger that raises an exception on any mutation attempt.",
         },
         {
           type: "table",

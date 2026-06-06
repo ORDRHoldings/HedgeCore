@@ -256,7 +256,7 @@ export default function StepExecute({
       account: ibkrAccountId ?? "DU1234567",
       currency: "USD",
       transactTime: new Date().toISOString(),
-      text: `ORDR Terminal: ${agg.side} ${agg.contracts}\u00D7${agg.symbol} ${agg.contractName}, settle ${agg.settlementMonth}`,
+      text: `ORDR Treasury: ${agg.side} ${agg.contracts}\u00D7${agg.symbol} ${agg.contractName}, settle ${agg.settlementMonth}`,
     }));
     return {
       orders,
@@ -310,7 +310,7 @@ export default function StepExecute({
     const primary = aggregatedOrders[0];
     if (!primary) return;
     const subject = encodeURIComponent(
-      `ORDR Terminal: ${primary.side} ${totalContracts}\u00D7${primary.symbol} ${primary.contractName} — ${primary.settlementMonth}`
+      `ORDR Treasury: ${primary.side} ${totalContracts}\u00D7${primary.symbol} ${primary.contractName} — ${primary.settlementMonth}`
     );
     const bodyLines = aggregatedOrders.map(
       (o) => `${o.side} ${o.contracts} x ${o.symbol} (${o.contractName}) @ ${fmtDec.format(o.avgRate)} - ${o.settlementMonth} - ${o.exchange}`

@@ -260,7 +260,7 @@ export default function CommandHubWidget({ token: _token, user: _user, onRemove 
         letterSpacing: "0.04em",
       }}>
         <span>Click to navigate · Role-filtered</span>
-        <span>ORDR Terminal</span>
+        <span>ORDR Treasury</span>
       </div>
     </div>
   );

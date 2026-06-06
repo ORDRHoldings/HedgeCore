@@ -105,7 +105,7 @@ export const FX_RATES: GuideDoc = {
               name: "Mid",
               type: "decimal",
               constraints: "= (bid + ask) / 2",
-              meaning: "Arithmetic midpoint of bid and ask. The rate displayed in ORDR Terminal. Not a tradeable price.",
+              meaning: "Arithmetic midpoint of bid and ask. The rate displayed in ORDR Treasury. Not a tradeable price.",
               example: "EURUSD mid = 1.0821",
             },
             {
@@ -172,7 +172,7 @@ export const FX_RATES: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "ORDR Terminal implements Garman-Kohlhagen (1983) for FX option pricing. This is the extension of Black-Scholes for currency options, accounting for both domestic and foreign risk-free rates. Greeks (delta, gamma, vega, theta, rho) are computed analytically.",
+          body: "ORDR Treasury implements Garman-Kohlhagen (1983) for FX option pricing. This is the extension of Black-Scholes for currency options, accounting for both domestic and foreign risk-free rates. Greeks (delta, gamma, vega, theta, rho) are computed analytically.",
         },
         {
           type: "formula",
@@ -284,7 +284,7 @@ export const FX_RATES: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "FX rates displayed in ORDR Terminal are indicative mid-market prices sourced from Finnhub's public API. They are suitable for exposure analysis, hedge sizing, and risk monitoring. They are not suitable as confirmed execution rates for regulatory reporting or ISDA settlement.",
+          body: "FX rates displayed in ORDR Treasury are indicative mid-market prices sourced from Finnhub's public API. They are suitable for exposure analysis, hedge sizing, and risk monitoring. They are not suitable as confirmed execution rates for regulatory reporting or ISDA settlement.",
         },
         {
           type: "table",
@@ -303,7 +303,7 @@ export const FX_RATES: GuideDoc = {
           type: "callout",
           callout: {
             type: "regulatory",
-            text: "For NDF settlement under ISDA FX Definitions 2002, the fixing rate is sourced from the designated fixing agent for each currency (e.g., EMTA MXN survey for USDMXN, SFEMC CNH fixing for USDCNH). ORDR Terminal Finnhub mid-market rates are not a substitute for these fixing sources.",
+            text: "For NDF settlement under ISDA FX Definitions 2002, the fixing rate is sourced from the designated fixing agent for each currency (e.g., EMTA MXN survey for USDMXN, SFEMC CNH fixing for USDCNH). ORDR Treasury Finnhub mid-market rates are not a substitute for these fixing sources.",
           },
         },
       ],

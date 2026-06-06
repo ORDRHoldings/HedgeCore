@@ -22,7 +22,7 @@ export const DASHBOARD_WIDGETS: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "The ORDR Terminal dashboard is a fully customisable grid of 19 registered widgets. Each widget is an independent data panel that can be added, removed, dragged, and resized within a 12-column responsive grid layout. Layout state is persisted per-user in localStorage under the key dashboard_layout_{userId}.",
+          body: "The ORDR Treasury dashboard is a fully customisable grid of 19 registered widgets. Each widget is an independent data panel that can be added, removed, dragged, and resized within a 12-column responsive grid layout. Layout state is persisted per-user in localStorage under the key dashboard_layout_{userId}.",
         },
         {
           type: "table",

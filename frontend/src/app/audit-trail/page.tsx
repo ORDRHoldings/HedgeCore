@@ -118,7 +118,7 @@ function mapBackendEvent(e: AuditEventResponse): AuditEvent {
     prevHash:    e.prev_event_hash,
     relatedIds:  buildRelatedIds(e),
     ip:          e.ip_address ?? "—",
-    userAgent:   "ORDR Terminal",
+    userAgent:   "ORDR Treasury",
     payload:     { ...e.payload, event_type: e.event_type },
   };
 }

@@ -1,7 +1,7 @@
 /**
  * login.spec.ts — E2E Test Contract
  *
- * Playwright-ready test spec for the ORDR Terminal login page.
+ * Playwright-ready test spec for the ORDR Treasury login page.
  * Documents all approved behaviors from Phase 1 checklist (A–G).
  *
  * To activate: install Playwright, configure playwright.config.ts,
@@ -12,7 +12,7 @@
 // const LOGIN_URL = process.env.BASE_URL ?? "http://localhost:3000/auth/login";
 
 /*
-test.describe("Login Page — ORDR Terminal", () => {
+test.describe("Login Page — ORDR Treasury", () => {
 
   // ── Layout & Structure ────────────────────────────────────────────────────
 
@@ -39,7 +39,7 @@ test.describe("Login Page — ORDR Terminal", () => {
 
   test("B1: ORDR mark renders at 64px", async ({ page }) => {
     await page.goto(LOGIN_URL);
-    const img = page.locator('img[alt="ORDR Terminal"]');
+    const img = page.locator('img[alt="ORDR Treasury"]');
     const box = await img.boundingBox();
     expect(box!.width).toBeCloseTo(64, 0);
   });
@@ -135,9 +135,9 @@ test.describe("Login Page — ORDR Terminal", () => {
 
   // ── Security & A11y ───────────────────────────────────────────────────────
 
-  test("E2: form has aria-label='ORDR Terminal authentication'", async ({ page }) => {
+  test("E2: form has aria-label='ORDR Treasury authentication'", async ({ page }) => {
     await page.goto(LOGIN_URL);
-    await expect(page.locator("form[aria-label='ORDR Terminal authentication']")).toBeVisible();
+    await expect(page.locator("form[aria-label='ORDR Treasury authentication']")).toBeVisible();
   });
 
   test("E2: status bar is aria-hidden", async ({ page }) => {

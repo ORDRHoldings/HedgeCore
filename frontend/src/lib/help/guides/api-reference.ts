@@ -4,7 +4,7 @@ export const API_REFERENCE: GuideDoc = {
   id: "api-reference",
   title: "API Reference",
   summary:
-    "REST API reference for ORDR Terminal: authentication, key backend endpoints, Next.js market data routes, request/response format, rate limits, and API governance.",
+    "REST API reference for ORDR Treasury: authentication, key backend endpoints, Next.js market data routes, request/response format, rate limits, and API governance.",
   path: "/api-reference",
   icon: "〈〉",
   lastReviewed: "2026-02-28",
@@ -19,7 +19,7 @@ export const API_REFERENCE: GuideDoc = {
       blocks: [
         {
           type: "text",
-          body: "ORDR Terminal exposes two API layers: (1) the Python FastAPI backend, accessed via the NEXT_PUBLIC_API_URL environment variable, and (2) the Next.js API routes hosted alongside the frontend on Vercel. All APIs are REST/JSON. Authentication for backend endpoints uses JWT Bearer tokens or HK_live_ API keys.",
+          body: "ORDR Treasury exposes two API layers: (1) the Python FastAPI backend, accessed via the NEXT_PUBLIC_API_URL environment variable, and (2) the Next.js API routes hosted alongside the frontend on Vercel. All APIs are REST/JSON. Authentication for backend endpoints uses JWT Bearer tokens or HK_live_ API keys.",
         },
         {
           type: "table",
@@ -140,7 +140,7 @@ curl "${"{"}NEXT_PUBLIC_API_URL{"}"}/v1/dashboard/summary" \\
       blocks: [
         {
           type: "text",
-          body: "All ORDR Terminal API requests and responses use JSON. Field naming follows snake_case throughout. The FastAPI framework enforces request validation via Pydantic v2 schemas — invalid requests return 422 with a structured error body.",
+          body: "All ORDR Treasury API requests and responses use JSON. Field naming follows snake_case throughout. The FastAPI framework enforces request validation via Pydantic v2 schemas — invalid requests return 422 with a structured error body.",
         },
         {
           type: "field-dict",
@@ -287,7 +287,7 @@ curl "${"{"}NEXT_PUBLIC_API_URL{"}"}/v1/dashboard/summary" \\
       blocks: [
         {
           type: "text",
-          body: "All backend API calls are subject to ORDR Terminal's governance controls: RBAC permission checks, WORM audit logging, and (for execution paths) 4-eyes segregation of duties enforcement.",
+          body: "All backend API calls are subject to ORDR Treasury's governance controls: RBAC permission checks, WORM audit logging, and (for execution paths) 4-eyes segregation of duties enforcement.",
         },
         {
           type: "table",

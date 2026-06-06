@@ -17,7 +17,7 @@ export async function GET(): Promise<NextResponse> {
     theme: "default",
     darkMode: true,
     metaData: {
-      title: "ORDR Terminal API Reference",
+      title: "ORDR Treasury API Reference",
       description:
         "Institutional FX hedge calculation and governance platform — REST API v1",
     },
@@ -46,10 +46,10 @@ export async function GET(): Promise<NextResponse> {
   const html = `<!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>ORDR Terminal — API Reference</title>
+    <title>ORDR Treasury — API Reference</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="ORDR Terminal REST API v1 — Institutional FX hedge calculation and governance platform" />
+    <meta name="description" content="ORDR Treasury REST API v1 — Institutional FX hedge calculation and governance platform" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
