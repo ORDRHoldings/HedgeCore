@@ -1,5 +1,27 @@
 # Changelog (AI-maintained)
 
+## 2026-06-07 (session 39) — Umbrella/Treasury separation + Vercel auto-deploy fix
+
+Shipped the full "separate umbrella, rebrand to Treasury" arc plus the deploy-infra fix that made it go live.
+
+**Rebrand + strip** (merged earlier in the arc): "ORDR Terminal" → "ORDR Treasury" display copy across 37 frontend files (`02c223f`); umbrella marketing routes removed, root `page.tsx` → `redirect("/dashboard")` (`34ae74d`).
+
+**URL separation (2026-06-06)** — product and marketing split by web address on Vercel:
+- `ordr-treasury.vercel.app` → Treasury product (new canonical); `hedgecore.vercel.app` 307-redirects to it.
+- `ordr-terminal.vercel.app` → Terminal marketing site (cut over from the product project). Required repointing `hedgecore.vercel.app`'s redirect off `ordr-terminal.vercel.app` first — Vercel refuses to remove a domain that is a live redirect target.
+
+**Vercel auto-deploy fix — PR #76 (`5f658ad`, squash-merged 2026-06-07).** Native Git integration broke on the `Synexiun → ORDRHoldings` repo transfer: project link + GitHub App OAuth grant stayed bound to the old namespace, so master pushes stopped deploying and even the repoId-keyed deploy hook returns `incorrect_git_source_info`. Replaced with a `deploy-frontend` CI job running server-side `vercel deploy --prod`, keyed by the immutable org/project IDs — independent of the GitHub↔Vercel link and immune to future namespace moves. Server-side build (not `--prebuilt`, which trips a @vercel/next packaging bug). Added repo-root `.vercelignore`. CI gates green at merge (only gitleaks red — known missing-license non-blocker). **One-time ops step pending**: add `VERCEL_TOKEN` repo secret (+ rotate the token exposed in-session). Production already live via manual deploy meanwhile (`dpl_9MgkE4Cn…`).
+
+## 2026-05-29 (session 38, PAUSED) — RISK-CI-E2E-01 followup #4: per-file BRITTLE_ORPHAN verification
+
+Paused on user `save` mid-verification. **11 of ~14 explicitly-flagged BRITTLE_ORPHAN candidates verified as canonical-route specs targeting valid `frontend/src/app/**/page.tsx` pages** — no deletions warranted, drive-by-deletions playbook applied recursively to the orphan triage itself.
+
+**Verified canonical (NOT orphans)**: `policy_desk_confirmation.spec.ts`, `decision-desk.spec.ts`, `phase_complete_reports.spec.ts`, `rejection_path.spec.ts`, `position_persistence.spec.ts`, `export_report.spec.ts`, `audit-lab.spec.ts`, `accounting.spec.ts`, `auth.spec.ts`, `reports-market-research.spec.ts`, `support_tickets.spec.ts`.
+
+**Open**: three navigateAuth() targets inside `treasury-suite.spec.ts` (the 19-route umbrella spec) — `/hedge-monitor` (line 16), `/trade-history` (line 22), `/hedge-templates` (line 40) — did not appear in a `frontend/src/app/**/page.tsx` glob, but the glob timed out. Resume action recorded in OPEN_RISKS RISK-CI-E2E-01 followup #5. Per the drive-by-deletions playbook, if these turn out to be truly dead, the fix is a surgical line-edit inside the umbrella spec, NOT a spec deletion.
+
+**No commits this session.** State files only.
+
 ## 2026-05-27 (later19) — Sales collateral refreshed: security questionnaire + reference architecture
 
 Brought the two highest-stakes prospect-facing security docs current with the RLS structural defense layer + 2026-05-13 operating evidence. These are the docs enterprise procurement teams literally cut-and-paste from in their RFI responses, so understating the security story here costs deals.
