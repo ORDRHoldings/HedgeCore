@@ -358,9 +358,16 @@ jobs:
   #
   # This job deploys via the Vercel CLI keyed by the immutable org/project IDs
   # (VERCEL_ORG_ID / VERCEL_PROJECT_ID), so it is independent of the GitHub↔Vercel
-  # OAuth link and survives future repo/namespace moves. `vercel pull` fetches the
-  # project's production env (incl. NEXT_PUBLIC_API_URL) from Vercel, so the build
-  # matches native-integration builds. `--prebuilt` uploads only .vercel/output.
+  # OAuth link and survives future repo/namespace moves. Vercel builds the upload
+  # server-side using the project's own production env (incl. NEXT_PUBLIC_API_URL)
+  # and rootDirectory=frontend — identical to how the native Git integration built,
+  # so output parity is exact.
+  #
+  # NOTE: we use a server-side `vercel deploy` (not local `vercel build --prebuilt`).
+  # The local prebuilt packaging step trips a @vercel/next bug on this app
+  # ("Unable to find lambda for route: /audit-lab/audit-trail"); building on
+  # Vercel's infra avoids it. The repo-root .vercelignore scopes the upload to
+  # the frontend (rootDirectory), keeping backend/tests/etc. out of the bundle.
   #
   # ONE-TIME SETUP (ops): add a Vercel access token as the `VERCEL_TOKEN` repo
   # secret —  gh secret set VERCEL_TOKEN  (or GitHub UI → Settings → Secrets).
@@ -384,11 +391,5 @@ jobs:
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
 
-      - name: Pull Vercel project settings + production env
-        run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
-
-      - name: Build (production, rootDirectory=frontend applied by project settings)
-        run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
-
-      - name: Deploy prebuilt output to production
-        run: vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"
+      - name: Deploy to production (Vercel server-side build)
+        run: vercel deploy --prod --yes --token="${{ secrets.VERCEL_TOKEN }}"
