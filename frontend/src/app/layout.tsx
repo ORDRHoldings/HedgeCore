@@ -28,18 +28,18 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "ORDR Treasury", url: "https://orderterminal.com" }],
   creator: "ORDR Treasury",
-  metadataBase: new URL("https://ordr-terminal.vercel.app"),
+  metadataBase: new URL("https://ordr-treasury.vercel.app"),
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://ordr-terminal.vercel.app",
+    url: "https://ordr-treasury.vercel.app",
     siteName: "ORDR Treasury",
     title: "ORDR Treasury \u2014 Institutional FX Hedge Platform",
     description:
       "Enterprise FX hedge calculation, governance, and audit. Deterministic engine, 4-eyes approval, WORM audit trail. Built for institutional treasury.",
     images: [
       {
-        url: "/og-image.png",
+        url: "/og-image.svg",
         width: 1200,
         height: 630,
         alt: "ORDR Treasury \u2014 Institutional FX Hedge Platform",
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
     title: "ORDR Treasury \u2014 Institutional FX Hedge Platform",
     description:
       "Enterprise FX hedge calculation, governance, and audit platform for institutional treasury teams.",
-    images: ["/og-image.png"],
+    images: ["/og-image.svg"],
   },
   robots: {
     index: true,

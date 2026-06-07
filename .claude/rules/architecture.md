@@ -29,6 +29,6 @@
 
 ## Engine Boundaries
 - `engine/` = orchestrator layer (14 modules). Coordinates engine_v1.
-- `engine_v1/` = production kernel (35 modules). Pure deterministic functions.
+- `engine_v1/` = production kernel (46 modules). Pure deterministic functions.
 - Never add non-deterministic logic to engine_v1/.
 - Never bypass validator.py input checks.
