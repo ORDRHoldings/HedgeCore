@@ -345,7 +345,7 @@ jobs:
           fetch-depth: 0   # full history required for gitleaks
 
       - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@v2   # tracks latest v2.x — not SHA-pinned (consistent with rest of ci.yml)
+        uses: gitleaks/gitleaks-action@v3   # tracks latest v2.x — not SHA-pinned (consistent with rest of ci.yml)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
