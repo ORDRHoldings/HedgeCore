@@ -32,8 +32,21 @@ def _db_path() -> str:
     return os.path.join(_repo_root(), ".claude", "state", "memory.db")
 
 
+def _introspection_enabled() -> bool:
+    """DevOps introspection is a local-development affordance only.
+
+    The memory.db it reads lives under .claude/state/ and is never shipped in
+    the production Docker image, so these endpoints already return empty in
+    prod. This is the defense-in-depth backstop: even if .claude/ were shipped
+    by accident, refuse to surface internal operating-system state in a
+    production environment. Superuser auth still gates every route on top.
+    """
+    env = os.environ.get("ENV", "").strip().lower()
+    return env not in {"production", "prod"}
+
+
 def _db_available() -> bool:
-    return os.path.isfile(_db_path())
+    return _introspection_enabled() and os.path.isfile(_db_path())
 
 
 def _query(sql: str, params: tuple = ()) -> list[dict[str, Any]]:
