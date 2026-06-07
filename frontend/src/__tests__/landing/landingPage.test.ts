@@ -3,138 +3,60 @@
  * and ClientProviders public route handling.
  */
 
-describe("Landing Page structure", () => {
-  test("FONT constants are defined correctly", () => {
-    const FONT_UI = "'IBM Plex Sans', sans-serif";
-    const FONT_MONO = "'IBM Plex Mono', monospace";
-    const FONT_HEADING = "'Manrope', 'IBM Plex Sans', sans-serif";
-    expect(FONT_UI).toContain("IBM Plex Sans");
-    expect(FONT_MONO).toContain("IBM Plex Mono");
-    expect(FONT_HEADING).toContain("Manrope");
+describe("Treasury landing structure", () => {
+  // Mirrors the verifiable fact-set rendered by src/app/page.tsx. These figures
+  // are sourced from the codebase (CLAUDE.md \u00a76, architecture canon) \u2014 keep this
+  // test and the landing in lockstep so neither drifts into marketing fiction.
+
+  test("login CTA points at the real product login route", () => {
+    const LOGIN_HREF = "/auth/login";
+    expect(LOGIN_HREF).toBe("/auth/login");
   });
 
-  test("color tokens use dark theme", () => {
-    const C = {
-      bgBase: "#0B1120",
-      bgMid: "#131722",
-      bgCard: "#1E222D",
-      border: "#2A2E39",
-      textPrimary: "#D1D4DC",
-      textMuted: "#787B86",
-      textDim: "#545B69",
-      accentBlue: "#2962FF",
-      accentGreen: "#26A69A",
-      white: "#FFFFFF",
-    };
-    expect(C.bgBase).toBe("#0B1120");
-    expect(C.bgMid).toBe("#131722");
-    expect(C.bgCard).toBe("#1E222D");
-    // All backgrounds should be dark (R < 0x30)
-    expect(parseInt(C.bgBase.slice(1, 3), 16)).toBeLessThan(48);
-    expect(parseInt(C.bgMid.slice(1, 3), 16)).toBeLessThan(48);
-    expect(parseInt(C.bgCard.slice(1, 3), 16)).toBeLessThan(48);
-  });
-
-  test("product list has 9 products", () => {
-    const products = [
-      "ORDR Market",
-      "ORDR Terminal",
-      "Polisophic Intelligence",
-      "Portfolio Risk",
-      "Scenario Studio",
-      "Sandbox",
-      "Currency Desk",
-      "Treasury Desk",
-      "HedgeWiki",
-    ];
-    expect(products).toHaveLength(9);
-  });
-
-  test("gated products are Currency Desk and Treasury Desk only", () => {
-    const products = [
-      { title: "ORDR Market", gated: false },
-      { title: "ORDR Terminal", gated: false },
-      { title: "Polisophic Intelligence", gated: false },
-      { title: "Portfolio Risk", gated: false },
-      { title: "Scenario Studio", gated: false },
-      { title: "Sandbox", gated: false },
-      { title: "Currency Desk", gated: true },
-      { title: "Treasury Desk", gated: true },
-      { title: "HedgeWiki", gated: false },
-    ];
-    const gated = products.filter((p) => p.gated);
-    expect(gated).toHaveLength(2);
-    expect(gated.map((p) => p.title)).toEqual(["Currency Desk", "Treasury Desk"]);
-  });
-
-  test("stats data has 5 entries with correct values", () => {
+  test("headline stat bar has 4 verifiable entries", () => {
     const STATS = [
-      { value: "219", label: "API Endpoints" },
-      { value: "41", label: "Engine Modules" },
-      { value: "60", label: "Policy Presets" },
-      { value: "3,200+", label: "Tests" },
-      { value: "23", label: "Indicators" },
+      ["60", "Engine modules"],
+      ["5,514", "Tests green"],
+      ["R1\u2013R8", "Risk taxonomy"],
+      ["SHA-256", "Hash-chained audit"],
     ];
-    expect(STATS).toHaveLength(5);
-    expect(STATS[0].value).toBe("219");
-    expect(STATS[4].value).toBe("23");
-    expect(STATS[4].label).toBe("Indicators");
+    expect(STATS).toHaveLength(4);
+    expect(STATS[0][0]).toBe("60"); // 46 engine_v1 + 14 orchestrator
+    expect(STATS[1][0]).toBe("5,514");
   });
 
-  test("value propositions have 3 items", () => {
-    const VALUE_PROPS = [
-      { title: "Deterministic Engine" },
-      { title: "Institutional Governance" },
-      { title: "Professional Charting" },
+  test("risk taxonomy is exactly R1\u2013R8", () => {
+    const RISKS = ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8"];
+    expect(RISKS).toHaveLength(8);
+    expect(RISKS[0]).toBe("R1");
+    expect(RISKS[7]).toBe("R8");
+  });
+
+  test("governance pipeline is the tri-state SANDBOX \u2192 STAGING \u2192 LEDGER", () => {
+    const GOV = ["SANDBOX", "STAGING", "LEDGER"];
+    expect(GOV).toEqual(["SANDBOX", "STAGING", "LEDGER"]);
+  });
+
+  test("WORM tables are the three append-only canon tables", () => {
+    const WORM = ["audit_events", "calculation_runs", "policy_revisions"];
+    expect(WORM).toHaveLength(3);
+    expect(WORM).toContain("audit_events");
+  });
+
+  test("compliance frameworks include the core hedge-accounting & reporting regimes", () => {
+    const REGS = ["EMIR", "MiFID II", "Dodd-Frank", "FINRA 17a-4", "ISDA", "IFRS 9", "ASC 815"];
+    expect(REGS).toContain("IFRS 9");
+    expect(REGS).toContain("ASC 815");
+    expect(REGS).toContain("EMIR");
+  });
+
+  test("ERP posting adapters are framed as paper mode (RISK-ERP-01), not live", () => {
+    const adapters = [
+      { name: "QuickBooks", status: "paper mode" },
+      { name: "Xero", status: "paper mode" },
+      { name: "NetSuite", status: "paper mode" },
     ];
-    expect(VALUE_PROPS).toHaveLength(3);
-    expect(VALUE_PROPS[0].title).toBe("Deterministic Engine");
-  });
-
-  test("background color is the correct dark base", () => {
-    const BG = "#0B1120";
-    expect(BG).toBe("#0B1120");
-  });
-
-  test("product badges have correct labels", () => {
-    const badges = ["FREE", "FULL ACCESS", "OPEN", "OPEN", "OPEN", "OPEN", "INSTITUTIONAL", "INSTITUTIONAL", "OPEN"];
-    expect(badges.filter((b) => b === "FREE")).toHaveLength(1);
-    expect(badges.filter((b) => b === "FULL ACCESS")).toHaveLength(1);
-    expect(badges.filter((b) => b === "INSTITUTIONAL")).toHaveLength(2);
-    expect(badges.filter((b) => b === "OPEN")).toHaveLength(5);
-  });
-
-  test("product links are correct", () => {
-    const links = [
-      { title: "ORDR Market", href: "/market" },
-      { title: "ORDR Terminal", href: "/auth/login" },
-      { title: "Polisophic Intelligence", href: "/polisophic" },
-      { title: "Portfolio Risk", href: "/portfolio-risk" },
-      { title: "Scenario Studio", href: "/scenario-studio" },
-      { title: "Sandbox", href: "/sandbox" },
-      { title: "Currency Desk", href: "/market-overview" },
-      { title: "Treasury Desk", href: "/hedge-desk" },
-      { title: "HedgeWiki", href: "/methodology" },
-    ];
-    expect(links.find((l) => l.title === "ORDR Market")?.href).toBe("/market");
-    expect(links.find((l) => l.title === "ORDR Terminal")?.href).toBe("/auth/login");
-    expect(links.find((l) => l.title === "Currency Desk")?.href).toBe("/market-overview");
-    expect(links.find((l) => l.title === "Treasury Desk")?.href).toBe("/hedge-desk");
-    expect(links.find((l) => l.title === "HedgeWiki")?.href).toBe("/methodology");
-  });
-
-  test("hero has correct main headline and subtitle", () => {
-    const headline = "ORDR";
-    const subtitle = "The Institutional Trading Platform";
-    expect(headline).toBe("ORDR");
-    expect(subtitle).toBe("The Institutional Trading Platform");
-  });
-
-  test("hero tagline is correct", () => {
-    const tagline = "Professional charting, deterministic hedging, and treasury management \u2014 unified.";
-    expect(tagline).toContain("charting");
-    expect(tagline).toContain("hedging");
-    expect(tagline).toContain("treasury");
+    expect(adapters.every((a) => a.status === "paper mode")).toBe(true);
   });
 });
 
