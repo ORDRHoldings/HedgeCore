@@ -348,3 +348,48 @@ jobs:
         uses: gitleaks/gitleaks-action@v2   # tracks latest v2.x — not SHA-pinned (consistent with rest of ci.yml)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Frontend production deploy (Vercel) ──────────────────────────────────────
+  # Replaces Vercel's native Git integration, which broke when the GitHub repo
+  # was transferred Synexiun → ORDRHoldings: the transfer changed the repo
+  # namespace while Vercel's project link (and its GitHub App OAuth grant) stayed
+  # bound to the old `Synexiun` namespace, so master pushes stopped auto-deploying
+  # and even the repoId-keyed deploy hook returns `incorrect_git_source_info`.
+  #
+  # This job deploys via the Vercel CLI keyed by the immutable org/project IDs
+  # (VERCEL_ORG_ID / VERCEL_PROJECT_ID), so it is independent of the GitHub↔Vercel
+  # OAuth link and survives future repo/namespace moves. Vercel builds the upload
+  # server-side using the project's own production env (incl. NEXT_PUBLIC_API_URL)
+  # and rootDirectory=frontend — identical to how the native Git integration built,
+  # so output parity is exact.
+  #
+  # NOTE: we use a server-side `vercel deploy` (not local `vercel build --prebuilt`).
+  # The local prebuilt packaging step trips a @vercel/next bug on this app
+  # ("Unable to find lambda for route: /audit-lab/audit-trail"); building on
+  # Vercel's infra avoids it. The repo-root .vercelignore scopes the upload to
+  # the frontend (rootDirectory), keeping backend/tests/etc. out of the bundle.
+  #
+  # ONE-TIME SETUP (ops): add a Vercel access token as the `VERCEL_TOKEN` repo
+  # secret —  gh secret set VERCEL_TOKEN  (or GitHub UI → Settings → Secrets).
+  # Org/project IDs are non-secret (they live in frontend/.vercel/project.json).
+  deploy-frontend:
+    name: Deploy Frontend (Vercel)
+    runs-on: ubuntu-latest
+    needs: [frontend]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    env:
+      VERCEL_ORG_ID: team_uQ9iUgSSC8m05t2W2iXwt5WM
+      VERCEL_PROJECT_ID: prj_oSjdLZdWu9OB54ib8WKGjGndT3U8
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+
+      - name: Deploy to production (Vercel server-side build)
+        run: vercel deploy --prod --yes --token="${{ secrets.VERCEL_TOKEN }}"
