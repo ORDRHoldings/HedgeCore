@@ -24,6 +24,8 @@ Treasury marketing landing (product app) + reconciliation of the 2026-05-29 laun
 
 **Repo state**: master at `df9cece` (PR #77); local working tip `8332942`.
 
+**2026-06-08 closeout**: Found PR #77's frontend never auto-deployed (`ordr-treasury.vercel.app/` was serving an old build, root `307→/dashboard`) — dead git integration. Fixed via manual `vercel deploy --prod` from **repo root** (`dpl_FiJLx8…`); root now `200` serving the landing. Both sites content-verified at HTTP level (markers + CTA/login journey all `200`); still NOT §6 browser-verified (extension offline). PR #76 confirmed **MERGED** — `deploy-frontend` job is live + correct, failed on `df9cece` solely on the missing `VERCEL_TOKEN` secret (user-only step; user declined to have it set and declined token revocation). State rollup `cf5e226` pushed to `feat/treasury-landing`; local `master` fast-forwarded to `df9cece` (0/0). Auto-deploy is one user-set secret away; until then frontend changes need the manual repo-root deploy.
+
 ## Session 39 (2026-06-03 → 06-07) — Umbrella/Treasury separation + Vercel auto-deploy fix
 
 Three-part "separate umbrella, rebrand to Treasury" arc, all shipped:

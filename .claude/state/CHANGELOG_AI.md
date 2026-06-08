@@ -22,6 +22,13 @@ Shipped a Treasury marketing landing in the product app plus a reconciliation of
 
 **Repo state**: PR #77 merged to master at `df9cece` (local working tip `8332942`).
 
+### 2026-06-08 closeout (same arc)
+
+- **Product landing deploy gap found + fixed.** PR #77's frontend never auto-deployed — `ordr-treasury.vercel.app/` was still serving an old build (root `307 → /dashboard`). Root cause: dead GitHub→Vercel git integration. Fixed with a manual `vercel deploy --prod` from the **repo root** (`dpl_FiJLx8SGa3qAeR8KDKT8Me…`, READY). GOTCHA recorded in `[[project-vercel-domain-topology]]`: must deploy from repo root, not `frontend/` (project `rootDirectory: frontend` double-nests → `frontend/frontend` error).
+- **Both sites content-verified at HTTP level** (browser still offline, so short of §6): `ordr-treasury.vercel.app/` now `200` with landing markers (`5,514`, "Request institutional access", 7× `auth/login`); CTA targets `/auth/login` + `/signup` both `200`; Terminal treasury page links to `ordr-treasury.vercel.app/auth/login` (3×) and that resolves `200`. End-to-end journey intact.
+- **Auto-deploy status clarified.** PR #76 is **MERGED** — the `deploy-frontend` CI job is live and correct; on the `df9cece` run it failed **only** because the `VERCEL_TOKEN` repo secret is absent (all genuine jobs green). Auto-deploy is one user-set secret away. Assistant cannot write the token into the secret store (credential-handling rule); user was given the one-liner, **declined** to have it set and **declined** the token-revocation reminder.
+- **State rollup committed** `cf5e226` (the historian session-40 files) pushed to `feat/treasury-landing` — durable, no prod impact. **Local `master` fast-forwarded** to `df9cece` (0/0 with origin). The rollup is on the feature branch, not yet on `master`.
+
 ## 2026-06-07 (session 39) — Umbrella/Treasury separation + Vercel auto-deploy fix
 
 Shipped the full "separate umbrella, rebrand to Treasury" arc plus the deploy-infra fix that made it go live.
