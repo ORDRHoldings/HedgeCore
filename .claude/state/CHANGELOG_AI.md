@@ -16,6 +16,8 @@ Triaged the 79 open Dependabot alerts (2 critical / 32 high / 39 moderate / 6 lo
 
 **Repo state**: merged to `master` `5797400` + state closeout on top.
 
+**xlsx follow-on (same day)** — cleared the deferred `xlsx` high: migrated off the unpatched npm package (frozen at 0.18.5) to the SheetJS CDN distribution **0.20.3** (`package.json` pins the CDN tarball; export-only API unchanged). Merged **PR #80** (`fd75d2a`), redeployed prod. Validated: `tsc` clean, `next build` exit 0, **`npm audit` → 0**, functional smoke (`aoa_to_sheet`/`json_to_sheet`/`write` → valid 17 KB xlsx buffer on `XLSX.version` 0.20.3). **Frontend Dependabot surface is now 0.** Net: **79 → 3** alerts, all backend (`ecdsa` high won't-fix; `starlette` 1.0 + `pytest` 9 deferred majors). _Auth gotcha for next session:_ `gh`'s active account had flipped to a write-less `ORDR-Holdings` fine-grained PAT → 403 on `git push`; fixed with `gh auth switch --user Synexiun` (the account with `repo` scope).
+
 ## 2026-06-13 (session 41) — Documentation + landing refresh to verified repo state
 
 Refreshed the flagship docs and comprehensively expanded the product marketing landing so both reflect the actual shipped surface, after a full source-of-truth inventory (3 parallel exploration agents + direct verification of the contested numbers).
