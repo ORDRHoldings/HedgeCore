@@ -1,6 +1,6 @@
-# ORDR Terminal API — k6 Load Tests
+# ORDR Treasury API — k6 Load Tests
 
-This directory contains [k6](https://k6.io/) load, smoke, and stress test scripts for the ORDR Terminal FastAPI backend.
+This directory contains [k6](https://k6.io/) load, smoke, and stress test scripts for the ORDR Treasury FastAPI backend.
 
 ## Directory Structure
 

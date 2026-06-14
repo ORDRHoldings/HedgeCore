@@ -8,13 +8,13 @@
 
 ## Authentication
 - JWT HS256: 30min access token + 7d refresh token.
-- API Keys: `HK_live_` prefix, bcrypt-hashed secret.
+- API Keys: `HK_live_` prefix; secret HMAC-SHA256'd with a server-side pepper, then Argon2id-hashed at rest.
 - Passwords: bcrypt hashed. No length check in hash_password() (demo/demo bypasses 12-char min).
 - CSRF: csrf_token cookie (set on login) + X-CSRF-Token header (mutations via dashboardClient).
 - CSRF skip: JWT Bearer-authenticated requests bypass CSRF check.
 
 ## Authorization
-- RBAC: 9 roles, 41 permissions, hierarchy_level 0-15.
+- RBAC: 9 roles, 63 permissions, hierarchy_level 0-15.
 - Fail-closed: missing permission = denied.
 - Separation of Duties: same user cannot make AND check an execution proposal.
 - Superuser-only endpoints use `require_superuser` dependency.

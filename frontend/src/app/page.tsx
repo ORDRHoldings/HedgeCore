@@ -114,12 +114,24 @@ const STATS = [
 
 const DESKS = [
   ["Exposure Desk", "Ingest positions from ERP, FX feeds and manual entry. Net by currency, tenor and entity before a single hedge is sized."],
-  ["Hedge Engine", "Deterministic kernel sizes hedges against the R1–R8 taxonomy and the frozen strategy-to-instrument map. Same inputs, same output, every time."],
-  ["Governance Desk", "Tri-state pipeline with 4-eyes maker/checker and Separation of Duties. Nothing reaches the ledger without an independent second signature."],
+  ["Hedge Engine", "A deterministic kernel sizes hedges against the R1–R8 taxonomy and the frozen strategy-to-instrument map. Same inputs, same output, every time."],
+  ["Cash & Liquidity", "Multi-entity cash positions, 13-week and 12-month forecasting, pooling, sweeps and intercompany netting — liquidity gaps surfaced before they bite."],
+  ["Debt & Rates", "Debt facilities, covenants and a maturity calendar alongside IR swaps, swaptions, a DV01 ladder and IFRS 9 interest-rate hedge effectiveness."],
+  ["Governance Desk", "A tri-state pipeline with 4-eyes maker/checker and Separation of Duties. Nothing reaches the ledger without an independent second signature."],
   ["Audit Vault", "WORM tables and a per-tenant SHA-256 hash chain. Every run, decision and policy revision is append-only and provable to a regulator."],
-  ["Compliance Layer", "Hedge-accounting and trade-reporting frameworks mapped to the artifacts each one demands — EMIR, MiFID II, Dodd-Frank, IFRS 9, ASC 815."],
-  ["Counterparty & TCA", "Counterparty exposure, transaction-cost analysis and posting adapters that reconcile the hedge back to the books."],
+  ["Compliance & Reporting", "IFRS 9 / ASC 815 effectiveness, EMIR / MiFID II / Dodd-Frank submissions and a 35-preset Report Studio — an examination becomes an export."],
+  ["Counterparty & TCA", "Counterparty credit limits and PFE exposure, pre-trade transaction-cost analysis, and posting adapters that reconcile the hedge back to the books."],
 ] as const;
+
+/* Full capability map — every functional area, grouped (sourced from the route + page surface) */
+const MODULES: [string, string[]][] = [
+  ["Exposure & hedging", ["Position desk & lifecycle", "Deterministic hedge engine · R1–R8", "Hedge templates", "Natural hedging — AR/AP offset", "Pre-trade TCA + reconciliation"]],
+  ["Cash & liquidity", ["Multi-entity cash positions", "13-week / 12-month forecasting", "Cash pooling & sweeps", "Intercompany netting", "Bank connections & statements", "Payments · SWIFT / pain.001"]],
+  ["Debt & interest rate", ["Debt facilities & covenants", "Maturity calendar", "IR swaps & swaptions", "DV01 ladder", "IFRS 9 IR hedge effectiveness"]],
+  ["Governance & audit", ["Tri-state pipeline · 4-eyes", "WORM audit vault", "Per-tenant SHA-256 hash chain", "Audit Lab — markup forensics", "Lineage & provenance"]],
+  ["Compliance & reporting", ["EMIR / MiFID II / Dodd-Frank", "IFRS 9 / ASC 815 effectiveness", "Committee packs", "Report Studio — 35 presets", "Counterparty hub & PFE limits"]],
+  ["Intelligence & integrations", ["Advisory AI · CMD+K", "5 ERP connectors", "Live market data + snapshots", "WorkOS SSO", "RBAC — 9 roles × 63 permissions"]],
+];
 
 const RISKS = [
   ["R1", "Transaction risk"], ["R2", "Translation risk"],
@@ -147,7 +159,7 @@ const REGS = [
 
 const SECURITY = [
   ["Forced row-level security", "PostgreSQL RLS is forced on every tenant-scoped table. A request without a tenant context returns zero rows — fail-closed by construction."],
-  ["RBAC — 9 roles, 41 permissions", "Hierarchy levels 0–15. Missing permission is denied, never defaulted. Superuser paths are explicitly gated."],
+  ["RBAC — 9 roles, 63 permissions", "Hierarchy levels 0–15. Missing permission is denied, never defaulted. Superuser paths are explicitly gated."],
   ["JWT + API-key auth", "HS256 access/refresh tokens for users; bcrypt-hashed HK_live_ keys for machine access, route-allowlisted at startup."],
   ["Tamper-evident audit", "SHA-256 hash chain per tenant from a fixed genesis. Any altered record breaks the chain and is detectable on verification."],
   ["Rate limiting & headers", "60 req/min token-bucket per principal. nosniff, frame-deny, strict referrer and per-environment CORS — no wildcards in production."],
@@ -158,12 +170,12 @@ const TIERS = [
   {
     name: "Desk", price: "Single entity",
     blurb: "One treasury team, the full deterministic engine and governance.",
-    items: ["Exposure & hedge engine", "Tri-state governance + 4-eyes", "WORM audit & hash chain", "IFRS 9 / ASC 815 effectiveness"],
+    items: ["Exposure, hedge & cash desks", "Tri-state governance + 4-eyes", "WORM audit & hash chain", "IFRS 9 / ASC 815 effectiveness", "Report Studio · 35 presets"],
   },
   {
     name: "Enterprise", price: "Multi-entity", featured: true,
     blurb: "Group treasury across entities with full regulatory reporting.",
-    items: ["Everything in Desk", "Multi-entity RLS isolation", "EMIR / MiFID II / Dodd-Frank reporting", "Counterparty hub & TCA", "ERP posting adapters", "SSO / WorkOS"],
+    items: ["Everything in Desk", "Multi-entity RLS isolation", "Debt, IR & counterparty risk", "EMIR / MiFID II / Dodd-Frank reporting", "Pre-trade TCA & natural hedging", "ERP posting adapters", "Advisory intelligence · CMD+K", "SSO / WorkOS"],
   },
   {
     name: "Sovereign", price: "Dedicated",
@@ -220,6 +232,7 @@ export default function TreasuryLanding() {
         <Hero />
         <StatBar />
         <Platform />
+        <Modules />
         <Engine />
         <Governance />
         <Audit />
@@ -237,8 +250,8 @@ export default function TreasuryLanding() {
 /* ─── Nav ────────────────────────────────────────────────────────────────────── */
 function Nav({ scrolled }: { scrolled: boolean }) {
   const links = [
-    ["Platform", "#platform"], ["Engine", "#engine"], ["Governance", "#governance"],
-    ["Audit", "#audit"], ["Compliance", "#compliance"], ["Security", "#security"],
+    ["Platform", "#platform"], ["Modules", "#modules"], ["Engine", "#engine"],
+    ["Governance", "#governance"], ["Audit", "#audit"], ["Compliance", "#compliance"], ["Security", "#security"],
   ];
   return (
     <header style={{
@@ -426,7 +439,7 @@ function Platform() {
       <Reveal as="header">
         <Kicker n="01" label="The platform" />
         <h2 style={h2()}>One operating system for the entire hedge lifecycle</h2>
-        <p style={lead()}>Six coordinated desks take an exposure from raw position to regulator-ready record — no spreadsheets, no handoffs that lose the audit thread.</p>
+        <p style={lead()}>Eight coordinated desks take an exposure from raw position to regulator-ready record — no spreadsheets, no handoffs that lose the audit thread.</p>
       </Reveal>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(330px, 1fr))", gap: 16, marginTop: 44 }}>
         {DESKS.map(([title, body], i) => (
@@ -445,13 +458,45 @@ function Platform() {
   );
 }
 
+/* ─── Modules / full capability map ──────────────────────────────────────────── */
+function Modules() {
+  return (
+    <section id="modules" style={{ ...sectionPad, paddingTop: 88, paddingBottom: 24 }}>
+      <Reveal as="header">
+        <Kicker n="02" label="Capabilities" />
+        <h2 style={h2()}>Everything the terminal runs, in one place</h2>
+        <p style={lead()}>From exposure capture to a regulator-ready export — the full module map across six operating areas, all on the same deterministic engine and the same audit spine.</p>
+      </Reveal>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(330px, 1fr))", gap: 16, marginTop: 44 }}>
+        {MODULES.map(([area, items], i) => (
+          <Reveal key={area} delay={(i % 3) * 70}>
+            <Card>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <span style={{ fontFamily: C.fontMono, fontSize: 12, color: C.accent }}>{String(i + 1).padStart(2, "0")}</span>
+                <h3 style={cardTitle()}>{area}</h3>
+              </div>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 9 }}>
+                {items.map((it) => (
+                  <li key={it} style={{ display: "flex", gap: 9, fontSize: 13.5, color: C.t2, lineHeight: 1.45 }}>
+                    <span style={{ color: C.accent, fontFamily: C.fontMono, fontSize: 12 }}>›</span>{it}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </Reveal>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /* ─── Engine + R1–R8 ─────────────────────────────────────────────────────────── */
 function Engine() {
   return (
     <section id="engine" style={{ ...sectionPad, paddingTop: 88, paddingBottom: 24 }}>
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 54, alignItems: "start" }} className="ordr-two">
         <Reveal as="header">
-          <Kicker n="02" label="Deterministic engine" />
+          <Kicker n="03" label="Deterministic engine" />
           <h2 style={h2()}>Same inputs. Same hedge. Every single time.</h2>
           <p style={lead()}>
             The hedge kernel is a set of pure, deterministic functions — 46 modules under a 14-module
@@ -493,7 +538,7 @@ function Governance() {
   return (
     <section id="governance" style={{ ...sectionPad, paddingTop: 88, paddingBottom: 24 }}>
       <Reveal as="header">
-        <Kicker n="03" label="Governance" />
+        <Kicker n="04" label="Governance" />
         <h2 style={h2()}>Nothing reaches the ledger on one person’s signature</h2>
         <p style={lead()}>A tri-state pipeline with maker/checker control and Separation of Duties. The person who builds a proposal is structurally barred from approving it.</p>
       </Reveal>
@@ -552,7 +597,7 @@ function Audit() {
           </Card>
         </Reveal>
         <Reveal as="header">
-          <Kicker n="04" label="Audit & integrity" />
+          <Kicker n="05" label="Audit & integrity" />
           <h2 style={h2()}>Append-only by law of the database, not the app</h2>
           <p style={lead()}>
             Three tables — <span style={mono()}>audit_events</span>, <span style={mono()}>calculation_runs</span> and{" "}
@@ -573,7 +618,7 @@ function Compliance() {
   return (
     <section id="compliance" style={{ ...sectionPad, paddingTop: 88, paddingBottom: 24 }}>
       <Reveal as="header">
-        <Kicker n="05" label="Compliance" />
+        <Kicker n="06" label="Compliance" />
         <h2 style={h2()}>Mapped to the frameworks your auditors already cite</h2>
         <p style={lead()}>Hedge-accounting effectiveness and trade-reporting obligations modelled against the artifacts each regime expects — so an examination is an export, not a fire drill.</p>
       </Reveal>
@@ -596,7 +641,7 @@ function Security() {
   return (
     <section id="security" style={{ ...sectionPad, paddingTop: 88, paddingBottom: 24 }}>
       <Reveal as="header">
-        <Kicker n="06" label="Security architecture" />
+        <Kicker n="07" label="Security architecture" />
         <h2 style={h2()}>Fail-closed at every layer that touches tenant data</h2>
         <p style={lead()}>Isolation, authorization and integrity are enforced structurally — in the database and at startup — not left to a developer remembering to check.</p>
       </Reveal>
@@ -622,16 +667,16 @@ function Integrations() {
         <Card style={{ padding: "30px 30px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 40, alignItems: "center" }} className="ordr-two">
             <div>
-              <Kicker n="07" label="Integrations" />
+              <Kicker n="08" label="Integrations" />
               <h2 style={{ ...h2(), fontSize: "clamp(24px,3vw,32px)" }}>Reconcile the hedge back to the books</h2>
               <p style={lead()}>
-                Posting adapters for QuickBooks, Xero and NetSuite, plus SWIFT / pain.001 payment messaging and
-                market-data feeds. ERP posting currently runs in <strong style={{ color: C.t1 }}>paper mode</strong> —
+                Posting adapters for QuickBooks, Xero, NetSuite, Sage Intacct and Dynamics 365, plus SWIFT / pain.001
+                payment messaging and live market-data feeds. ERP posting currently runs in <strong style={{ color: C.t1 }}>paper mode</strong> —
                 journals are generated and validated end-to-end, ready to switch to live credentials per tenant.
               </p>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              {[["QuickBooks", "paper mode"], ["Xero", "paper mode"], ["NetSuite", "paper mode"], ["SWIFT pain.001", "generation"], ["Market data", "live feed"], ["WorkOS SSO", "enterprise"]].map(([n, s]) => (
+              {[["QuickBooks", "paper mode"], ["Xero", "paper mode"], ["NetSuite", "paper mode"], ["Sage Intacct", "paper mode"], ["Dynamics 365", "paper mode"], ["SWIFT pain.001", "generation"], ["Market data", "live feed"], ["WorkOS SSO", "enterprise"]].map(([n, s]) => (
                 <div key={n} style={{ border: `1px solid ${C.soft}`, borderRadius: 9, padding: "13px 14px", background: C.bgDeep }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{n}</div>
                   <div style={{ fontFamily: C.fontMono, fontSize: 11, color: C.t3, marginTop: 3, letterSpacing: "0.04em" }}>{s}</div>
@@ -650,7 +695,7 @@ function Pricing() {
   return (
     <section style={{ ...sectionPad, paddingTop: 88, paddingBottom: 24 }}>
       <Reveal as="header">
-        <Kicker n="08" label="Engagement" />
+        <Kicker n="09" label="Engagement" />
         <h2 style={h2()}>Deploy at the scale of your mandate</h2>
         <p style={lead()}>From a single treasury desk to a sovereign, fully-isolated deployment. The engine and governance are identical at every tier — only the perimeter changes.</p>
       </Reveal>
