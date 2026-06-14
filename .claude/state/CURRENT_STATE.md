@@ -21,7 +21,7 @@ Comprehensive doc + marketing-landing refresh grounded in a fresh source-of-trut
 
 **Deferred (flagged)**: broad `docs/` brand+URL sweep (mostly historical records — not rewritten); `rules/releases.md` 40%→70% drift; `DB_CANON.md` "48 tables" vs 51 models; CLAUDE.md §2 "20 ADRs" vs 18 files.
 
-**Repo state**: merged to `master` via **PR #78** (merge `47277ae`). CI hard-gates billing-blocked (all jobs `steps:[]`, 2–9s — verified via `gh run view`, not a code failure); merged `--admin` on local validation per §9.5. **Production deploy pending**: landing is on `master` but not yet live on `ordr-treasury.vercel.app` (needs `VERCEL_TOKEN` secret or manual `vercel deploy --prod`).
+**Repo state**: merged to `master` via **PR #78** (merge `47277ae`). CI hard-gates billing-blocked (all jobs `steps:[]`, 2–9s — verified via `gh run view`, not a code failure); merged `--admin` on local validation per §9.5. **Production deploy DONE**: deployed via the already-authenticated Vercel CLI (`synexiun`), repo-root `vercel deploy --prod` to project `hedgecore` (`prj_oSjdLZ…`). `dpl_CWwybAbR…` READY + aliased to `ordr-treasury.vercel.app` — live-verified (HTTP 200 + Modules/Capabilities/63-permissions/Eight-desks/Sage-Intacct markers; Modules nav link visible). `origin` remote repointed Synexiun→ORDRHoldings.
 
 ## Session 40 (2026-06-07) — Launch-readiness reconciliation + Treasury landing + cross-site sync
 
