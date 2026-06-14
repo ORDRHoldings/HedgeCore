@@ -1,5 +1,26 @@
 # Changelog (AI-maintained)
 
+## 2026-06-13 (session 41) — Documentation + landing refresh to verified repo state
+
+Refreshed the flagship docs and comprehensively expanded the product marketing landing so both reflect the actual shipped surface, after a full source-of-truth inventory (3 parallel exploration agents + direct verification of the contested numbers).
+
+**Six files changed:**
+- `README.md` — full rewrite. Rebrand Terminal→Treasury; correct URLs (frontend `ordr-treasury.vercel.app`; backend `hedgecore.onrender.com` is unchanged and correct); documented the full module surface (cash forecasting/pooling/netting, debt & IR, pre-trade TCA, counterparty, regulatory submissions, advisory intelligence, Report Studio, Audit Lab, 5 ERP connectors); corrected metrics; accurate security + deployment + ADR-discipline sections.
+- `frontend/README.md` — replaced a stray default **Vite/React template** (wrong framework) with an accurate Next.js 15.5 App Router doc.
+- `frontend/src/app/page.tsx` — landing expanded 6→8 desks (added Cash & Liquidity, Debt & Rates); new "Capabilities" section (kicker 02) mapping all six module groups; integrations now list all 5 ERP connectors; pricing enriched; `41→63` permissions; downstream section kickers renumbered 02→09; "Six"→"Eight" desks lead copy.
+- `SECURITY.md` + `.claude/rules/security.md` — corrected `41→63` permissions and the API-key hashing claim (verified **Argon2id over HMAC-SHA256 pepper**, not bcrypt).
+- `tests/k6/README.md` — brand Terminal→Treasury.
+
+**Verified ground truth (now in the docs):** 60 engine modules (46 `engine_v1` + 14 `engine`), 90 route modules, 51 models, 65 migrations, 18 ADRs (through 0021); RBAC **9 roles × 63 permissions** (hierarchy 0–15, from `seed.py::ROLES` + `permission.py::SEED_PERMISSIONS`); passwords bcrypt; API keys Argon2id-over-HMAC-SHA256-pepper (`security.py` / `api_keys.py`); 5 ERP connectors (QB/Xero/NetSuite/Sage Intacct/D365); Report Studio 35 presets / 11 categories; baseline 5,514/160/0 @ 70% gate.
+
+**Key drift corrected:** the permission count had grown **41→63** as feature modules (TCA, counterparty, debt, IR, market snapshots) seeded new codenames; API-key hashing was stated three inconsistent ways across README ("HMAC-SHA256") / SECURITY ("bcrypt") / changelog ("Argon2id+pepper") — all reconciled to the verified scheme.
+
+**Validation**: `tsc --noEmit` clean (twice), `next build` exit 0 (`/` prerendered static), and **browser-verified** (Chrome, production build on :3100) — hero + hash-chain proof panel, 8-desk Platform, the new Capabilities map (incl. "RBAC — 9 roles × 63 permissions"), and renumbered sections all render. The browser check caught a stale "Six desks" string the compiler couldn't. Meets CLAUDE.md §6 DONE bar.
+
+**Flagged, not done (deliberate):** broad `docs/` brand/URL sweep (~118 "ORDR Terminal" + ~284 `hedgecore` refs) deferred — most are historical point-in-time records (audits, incident post-mortems, dated plans) that shouldn't be retroactively rewritten. Also flagged for a future pass: `.claude/rules/releases.md` "40%" vs the real 70% coverage gate; `docs/architecture/DB_CANON.md` "48 tables" vs 51 model files; CLAUDE.md §2 "20 ADRs" vs 18 files.
+
+**Repo state**: branch `feat/treasury-landing`; content + state commits land on top and are pushed to origin.
+
 ## 2026-06-07 (session 40) — Launch-readiness reconciliation + Treasury landing + cross-site sync
 
 Shipped a Treasury marketing landing in the product app plus a reconciliation of the 2026-05-29 launch-readiness audit, and synced the standalone Terminal marketing site to the same verified numbers.
