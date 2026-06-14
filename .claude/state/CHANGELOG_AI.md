@@ -19,7 +19,7 @@ Refreshed the flagship docs and comprehensively expanded the product marketing l
 
 **Flagged, not done (deliberate):** broad `docs/` brand/URL sweep (~118 "ORDR Terminal" + ~284 `hedgecore` refs) deferred — most are historical point-in-time records (audits, incident post-mortems, dated plans) that shouldn't be retroactively rewritten. Also flagged for a future pass: `.claude/rules/releases.md` "40%" vs the real 70% coverage gate; `docs/architecture/DB_CANON.md` "48 tables" vs 51 model files; CLAUDE.md §2 "20 ADRs" vs 18 files.
 
-**Repo state**: branch `feat/treasury-landing`; content + state commits land on top and are pushed to origin.
+**Repo state**: merged to `master` via **PR #78** (merge `47277ae`; commits `5e7e04d` content + `1eeaa51` state, plus the carried session-40 rollups). CI hard-gates showed the documented billing-block signature — every job `steps:[]`, 2–9s wall-clock, verified via `gh run view 27483424682 --json jobs` (Backend "failed" in 2s, which cannot run 5,514 tests). Merged with `--admin` on local validation per CLAUDE.md §9.5 (same as PR #76/#77). **Production deploy still pending**: the landing is on `master` but not live on `ordr-treasury.vercel.app` — needs the `VERCEL_TOKEN` deploy-job secret (user-declined) or a manual `vercel deploy --prod` from repo root (Vercel CLI not installed this session).
 
 ## 2026-06-07 (session 40) — Launch-readiness reconciliation + Treasury landing + cross-site sync
 
