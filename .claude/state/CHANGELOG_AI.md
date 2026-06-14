@@ -1,5 +1,21 @@
 # Changelog (AI-maintained)
 
+## 2026-06-14 (session 41 cont.) — Dependabot dependency-vulnerability triage
+
+Triaged the 79 open Dependabot alerts (2 critical / 32 high / 39 moderate / 6 low) on the default branch — they dedupe to ~18 unique packages. Fixed the safe set, documented the deferred. **Both criticals resolved.** Merged via **PR #79** (merge `5797400`) and redeployed to production.
+
+**Frontend** (~70 alerts → 1 residual): direct bumps `next` 15.5.12→15.5.18, `axios` ^1.16.0, `jspdf` ^4.2.1 (critical), `js-cookie` ^3.0.7, `@anthropic-ai/sdk` ^0.91.1, `eslint-config-next` 15.5.18; overrides `minimatch` 3.1.2→3.1.4 (the existing override was pinning a *vulnerable* version) + `postcss` ^8.5.10; transitive via `npm audit fix` (`handlebars` 4.7.9 critical, `lodash` ≥4.18.1, `dompurify` ≥3.4.0, `flatted`, `follow-redirects`, `brace-expansion`, `uuid`). Validated: `tsc` clean, `next build` exit 0 (100 pages), `npm audit` → 1 (`xlsx`).
+
+**Backend** (`requirements.txt`): `cryptography` 46.0.7, `idna` 3.15, `python-dotenv` 1.2.2, `ecdsa` 0.19.2, `Pygments` 2.20.0. Validated by `pip install --dry-run` resolving the full set with no conflicts (`starlette` held at 0.49.1 for FastAPI 0.121 compat). Full pytest deferred to CI — local venvs are drifted from requirements.txt (fastapi 0.118 vs pinned 0.121).
+
+**Residual / deferred** (`docs/security/dependency-triage-2026-06-14.md`): `xlsx` high (no npm fix — **not exploitable**: export-only usage, no `XLSX.read` of untrusted input; SheetJS-CDN migration deferred), `ecdsa` high (Minerva won't-fix upstream; risk-accept), `starlette` 1.0 (breaks FastAPI 0.121), `pytest` 9 (major, test-only).
+
+**CI**: billing-block persists (jobs fail 2–9 s, empty `steps[]`); merged `--admin` on local validation per §9.5.
+
+**Deploy**: redeployed `frontend` to production — `vercel deploy --prod` (project `hedgecore`) built on **next 15.5.18**, `dpl_9xLjmkfHD4R1Vw3SCQMmHCCnsTyQ` READY + aliased to `ordr-treasury.vercel.app` (HTTP 200, landing markers intact). Security patches now live.
+
+**Repo state**: merged to `master` `5797400` + state closeout on top.
+
 ## 2026-06-13 (session 41) — Documentation + landing refresh to verified repo state
 
 Refreshed the flagship docs and comprehensively expanded the product marketing landing so both reflect the actual shipped surface, after a full source-of-truth inventory (3 parallel exploration agents + direct verification of the contested numbers).

@@ -4,7 +4,17 @@
 
 ## Sessions: 41 total, 40 completed, 1 paused
 ## Active Patterns: 12
-## Last Updated: 2026-06-13
+## Last Updated: 2026-06-14
+
+## Session 41 cont. (2026-06-14) — Dependabot dependency-vulnerability triage
+
+Triaged the 79 open Dependabot alerts (2 critical / 32 high / 39 moderate / 6 low; ~18 unique packages). **Both criticals fixed.** Merged **PR #79** (`5797400`) and redeployed to prod.
+
+- **Frontend** ~70 → 1 residual: bumped `next` 15.5.12→15.5.18, `axios`, `jspdf` 4.2.1 (crit), `js-cookie`, `@anthropic-ai/sdk`; overrides `minimatch` 3.1.2→3.1.4 (was pinning a vulnerable version) + `postcss` ^8.5.10; transitive via `npm audit fix` (`handlebars` 4.7.9 crit, lodash, dompurify, flatted, …). Validated tsc + `next build` exit 0 + audit → 1.
+- **Backend** `requirements.txt`: cryptography 46.0.7, idna 3.15, python-dotenv 1.2.2, ecdsa 0.19.2, Pygments 2.20.0. Validated via `pip --dry-run` full-set resolution.
+- **Deferred** (`docs/security/dependency-triage-2026-06-14.md`): `xlsx` (no npm fix; not exploitable — export-only), `ecdsa` high (Minerva won't-fix), `starlette` 1.0 (breaks FastAPI), `pytest` 9 (major, test-only).
+- **Deploy**: redeployed prod on next 15.5.18 (`dpl_9xLjmkfHD4R…` → `ordr-treasury.vercel.app`, HTTP 200). Security patches live.
+- **CI** still billing-blocked; merged `--admin` on local validation.
 
 ## Session 41 (2026-06-13) — Documentation + landing refresh to verified repo state
 
