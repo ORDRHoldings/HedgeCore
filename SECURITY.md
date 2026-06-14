@@ -74,11 +74,12 @@ review time. Highlights:
 - **Secrets**: `gitleaks` scans on every push; `JWT_SECRET` must be ≥ 32
   chars; production refuses dev defaults.
 - **Auth**: JWT HS256 access + refresh, bcrypt passwords, CSRF
-  double-submit cookie, API keys stored bcrypt-hashed with `HK_live_`
-  prefix.
+  double-submit cookie. API keys use the `HK_live_{keyid}.{secret}`
+  format; the secret is HMAC-SHA256'd with a server-side pepper, then
+  Argon2id-hashed at rest and verified in constant time.
 - **WORM**: `audit_events`, `calculation_runs`, `policy_revisions` are
   append-only; SHA-256 hash chain is per-tenant and genesis-anchored.
-- **RBAC**: 9 roles × 41 permissions, fail-closed, hierarchy levels 0–15.
+- **RBAC**: 9 roles × 63 permissions, fail-closed, hierarchy levels 0–15.
 - **Separation of Duties**: the same user cannot make AND check an
   execution proposal.
 - **Middleware order**: `Audit → Rate Limit → Auth` (never reordered).
