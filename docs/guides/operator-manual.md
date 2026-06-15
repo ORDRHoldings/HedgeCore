@@ -74,7 +74,7 @@ CurrencyFX is the core FX exposure management and hedge recommendation module of
 - Reproducibility: Any identical input set produces byte-identical outputs
 - Integrity: SHA-256 hash of all six input datasets (trades, hedges, market, policy, inputs, outputs)
 - Pipeline: Sandbox (calculation workspace) -> Staging (pending approval) -> Ledger (archived)
-- URL: hedgecore.vercel.app
+- URL: ordr-treasury.vercel.app
 - Role: risk_analyst
 
 ---
@@ -84,7 +84,7 @@ CurrencyFX is the core FX exposure management and hedge recommendation module of
 This quickstart uses the default F01 LatAm Corp dataset (Manufacturing, Auto Parts, MXN).
 
 **Step 1 -- Navigate to the platform**
-Go to hedgecore.vercel.app/auth/login. Enter credentials: demo / demo. Click Login. You will be redirected to the terminal selector.
+Go to ordr-treasury.vercel.app/auth/login. Enter credentials: demo / demo. Click Login. You will be redirected to the terminal selector.
 
 **Step 2 -- Select CurrencyFX**
 The terminal selector shows four modules. Click the **CurrencyFX** card. You will be taken to the input page at /currency-fx.
@@ -876,7 +876,7 @@ This tutorial walks a new user through the complete CurrencyFX workflow from log
 
 **Prerequisites:**
 - Modern browser: Chrome 120+ or Edge 120+
-- URL: hedgecore.vercel.app
+- URL: ordr-treasury.vercel.app
 - Credentials: username demo / password demo
 - Estimated time: 10-15 minutes
 
@@ -884,7 +884,7 @@ This tutorial walks a new user through the complete CurrencyFX workflow from log
 
 **Step 1 -- Login**
 
-Navigate to hedgecore.vercel.app. You will be redirected to /auth/login.
+Navigate to ordr-treasury.vercel.app. You will be redirected to /auth/login.
 
 The login page shows a dark terminal interface with the HEDGECALC shield icon. Enter:
 - Username: demo
@@ -1179,13 +1179,13 @@ Optionally:
 
 CurrencyFX operates within a three-stage pipeline:
 
-**Sandbox (hedgecore.vercel.app/currency-fx)**
+**Sandbox (ordr-treasury.vercel.app/currency-fx)**
 The calculation workspace. All hedge plans are generated here. Runs are not committed to any permanent record. The analyst can run unlimited scenarios, switch datasets, change policies, and generate multiple Committee Packs. The Sandbox label appears in the top-right corner of the page.
 
-**Staging (hedgecore.vercel.app/staging)**
+**Staging (ordr-treasury.vercel.app/staging)**
 When a hedge plan in Sandbox is approved for review, it is promoted to Staging. The Staging area holds plans awaiting CFO or Risk Officer sign-off. Plans in Staging are read-only -- no further computation is performed. In the demo environment, Staging is accessible but populated with demo data.
 
-**Ledger (hedgecore.vercel.app/ledger)**
+**Ledger (ordr-treasury.vercel.app/ledger)**
 The Ledger is the final immutable archive. Once a plan is approved from Staging, it moves to the Ledger and cannot be modified. The Ledger serves as the compliance record for all executed hedge plans, with full audit trail and cryptographic attestation intact.
 
 **Pipeline Navigation:**

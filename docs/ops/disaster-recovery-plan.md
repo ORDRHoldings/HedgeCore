@@ -124,7 +124,7 @@ If all Render env vars are lost (env group deleted):
 | `JWT_SECRET` | Generate new: `python3 -c "import secrets; print(secrets.token_hex(32))"` |
 | `FINNHUB_API_KEY` | finnhub.io → account → API keys |
 | `ANTHROPIC_API_KEY` | console.anthropic.com → API keys |
-| `CORS_ALLOW_ORIGINS` | `["https://hedgecore.vercel.app","https://ordr-terminal.vercel.app"]` |
+| `CORS_ALLOW_ORIGINS` | `["https://ordr-treasury.vercel.app","https://ordr-terminal.vercel.app"]` |
 | `ENV` | `production` |
 
 ---

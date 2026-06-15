@@ -46,7 +46,7 @@
 - Dashboard: aggregated KPIs (read-only views)
 
 ## Network Boundaries
-- Frontend: Vercel edge network (hedgecore.vercel.app)
+- Frontend: Vercel edge network (ordr-treasury.vercel.app)
 - Backend: Render Oregon region (hedgecore.onrender.com)
 - Database: Render managed PostgreSQL (same region, internal network)
 - No VPN, no private networking in v1.

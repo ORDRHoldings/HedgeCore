@@ -9,7 +9,7 @@
 | Backend (prod) | Render — `hedgecore` | <https://hedgecore.onrender.com/health> | Yes — on push to `master` |
 | Backend (preview) | Render — `hedgecore-preview` | <https://hedgecore-preview.onrender.com/health> | Yes — on push to `dev` |
 | Frontend (prod) | Vercel — `ordr-terminal` | <https://ordr-terminal.vercel.app/> | Yes — on push to `master` |
-| Frontend (alt prod) | Vercel — `hedgecore` | <https://hedgecore.vercel.app/> | Yes — on push to `master` |
+| Frontend (alt prod) | Vercel — `hedgecore` | <https://ordr-treasury.vercel.app/> | Yes — on push to `master` |
 | Database (prod) | Render Postgres — `hedge` | (Render dashboard) | n/a |
 
 ## Standard deploy flow

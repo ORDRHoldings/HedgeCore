@@ -327,7 +327,7 @@
 >
 > HedgeWiki provides the governance foundation — every concept, instrument, and accounting standard documented and cross-referenced.
 >
-> Together, these modules form a unified institutional FX risk infrastructure. Visit hedgecore.vercel.app to begin.
+> Together, these modules form a unified institutional FX risk infrastructure. Visit ordr-treasury.vercel.app to begin.
 
 ---
 

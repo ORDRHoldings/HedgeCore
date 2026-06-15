@@ -45,7 +45,7 @@ Git history scrub is optional maintenance, not a security requirement, after rot
   3. Update `JWT_SECRET` in Render env group `hedgecore-secrets`
   4. Redeploy backend (Render auto-deploys on env change)
   5. Existing user sessions will be invalidated (expected — users re-login)
-- **Verification**: Login at hedgecore.vercel.app works; old JWT tokens return 401
+- **Verification**: Login at ordr-treasury.vercel.app works; old JWT tokens return 401
 - **Impact if skipped**: If production uses the exposed dev value, attacker can forge JWTs. If production already uses a different value, impact is zero.
 - **Status**: [ ] PENDING — check Render first, may already be different
 
@@ -92,7 +92,7 @@ curl -s -o /dev/null -w "%{http_code}" \
 # Expected: 401 or 403
 
 # 3. Production app — login still works
-# Navigate to https://hedgecore.vercel.app and login with demo/demo
+# Navigate to https://ordr-treasury.vercel.app and login with demo/demo
 ```
 
 ### Step 2: Update repo state

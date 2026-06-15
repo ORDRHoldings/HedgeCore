@@ -53,14 +53,14 @@ Hedge Terminal is an institutional-grade FX risk management infrastructure platf
 - Backend: Python FastAPI on Render — deterministic hedge computation engine
 - Deployment: Vercel (frontend) + Render (backend API)
 - Authentication: Cookie-backed session with demo credentials
-- URL: https://hedgecore.vercel.app
+- URL: https://ordr-treasury.vercel.app
 
 ---
 
 ## 2. Getting Started
 
 ### 2.1 Authentication
-- Navigate to https://hedgecore.vercel.app
+- Navigate to https://ordr-treasury.vercel.app
 - The system redirects to the Auth Gateway
 - Enter credentials: username `demo` / password `demo`
 - Click "Initialize Session"
@@ -472,7 +472,7 @@ The response includes:
 - HTTPS enforced on both Vercel and Render
 
 ### 10.2 CORS Policy
-- Allowed origins: hedgecore.vercel.app, localhost:3000
+- Allowed origins: ordr-treasury.vercel.app, localhost:3000
 - Credentials supported
 - Pre-flight OPTIONS handling
 
@@ -538,7 +538,7 @@ The response includes:
 
 ## 13. Support & Contact
 
-- Platform URL: https://hedgecore.vercel.app
+- Platform URL: https://ordr-treasury.vercel.app
 - API Documentation: https://hedgecore.onrender.com/api/docs
 - Status: All systems operational
 - Demo Access: username `demo` / password `demo`

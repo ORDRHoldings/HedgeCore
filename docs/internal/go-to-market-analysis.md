@@ -116,7 +116,7 @@ The codebase already has **Professional-tier gating** wired on Counterparty Hub,
 - **GDPR DPA + SOC 2 controls matrix drafted**
 - **4,800+ passing tests, 75% coverage**
 - **Frontend warning baseline 0** (lint debt drained)
-- **Live deploy URLs:** hedgecore.onrender.com (api), hedgecore.vercel.app (app)
+- **Live deploy URLs:** hedgecore.onrender.com (api), ordr-treasury.vercel.app (app)
 
 ### 5.2 ⚠️ Blocked on internal action
 | # | Item | Blocker | Effort |

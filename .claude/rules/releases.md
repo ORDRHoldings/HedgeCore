@@ -12,7 +12,7 @@
 - `feat/*`, `fix/*`, `hardening/*` — feature branches (CI runs, no auto-deploy)
 
 ## CI Gates (must pass before merge)
-1. Backend: ruff lint + pytest (40% coverage minimum)
+1. Backend: ruff lint + pytest (70% coverage minimum)
 2. Frontend: tsc --noEmit + next build
 3. E2E: Playwright (master/dev only)
 4. Docker: backend image builds

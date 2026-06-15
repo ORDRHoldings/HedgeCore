@@ -4,7 +4,7 @@
 - Location: `backend/tests/`
 - Runner: `python -m pytest tests/ -x -q --tb=short`
 - Required env: `JWT_SECRET="test-secret-key-for-ci-at-least-32-chars-long" DATABASE_URL="sqlite+aiosqlite://"`
-- CI coverage gate: 40% minimum (target: 75%+)
+- CI coverage gate: 70% minimum (target: 75%+)
 - Current state (verified 2026-04-26): 5264 passing, 0 failed, 158 skipped (PG-only), ~75% coverage
 
 ## Markers
