@@ -37,7 +37,7 @@
 4. **Middleware order** — `Audit → Rate Limit → Auth`. Never reorder.
 5. **WORM tables** — `audit_events`, `calculation_runs`, `policy_revisions` are append-only. No UPDATE, no DELETE triggers.
 6. **Hash chain** — SHA-256, per-tenant, `GENESIS_HASH = 64 × '0'`.
-7. **Frozen-file ADR rule** — files listed in `.claude/rules/architecture.md` require an ADR in `docs/architecture/adr/` to modify. Next ADR number = 0021 (last accepted: `0020-enterprise-audit-hardening`).
+7. **Frozen-file ADR rule** — files listed in `.claude/rules/architecture.md` require an ADR in `docs/architecture/adr/` to modify. Next ADR number = 0022 (`0021-migration-metadata-completeness` is proposed; last accepted: `0020-enterprise-audit-hardening`).
 
 Violation of any rule above blocks merge to master.
 
@@ -53,7 +53,7 @@ Structured Claude Code operating layout. The framework is the contract — agent
 | Agents | `.claude/agents/` | Specialized subagents | 6 (architect, historian, implementer, quant-auditor, release-guardian, reviewer) |
 | Skills | `.claude/skills/` | Reusable workflows | 9 (done, freeze-check, merge-gate, reconcile, repo-audit, sprint-update, status, task-rollup, validation-gate) |
 | State | `.claude/state/` | Working memory (markdown + SQLite) | 7 files + 2 DBs |
-| Canon | `docs/architecture/` | Architecture freeze, ADRs, truth tables, threat model | 20 ADRs + 5 canon docs |
+| Canon | `docs/architecture/` | Architecture freeze, ADRs, truth tables, threat model | 18 ADRs (numbered through 0021) + 5 canon docs |
 
 ### Agent Workflow (typical handoff)
 
