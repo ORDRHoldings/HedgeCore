@@ -1,15 +1,20 @@
-# FastAPI / Starlette upgrade — BLOCKED (2026-06-14)
+# FastAPI / Starlette upgrade — clean path found (2026-06-14)
 
 **Goal:** clear the `starlette` moderate Dependabot alert (wants ≥ 1.0.1; we pin 0.49.1).
 `starlette` 1.x cannot coexist with FastAPI 0.121 (which constrains `starlette < 0.50`),
 so this requires a coordinated FastAPI + Starlette + Pydantic upgrade.
 
-**Status:** feasibility confirmed, **but blocked** by a route-introspection regression that
-silently disables the RLS security guards. **Do not merge until CI billing is restored**
-(the change must be validated against PostgreSQL + the full CI matrix before it
-auto-deploys to the no-rollback Render production backend — RISK-OPS-MON-01).
+**Status: RESOLVED via version choice — target FastAPI `0.136.3`, not `0.137.0`.** The
+route-introspection regression described below is a **FastAPI 0.137.0-only** breaking change
+(released 2026-06-14). FastAPI **0.126–0.136** support Starlette 1.x *without* it. On `0.136.3`
+the upgrade is a **clean drop-in**: the RLS guards enumerate all **455** routes and the full
+SQLite suite is **5514 / 160 / 0** — an exact baseline match, with no code changes. See
+**Resolution** at the bottom. Remaining gate before the prod-backend merge: validate the
+framework major on **PostgreSQL + the full CI matrix** (RLS runtime is PG-specific; CI is
+billing-blocked; no Render auto-rollback — RISK-OPS-MON-01).
 
-Work-in-progress on branch `chore/fastapi-starlette-upgrade`.
+Branch `chore/fastapi-starlette-upgrade` (PR #81). _The 0.137.0 analysis below is retained as
+the record of why that specific version is unsafe._
 
 ---
 
@@ -79,3 +84,35 @@ but they are no longer enumerable from `app.routes`.
 It is a framework *major* that touches the RLS security guards and auto-deploys to a backend with
 no auto-rollback — it must not ship on SQLite-only validation. The remaining alert is **moderate**,
 so the deferral cost is low.
+
+---
+
+## RESOLUTION (2026-06-14) — target FastAPI 0.136.3
+
+The `_IncludedRouter` introspection change is a **FastAPI 0.137.0-only** breaking change
+([PR #15745](https://github.com/fastapi/fastapi/pull/15745), "Refactor internals to preserve
+`APIRouter`/`APIRoute` instances", released 2026-06-14). Starlette 1.0 support landed earlier, in
+**FastAPI 0.126.0** (2025-12-20). So FastAPI **0.126–0.136** clear the `starlette` alert *without*
+the introspection change.
+
+**Target:** `fastapi==0.136.3` (latest in the clean window) + `starlette==1.3.1` +
+`pydantic==2.13.4` + `pydantic_core==2.46.4` + `anyio==4.13.0` + `annotated-doc==0.0.4`. This is
+the only delta from the (blocked) 0.137.0 attempt — a single pin (`0.137.0` → `0.136.3`).
+
+**Validated on 0.136.3 (SQLite):**
+
+| Check | 0.137.0 (regressed) | 0.136.3 (clean) |
+|-------|---------------------|-----------------|
+| Routes the RLS guard enumerates | 5 (vacuous pass) | **455** (full API) |
+| Full backend suite | 2 failed / 5387 passed | **5514 passed / 160 skipped / 0 failed** (exact baseline) |
+| Guard / `custom_openapi` code changes | required (fragile) | **none — clean drop-in** |
+
+No changes to the RLS guards, `custom_openapi`, `main.py`, or any code are needed on 0.136.3 —
+only the `requirements.txt` pins. Both structural canary tests pass.
+
+**Remaining gate before merging to master** (which auto-deploys the backend): this is still a
+framework *major* (starlette 0.49 → 1.3). The RLS runtime (`set_config` on asyncpg) and the
+custom middleware lifecycle are PG-specific and not exercised by the SQLite suite — the 2026-05-16
+incident is the precedent for SQLite-green / PG-broke. **Validate on PostgreSQL + the full CI
+matrix before the prod merge**: restore GitHub Actions billing, or run the `requires_postgres`
+marker suite against a local PG as an interim gate.
