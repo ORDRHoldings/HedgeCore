@@ -16,6 +16,7 @@ Triaged the 79 open Dependabot alerts (2 critical / 32 high / 39 moderate / 6 lo
 - **Deploy**: redeployed prod on next 15.5.18 (`dpl_9xLjmkfHD4R…` → `ordr-treasury.vercel.app`, HTTP 200). Security patches live.
 - **CI** still billing-blocked; merged `--admin` on local validation.
 - **xlsx follow-on (same day)**: migrated `xlsx` off the unpatched npm package to the SheetJS CDN build **0.20.3** (PR #80, `fd75d2a`), redeployed prod. `npm audit` → **0**; functional smoke verified the export API. **Frontend Dependabot = 0**; net **79 → 3** (backend-only: `ecdsa` won't-fix, `starlette`/`pytest` deferred majors). _Auth gotcha:_ `gh` active account flipped to a write-less `ORDR-Holdings` PAT → `git push` 403; fixed via `gh auth switch --user Synexiun`.
+- **FastAPI/Starlette upgrade — BLOCKED, not shipped** (draft **PR #81**): fastapi 0.137 + starlette 1.3 installs clean, 5387/5389 SQLite tests pass, but FastAPI 0.137's `_IncludedRouter` breaks `app.routes` introspection → RLS startup guards **pass vacuously** (silent security regression) + OpenAPI drops the API. Deferred to a CI/PG-validated PR once billing is restored. `master` + `.venv` restored to the 0.121 stack. Doc: `docs/security/fastapi-starlette-upgrade-blocker-2026-06-14.md`.
 
 ## Session 41 (2026-06-13) — Documentation + landing refresh to verified repo state
 
