@@ -98,9 +98,56 @@ dropped after) to measure the real drift — a test the source audit never perfo
   `CREATE EXTENSION pgcrypto` first. The baseline migration should add an explicit
   `CREATE EXTENSION IF NOT EXISTS pgcrypto` for portability.
 
-The follow-up reconciliation is thus a **precisely bounded** task: migrate these 24 named
+The follow-up reconciliation is thus a **precisely bounded** task: migrate these 25 named
 tables (with their WORM triggers / RLS for `positions`) into a versioned baseline, then
 reduce `_ensure_tables()` to column-drift guards.
+
+#### Implementation status — migration `0037_baseline_residual_tables`
+
+Implemented on branch `feat/alembic-baseline-residual-tables`. The migration extracts
+**158 statements verbatim** from `_ensure_tables` (via AST, no hand-transcription):
+- the **115** statements for the **25 residual tables**, plus
+- the **43 `ADD COLUMN IF NOT EXISTS` patches** that `_ensure_tables` applies to
+  alembic-managed tables (`users.company_id/created_at/token_version`, `companies.plan_tier`,
+  `execution_proposals.*` (21 cols), `roles.hierarchy_level`, `ledger_entries.company_id`,
+  `staging_artifacts.company_id`, …) — without which `/auth`-path queries `500` on a
+  pure-alembic schema (`column users.company_id does not exist`),
+and re-applies the canonical `positions` tenant-RLS (enable + 4 policies + FORCE).
+
+Verified on a fresh Postgres (PG12 + `pgcrypto`):
+- `alembic upgrade head` → single head `0037`, exit 0, **83 tables** (was 58); all 25
+  residual tables + 43 column-patches present.
+- `positions`: `relrowsecurity = t` **and** `relforcerowsecurity = t`, all 4
+  `positions_tenant_isolation_*` policies.
+- Reversible + idempotent; `tests/test_db_migrations.py` + route smoke pass; freeze clean.
+- **37 RLS/tenant-isolation integration tests pass** (`test_rls_tenant_isolation`,
+  `test_dashboard_rls_injection`, `test_pipeline_tenant_isolation`) against the
+  `0037`-built schema — behavioural isolation confirmed, not just schema shape.
+
+#### ⚠️ Security-sensitive finding surfaced by the `requires_postgres` suite
+
+Running the full `requires_postgres` suite against schemas built two ways revealed a
+**latent RLS gap in the current build order**, and a behavioural interaction `0037` must
+be reviewed against:
+
+- **prod-equivalent build** (lifespan order: `alembic upgrade` **then** `_ensure_tables`):
+  `positions` ends up with `relrowsecurity=false`, `relforcerowsecurity=false`,
+  **0 policies**. Both `k1a2b3c4d5e6` (creates policies) and `0036` (FORCE) are
+  `IF EXISTS`-guarded and **skip** because `positions` does not exist when they run.
+  → On a **fresh** DB bootstrapped in this order, `positions` tenant-RLS is **never
+  applied** (RISK-AUTH-RLS-02 class). Exposure for long-lived prod DBs depends on whether
+  `positions` already existed when `0036` first ran — **needs verification against prod's
+  actual `RUN_ALEMBIC_ON_STARTUP` / `RUN_SCHEMA_BOOTSTRAP_ON_STARTUP` sequence.**
+- **`0037` build:** `positions` RLS is deterministically forced. This is *more* secure, but
+  surfaces **45 `requires_postgres` tests** that pass only when `positions` RLS is **not**
+  enforced (they never set `app.current_tenant_id` / `app.bypass_tenant_rls` and connect as
+  the table owner under `FORCE`). The same 45 **pass** on the prod-equivalent (unforced)
+  schema. These tests — not `0037` — assume an unforced `positions`; they must be updated to
+  set tenant context (or use the bypass) before `0037` can merge.
+
+**Gating before merge (not done):** (1) decide/verify the **intended** `positions` RLS posture
+and whether current prod is exposed; (2) update the 45 tenant-context-less tests; (3) **PG17**
+parity run (PG12 was a local proxy); (4) keep `_ensure_tables` until all land.
 
 ## Consequences
 
