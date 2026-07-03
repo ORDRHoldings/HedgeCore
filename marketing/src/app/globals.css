@@ -1,0 +1,173 @@
+@import "tailwindcss";
+
+/* ────────────────────────────────────────────────────────────────
+   ORDR product-site design tokens — shared ecosystem system.
+   Dark terminal-grade institutional: ink base, product accent.
+   The accent is set per product in @theme (--color-accent).
+   ──────────────────────────────────────────────────────────────── */
+
+@theme {
+  --color-ink: #0a0d13;
+  --color-panel: #10141c;
+  --color-panel2: #151a24;
+  --color-hairline: #202634;
+  --color-hairline2: #2a3242;
+  --color-text: #e9ecf2;
+  --color-muted: #97a0b3;
+  --color-faint: #5c6577;
+  --color-accent: #f5a800; /* per-product accent — capital=amber, security=red, ops=cyan, intel=violet */
+  --color-accent-bright: #ffbe2e;
+  --color-green: #34d399;
+
+  --font-display: var(--font-archivo), "Archivo", system-ui, sans-serif;
+  --font-body: var(--font-plex-sans), "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@layer components {
+  /* ── Type ── */
+  .display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.04;
+    text-wrap: balance;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+
+  .mono-label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Surfaces ── */
+  .panel {
+    background: var(--color-panel);
+    border: 1px solid var(--color-hairline);
+  }
+
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(32, 38, 52, 0.5) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(32, 38, 52, 0.5) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.75rem 1.375rem;
+    border: 1px solid transparent;
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  }
+
+  .btn-primary {
+    background: var(--color-accent);
+    color: #0a0d13;
+  }
+  .btn-primary:hover {
+    background: var(--color-accent-bright);
+  }
+
+  .btn-ghost {
+    border-color: var(--color-hairline2);
+    color: var(--color-text);
+  }
+  .btn-ghost:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  /* ── Terminal panel rows ── */
+  @keyframes row-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .row-enter {
+    animation: row-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  @keyframes pulse-dot {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+
+  .pulse-dot {
+    animation: pulse-dot 2.2s ease-in-out infinite;
+  }
+
+  .hover-row {
+    transition: background-color 130ms ease;
+  }
+  .hover-row:hover {
+    background: var(--color-panel2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .row-enter,
+  .pulse-dot {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
